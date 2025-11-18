@@ -58,7 +58,9 @@ export function Dashboard() {
         
         <main className="flex-1 transition-all duration-300 overflow-hidden">
           <div className="container max-w-full h-full p-4 lg:p-6 flex flex-col animate-fade-in">
-            <h1 className="text-2xl font-bold mb-4">Painel do Mercado</h1>
+            <div className="bg-muted/30 rounded-lg p-4 mb-4 text-center">
+              <h1 className="text-2xl font-bold">Painel do Mercado</h1>
+            </div>
             
             {/* Stats Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4 animate-slide-up" style={{ '--delay': '100ms' } as React.CSSProperties}>
