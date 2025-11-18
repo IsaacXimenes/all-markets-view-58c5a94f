@@ -50,11 +50,11 @@ export function Dashboard() {
   };
   
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <div className="min-h-screen flex">
+      <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
       
-      <div className="flex-1 flex">
-        <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
+      <div className="flex-1 flex flex-col">
+        <Navbar />
         
         <main className="flex-1 transition-all duration-300 overflow-hidden">
           <div className="container max-w-full h-full p-4 lg:p-6 flex flex-col animate-fade-in">
