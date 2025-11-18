@@ -58,7 +58,7 @@ export function Dashboard() {
         
         <main className="flex-1 transition-all duration-300 overflow-hidden">
           <div className="container max-w-full h-full p-4 lg:p-6 flex flex-col animate-fade-in">
-            <div className="bg-muted/30 rounded-lg p-4 mb-4 text-center">
+            <div className="bg-muted/30 rounded-lg p-4 mb-4 text-center border border-border">
               <h1 className="text-2xl font-bold">Painel do Mercado</h1>
             </div>
             
