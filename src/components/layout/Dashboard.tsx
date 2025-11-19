@@ -13,7 +13,9 @@ import { MarketOverview } from '@/components/markets/MarketOverview';
 import { CurrencyExchange } from '@/components/currencies/CurrencyExchange';
 import { NewsCard } from '@/components/news/NewsCard';
 import { StatsCard } from '@/components/ui/StatsCard';
+import { RankingVendedores } from '@/components/dashboard/RankingVendedores';
 import { BarChart3, TrendingDown, TrendingUp, Wallet2, Package, ShoppingCart } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function Dashboard() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -51,7 +53,7 @@ export function Dashboard() {
     <div className="min-h-screen flex">
       <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
       
-      <div className="flex-1 flex flex-col">
+      <div className={cn("flex-1 flex flex-col transition-all duration-300", isSidebarCollapsed ? "ml-16" : "ml-64")}>
         <Navbar />
         
         <main className="flex-1 transition-all duration-300 overflow-hidden">
@@ -136,31 +138,10 @@ export function Dashboard() {
                 </div>
               </div>
               
-              {/* Right column - Categories and sales */}
-              <div className="lg:col-span-1 flex flex-col gap-4 animate-slide-up overflow-hidden" style={{ '--delay': '400ms' } as React.CSSProperties}>
-                <div className="flex-1 min-h-0 overflow-hidden">
-                  <MarketOverview indices={categories.map(cat => ({
-                    symbol: cat.id,
-                    name: cat.name,
-                    value: cat.revenue,
-                    change: cat.change,
-                    changePercent: cat.changePercent,
-                    region: `${cat.totalProducts} produtos`,
-                    lastUpdated: cat.lastUpdated
-                  }))} />
-                </div>
-                <div className="flex-1 min-h-0 overflow-hidden">
-                  <CurrencyExchange currencies={salesMetrics.map(metric => ({
-                    symbol: metric.period,
-                    fromCurrency: 'Vendas',
-                    toCurrency: metric.period,
-                    rate: metric.value,
-                    change: metric.change,
-                    changePercent: metric.changePercent,
-                    lastUpdated: metric.lastUpdated
-                  }))} />
-                </div>
-              </div>
+            {/* Right column - Ranking de Vendedores */}
+            <div className="lg:col-span-1 flex flex-col gap-4 animate-slide-up overflow-hidden" style={{ '--delay': '400ms' } as React.CSSProperties}>
+              <RankingVendedores />
+            </div>
             </div>
           </div>
         </main>
