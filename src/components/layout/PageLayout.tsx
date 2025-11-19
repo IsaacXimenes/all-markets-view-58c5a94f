@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { cn } from '@/lib/utils';
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -19,7 +20,7 @@ export function PageLayout({ children, title }: PageLayoutProps) {
     <div className="min-h-screen flex">
       <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
       
-      <div className="flex-1 flex flex-col">
+      <div className={cn("flex-1 flex flex-col transition-all duration-300", isSidebarCollapsed ? "ml-16" : "ml-64")}>
         <Navbar />
         
         <main className="flex-1 transition-all duration-300">

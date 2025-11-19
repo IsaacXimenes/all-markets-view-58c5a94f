@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { 
-  BarChart, PieChart, BarChart3, Wallet, LineChart, Globe, 
+  BarChart, PieChart, BarChart3, Wallet, LineChart, Users, 
   DollarSign, Settings, ChevronRight, ChevronLeft, Home
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -46,9 +46,9 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
       href: '/currencies',
     },
     {
-      title: 'Acessórios',
-      icon: Globe,
-      href: '/global',
+      title: 'Recursos Humanos',
+      icon: Users,
+      href: '/rh',
     },
     {
       title: 'Vendas',
@@ -74,7 +74,7 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
 
   return (
     <aside className={cn(
-      "bg-sidebar text-sidebar-foreground relative transition-all duration-300 ease-in-out flex flex-col border-r border-sidebar-border",
+      "bg-sidebar text-sidebar-foreground relative transition-all duration-300 ease-in-out flex flex-col border-r border-sidebar-border fixed top-0 left-0 h-screen z-50",
       isCollapsed ? "w-16" : "w-64",
       className
     )}>

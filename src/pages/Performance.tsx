@@ -1,172 +1,195 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { generatePriceHistory } from '@/utils/stocksApi';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { 
+  generateMultiStorePerformance, 
+  generateBrandRecurrence,
+  calculateAverageTicket,
+  generateHourlyTraffic,
+  getLastThreeMonths,
+  mockStoresData 
+} from '@/utils/storesApi';
+import { 
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+} from 'recharts';
+import { TrendingUp, TrendingDown, DollarSign, Clock } from 'lucide-react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
-const Performance = () => {
-  // Generate mock performance data
-  const generatePerformanceData = () => {
-    const baseValue = 10000;
-    const volatility = 1.5;
-    const days = 30;
-    const portfolioValues = [baseValue];
-    const marketValues = [baseValue];
-    
-    const dates = Array.from({ length: days }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - (days - i - 1));
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    });
-    
-    for (let i = 1; i < days; i++) {
-      const portfolioChange = (Math.random() - 0.45) * volatility;
-      const marketChange = (Math.random() - 0.5) * (volatility * 0.8);
-      
-      portfolioValues.push(
-        parseFloat((portfolioValues[i-1] * (1 + portfolioChange / 100)).toFixed(2))
-      );
-      
-      marketValues.push(
-        parseFloat((marketValues[i-1] * (1 + marketChange / 100)).toFixed(2))
+export default function Performance() {
+  const [selectedStore, setSelectedStore] = useState<string>('all');
+  const [selectedPeriod, setSelectedPeriod] = useState(12);
+
+  const performanceData = generateMultiStorePerformance(selectedPeriod, selectedStore === 'all' ? undefined : selectedStore);
+  const brandData = generateBrandRecurrence();
+  const ticketData = calculateAverageTicket(selectedStore === 'all' ? undefined : selectedStore);
+  const hourlyData = generateHourlyTraffic();
+  const lastThreeMonths = getLastThreeMonths();
+
+  const formatCurrency = (value: number) => `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const initialValue = performanceData[0]?.total || 0;
+  const currentValue = performanceData[performanceData.length - 1]?.total || 0;
+  const absoluteReturn = currentValue - initialValue;
+  const percentReturn = initialValue > 0 ? ((absoluteReturn / initialValue) * 100) : 0;
+
+  const COLORS = ['#8b5cf6', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-card border border-border p-3 rounded-lg shadow-lg">
+          <p className="font-semibold mb-2">{data.brand}</p>
+          <p className="text-sm text-muted-foreground mb-1">{formatCurrency(data.value)}</p>
+          <div className="text-xs text-muted-foreground mt-2 space-y-1">
+            <p className="font-medium">Top 3 produtos:</p>
+            {data.topProducts.map((product: string, idx: number) => (<p key={idx}>• {product}</p>))}
+          </div>
+        </div>
       );
     }
-    
-    return dates.map((date, i) => ({
-      date,
-      portfolio: portfolioValues[i],
-      market: marketValues[i]
-    }));
+    return null;
   };
-  
-  const performanceData = generatePerformanceData();
-  
-  // Calculate performance metrics
-  const initialPortfolio = performanceData[0].portfolio;
-  const currentPortfolio = performanceData[performanceData.length - 1].portfolio;
-  const totalReturn = ((currentPortfolio - initialPortfolio) / initialPortfolio) * 100;
-  
-  // Mock sector allocation data
-  const sectorAllocation = [
-    { name: 'Tecnologia', value: 45 },
-    { name: 'Saúde', value: 20 },
-    { name: 'Financeiro', value: 15 },
-    { name: 'Consumo', value: 10 },
-    { name: 'Energia', value: 5 },
-    { name: 'Outros', value: 5 }
-  ];
-  
+
   return (
     <PageLayout title="Desempenho">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-3">
-          <div className="bg-card rounded-lg p-6 shadow">
-            <h2 className="text-xl font-semibold mb-4">Desempenho do Portfólio</h2>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={performanceData}
-                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis domain={['dataMin - 100', 'dataMax + 100']} />
-                  <Tooltip formatter={(value) => [`$${typeof value === 'number' ? value.toFixed(2) : value}`, '']} />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="portfolio" 
-                    name="Seu Portfólio" 
-                    stroke="#8884d8" 
-                    strokeWidth={2} 
-                    dot={false} 
-                    activeDot={{ r: 8 }} 
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="market" 
-                    name="S&P 500" 
-                    stroke="#82ca9d" 
-                    strokeWidth={2} 
-                    dot={false}
-                  />
-                </LineChart>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Selecionar Loja:</span>
+            <Select value={selectedStore} onValueChange={setSelectedStore}>
+              <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as lojas</SelectItem>
+                {mockStoresData.map(store => (<SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex gap-2">
+            {[3, 6, 9, 12].map((period) => (<Button key={period} variant={selectedPeriod === period ? 'default' : 'outline'} size="sm" onClick={() => setSelectedPeriod(period)}>{period}m</Button>))}
+            <Button variant={selectedPeriod === 24 ? 'default' : 'outline'} size="sm" onClick={() => setSelectedPeriod(24)}>Tudo</Button>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader><CardTitle>Desempenho {selectedStore === 'all' ? 'de Todas as Lojas' : `- ${mockStoresData.find(s => s.id === selectedStore)?.name}`}</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={400}>
+              <LineChart data={performanceData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                <Legend />
+                <Line type="monotone" dataKey="total" stroke="hsl(var(--primary))" strokeWidth={2} name="Receita Total" dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader><CardTitle className="text-lg">Resumo Financeiro</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div><p className="text-sm text-muted-foreground">Valor Investido</p><p className="text-2xl font-bold">{formatCurrency(initialValue)}</p></div>
+              <div><p className="text-sm text-muted-foreground">Receita Gerada</p><p className="text-2xl font-bold">{formatCurrency(currentValue)}</p></div>
+              <div>
+                <p className="text-sm text-muted-foreground">Retorno Gerado</p>
+                <p className={`text-2xl font-bold flex items-center gap-2 ${absoluteReturn >= 0 ? 'text-success' : 'text-danger'}`}>
+                  {absoluteReturn >= 0 ? <TrendingUp className="h-5 w-5" /> : <TrendingDown className="h-5 w-5" />}
+                  {formatCurrency(Math.abs(absoluteReturn))}
+                </p>
+                <p className={`text-sm ${percentReturn >= 0 ? 'text-success' : 'text-danger'}`}>{percentReturn >= 0 ? '+' : ''}{percentReturn.toFixed(2)}%</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-2">
+            <CardHeader><CardTitle className="text-lg">Vendas Recorrentes por Marca</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie data={brandData} cx="50%" cy="50%" labelLine={false} label={(entry) => entry.brand} outerRadius={100} fill="#8884d8" dataKey="value">
+                    {brandData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
               </ResponsiveContainer>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
-        
-        <div className="lg:col-span-1">
-          <div className="bg-card rounded-lg p-6 shadow">
-            <h2 className="text-xl font-semibold mb-4">Resumo de Desempenho</h2>
+
+        <Card>
+          <CardHeader><CardTitle>Comparativo Mensal – Todas as Lojas</CardTitle></CardHeader>
+          <CardContent>
             <div className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Retorno Total</p>
-                <p className={`text-2xl font-bold ${totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Investimento Inicial</p>
-                <p className="text-xl font-bold">${initialPortfolio.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Valor Atual</p>
-                <p className="text-xl font-bold">${currentPortfolio.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Retorno Absoluto</p>
-                <p className={`text-xl font-bold ${(currentPortfolio - initialPortfolio) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  ${(currentPortfolio - initialPortfolio).toFixed(2)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="lg:col-span-1">
-          <div className="bg-card rounded-lg p-6 shadow">
-            <h2 className="text-xl font-semibold mb-4">Alocação por Setor</h2>
-            <div className="space-y-4">
-              {sectorAllocation.map((sector) => (
-                <div key={sector.name}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>{sector.name}</span>
-                    <span className="font-medium">{sector.value}%</span>
+              {lastThreeMonths.map((monthData, idx) => (
+                <div key={idx}>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold">{monthData.month}</h4>
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg font-bold">{formatCurrency(monthData.total)}</span>
+                      <span className={`flex items-center text-sm ${monthData.change >= 0 ? 'text-success' : 'text-danger'}`}>
+                        {monthData.change >= 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : <TrendingDown className="h-4 w-4 mr-1" />}
+                        {Math.abs(monthData.change).toFixed(1)}%
+                      </span>
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full" 
-                      style={{ width: `${sector.value}%` }}
-                    ></div>
-                  </div>
+                  <Accordion type="single" collapsible>
+                    <AccordionItem value={`month-${idx}`}>
+                      <AccordionTrigger className="text-sm text-muted-foreground">Ver detalhes por loja</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 pt-2">
+                          {monthData.stores.map(store => (<div key={store.id} className="bg-muted/50 p-3 rounded"><p className="text-sm font-medium">{store.name}</p><p className="text-lg font-bold">{formatCurrency(store.monthRevenue)}</p></div>))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-        
-        <div className="lg:col-span-1">
-          <div className="bg-card rounded-lg p-6 shadow">
-            <h2 className="text-xl font-semibold mb-4">Retornos Mensais (%)</h2>
-            <div className="grid grid-cols-3 gap-2">
-              {['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'].map((month) => {
-                const returnValue = (Math.random() * 6) - 2;
-                return (
-                  <div key={month} className="text-center p-2">
-                    <p className="text-xs text-muted-foreground">{month}</p>
-                    <p className={`text-sm font-medium ${returnValue >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                      {returnValue >= 0 ? '+' : ''}{returnValue.toFixed(2)}%
-                    </p>
-                  </div>
-                );
-              })}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><DollarSign className="h-5 w-5" />Ticket Médio (últimos 30 dias)</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="bg-primary/10 p-4 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">Ticket Médio Geral</p>
+                <p className="text-3xl font-bold text-primary">{formatCurrency(ticketData.overall)}</p>
+              </div>
+              {ticketData.byStore.length > 1 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {ticketData.byStore.map(store => (<div key={store.storeId} className="bg-muted/50 p-3 rounded"><p className="text-xs text-muted-foreground mb-1">{store.name}</p><p className="text-lg font-bold">{formatCurrency(store.ticket)}</p></div>))}
+                </div>
+              )}
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Clock className="h-5 w-5" />Vendas por Horário do Dia</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={hourlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="day" />
+                <YAxis />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                <Legend />
+                <Bar dataKey="morning" stackId="a" fill="#94a3b8" name="06-10h" />
+                <Bar dataKey="midday" stackId="a" fill="#3b82f6" name="10-14h" />
+                <Bar dataKey="afternoon" stackId="a" fill="#8b5cf6" name="14-18h" />
+                <Bar dataKey="evening" stackId="a" fill="#6366f1" name="18-24h" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
     </PageLayout>
   );
-};
-
-export default Performance;
+}

@@ -2,6 +2,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { NotificationSystem } from "@/components/notifications/NotificationSystem";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
@@ -14,6 +15,9 @@ import Portfolio from "./pages/Portfolio";
 import Performance from "./pages/Performance";
 import Analysis from "./pages/Analysis";
 import Settings from "./pages/Settings";
+import RecursosHumanos from "./pages/RecursosHumanos";
+import LojaRH from "./pages/LojaRH";
+import FuncionarioDetalhes from "./pages/FuncionarioDetalhes";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +26,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <NotificationSystem />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
@@ -33,6 +38,9 @@ const App = () => (
           <Route path="/performance" element={<Performance />} />
           <Route path="/analysis" element={<Analysis />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/rh" element={<RecursosHumanos />} />
+          <Route path="/rh/loja/:id" element={<LojaRH />} />
+          <Route path="/rh/funcionario/:id" element={<FuncionarioDetalhes />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
