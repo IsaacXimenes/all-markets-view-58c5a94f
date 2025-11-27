@@ -18,6 +18,9 @@ import Settings from "./pages/Settings";
 import RecursosHumanos from "./pages/RecursosHumanos";
 import LojaRH from "./pages/LojaRH";
 import FuncionarioDetalhes from "./pages/FuncionarioDetalhes";
+import FinanceiroConferencia from "./pages/FinanceiroConferencia";
+import FinanceiroLancarDespesa from "./pages/FinanceiroLancarDespesa";
+import FinanceiroContas from "./pages/FinanceiroContas";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +44,9 @@ const App = () => (
           <Route path="/rh" element={<RecursosHumanos />} />
           <Route path="/rh/loja/:id" element={<LojaRH />} />
           <Route path="/rh/funcionario/:id" element={<FuncionarioDetalhes />} />
+          <Route path="/financeiro/conferencia" element={<FinanceiroConferencia />} />
+          <Route path="/financeiro/lancar-despesa" element={<FinanceiroLancarDespesa />} />
+          <Route path="/financeiro/contas" element={<FinanceiroContas />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
