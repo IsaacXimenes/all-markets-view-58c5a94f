@@ -1,21 +1,21 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { FileCheck, Plus, Building2 } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, ArrowRightLeft } from 'lucide-react';
 
-interface FinanceiroLayoutProps {
+interface EstoqueLayoutProps {
   children: React.ReactNode;
   title: string;
 }
 
-export function FinanceiroLayout({ children, title }: FinanceiroLayoutProps) {
+export function EstoqueLayout({ children, title }: EstoqueLayoutProps) {
   const location = useLocation();
   
   const tabs = [
-    { name: 'Conferência de Contas', href: '/financeiro/conferencia', icon: FileCheck },
-    { name: 'Lançar Despesa', href: '/financeiro/lancar-despesa', icon: Plus },
-    { name: 'Contas Financeiras', href: '/financeiro/contas', icon: Building2 },
-    { name: 'Conferência de Notas', href: '/financeiro/conferencia-notas-entrada', icon: FileCheck }
+    { name: 'Dashboard', href: '/estoque', icon: LayoutDashboard },
+    { name: 'Produtos', href: '/estoque/produtos', icon: Package },
+    { name: 'Notas de Compra', href: '/estoque/notas-compra', icon: FileText },
+    { name: 'Movimentações', href: '/estoque/movimentacoes', icon: ArrowRightLeft }
   ];
 
   return (

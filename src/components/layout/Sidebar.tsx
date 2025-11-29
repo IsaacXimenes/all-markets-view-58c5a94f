@@ -1,8 +1,7 @@
 
 import React from 'react';
 import { 
-  BarChart, PieChart, BarChart3, Wallet, LineChart, Users, 
-  DollarSign, Settings, ChevronRight, ChevronLeft, Home, Banknote
+  Package, Settings, ChevronRight, ChevronLeft, Home, Banknote, Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -31,21 +30,6 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
       href: '/',
     },
     {
-      title: 'Smartphones',
-      icon: BarChart,
-      href: '/stocks',
-    },
-    {
-      title: 'Categorias',
-      icon: BarChart3,
-      href: '/markets',
-    },
-    {
-      title: 'Capinhas',
-      icon: DollarSign,
-      href: '/currencies',
-    },
-    {
       title: 'Recursos Humanos',
       icon: Users,
       href: '/rh',
@@ -56,19 +40,9 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
       href: '/financeiro/conferencia',
     },
     {
-      title: 'Vendas',
-      icon: Wallet,
-      href: '/portfolio',
-    },
-    {
-      title: 'Desempenho',
-      icon: LineChart,
-      href: '/performance',
-    },
-    {
-      title: 'Relatórios',
-      icon: PieChart,
-      href: '/analysis',
+      title: 'Estoque',
+      icon: Package,
+      href: '/estoque',
     },
     {
       title: 'Configurações',
