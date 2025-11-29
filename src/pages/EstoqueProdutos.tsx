@@ -1,17 +1,21 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getProdutos, getLojas, exportToCSV } from '@/utils/estoqueApi';
-import { Download, Eye, CheckCircle, XCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getProdutos, getLojas, exportToCSV, getEstoqueStats } from '@/utils/estoqueApi';
+import { Download, Eye, CheckCircle, XCircle, Package, DollarSign, AlertTriangle, FileWarning } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 
 export default function EstoqueProdutos() {
+  const navigate = useNavigate();
   const [produtos] = useState(getProdutos());
+  const stats = getEstoqueStats();
   const [lojaFilter, setLojaFilter] = useState<string>('todas');
   const [modeloFilter, setModeloFilter] = useState('');
   const [palavraChave, setPalavraChave] = useState('');
@@ -31,7 +35,61 @@ export default function EstoqueProdutos() {
 
   return (
     <EstoqueLayout title="Gerenciamento de Produtos">
-      <div className="space-y-4">
+      <div className="space-y-6">
+        {/* Dashboard Cards */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total de Produtos</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalProdutos}</div>
+              <p className="text-xs text-muted-foreground">Unidades em estoque</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Valor Total do Estoque</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.valorTotalEstoque)}
+              </div>
+              <p className="text-xs text-muted-foreground">Base custo</p>
+            </CardContent>
+          </Card>
+
+          <Card className={stats.produtosBateriaFraca > 0 ? 'bg-destructive/10' : ''}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Saúde da Bateria &lt; 85%</CardTitle>
+              <AlertTriangle className={`h-4 w-4 ${stats.produtosBateriaFraca > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${stats.produtosBateriaFraca > 0 ? 'text-destructive' : ''}`}>
+                {stats.produtosBateriaFraca}
+              </div>
+              <p className="text-xs text-muted-foreground">Produtos com bateria degradada</p>
+            </CardContent>
+          </Card>
+
+          <Card className={stats.notasPendentes > 0 ? 'bg-destructive/10' : ''}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Notas Pendentes</CardTitle>
+              <FileWarning className={`h-4 w-4 ${stats.notasPendentes > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${stats.notasPendentes > 0 ? 'text-destructive' : ''}`}>
+                {stats.notasPendentes}
+              </div>
+              <p className="text-xs text-muted-foreground">Aguardando financeiro</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Filters */}
         <div className="flex flex-wrap gap-4">
           <Select value={lojaFilter} onValueChange={setLojaFilter}>
             <SelectTrigger className="w-[200px]">
@@ -86,7 +144,6 @@ export default function EstoqueProdutos() {
                 <TableHead>Tipo</TableHead>
                 <TableHead>Qtd</TableHead>
                 <TableHead>Custo</TableHead>
-                <TableHead>Venda Sugerida</TableHead>
                 <TableHead>Saúde Bat.</TableHead>
                 <TableHead>Estoque</TableHead>
                 <TableHead>Assistência</TableHead>
@@ -120,9 +177,6 @@ export default function EstoqueProdutos() {
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(produto.valorCusto)}
                   </TableCell>
                   <TableCell>
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(produto.valorVendaSugerido)}
-                  </TableCell>
-                  <TableCell>
                     <span className={cn(
                       'font-semibold',
                       produto.saudeBateria < 70 ? 'text-destructive' :
@@ -147,7 +201,11 @@ export default function EstoqueProdutos() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => navigate(`/estoque/produto/${produto.id}`)}
+                    >
                       <Eye className="h-4 w-4" />
                     </Button>
                   </TableCell>

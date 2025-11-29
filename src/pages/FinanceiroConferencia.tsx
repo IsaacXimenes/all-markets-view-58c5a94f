@@ -7,13 +7,19 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Check, Download, Filter, X } from 'lucide-react';
-import { getPagamentos, getContas, conferirPagamento, exportToCSV } from '@/utils/financeApi';
+import { getPagamentos, getContas, conferirPagamento, exportToCSV, Pagamento } from '@/utils/financeApi';
 import { toast } from 'sonner';
 
 export default function FinanceiroConferencia() {
   const [pagamentos, setPagamentos] = useState(getPagamentos());
   const contas = getContas();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [pagamentoSelecionado, setPagamentoSelecionado] = useState<Pagamento | null>(null);
+  const [contaSelecionada, setContaSelecionada] = useState('');
+  const [meioPagamentoSelecionado, setMeioPagamentoSelecionado] = useState('');
+  const [parcelas, setParcelas] = useState('');
   
   const [filters, setFilters] = useState({
     dataInicio: '',
@@ -23,12 +29,33 @@ export default function FinanceiroConferencia() {
     palavraChave: ''
   });
 
-  const handleConferir = (id: string) => {
-    if (conferirPagamento(id)) {
+  const handleAbrirConferencia = (pagamento: Pagamento) => {
+    setPagamentoSelecionado(pagamento);
+    setContaSelecionada('');
+    setMeioPagamentoSelecionado('');
+    setParcelas('');
+    setDialogOpen(true);
+  };
+
+  const handleConferir = () => {
+    if (!contaSelecionada || !meioPagamentoSelecionado) {
+      toast.error('Selecione a conta e meio de pagamento');
+      return;
+    }
+
+    if ((meioPagamentoSelecionado === 'Cartão Crédito' || meioPagamentoSelecionado === 'Boleto') && !parcelas) {
+      toast.error('Informe o número de parcelas');
+      return;
+    }
+
+    if (pagamentoSelecionado && conferirPagamento(pagamentoSelecionado.id)) {
       setPagamentos(getPagamentos());
+      setDialogOpen(false);
       toast.success('Pagamento conferido com sucesso!');
     }
   };
+
+  const mostrarCampoParcelas = meioPagamentoSelecionado === 'Cartão Crédito' || meioPagamentoSelecionado === 'Boleto';
 
   const filteredPagamentos = useMemo(() => {
     return pagamentos.filter(pag => {
@@ -195,7 +222,7 @@ export default function FinanceiroConferencia() {
                       </TableCell>
                       <TableCell>
                         {pag.status === 'Pendente' && (
-                          <Button size="sm" onClick={() => handleConferir(pag.id)}>
+                          <Button size="sm" onClick={() => handleAbrirConferencia(pag)}>
                             <Check className="h-4 w-4 mr-1" />
                             Conferir
                           </Button>
@@ -216,6 +243,87 @@ export default function FinanceiroConferencia() {
             </div>
           </CardContent>
         </Card>
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Conferir Pagamento</DialogTitle>
+            </DialogHeader>
+            {pagamentoSelecionado && (
+              <div className="space-y-4">
+                <div>
+                  <Label>Descrição</Label>
+                  <Input value={pagamentoSelecionado.descricao} disabled />
+                </div>
+                <div>
+                  <Label>Valor</Label>
+                  <Input 
+                    value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pagamentoSelecionado.valor)} 
+                    disabled 
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="conta">Conta *</Label>
+                  <Select value={contaSelecionada} onValueChange={setContaSelecionada}>
+                    <SelectTrigger id="conta">
+                      <SelectValue placeholder="Selecione a conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {contas.map(c => (
+                        <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="meioPagamento">Meio de Pagamento *</Label>
+                  <Select value={meioPagamentoSelecionado} onValueChange={setMeioPagamentoSelecionado}>
+                    <SelectTrigger id="meioPagamento">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pix">Pix</SelectItem>
+                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
+                      <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
+                      <SelectItem value="Transferência">Transferência</SelectItem>
+                      <SelectItem value="Boleto">Boleto</SelectItem>
+                      <SelectItem value="Outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {mostrarCampoParcelas && (
+                  <div>
+                    <Label htmlFor="parcelas">Nº de Parcelas *</Label>
+                    <Input 
+                      id="parcelas"
+                      type="number"
+                      min="1"
+                      value={parcelas}
+                      onChange={(e) => setParcelas(e.target.value)}
+                      placeholder="Ex: 3"
+                    />
+                    {mostrarCampoParcelas && !parcelas && (
+                      <p className="text-sm text-destructive mt-1">Informe o número de parcelas</p>
+                    )}
+                  </div>
+                )}
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={handleConferir}
+                    disabled={!contaSelecionada || !meioPagamentoSelecionado || (mostrarCampoParcelas && !parcelas)}
+                  >
+                    <Check className="mr-2 h-4 w-4" />
+                    Conferir
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </FinanceiroLayout>
   );

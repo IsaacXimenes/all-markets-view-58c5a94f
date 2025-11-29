@@ -24,7 +24,10 @@ import FinanceiroContas from "./pages/FinanceiroContas";
 import FinanceiroConferenciaNotas from "./pages/FinanceiroConferenciaNotas";
 import Estoque from "./pages/Estoque";
 import EstoqueProdutos from "./pages/EstoqueProdutos";
+import EstoqueProdutoDetalhes from "./pages/EstoqueProdutoDetalhes";
 import EstoqueNotasCompra from "./pages/EstoqueNotasCompra";
+import EstoqueNotaDetalhes from "./pages/EstoqueNotaDetalhes";
+import EstoqueNotaCadastrar from "./pages/EstoqueNotaCadastrar";
 import EstoqueMovimentacoes from "./pages/EstoqueMovimentacoes";
 
 const queryClient = new QueryClient();
@@ -55,7 +58,10 @@ const App = () => (
           <Route path="/financeiro/conferencia-notas-entrada" element={<FinanceiroConferenciaNotas />} />
           <Route path="/estoque" element={<Estoque />} />
           <Route path="/estoque/produtos" element={<EstoqueProdutos />} />
+          <Route path="/estoque/produto/:id" element={<EstoqueProdutoDetalhes />} />
           <Route path="/estoque/notas-compra" element={<EstoqueNotasCompra />} />
+          <Route path="/estoque/nota/:id" element={<EstoqueNotaDetalhes />} />
+          <Route path="/estoque/nota/cadastrar" element={<EstoqueNotaCadastrar />} />
           <Route path="/estoque/movimentacoes" element={<EstoqueMovimentacoes />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

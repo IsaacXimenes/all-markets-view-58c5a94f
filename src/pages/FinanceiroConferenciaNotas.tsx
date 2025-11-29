@@ -9,13 +9,14 @@ import { Eye, CheckCircle } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export default function FinanceiroConferenciaNotas() {
   const [notas, setNotas] = useState(getNotasCompra());
   const [notaSelecionada, setNotaSelecionada] = useState<NotaCompra | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { toast } = useToast();
+  const [formaPagamento, setFormaPagamento] = useState('');
+  const [parcelas, setParcelas] = useState('1');
 
   const notasPendentes = notas.filter(n => n.status === 'Pendente');
 
@@ -32,7 +33,7 @@ export default function FinanceiroConferenciaNotas() {
     
     const pagamento = {
       formaPagamento: formData.get('formaPagamento') as string,
-      parcelas: parseInt(formData.get('parcelas') as string),
+      parcelas: parseInt(formData.get('parcelas') as string || '1'),
       valorParcela: parseFloat(formData.get('valorParcela') as string),
       dataVencimento: formData.get('dataVencimento') as string
     };
@@ -47,13 +48,11 @@ export default function FinanceiroConferenciaNotas() {
       
       const totalProdutos = notaFinalizada.produtos.reduce((sum, p) => sum + p.quantidade, 0);
       
-      toast({
-        title: '✅ Nota liberada com sucesso!',
-        description: `Nota ${notaFinalizada.id} liberada – ${totalProdutos} produtos adicionados ao estoque!`,
-        className: 'bg-green-500 text-white',
-      });
+      toast.success(`✅ Nota ${notaFinalizada.id} liberada – ${totalProdutos} produtos adicionados ao estoque!`);
     }
   };
+
+  const mostrarCampoParcelas = formaPagamento === 'Cartão de Crédito' || formaPagamento === 'Boleto';
 
   return (
     <FinanceiroLayout title="Conferência de Notas de Entrada">
@@ -150,7 +149,7 @@ export default function FinanceiroConferenciaNotas() {
                     <div className="grid gap-4">
                       <div>
                         <Label htmlFor="formaPagamento">Forma de Pagamento*</Label>
-                        <Select name="formaPagamento" required>
+                        <Select name="formaPagamento" value={formaPagamento} onValueChange={setFormaPagamento} required>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
@@ -159,15 +158,30 @@ export default function FinanceiroConferenciaNotas() {
                             <SelectItem value="Transferência Bancária">Transferência Bancária</SelectItem>
                             <SelectItem value="Boleto">Boleto</SelectItem>
                             <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+                            <SelectItem value="Dinheiro">Dinheiro</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-4">
+                      {mostrarCampoParcelas && (
                         <div>
-                          <Label htmlFor="parcelas">Parcelas*</Label>
-                          <Input id="parcelas" name="parcelas" type="number" min="1" defaultValue="1" required />
+                          <Label htmlFor="parcelas">Nº de Parcelas*</Label>
+                          <Input 
+                            id="parcelas" 
+                            name="parcelas" 
+                            type="number" 
+                            min="1" 
+                            value={parcelas}
+                            onChange={(e) => setParcelas(e.target.value)}
+                            required 
+                          />
+                          {mostrarCampoParcelas && !parcelas && (
+                            <p className="text-sm text-destructive mt-1">Informe o número de parcelas</p>
+                          )}
                         </div>
+                      )}
+
+                      <div className="grid gap-4">
                         <div>
                           <Label htmlFor="valorParcela">Valor da Parcela*</Label>
                           <Input 
@@ -197,7 +211,11 @@ export default function FinanceiroConferenciaNotas() {
                   <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                  <Button 
+                    type="submit" 
+                    className="bg-green-600 hover:bg-green-700"
+                    disabled={!formaPagamento || (mostrarCampoParcelas && !parcelas)}
+                  >
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Finalizar Nota
                   </Button>
