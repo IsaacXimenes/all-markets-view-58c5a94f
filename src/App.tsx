@@ -29,6 +29,17 @@ import EstoqueNotasCompra from "./pages/EstoqueNotasCompra";
 import EstoqueNotaDetalhes from "./pages/EstoqueNotaDetalhes";
 import EstoqueNotaCadastrar from "./pages/EstoqueNotaCadastrar";
 import EstoqueMovimentacoes from "./pages/EstoqueMovimentacoes";
+import Cadastros from "./pages/Cadastros";
+import CadastrosLojas from "./pages/CadastrosLojas";
+import CadastrosClientes from "./pages/CadastrosClientes";
+import CadastrosColaboradores from "./pages/CadastrosColaboradores";
+import CadastrosFornecedores from "./pages/CadastrosFornecedores";
+import CadastrosOrigensVenda from "./pages/CadastrosOrigensVenda";
+import CadastrosProdutos from "./pages/CadastrosProdutos";
+import CadastrosTiposDesconto from "./pages/CadastrosTiposDesconto";
+import CadastrosCargos from "./pages/CadastrosCargos";
+import CadastrosModelosPagamento from "./pages/CadastrosModelosPagamento";
+import CadastrosContasFinanceiras from "./pages/CadastrosContasFinanceiras";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +74,17 @@ const App = () => (
           <Route path="/estoque/nota/:id" element={<EstoqueNotaDetalhes />} />
           <Route path="/estoque/nota/cadastrar" element={<EstoqueNotaCadastrar />} />
           <Route path="/estoque/movimentacoes" element={<EstoqueMovimentacoes />} />
+          <Route path="/cadastros" element={<Cadastros />} />
+          <Route path="/cadastros/lojas" element={<CadastrosLojas />} />
+          <Route path="/cadastros/clientes" element={<CadastrosClientes />} />
+          <Route path="/cadastros/colaboradores" element={<CadastrosColaboradores />} />
+          <Route path="/cadastros/fornecedores" element={<CadastrosFornecedores />} />
+          <Route path="/cadastros/origens-venda" element={<CadastrosOrigensVenda />} />
+          <Route path="/cadastros/produtos" element={<CadastrosProdutos />} />
+          <Route path="/cadastros/tipos-desconto" element={<CadastrosTiposDesconto />} />
+          <Route path="/cadastros/cargos" element={<CadastrosCargos />} />
+          <Route path="/cadastros/modelos-pagamento" element={<CadastrosModelosPagamento />} />
+          <Route path="/cadastros/contas-financeiras" element={<CadastrosContasFinanceiras />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
