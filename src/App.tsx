@@ -19,8 +19,8 @@ import RecursosHumanos from "./pages/RecursosHumanos";
 import LojaRH from "./pages/LojaRH";
 import FuncionarioDetalhes from "./pages/FuncionarioDetalhes";
 import FinanceiroConferencia from "./pages/FinanceiroConferencia";
-import FinanceiroLancarDespesa from "./pages/FinanceiroLancarDespesa";
-import FinanceiroContas from "./pages/FinanceiroContas";
+import FinanceiroDespesasFixas from "./pages/FinanceiroDespesasFixas";
+import FinanceiroDespesasVariaveis from "./pages/FinanceiroDespesasVariaveis";
 import FinanceiroConferenciaNotas from "./pages/FinanceiroConferenciaNotas";
 import Estoque from "./pages/Estoque";
 import EstoqueProdutos from "./pages/EstoqueProdutos";
@@ -64,8 +64,8 @@ const App = () => (
           <Route path="/rh/loja/:id" element={<LojaRH />} />
           <Route path="/rh/funcionario/:id" element={<FuncionarioDetalhes />} />
           <Route path="/financeiro/conferencia" element={<FinanceiroConferencia />} />
-          <Route path="/financeiro/lancar-despesa" element={<FinanceiroLancarDespesa />} />
-          <Route path="/financeiro/contas" element={<FinanceiroContas />} />
+          <Route path="/financeiro/despesas-fixas" element={<FinanceiroDespesasFixas />} />
+          <Route path="/financeiro/despesas-variaveis" element={<FinanceiroDespesasVariaveis />} />
           <Route path="/financeiro/conferencia-notas-entrada" element={<FinanceiroConferenciaNotas />} />
           <Route path="/estoque" element={<Estoque />} />
           <Route path="/estoque/produtos" element={<EstoqueProdutos />} />

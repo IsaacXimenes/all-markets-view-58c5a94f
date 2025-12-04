@@ -9,17 +9,26 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Check, Download, Filter, X } from 'lucide-react';
-import { getPagamentos, getContas, conferirPagamento, exportToCSV, Pagamento } from '@/utils/financeApi';
+import { getPagamentos, conferirPagamento, exportToCSV, Pagamento } from '@/utils/financeApi';
+import { getContasFinanceiras, getColaboradores, getCargos } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
+
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+};
 
 export default function FinanceiroConferencia() {
   const [pagamentos, setPagamentos] = useState(getPagamentos());
-  const contas = getContas();
+  const contasFinanceiras = getContasFinanceiras();
+  const colaboradores = getColaboradores();
+  const cargos = getCargos();
+  
   const [dialogOpen, setDialogOpen] = useState(false);
   const [pagamentoSelecionado, setPagamentoSelecionado] = useState<Pagamento | null>(null);
   const [contaSelecionada, setContaSelecionada] = useState('');
   const [meioPagamentoSelecionado, setMeioPagamentoSelecionado] = useState('');
   const [parcelas, setParcelas] = useState('');
+  const [responsavelSelecionado, setResponsavelSelecionado] = useState('');
   
   const [filters, setFilters] = useState({
     dataInicio: '',
@@ -29,17 +38,27 @@ export default function FinanceiroConferencia() {
     palavraChave: ''
   });
 
+  // Filtrar colaboradores que têm permissão "Financeiro"
+  const colaboradoresFinanceiros = useMemo(() => {
+    const cargosComPermissaoFinanceiro = cargos
+      .filter(c => c.permissoes.includes('Financeiro'))
+      .map(c => c.id);
+    
+    return colaboradores.filter(col => cargosComPermissaoFinanceiro.includes(col.cargo));
+  }, [colaboradores, cargos]);
+
   const handleAbrirConferencia = (pagamento: Pagamento) => {
     setPagamentoSelecionado(pagamento);
     setContaSelecionada('');
     setMeioPagamentoSelecionado('');
     setParcelas('');
+    setResponsavelSelecionado('');
     setDialogOpen(true);
   };
 
   const handleConferir = () => {
-    if (!contaSelecionada || !meioPagamentoSelecionado) {
-      toast.error('Selecione a conta e meio de pagamento');
+    if (!contaSelecionada || !meioPagamentoSelecionado || !responsavelSelecionado) {
+      toast.error('Preencha todos os campos obrigatórios');
       return;
     }
 
@@ -56,6 +75,7 @@ export default function FinanceiroConferencia() {
   };
 
   const mostrarCampoParcelas = meioPagamentoSelecionado === 'Cartão Crédito' || meioPagamentoSelecionado === 'Boleto';
+  const botaoDesabilitado = !contaSelecionada || !meioPagamentoSelecionado || !responsavelSelecionado || (mostrarCampoParcelas && !parcelas);
 
   const filteredPagamentos = useMemo(() => {
     return pagamentos.filter(pag => {
@@ -79,7 +99,7 @@ export default function FinanceiroConferencia() {
       ID: p.id,
       Data: p.data,
       Descrição: p.descricao,
-      Valor: `R$ ${p.valor.toFixed(2)}`,
+      Valor: formatCurrency(p.valor),
       'Meio Pagamento': p.meioPagamento,
       Conta: p.conta,
       Loja: p.loja,
@@ -137,7 +157,7 @@ export default function FinanceiroConferencia() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todas">Todas</SelectItem>
-                    {contas.map(c => (
+                    {contasFinanceiras.map(c => (
                       <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
                     ))}
                   </SelectContent>
@@ -156,6 +176,7 @@ export default function FinanceiroConferencia() {
                     <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
                     <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
                     <SelectItem value="Transferência">Transferência</SelectItem>
+                    <SelectItem value="Boleto">Boleto</SelectItem>
                     <SelectItem value="Outro">Outro</SelectItem>
                   </SelectContent>
                 </Select>
@@ -211,7 +232,7 @@ export default function FinanceiroConferencia() {
                       <TableCell className="font-mono text-xs">{pag.id}</TableCell>
                       <TableCell>{new Date(pag.data).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell>{pag.descricao}</TableCell>
-                      <TableCell className="font-semibold">R$ {pag.valor.toFixed(2)}</TableCell>
+                      <TableCell className="font-semibold">{formatCurrency(pag.valor)}</TableCell>
                       <TableCell>{pag.meioPagamento}</TableCell>
                       <TableCell className="text-xs">{pag.conta}</TableCell>
                       <TableCell>{pag.loja}</TableCell>
@@ -238,7 +259,7 @@ export default function FinanceiroConferencia() {
                 {filteredPagamentos.filter(p => p.status === 'Pendente').length} pagamento(s) pendente(s)
               </span>
               <span className="text-lg font-bold">
-                Total Pendente: R$ {totalPendente.toFixed(2)}
+                Total Pendente: {formatCurrency(totalPendente)}
               </span>
             </div>
           </CardContent>
@@ -258,27 +279,27 @@ export default function FinanceiroConferencia() {
                 <div>
                   <Label>Valor</Label>
                   <Input 
-                    value={new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pagamentoSelecionado.valor)} 
+                    value={formatCurrency(pagamentoSelecionado.valor)} 
                     disabled 
                   />
                 </div>
                 <div>
-                  <Label htmlFor="conta">Conta *</Label>
+                  <Label htmlFor="contaConferencia">Conta *</Label>
                   <Select value={contaSelecionada} onValueChange={setContaSelecionada}>
-                    <SelectTrigger id="conta">
+                    <SelectTrigger id="contaConferencia">
                       <SelectValue placeholder="Selecione a conta" />
                     </SelectTrigger>
                     <SelectContent>
-                      {contas.map(c => (
+                      {contasFinanceiras.filter(c => c.status === 'Ativo').map(c => (
                         <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="meioPagamento">Meio de Pagamento *</Label>
+                  <Label htmlFor="meioPagamentoConferencia">Meio de Pagamento *</Label>
                   <Select value={meioPagamentoSelecionado} onValueChange={setMeioPagamentoSelecionado}>
-                    <SelectTrigger id="meioPagamento">
+                    <SelectTrigger id="meioPagamentoConferencia">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
@@ -303,18 +324,34 @@ export default function FinanceiroConferencia() {
                       onChange={(e) => setParcelas(e.target.value)}
                       placeholder="Ex: 3"
                     />
-                    {mostrarCampoParcelas && !parcelas && (
+                    {!parcelas && (
                       <p className="text-sm text-destructive mt-1">Informe o número de parcelas</p>
                     )}
                   </div>
                 )}
+                <div>
+                  <Label htmlFor="responsavel">Responsável *</Label>
+                  <Select value={responsavelSelecionado} onValueChange={setResponsavelSelecionado}>
+                    <SelectTrigger id="responsavel">
+                      <SelectValue placeholder="Selecione o responsável" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {colaboradoresFinanceiros.map(col => (
+                        <SelectItem key={col.id} value={col.nome}>{col.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!responsavelSelecionado && (
+                    <p className="text-sm text-muted-foreground mt-1">Selecione um colaborador com permissão financeira</p>
+                  )}
+                </div>
                 <div className="flex justify-end gap-2 pt-4">
                   <Button variant="outline" onClick={() => setDialogOpen(false)}>
                     Cancelar
                   </Button>
                   <Button 
                     onClick={handleConferir}
-                    disabled={!contaSelecionada || !meioPagamentoSelecionado || (mostrarCampoParcelas && !parcelas)}
+                    disabled={botaoDesabilitado}
                   >
                     <Check className="mr-2 h-4 w-4" />
                     Conferir

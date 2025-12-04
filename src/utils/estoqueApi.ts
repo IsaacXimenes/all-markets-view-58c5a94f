@@ -10,6 +10,7 @@ export interface Produto {
   quantidade: number;
   valorCusto: number;
   valorVendaSugerido: number;
+  vendaRecomendada?: number;
   saudeBateria: number;
   loja: string;
   estoqueConferido: boolean;
