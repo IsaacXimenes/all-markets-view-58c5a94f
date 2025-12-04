@@ -8,9 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getProdutos, getLojas, exportToCSV, getEstoqueStats } from '@/utils/estoqueApi';
-import { Download, Eye, CheckCircle, XCircle, Package, DollarSign, AlertTriangle, FileWarning } from 'lucide-react';
+import { Download, Eye, CheckCircle, XCircle, Package, DollarSign, AlertTriangle, FileWarning, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
+
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+};
 
 export default function EstoqueProdutos() {
   const navigate = useNavigate();
@@ -18,16 +22,24 @@ export default function EstoqueProdutos() {
   const stats = getEstoqueStats();
   const [lojaFilter, setLojaFilter] = useState<string>('todas');
   const [modeloFilter, setModeloFilter] = useState('');
-  const [palavraChave, setPalavraChave] = useState('');
+  const [imeiFilter, setImeiFilter] = useState('');
   const [somenteNaoConferidos, setSomenteNaoConferidos] = useState(false);
 
   const produtosFiltrados = produtos.filter(p => {
     if (lojaFilter !== 'todas' && p.loja !== lojaFilter) return false;
     if (modeloFilter && !p.modelo.toLowerCase().includes(modeloFilter.toLowerCase())) return false;
-    if (palavraChave && !JSON.stringify(p).toLowerCase().includes(palavraChave.toLowerCase())) return false;
+    if (imeiFilter && !p.imei.toLowerCase().includes(imeiFilter.toLowerCase())) return false;
     if (somenteNaoConferidos && (p.estoqueConferido && p.assistenciaConferida)) return false;
     return true;
   });
+
+  // Stats dinâmicos baseados nos filtros
+  const statsFiltrados = {
+    totalProdutos: produtosFiltrados.length,
+    valorTotalEstoque: produtosFiltrados.reduce((acc, p) => acc + p.valorCusto * p.quantidade, 0),
+    produtosBateriaFraca: produtosFiltrados.filter(p => p.saudeBateria < 85).length,
+    notasPendentes: stats.notasPendentes
+  };
 
   const handleExport = () => {
     exportToCSV(produtosFiltrados, 'produtos-estoque.csv');
@@ -44,7 +56,7 @@ export default function EstoqueProdutos() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalProdutos}</div>
+              <div className="text-2xl font-bold">{statsFiltrados.totalProdutos}</div>
               <p className="text-xs text-muted-foreground">Unidades em estoque</p>
             </CardContent>
           </Card>
@@ -56,33 +68,33 @@ export default function EstoqueProdutos() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.valorTotalEstoque)}
+                {formatCurrency(statsFiltrados.valorTotalEstoque)}
               </div>
               <p className="text-xs text-muted-foreground">Base custo</p>
             </CardContent>
           </Card>
 
-          <Card className={stats.produtosBateriaFraca > 0 ? 'bg-destructive/10' : ''}>
+          <Card className={statsFiltrados.produtosBateriaFraca > 0 ? 'bg-destructive/10' : ''}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Saúde da Bateria &lt; 85%</CardTitle>
-              <AlertTriangle className={`h-4 w-4 ${stats.produtosBateriaFraca > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
+              <AlertTriangle className={`h-4 w-4 ${statsFiltrados.produtosBateriaFraca > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${stats.produtosBateriaFraca > 0 ? 'text-destructive' : ''}`}>
-                {stats.produtosBateriaFraca}
+              <div className={`text-2xl font-bold ${statsFiltrados.produtosBateriaFraca > 0 ? 'text-destructive' : ''}`}>
+                {statsFiltrados.produtosBateriaFraca}
               </div>
               <p className="text-xs text-muted-foreground">Produtos com bateria degradada</p>
             </CardContent>
           </Card>
 
-          <Card className={stats.notasPendentes > 0 ? 'bg-destructive/10' : ''}>
+          <Card className={statsFiltrados.notasPendentes > 0 ? 'bg-destructive/10' : ''}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Notas Pendentes</CardTitle>
-              <FileWarning className={`h-4 w-4 ${stats.notasPendentes > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
+              <FileWarning className={`h-4 w-4 ${statsFiltrados.notasPendentes > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${stats.notasPendentes > 0 ? 'text-destructive' : ''}`}>
-                {stats.notasPendentes}
+              <div className={`text-2xl font-bold ${statsFiltrados.notasPendentes > 0 ? 'text-destructive' : ''}`}>
+                {statsFiltrados.notasPendentes}
               </div>
               <p className="text-xs text-muted-foreground">Aguardando financeiro</p>
             </CardContent>
@@ -111,9 +123,9 @@ export default function EstoqueProdutos() {
           />
 
           <Input
-            placeholder="Buscar..."
-            value={palavraChave}
-            onChange={(e) => setPalavraChave(e.target.value)}
+            placeholder="IMEI"
+            value={imeiFilter}
+            onChange={(e) => setImeiFilter(e.target.value)}
             className="w-[200px]"
           />
 
@@ -144,6 +156,7 @@ export default function EstoqueProdutos() {
                 <TableHead>Tipo</TableHead>
                 <TableHead>Qtd</TableHead>
                 <TableHead>Custo</TableHead>
+                <TableHead>Venda Recomendada</TableHead>
                 <TableHead>Saúde Bat.</TableHead>
                 <TableHead>Estoque</TableHead>
                 <TableHead>Assistência</TableHead>
@@ -174,7 +187,17 @@ export default function EstoqueProdutos() {
                   </TableCell>
                   <TableCell>{produto.quantidade}</TableCell>
                   <TableCell>
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(produto.valorCusto)}
+                    {formatCurrency(produto.valorCusto)}
+                  </TableCell>
+                  <TableCell>
+                    {produto.vendaRecomendada ? (
+                      <span className="font-semibold text-green-600">{formatCurrency(produto.vendaRecomendada)}</span>
+                    ) : (
+                      <div className="flex items-center gap-1 text-destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <span className="text-xs">Pendente</span>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     <span className={cn(

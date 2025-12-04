@@ -1,46 +1,70 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { FinanceiroLayout } from '@/components/layout/FinanceiroLayout';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getNotasCompra, finalizarNota, NotaCompra } from '@/utils/estoqueApi';
+import { getContasFinanceiras, getColaboradores, getCargos } from '@/utils/cadastrosApi';
 import { Eye, CheckCircle } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+};
+
 export default function FinanceiroConferenciaNotas() {
   const [notas, setNotas] = useState(getNotasCompra());
   const [notaSelecionada, setNotaSelecionada] = useState<NotaCompra | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  const contasFinanceiras = getContasFinanceiras().filter(c => c.status === 'Ativo');
+  const colaboradores = getColaboradores();
+  const cargos = getCargos();
+  
+  const [contaPagamento, setContaPagamento] = useState('');
   const [formaPagamento, setFormaPagamento] = useState('');
   const [parcelas, setParcelas] = useState('1');
+  const [responsavelFinanceiro, setResponsavelFinanceiro] = useState('');
+
+  // Filtrar colaboradores que têm permissão "Financeiro"
+  const colaboradoresFinanceiros = useMemo(() => {
+    const cargosComPermissaoFinanceiro = cargos
+      .filter(c => c.permissoes.includes('Financeiro'))
+      .map(c => c.id);
+    
+    return colaboradores.filter(col => cargosComPermissaoFinanceiro.includes(col.cargo));
+  }, [colaboradores, cargos]);
 
   const notasPendentes = notas.filter(n => n.status === 'Pendente');
 
   const handleVerNota = (nota: NotaCompra) => {
     setNotaSelecionada(nota);
+    setContaPagamento('');
+    setFormaPagamento('');
+    setParcelas('1');
+    setResponsavelFinanceiro('');
     setDialogOpen(true);
   };
 
-  const handleFinalizarNota = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!notaSelecionada) return;
+  const mostrarCampoParcelas = formaPagamento === 'Cartão de Crédito' || formaPagamento === 'Boleto';
+  
+  const botaoDesabilitado = !contaPagamento || !formaPagamento || !responsavelFinanceiro || (mostrarCampoParcelas && !parcelas);
 
-    const formData = new FormData(e.currentTarget);
-    
+  const handleFinalizarNota = () => {
+    if (!notaSelecionada || botaoDesabilitado) return;
+
     const pagamento = {
-      formaPagamento: formData.get('formaPagamento') as string,
-      parcelas: parseInt(formData.get('parcelas') as string || '1'),
-      valorParcela: parseFloat(formData.get('valorParcela') as string),
-      dataVencimento: formData.get('dataVencimento') as string
+      formaPagamento,
+      parcelas: parseInt(parcelas || '1'),
+      valorParcela: notaSelecionada.valorTotal / parseInt(parcelas || '1'),
+      dataVencimento: new Date().toISOString().split('T')[0]
     };
-    
-    const responsavel = formData.get('responsavel') as string;
 
-    const notaFinalizada = finalizarNota(notaSelecionada.id, pagamento, responsavel);
+    const notaFinalizada = finalizarNota(notaSelecionada.id, pagamento, responsavelFinanceiro);
     
     if (notaFinalizada) {
       setNotas(getNotasCompra());
@@ -48,11 +72,16 @@ export default function FinanceiroConferenciaNotas() {
       
       const totalProdutos = notaFinalizada.produtos.reduce((sum, p) => sum + p.quantidade, 0);
       
-      toast.success(`✅ Nota ${notaFinalizada.id} liberada – ${totalProdutos} produtos adicionados ao estoque!`);
+      toast.success(`✅ Nota ${notaFinalizada.id} liberada – ${totalProdutos} produtos adicionados ao estoque!`, {
+        duration: 5000,
+        style: {
+          background: '#22c55e',
+          color: 'white',
+          border: 'none'
+        }
+      });
     }
   };
-
-  const mostrarCampoParcelas = formaPagamento === 'Cartão de Crédito' || formaPagamento === 'Boleto';
 
   return (
     <FinanceiroLayout title="Conferência de Notas de Entrada">
@@ -84,8 +113,8 @@ export default function FinanceiroConferenciaNotas() {
                     <TableCell>{new Date(nota.data).toLocaleDateString('pt-BR')}</TableCell>
                     <TableCell className="font-mono text-xs">{nota.numeroNota}</TableCell>
                     <TableCell>{nota.fornecedor}</TableCell>
-                    <TableCell>
-                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(nota.valorTotal)}
+                    <TableCell className="font-semibold">
+                      {formatCurrency(nota.valorTotal)}
                     </TableCell>
                     <TableCell>
                       <Badge variant="destructive">{nota.status}</Badge>
@@ -109,7 +138,7 @@ export default function FinanceiroConferenciaNotas() {
             </DialogHeader>
             
             {notaSelecionada && (
-              <form onSubmit={handleFinalizarNota} className="space-y-6">
+              <div className="space-y-6">
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -134,7 +163,7 @@ export default function FinanceiroConferenciaNotas() {
                         <div key={idx} className="p-3 bg-muted/30 rounded">
                           <div className="flex justify-between">
                             <span className="font-medium">{prod.marca} {prod.modelo} - {prod.cor}</span>
-                            <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.valorTotal)}</span>
+                            <span>{formatCurrency(prod.valorTotal)}</span>
                           </div>
                           <div className="text-xs text-muted-foreground mt-1">
                             IMEI: {prod.imei} | Qtd: {prod.quantidade} | Tipo: {prod.tipo}
@@ -148,8 +177,22 @@ export default function FinanceiroConferenciaNotas() {
                     <h3 className="font-semibold mb-3 text-primary">Seção "Pagamento" (Habilitada)</h3>
                     <div className="grid gap-4">
                       <div>
-                        <Label htmlFor="formaPagamento">Forma de Pagamento*</Label>
-                        <Select name="formaPagamento" value={formaPagamento} onValueChange={setFormaPagamento} required>
+                        <Label htmlFor="contaPagamento">Conta de Pagamento *</Label>
+                        <Select value={contaPagamento} onValueChange={setContaPagamento}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a conta" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {contasFinanceiras.map(c => (
+                              <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label htmlFor="formaPagamento">Forma de Pagamento *</Label>
+                        <Select value={formaPagamento} onValueChange={setFormaPagamento}>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
@@ -165,43 +208,44 @@ export default function FinanceiroConferenciaNotas() {
 
                       {mostrarCampoParcelas && (
                         <div>
-                          <Label htmlFor="parcelas">Nº de Parcelas*</Label>
+                          <Label htmlFor="parcelas">Nº de Parcelas *</Label>
                           <Input 
                             id="parcelas" 
-                            name="parcelas" 
                             type="number" 
                             min="1" 
                             value={parcelas}
                             onChange={(e) => setParcelas(e.target.value)}
-                            required 
                           />
-                          {mostrarCampoParcelas && !parcelas && (
+                          {!parcelas && (
                             <p className="text-sm text-destructive mt-1">Informe o número de parcelas</p>
                           )}
                         </div>
                       )}
 
-                      <div className="grid gap-4">
-                        <div>
-                          <Label htmlFor="valorParcela">Valor da Parcela*</Label>
-                          <Input 
-                            id="valorParcela" 
-                            name="valorParcela" 
-                            type="number" 
-                            step="0.01" 
-                            defaultValue={notaSelecionada.valorTotal}
-                            required 
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="dataVencimento">Data Vencimento*</Label>
-                          <Input id="dataVencimento" name="dataVencimento" type="date" required />
-                        </div>
+                      <div>
+                        <Label htmlFor="responsavelFinanceiro">Responsável Financeiro *</Label>
+                        <Select value={responsavelFinanceiro} onValueChange={setResponsavelFinanceiro}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o responsável" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {colaboradoresFinanceiros.map(col => (
+                              <SelectItem key={col.id} value={col.nome}>{col.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {!responsavelFinanceiro && (
+                          <p className="text-sm text-muted-foreground mt-1">Selecione um colaborador com permissão financeira</p>
+                        )}
                       </div>
 
                       <div>
-                        <Label htmlFor="responsavel">Responsável Financeiro*</Label>
-                        <Input id="responsavel" name="responsavel" placeholder="Seu nome" required />
+                        <Label>Valor Total</Label>
+                        <Input 
+                          value={formatCurrency(notaSelecionada.valorTotal)} 
+                          disabled 
+                          className="font-bold text-lg"
+                        />
                       </div>
                     </div>
                   </div>
@@ -212,15 +256,15 @@ export default function FinanceiroConferenciaNotas() {
                     Cancelar
                   </Button>
                   <Button 
-                    type="submit" 
+                    onClick={handleFinalizarNota}
                     className="bg-green-600 hover:bg-green-700"
-                    disabled={!formaPagamento || (mostrarCampoParcelas && !parcelas)}
+                    disabled={botaoDesabilitado}
                   >
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Finalizar Nota
                   </Button>
                 </div>
-              </form>
+              </div>
             )}
           </DialogContent>
         </Dialog>
