@@ -194,7 +194,9 @@ export default function VendasNova() {
       bairro: novoCliente.bairro || '',
       cidade: novoCliente.cidade || '',
       estado: novoCliente.estado || '',
-      status: 'Ativo'
+      status: 'Ativo',
+      origemCliente: 'Venda',
+      idsCompras: []
     });
     
     setClientes([...clientes, cliente]);

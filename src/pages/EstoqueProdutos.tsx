@@ -3,14 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getProdutos, getLojas, exportToCSV, getEstoqueStats } from '@/utils/estoqueApi';
-import { Download, Eye, CheckCircle, XCircle, Package, DollarSign, AlertTriangle, FileWarning, AlertCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { getProdutos, getLojas, exportToCSV, getEstoqueStats, updateValorRecomendado, updateProdutoLoja, Produto } from '@/utils/estoqueApi';
+import { getColaboradores, getCargos } from '@/utils/cadastrosApi';
+import { Download, Eye, CheckCircle, XCircle, Package, DollarSign, AlertTriangle, FileWarning, AlertCircle, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -18,12 +22,28 @@ const formatCurrency = (value: number) => {
 
 export default function EstoqueProdutos() {
   const navigate = useNavigate();
-  const [produtos] = useState(getProdutos());
+  const [produtos, setProdutos] = useState(getProdutos());
   const stats = getEstoqueStats();
+  const lojasEstoque = getLojas();
+  const colaboradores = getColaboradores();
+  const cargos = getCargos();
+  
   const [lojaFilter, setLojaFilter] = useState<string>('todas');
   const [modeloFilter, setModeloFilter] = useState('');
   const [imeiFilter, setImeiFilter] = useState('');
   const [somenteNaoConferidos, setSomenteNaoConferidos] = useState(false);
+  
+  // Modal para informar valor recomendado
+  const [showValorModal, setShowValorModal] = useState(false);
+  const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
+  const [novoValorRecomendado, setNovoValorRecomendado] = useState('');
+  const [usuarioSelecionado, setUsuarioSelecionado] = useState('');
+
+  // Colaboradores com permissão de estoque
+  const colaboradoresEstoque = colaboradores.filter(col => {
+    const cargo = cargos.find(c => c.id === col.cargo);
+    return cargo?.permissoes.includes('Estoque') || cargo?.permissoes.includes('Admin');
+  });
 
   const produtosFiltrados = produtos.filter(p => {
     if (lojaFilter !== 'todas' && p.loja !== lojaFilter) return false;
@@ -43,6 +63,45 @@ export default function EstoqueProdutos() {
 
   const handleExport = () => {
     exportToCSV(produtosFiltrados, 'produtos-estoque.csv');
+  };
+
+  const handleOpenValorModal = (produto: Produto) => {
+    setProdutoSelecionado(produto);
+    setNovoValorRecomendado(produto.vendaRecomendada?.toString() || '');
+    setUsuarioSelecionado('');
+    setShowValorModal(true);
+  };
+
+  const handleSaveValorRecomendado = () => {
+    if (!produtoSelecionado || !novoValorRecomendado || !usuarioSelecionado) {
+      toast.error('Preencha todos os campos');
+      return;
+    }
+
+    const valor = parseFloat(novoValorRecomendado.replace(/[^\d,]/g, '').replace(',', '.'));
+    if (isNaN(valor) || valor <= 0) {
+      toast.error('Valor inválido');
+      return;
+    }
+
+    const usuario = colaboradores.find(c => c.id === usuarioSelecionado);
+    if (!usuario) {
+      toast.error('Selecione um usuário válido');
+      return;
+    }
+
+    updateValorRecomendado(produtoSelecionado.id, valor, usuario.nome);
+    setProdutos(getProdutos());
+    setShowValorModal(false);
+    toast.success(`Valor recomendado atualizado para ${formatCurrency(valor)}`);
+  };
+
+  const handleLojaChange = (produtoId: string, novaLoja: string) => {
+    // Usar o primeiro colaborador com permissão como responsável
+    const responsavel = colaboradoresEstoque[0]?.nome || 'Sistema';
+    updateProdutoLoja(produtoId, novaLoja, responsavel);
+    setProdutos(getProdutos());
+    toast.success(`Produto transferido para ${novaLoja}`);
   };
 
   return (
@@ -109,7 +168,7 @@ export default function EstoqueProdutos() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas as lojas</SelectItem>
-              {getLojas().map(loja => (
+              {lojasEstoque.map(loja => (
                 <SelectItem key={loja} value={loja}>{loja}</SelectItem>
               ))}
             </SelectContent>
@@ -146,7 +205,7 @@ export default function EstoqueProdutos() {
           </Button>
         </div>
 
-        <div className="rounded-md border">
+        <div className="rounded-md border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -158,6 +217,7 @@ export default function EstoqueProdutos() {
                 <TableHead>Custo</TableHead>
                 <TableHead>Venda Recomendada</TableHead>
                 <TableHead>Saúde Bat.</TableHead>
+                <TableHead>Loja do Produto</TableHead>
                 <TableHead>Estoque</TableHead>
                 <TableHead>Assistência</TableHead>
                 <TableHead>Ações</TableHead>
@@ -191,11 +251,35 @@ export default function EstoqueProdutos() {
                   </TableCell>
                   <TableCell>
                     {produto.vendaRecomendada ? (
-                      <span className="font-semibold text-green-600">{formatCurrency(produto.vendaRecomendada)}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-green-600">{formatCurrency(produto.vendaRecomendada)}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-6 w-6 p-0"
+                          onClick={() => handleOpenValorModal(produto)}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      </div>
                     ) : (
-                      <div className="flex items-center gap-1 text-destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <span className="text-xs">Pendente</span>
+                      <div className="flex items-center gap-1">
+                        {produto.statusNota === 'Pendente' ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive border-destructive hover:bg-destructive/10"
+                            onClick={() => handleOpenValorModal(produto)}
+                          >
+                            <AlertCircle className="h-4 w-4 mr-1" />
+                            Informar Valor
+                          </Button>
+                        ) : (
+                          <div className="flex items-center gap-1 text-destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <span className="text-xs">Pendente</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </TableCell>
@@ -208,6 +292,21 @@ export default function EstoqueProdutos() {
                     )}>
                       {produto.saudeBateria}%
                     </span>
+                  </TableCell>
+                  <TableCell>
+                    <Select 
+                      value={produto.loja} 
+                      onValueChange={(value) => handleLojaChange(produto.id, value)}
+                    >
+                      <SelectTrigger className="w-[140px] h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lojasEstoque.map(loja => (
+                          <SelectItem key={loja} value={loja}>{loja}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell>
                     {produto.estoqueConferido ? (
@@ -238,6 +337,83 @@ export default function EstoqueProdutos() {
           </Table>
         </div>
       </div>
+
+      {/* Modal Informar Valor Recomendado */}
+      <Dialog open={showValorModal} onOpenChange={setShowValorModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Informar Valor Recomendado</DialogTitle>
+          </DialogHeader>
+          {produtoSelecionado && (
+            <div className="space-y-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-medium">{produtoSelecionado.modelo}</p>
+                <p className="text-sm text-muted-foreground">{produtoSelecionado.cor} • IMEI: {produtoSelecionado.imei}</p>
+                <p className="text-sm">Custo: {formatCurrency(produtoSelecionado.valorCusto)}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="valorRecomendado">Valor Recomendado (R$)</Label>
+                <Input
+                  id="valorRecomendado"
+                  type="text"
+                  value={novoValorRecomendado}
+                  onChange={(e) => {
+                    // Permitir apenas números e vírgula
+                    const value = e.target.value.replace(/[^\d,]/g, '');
+                    setNovoValorRecomendado(value);
+                  }}
+                  placeholder="Ex: 5999,00"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="usuario">Usuário que Informou *</Label>
+                <Select value={usuarioSelecionado} onValueChange={setUsuarioSelecionado}>
+                  <SelectTrigger id="usuario">
+                    <SelectValue placeholder="Selecione o colaborador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {colaboradoresEstoque.map(col => (
+                      <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {produtoSelecionado.historicoValorRecomendado && produtoSelecionado.historicoValorRecomendado.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Histórico de Valor Recomendado</Label>
+                  <div className="max-h-32 overflow-y-auto space-y-1">
+                    {produtoSelecionado.historicoValorRecomendado.map((hist, idx) => (
+                      <div key={idx} className="text-xs p-2 bg-muted/50 rounded">
+                        <span className="font-medium">{new Date(hist.data).toLocaleDateString('pt-BR')}</span>
+                        <span className="mx-2">•</span>
+                        <span>{hist.usuario}</span>
+                        <span className="mx-2">•</span>
+                        <span>
+                          {hist.valorAntigo ? formatCurrency(hist.valorAntigo) : 'N/A'} → {formatCurrency(hist.valorNovo)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowValorModal(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSaveValorRecomendado}
+              disabled={!novoValorRecomendado || !usuarioSelecionado}
+            >
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </EstoqueLayout>
   );
 }

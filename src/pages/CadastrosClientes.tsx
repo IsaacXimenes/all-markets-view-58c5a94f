@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { getClientes, addCliente, updateCliente, deleteCliente, exportToCSV, Cliente } from '@/utils/cadastrosApi';
-import { Plus, Pencil, Trash2, Download } from 'lucide-react';
+import { getClientes, addCliente, updateCliente, deleteCliente, exportToCSV, Cliente, getClienteByCpf } from '@/utils/cadastrosApi';
+import { Plus, Pencil, Trash2, Download, Crown, User, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function CadastrosClientes() {
@@ -28,7 +28,8 @@ export default function CadastrosClientes() {
     bairro: '',
     cidade: '',
     estado: '',
-    status: 'Ativo' as 'Ativo' | 'Inativo'
+    status: 'Ativo' as 'Ativo' | 'Inativo',
+    origemCliente: 'Venda' as 'Assistência' | 'Venda'
   });
 
   const resetForm = () => {
@@ -44,7 +45,8 @@ export default function CadastrosClientes() {
       bairro: '',
       cidade: '',
       estado: '',
-      status: 'Ativo'
+      status: 'Ativo',
+      origemCliente: 'Venda'
     });
     setEditingCliente(null);
   };
@@ -52,7 +54,21 @@ export default function CadastrosClientes() {
   const handleOpenDialog = (cliente?: Cliente) => {
     if (cliente) {
       setEditingCliente(cliente);
-      setForm({ ...cliente });
+      setForm({ 
+        nome: cliente.nome,
+        cpf: cliente.cpf,
+        telefone: cliente.telefone,
+        dataNascimento: cliente.dataNascimento,
+        email: cliente.email,
+        cep: cliente.cep,
+        endereco: cliente.endereco,
+        numero: cliente.numero,
+        bairro: cliente.bairro,
+        cidade: cliente.cidade,
+        estado: cliente.estado,
+        status: cliente.status,
+        origemCliente: cliente.origemCliente
+      });
     } else {
       resetForm();
     }
@@ -65,11 +81,31 @@ export default function CadastrosClientes() {
       return;
     }
 
+    // Validar se CPF já existe e está inativo (bloqueio)
+    if (!editingCliente) {
+      const clienteExistente = getClienteByCpf(form.cpf);
+      if (clienteExistente && clienteExistente.status === 'Inativo') {
+        toast({ 
+          title: 'Cliente Bloqueado', 
+          description: 'Este CPF pertence a um cliente inativo. Não é permitido cadastrar novamente.', 
+          variant: 'destructive' 
+        });
+        return;
+      }
+    }
+
     if (editingCliente) {
-      updateCliente(editingCliente.id, form);
+      updateCliente(editingCliente.id, {
+        ...form,
+        idsCompras: editingCliente.idsCompras
+      });
       toast({ title: 'Sucesso', description: 'Cliente atualizado com sucesso' });
     } else {
-      addCliente(form);
+      addCliente({
+        ...form,
+        idsCompras: [],
+        origemCliente: form.origemCliente
+      });
       toast({ title: 'Sucesso', description: 'Cliente cadastrado com sucesso' });
     }
 
@@ -85,7 +121,32 @@ export default function CadastrosClientes() {
   };
 
   const handleExport = () => {
-    exportToCSV(clientes, 'clientes.csv');
+    const dataExport = clientes.map(c => ({
+      ID: c.id,
+      Nome: c.nome,
+      CPF: c.cpf,
+      Telefone: c.telefone,
+      Email: c.email,
+      Cidade: c.cidade,
+      Estado: c.estado,
+      Status: c.status,
+      Origem: c.origemCliente,
+      TipoCliente: c.tipoCliente,
+      NumCompras: c.idsCompras.length,
+      IDsCompras: c.idsCompras.join('; ')
+    }));
+    exportToCSV(dataExport, 'clientes.csv');
+  };
+
+  const getTipoClienteBadge = (tipo: string) => {
+    switch (tipo) {
+      case 'VIP':
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600"><Crown className="h-3 w-3 mr-1" />VIP</Badge>;
+      case 'Normal':
+        return <Badge variant="secondary"><User className="h-3 w-3 mr-1" />Normal</Badge>;
+      default:
+        return <Badge variant="outline"><UserPlus className="h-3 w-3 mr-1" />Novo</Badge>;
+    }
   };
 
   return (
@@ -104,7 +165,7 @@ export default function CadastrosClientes() {
           </div>
         </div>
 
-        <div className="rounded-md border">
+        <div className="rounded-md border overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -114,13 +175,16 @@ export default function CadastrosClientes() {
                 <TableHead>Telefone</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Cidade/UF</TableHead>
+                <TableHead>Origem</TableHead>
+                <TableHead>Tipo Cliente</TableHead>
+                <TableHead>IDs Compras</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {clientes.map(cliente => (
-                <TableRow key={cliente.id}>
+                <TableRow key={cliente.id} className={cliente.status === 'Inativo' ? 'opacity-50' : ''}>
                   <TableCell className="font-mono text-xs">{cliente.id}</TableCell>
                   <TableCell className="font-medium">{cliente.nome}</TableCell>
                   <TableCell className="text-xs">{cliente.cpf}</TableCell>
@@ -128,7 +192,20 @@ export default function CadastrosClientes() {
                   <TableCell className="text-xs">{cliente.email}</TableCell>
                   <TableCell>{cliente.cidade}/{cliente.estado}</TableCell>
                   <TableCell>
-                    <Badge variant={cliente.status === 'Ativo' ? 'default' : 'secondary'}>
+                    <Badge variant={cliente.origemCliente === 'Venda' ? 'default' : 'secondary'}>
+                      {cliente.origemCliente}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {getTipoClienteBadge(cliente.tipoCliente)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="max-w-[150px] truncate text-xs text-muted-foreground" title={cliente.idsCompras.join(', ')}>
+                      {cliente.idsCompras.length > 0 ? cliente.idsCompras.join(', ') : '-'}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={cliente.status === 'Ativo' ? 'default' : 'destructive'}>
                       {cliente.status}
                     </Badge>
                   </TableCell>
@@ -200,6 +277,16 @@ export default function CadastrosClientes() {
               <Input value={form.estado} onChange={e => setForm({ ...form, estado: e.target.value })} maxLength={2} />
             </div>
             <div className="space-y-2">
+              <Label>Origem do Cliente</Label>
+              <Select value={form.origemCliente} onValueChange={v => setForm({ ...form, origemCliente: v as 'Assistência' | 'Venda' })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Venda">Venda</SelectItem>
+                  <SelectItem value="Assistência">Assistência</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>Status</Label>
               <Select value={form.status} onValueChange={v => setForm({ ...form, status: v as 'Ativo' | 'Inativo' })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -209,6 +296,25 @@ export default function CadastrosClientes() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {editingCliente && (
+              <>
+                <div className="space-y-2">
+                  <Label>Tipo de Cliente (automático)</Label>
+                  <div className="pt-2">
+                    {getTipoClienteBadge(editingCliente.tipoCliente)}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>IDs das Compras</Label>
+                  <div className="text-sm text-muted-foreground p-2 bg-muted rounded">
+                    {editingCliente.idsCompras.length > 0 
+                      ? editingCliente.idsCompras.join(', ') 
+                      : 'Nenhuma compra registrada'}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>

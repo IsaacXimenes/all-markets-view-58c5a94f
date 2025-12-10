@@ -16,7 +16,7 @@ export interface Pagamento {
   data: string;
   descricao: string;
   valor: number;
-  meioPagamento: 'Pix' | 'Dinheiro' | 'Cartão Crédito' | 'Cartão Débito' | 'Transferência' | 'Outro';
+  meioPagamento: 'Pix' | 'Dinheiro' | 'Cartão Crédito' | 'Cartão Débito' | 'Transferência' | 'Boleto' | 'Outro';
   conta: string;
   loja: string;
   status: 'Pendente' | 'Conferido';
@@ -115,12 +115,14 @@ let contas: Conta[] = [
   }
 ];
 
+// Pagamentos com 5 pendentes e 5 conferidos em 14/01/2025
 let pagamentos: Pagamento[] = [
+  // Pendentes (mais recentes primeiro ao ordenar)
   {
     id: 'PAG-2025-0001',
-    data: '2025-01-15',
-    descricao: 'Venda iPhone 15 Pro',
-    valor: 8999.00,
+    data: '2025-01-14',
+    descricao: 'Venda iPhone 15 Pro Max',
+    valor: 12999.00,
     meioPagamento: 'Pix',
     conta: 'Pix Loja Shopping',
     loja: 'Loja Shopping',
@@ -128,9 +130,9 @@ let pagamentos: Pagamento[] = [
   },
   {
     id: 'PAG-2025-0002',
-    data: '2025-01-16',
-    descricao: 'Venda AirPods Pro',
-    valor: 2499.00,
+    data: '2025-01-14',
+    descricao: 'Venda MacBook Air M2',
+    valor: 8499.00,
     meioPagamento: 'Cartão Crédito',
     conta: 'Conta Bancária Principal',
     loja: 'Loja Centro',
@@ -138,47 +140,48 @@ let pagamentos: Pagamento[] = [
   },
   {
     id: 'PAG-2025-0003',
-    data: '2025-01-16',
-    descricao: 'Venda Apple Watch',
-    valor: 4799.00,
+    data: '2025-01-14',
+    descricao: 'Venda Apple Watch Ultra 2',
+    valor: 5999.00,
     meioPagamento: 'Dinheiro',
     conta: 'Caixa Loja Centro',
     loja: 'Loja Centro',
-    status: 'Conferido'
-  },
-  {
-    id: 'PAG-2025-0004',
-    data: '2025-01-17',
-    descricao: 'Venda MacBook Air',
-    valor: 12999.00,
-    meioPagamento: 'Transferência',
-    conta: 'Conta Digital Norte',
-    loja: 'Loja Norte',
     status: 'Pendente'
   },
   {
-    id: 'PAG-2025-0005',
-    data: '2025-01-17',
-    descricao: 'Venda Capinha iPhone',
-    valor: 149.90,
+    id: 'PAG-2025-0004',
+    data: '2025-01-14',
+    descricao: 'Venda AirPods Pro 2',
+    valor: 2199.00,
     meioPagamento: 'Pix',
     conta: 'Pix Loja Oeste',
     loja: 'Loja Oeste',
     status: 'Pendente'
   },
   {
+    id: 'PAG-2025-0005',
+    data: '2025-01-14',
+    descricao: 'Venda iPad Pro 12.9"',
+    valor: 9899.00,
+    meioPagamento: 'Transferência',
+    conta: 'Conta Digital Norte',
+    loja: 'Loja Norte',
+    status: 'Pendente'
+  },
+  // Conferidos
+  {
     id: 'PAG-2025-0006',
-    data: '2025-01-18',
-    descricao: 'Venda iPad Pro',
-    valor: 9999.00,
+    data: '2025-01-14',
+    descricao: 'Venda iPhone 14',
+    valor: 5499.00,
     meioPagamento: 'Cartão Débito',
     conta: 'Conta Bancária Loja Leste',
     loja: 'Loja Leste',
-    status: 'Pendente'
+    status: 'Conferido'
   },
   {
     id: 'PAG-2025-0007',
-    data: '2025-01-18',
+    data: '2025-01-14',
     descricao: 'Venda Carregador MagSafe',
     valor: 399.00,
     meioPagamento: 'Dinheiro',
@@ -188,13 +191,33 @@ let pagamentos: Pagamento[] = [
   },
   {
     id: 'PAG-2025-0008',
-    data: '2025-01-19',
-    descricao: 'Venda Apple Pencil',
+    data: '2025-01-14',
+    descricao: 'Venda Apple Pencil 2',
     valor: 1299.00,
     meioPagamento: 'Pix',
     conta: 'Pix Loja Shopping',
     loja: 'Loja Shopping',
-    status: 'Pendente'
+    status: 'Conferido'
+  },
+  {
+    id: 'PAG-2025-0009',
+    data: '2025-01-14',
+    descricao: 'Venda Magic Keyboard',
+    valor: 1599.00,
+    meioPagamento: 'Cartão Crédito',
+    conta: 'Conta Bancária Principal',
+    loja: 'Loja Centro',
+    status: 'Conferido'
+  },
+  {
+    id: 'PAG-2025-0010',
+    data: '2025-01-14',
+    descricao: 'Venda iPhone 13',
+    valor: 4299.00,
+    meioPagamento: 'Boleto',
+    conta: 'Conta Digital Administrativo',
+    loja: 'Loja Norte',
+    status: 'Conferido'
   }
 ];
 
@@ -285,7 +308,16 @@ export const deleteConta = (id: string): boolean => {
 };
 
 export const getPagamentos = (): Pagamento[] => {
-  return [...pagamentos];
+  // Ordenar: Pendentes primeiro, depois Conferidos
+  // Dentro de cada grupo, ordenar por data mais recente (descendente)
+  const sorted = [...pagamentos].sort((a, b) => {
+    // Primeiro por status (Pendente antes de Conferido)
+    if (a.status === 'Pendente' && b.status === 'Conferido') return -1;
+    if (a.status === 'Conferido' && b.status === 'Pendente') return 1;
+    // Depois por data (mais recente primeiro)
+    return new Date(b.data).getTime() - new Date(a.data).getTime();
+  });
+  return sorted;
 };
 
 export const conferirPagamento = (id: string): boolean => {

@@ -28,6 +28,9 @@ export interface Cliente {
   cidade: string;
   estado: string;
   status: 'Ativo' | 'Inativo';
+  origemCliente: 'Assistência' | 'Venda';
+  idsCompras: string[];
+  tipoCliente: 'Novo' | 'Normal' | 'VIP';
 }
 
 export interface Colaborador {
@@ -99,6 +102,14 @@ export interface ContaFinanceira {
   ultimoMovimento?: string;
 }
 
+// Helper para calcular tipo de cliente
+const calcularTipoCliente = (idsCompras: string[]): 'Novo' | 'Normal' | 'VIP' => {
+  const numCompras = idsCompras.length;
+  if (numCompras === 0) return 'Novo';
+  if (numCompras === 1) return 'Normal';
+  return 'VIP';
+};
+
 // Mock Data
 let lojas: Loja[] = [
   { id: 'LOJA-001', nome: 'Thiago Imports Centro', cnpj: '12.345.678/0001-01', endereco: 'Rua das Flores, 123', telefone: '(11) 3456-7890', cep: '01310-100', cidade: 'São Paulo', estado: 'SP', responsavel: 'COL-001', horarioFuncionamento: '09:00 - 18:00', status: 'Ativo' },
@@ -115,11 +126,11 @@ let lojas: Loja[] = [
 ];
 
 let clientes: Cliente[] = [
-  { id: 'CLI-001', nome: 'João Silva', cpf: '123.456.789-00', telefone: '(11) 99999-1111', dataNascimento: '1985-05-15', email: 'joao@email.com', cep: '01310-100', endereco: 'Rua das Flores', numero: '123', bairro: 'Centro', cidade: 'São Paulo', estado: 'SP', status: 'Ativo' },
-  { id: 'CLI-002', nome: 'Maria Santos', cpf: '234.567.890-11', telefone: '(11) 99999-2222', dataNascimento: '1990-08-20', email: 'maria@email.com', cep: '02020-000', endereco: 'Av. Norte', numero: '456', bairro: 'Santana', cidade: 'São Paulo', estado: 'SP', status: 'Ativo' },
-  { id: 'CLI-003', nome: 'Pedro Oliveira', cpf: '345.678.901-22', telefone: '(11) 99999-3333', dataNascimento: '1988-12-10', email: 'pedro@email.com', cep: '04040-000', endereco: 'Rua Sul', numero: '789', bairro: 'Moema', cidade: 'São Paulo', estado: 'SP', status: 'Ativo' },
-  { id: 'CLI-004', nome: 'Ana Costa', cpf: '456.789.012-33', telefone: '(11) 99999-4444', dataNascimento: '1995-03-25', email: 'ana@email.com', cep: '05050-000', endereco: 'Av. Paulista', numero: '1000', bairro: 'Bela Vista', cidade: 'São Paulo', estado: 'SP', status: 'Ativo' },
-  { id: 'CLI-005', nome: 'Carlos Ferreira', cpf: '567.890.123-44', telefone: '(11) 99999-5555', dataNascimento: '1982-07-30', email: 'carlos@email.com', cep: '06060-000', endereco: 'Rua Augusta', numero: '500', bairro: 'Consolação', cidade: 'São Paulo', estado: 'SP', status: 'Inativo' },
+  { id: 'CLI-001', nome: 'João Silva', cpf: '123.456.789-00', telefone: '(11) 99999-1111', dataNascimento: '1985-05-15', email: 'joao@email.com', cep: '01310-100', endereco: 'Rua das Flores', numero: '123', bairro: 'Centro', cidade: 'São Paulo', estado: 'SP', status: 'Ativo', origemCliente: 'Venda', idsCompras: ['VEN-2025-0001', 'VEN-2025-0005', 'VEN-2025-0008'], tipoCliente: 'VIP' },
+  { id: 'CLI-002', nome: 'Maria Santos', cpf: '234.567.890-11', telefone: '(11) 99999-2222', dataNascimento: '1990-08-20', email: 'maria@email.com', cep: '02020-000', endereco: 'Av. Norte', numero: '456', bairro: 'Santana', cidade: 'São Paulo', estado: 'SP', status: 'Ativo', origemCliente: 'Venda', idsCompras: ['VEN-2025-0002'], tipoCliente: 'Normal' },
+  { id: 'CLI-003', nome: 'Pedro Oliveira', cpf: '345.678.901-22', telefone: '(11) 99999-3333', dataNascimento: '1988-12-10', email: 'pedro@email.com', cep: '04040-000', endereco: 'Rua Sul', numero: '789', bairro: 'Moema', cidade: 'São Paulo', estado: 'SP', status: 'Ativo', origemCliente: 'Assistência', idsCompras: [], tipoCliente: 'Novo' },
+  { id: 'CLI-004', nome: 'Ana Costa', cpf: '456.789.012-33', telefone: '(11) 99999-4444', dataNascimento: '1995-03-25', email: 'ana@email.com', cep: '05050-000', endereco: 'Av. Paulista', numero: '1000', bairro: 'Bela Vista', cidade: 'São Paulo', estado: 'SP', status: 'Ativo', origemCliente: 'Venda', idsCompras: ['VEN-2025-0003', 'VEN-2025-0006'], tipoCliente: 'VIP' },
+  { id: 'CLI-005', nome: 'Carlos Ferreira', cpf: '567.890.123-44', telefone: '(11) 99999-5555', dataNascimento: '1982-07-30', email: 'carlos@email.com', cep: '06060-000', endereco: 'Rua Augusta', numero: '500', bairro: 'Consolação', cidade: 'São Paulo', estado: 'SP', status: 'Inativo', origemCliente: 'Venda', idsCompras: ['VEN-2025-0004'], tipoCliente: 'Normal' },
 ];
 
 let colaboradores: Colaborador[] = [
@@ -267,22 +278,48 @@ export const deleteLoja = (id: string) => {
 };
 
 export const getClientes = () => [...clientes];
-export const addCliente = (cliente: Omit<Cliente, 'id'>) => {
+export const getClienteById = (id: string) => clientes.find(c => c.id === id);
+export const getClienteByCpf = (cpf: string) => clientes.find(c => c.cpf === cpf);
+export const addCliente = (cliente: Omit<Cliente, 'id' | 'tipoCliente'>) => {
   const newId = `CLI-${String(clientes.length + 1).padStart(3, '0')}`;
-  const newCliente = { ...cliente, id: newId };
+  const idsCompras = cliente.idsCompras || [];
+  const newCliente: Cliente = { 
+    ...cliente, 
+    id: newId, 
+    idsCompras,
+    tipoCliente: calcularTipoCliente(idsCompras),
+    origemCliente: cliente.origemCliente || 'Venda'
+  };
   clientes.push(newCliente);
   return newCliente;
 };
 export const updateCliente = (id: string, updates: Partial<Cliente>) => {
   const index = clientes.findIndex(c => c.id === id);
   if (index !== -1) {
-    clientes[index] = { ...clientes[index], ...updates };
+    const updatedCliente = { ...clientes[index], ...updates };
+    // Recalcular tipo de cliente se idsCompras foi atualizado
+    if (updates.idsCompras) {
+      updatedCliente.tipoCliente = calcularTipoCliente(updates.idsCompras);
+    }
+    clientes[index] = updatedCliente;
     return clientes[index];
   }
   return null;
 };
 export const deleteCliente = (id: string) => {
   clientes = clientes.filter(c => c.id !== id);
+};
+// Adicionar compra ao cliente
+export const addCompraToCliente = (clienteId: string, vendaId: string) => {
+  const cliente = clientes.find(c => c.id === clienteId);
+  if (cliente) {
+    if (!cliente.idsCompras.includes(vendaId)) {
+      cliente.idsCompras.push(vendaId);
+      cliente.tipoCliente = calcularTipoCliente(cliente.idsCompras);
+    }
+    return cliente;
+  }
+  return null;
 };
 
 export const getColaboradores = () => [...colaboradores];

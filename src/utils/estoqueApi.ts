@@ -1,4 +1,11 @@
 // Tipos
+export interface HistoricoValorRecomendado {
+  data: string;
+  usuario: string;
+  valorAntigo: number | null;
+  valorNovo: number;
+}
+
 export interface Produto {
   id: string;
   imei: string;
@@ -18,6 +25,8 @@ export interface Produto {
   condicao: string;
   pareceres?: string;
   historicoCusto: { data: string; fornecedor: string; valor: number }[];
+  historicoValorRecomendado: HistoricoValorRecomendado[];
+  statusNota: 'Pendente' | 'Concluído';
 }
 
 export interface NotaCompra {
@@ -86,6 +95,7 @@ let produtos: Produto[] = [
     quantidade: 1,
     valorCusto: 7200.00,
     valorVendaSugerido: 15120.00,
+    vendaRecomendada: 12999.00,
     saudeBateria: 100,
     loja: 'Loja Centro',
     estoqueConferido: true,
@@ -95,7 +105,11 @@ let produtos: Produto[] = [
       { data: '2024-11-15', fornecedor: 'Apple Distribuidor BR', valor: 7200.00 },
       { data: '2024-10-20', fornecedor: 'TechSupply Imports', valor: 7350.00 },
       { data: '2024-09-10', fornecedor: 'MobileWorld Atacado', valor: 7100.00 }
-    ]
+    ],
+    historicoValorRecomendado: [
+      { data: '2025-01-10', usuario: 'Lucas Mendes', valorAntigo: null, valorNovo: 12999.00 }
+    ],
+    statusNota: 'Concluído'
   },
   {
     id: 'PROD-0002',
@@ -107,6 +121,7 @@ let produtos: Produto[] = [
     quantidade: 1,
     valorCusto: 6400.00,
     valorVendaSugerido: 13440.00,
+    vendaRecomendada: 10999.00,
     saudeBateria: 100,
     loja: 'Loja Shopping',
     estoqueConferido: true,
@@ -115,7 +130,11 @@ let produtos: Produto[] = [
     historicoCusto: [
       { data: '2024-11-18', fornecedor: 'Apple Distribuidor BR', valor: 6400.00 },
       { data: '2024-10-25', fornecedor: 'iStore Fornecedor', valor: 6500.00 }
-    ]
+    ],
+    historicoValorRecomendado: [
+      { data: '2025-01-08', usuario: 'Fernanda Lima', valorAntigo: null, valorNovo: 10999.00 }
+    ],
+    statusNota: 'Concluído'
   },
   {
     id: 'PROD-0003',
@@ -127,6 +146,7 @@ let produtos: Produto[] = [
     quantidade: 1,
     valorCusto: 3800.00,
     valorVendaSugerido: 6840.00,
+    vendaRecomendada: 5499.00,
     saudeBateria: 92,
     loja: 'Loja Norte',
     estoqueConferido: true,
@@ -135,7 +155,11 @@ let produtos: Produto[] = [
     pareceres: 'Sem riscos, bateria em ótimo estado',
     historicoCusto: [
       { data: '2024-11-10', fornecedor: 'TechSupply Imports', valor: 3800.00 }
-    ]
+    ],
+    historicoValorRecomendado: [
+      { data: '2025-01-05', usuario: 'Roberto Alves', valorAntigo: null, valorNovo: 5499.00 }
+    ],
+    statusNota: 'Concluído'
   },
   {
     id: 'PROD-0004',
@@ -147,6 +171,7 @@ let produtos: Produto[] = [
     quantidade: 1,
     valorCusto: 2400.00,
     valorVendaSugerido: 4320.00,
+    vendaRecomendada: 3599.00,
     saudeBateria: 78,
     loja: 'Loja Sul',
     estoqueConferido: true,
@@ -155,7 +180,11 @@ let produtos: Produto[] = [
     pareceres: 'Bateria abaixo de 80%, considerar troca',
     historicoCusto: [
       { data: '2024-11-05', fornecedor: 'MobileWorld Atacado', valor: 2400.00 }
-    ]
+    ],
+    historicoValorRecomendado: [
+      { data: '2025-01-06', usuario: 'Lucas Mendes', valorAntigo: null, valorNovo: 3599.00 }
+    ],
+    statusNota: 'Concluído'
   },
   {
     id: 'PROD-0005',
@@ -167,6 +196,7 @@ let produtos: Produto[] = [
     quantidade: 1,
     valorCusto: 5200.00,
     valorVendaSugerido: 10920.00,
+    vendaRecomendada: 8999.00,
     saudeBateria: 100,
     loja: 'Loja Oeste',
     estoqueConferido: true,
@@ -174,7 +204,11 @@ let produtos: Produto[] = [
     condicao: 'Lacrado',
     historicoCusto: [
       { data: '2024-11-22', fornecedor: 'Apple Distribuidor BR', valor: 5200.00 }
-    ]
+    ],
+    historicoValorRecomendado: [
+      { data: '2025-01-09', usuario: 'Fernanda Lima', valorAntigo: null, valorNovo: 8999.00 }
+    ],
+    statusNota: 'Concluído'
   },
   {
     id: 'PROD-0006',
@@ -194,7 +228,9 @@ let produtos: Produto[] = [
     pareceres: 'Bateria muito degradada, necessita troca urgente',
     historicoCusto: [
       { data: '2024-11-20', fornecedor: 'GlobalCell Supply', valor: 1900.00 }
-    ]
+    ],
+    historicoValorRecomendado: [],
+    statusNota: 'Pendente'
   },
   {
     id: 'PROD-0007',
@@ -206,6 +242,7 @@ let produtos: Produto[] = [
     quantidade: 1,
     valorCusto: 5800.00,
     valorVendaSugerido: 12180.00,
+    vendaRecomendada: 9499.00,
     saudeBateria: 100,
     loja: 'Loja Shopping',
     estoqueConferido: true,
@@ -213,7 +250,11 @@ let produtos: Produto[] = [
     condicao: 'Lacrado',
     historicoCusto: [
       { data: '2024-11-19', fornecedor: 'Eletrônicos Premium', valor: 5800.00 }
-    ]
+    ],
+    historicoValorRecomendado: [
+      { data: '2025-01-07', usuario: 'Roberto Alves', valorAntigo: null, valorNovo: 9499.00 }
+    ],
+    statusNota: 'Concluído'
   },
   {
     id: 'PROD-0008',
@@ -225,6 +266,7 @@ let produtos: Produto[] = [
     quantidade: 1,
     valorCusto: 1400.00,
     valorVendaSugerido: 2520.00,
+    vendaRecomendada: 2199.00,
     saudeBateria: 85,
     loja: 'Loja Norte',
     estoqueConferido: true,
@@ -232,7 +274,11 @@ let produtos: Produto[] = [
     condicao: 'Bom estado',
     historicoCusto: [
       { data: '2024-11-12', fornecedor: 'PhoneParts Brasil', valor: 1400.00 }
-    ]
+    ],
+    historicoValorRecomendado: [
+      { data: '2025-01-04', usuario: 'Lucas Mendes', valorAntigo: null, valorNovo: 2199.00 }
+    ],
+    statusNota: 'Concluído'
   },
   {
     id: 'PROD-0009',
@@ -244,6 +290,7 @@ let produtos: Produto[] = [
     quantidade: 1,
     valorCusto: 3200.00,
     valorVendaSugerido: 5760.00,
+    vendaRecomendada: 4799.00,
     saudeBateria: 88,
     loja: 'Loja Sul',
     estoqueConferido: true,
@@ -251,7 +298,11 @@ let produtos: Produto[] = [
     condicao: 'Excelente estado',
     historicoCusto: [
       { data: '2024-11-08', fornecedor: 'TechnoImports', valor: 3200.00 }
-    ]
+    ],
+    historicoValorRecomendado: [
+      { data: '2025-01-03', usuario: 'Fernanda Lima', valorAntigo: null, valorNovo: 4799.00 }
+    ],
+    statusNota: 'Concluído'
   },
   {
     id: 'PROD-0010',
@@ -270,7 +321,9 @@ let produtos: Produto[] = [
     condicao: 'Lacrado',
     historicoCusto: [
       { data: '2024-11-25', fornecedor: 'Apple Distribuidor BR', valor: 6400.00 }
-    ]
+    ],
+    historicoValorRecomendado: [],
+    statusNota: 'Pendente'
   },
   {
     id: 'PROD-0011',
@@ -289,7 +342,9 @@ let produtos: Produto[] = [
     condicao: 'Bom estado',
     historicoCusto: [
       { data: '2024-11-14', fornecedor: 'FastCell Distribuição', valor: 3400.00 }
-    ]
+    ],
+    historicoValorRecomendado: [],
+    statusNota: 'Pendente'
   },
   {
     id: 'PROD-0012',
@@ -309,7 +364,9 @@ let produtos: Produto[] = [
     pareceres: 'Bateria degradada, trocar antes da venda',
     historicoCusto: [
       { data: '2024-11-17', fornecedor: 'MegaTech Distribuidor', valor: 1600.00 }
-    ]
+    ],
+    historicoValorRecomendado: [],
+    statusNota: 'Pendente'
   }
 ];
 
@@ -486,6 +543,56 @@ export const updateProduto = (id: string, updates: Partial<Produto>): Produto | 
   return produtos[index];
 };
 
+// Atualizar valor recomendado com histórico
+export const updateValorRecomendado = (
+  id: string, 
+  novoValor: number, 
+  usuario: string
+): Produto | null => {
+  const produto = produtos.find(p => p.id === id);
+  if (!produto) return null;
+
+  const historicoEntry: HistoricoValorRecomendado = {
+    data: new Date().toISOString().split('T')[0],
+    usuario,
+    valorAntigo: produto.vendaRecomendada || null,
+    valorNovo: novoValor
+  };
+
+  produto.vendaRecomendada = novoValor;
+  if (!produto.historicoValorRecomendado) {
+    produto.historicoValorRecomendado = [];
+  }
+  produto.historicoValorRecomendado.unshift(historicoEntry);
+
+  return produto;
+};
+
+// Atualizar loja do produto (transferência rápida)
+export const updateProdutoLoja = (id: string, novaLoja: string, responsavel: string): Produto | null => {
+  const produto = produtos.find(p => p.id === id);
+  if (!produto) return null;
+
+  const lojaAntiga = produto.loja;
+  produto.loja = novaLoja;
+
+  // Registrar movimentação
+  const newMovId = `MOV-${new Date().getFullYear()}-${String(movimentacoes.length + 1).padStart(4, '0')}`;
+  movimentacoes.push({
+    id: newMovId,
+    data: new Date().toISOString().split('T')[0],
+    produto: produto.modelo,
+    imei: produto.imei,
+    quantidade: produto.quantidade,
+    origem: lojaAntiga,
+    destino: novaLoja,
+    responsavel,
+    motivo: 'Transferência via tabela de produtos'
+  });
+
+  return produto;
+};
+
 export const getNotasCompra = (): NotaCompra[] => {
   return [...notasCompra];
 };
@@ -503,20 +610,26 @@ export const addNotaCompra = (nota: Omit<NotaCompra, 'id' | 'status'>): NotaComp
   return newNota;
 };
 
-export const finalizarNota = (id: string, pagamento: NotaCompra['pagamento'], responsavel: string): NotaCompra | null => {
+export const updateNota = (id: string, updates: Partial<NotaCompra>): NotaCompra | null => {
+  const index = notasCompra.findIndex(n => n.id === id);
+  if (index === -1) return null;
+  notasCompra[index] = { ...notasCompra[index], ...updates };
+  return notasCompra[index];
+};
+
+export const finalizarNota = (id: string, pagamento: NotaCompra['pagamento'], responsavelFinanceiro: string): NotaCompra | null => {
   const nota = notasCompra.find(n => n.id === id);
   if (!nota) return null;
   
-  nota.status = 'Concluído';
   nota.pagamento = pagamento;
-  nota.responsavelFinanceiro = responsavel;
+  nota.responsavelFinanceiro = responsavelFinanceiro;
+  nota.status = 'Concluído';
   
-  // Liberar produtos automaticamente
-  nota.produtos.forEach(prod => {
-    const produto = produtos.find(p => p.imei === prod.imei);
+  // Atualizar status dos produtos relacionados
+  nota.produtos.forEach(prodNota => {
+    const produto = produtos.find(p => p.imei === prodNota.imei);
     if (produto) {
-      produto.estoqueConferido = true;
-      produto.assistenciaConferida = true;
+      produto.statusNota = 'Concluído';
     }
   });
   
@@ -531,18 +644,22 @@ export const addMovimentacao = (mov: Omit<Movimentacao, 'id'>): Movimentacao => 
   const year = new Date().getFullYear();
   const num = movimentacoes.filter(m => m.id.includes(String(year))).length + 1;
   const newId = `MOV-${year}-${String(num).padStart(4, '0')}`;
-  const newMov = { ...mov, id: newId };
+  const newMov: Movimentacao = { ...mov, id: newId };
   movimentacoes.push(newMov);
   return newMov;
 };
 
-export const getLojas = () => lojas;
-export const getFornecedores = () => fornecedores;
+export const getLojas = (): string[] => {
+  return [...lojas];
+};
 
-// Estatísticas do dashboard
+export const getFornecedores = (): string[] => {
+  return [...fornecedores];
+};
+
 export const getEstoqueStats = () => {
   const totalProdutos = produtos.length;
-  const valorTotalEstoque = produtos.reduce((acc, p) => acc + p.valorCusto, 0);
+  const valorTotalEstoque = produtos.reduce((acc, p) => acc + p.valorCusto * p.quantidade, 0);
   const produtosBateriaFraca = produtos.filter(p => p.saudeBateria < 85).length;
   const notasPendentes = notasCompra.filter(n => n.status === 'Pendente').length;
   
@@ -557,22 +674,24 @@ export const getEstoqueStats = () => {
 export const exportToCSV = (data: any[], filename: string) => {
   if (data.length === 0) return;
   
-  const headers = Object.keys(data[0]).join(',');
-  const rows = data.map(item => 
-    Object.values(item).map(value => 
-      typeof value === 'string' && value.includes(',') ? `"${value}"` : value
-    ).join(',')
-  );
+  const headers = Object.keys(data[0]);
+  const csvContent = [
+    headers.join(','),
+    ...data.map(row => headers.map(header => {
+      const value = row[header];
+      if (typeof value === 'string' && value.includes(',')) {
+        return `"${value}"`;
+      }
+      if (Array.isArray(value)) {
+        return `"${JSON.stringify(value)}"`;
+      }
+      return value;
+    }).join(','))
+  ].join('\n');
   
-  const csv = [headers, ...rows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
   link.click();
-  document.body.removeChild(link);
 };
