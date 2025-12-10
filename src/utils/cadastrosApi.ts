@@ -492,4 +492,3 @@ export const getCargoById = (id: string) => cargos.find(c => c.id === id);
 export const getFornecedorById = (id: string) => fornecedores.find(f => f.id === id);
 export const getContaFinanceiraById = (id: string) => contasFinanceiras.find(c => c.id === id);
 export const getModeloPagamentoById = (id: string) => modelosPagamento.find(m => m.id === id);
-export const getProdutosCadastro = () => [...produtosCadastro];
