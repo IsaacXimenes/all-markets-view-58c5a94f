@@ -139,12 +139,12 @@ export default function Vendas() {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Loja de Venda</label>
-              <Select value={lojaFiltro} onValueChange={setLojaFiltro}>
+              <Select value={lojaFiltro} onValueChange={(val) => setLojaFiltro(val === 'all' ? '' : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todas as Lojas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as Lojas</SelectItem>
+                  <SelectItem value="all">Todas as Lojas</SelectItem>
                   {lojas.map(loja => (
                     <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
                   ))}
