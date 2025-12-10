@@ -1040,12 +1040,12 @@ export default function VendasNova() {
                 onChange={(e) => setBuscaProduto(e.target.value)}
                 className="flex-1"
               />
-              <Select value={filtroLojaProduto} onValueChange={setFiltroLojaProduto}>
+              <Select value={filtroLojaProduto || 'all'} onValueChange={(val) => setFiltroLojaProduto(val === 'all' ? '' : val)}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Todas as Lojas" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as Lojas</SelectItem>
+                  <SelectItem value="all">Todas as Lojas</SelectItem>
                   {['Loja Centro', 'Loja Norte', 'Loja Sul', 'Loja Shopping', 'Loja Oeste'].map(loja => (
                     <SelectItem key={loja} value={loja}>{loja}</SelectItem>
                   ))}
