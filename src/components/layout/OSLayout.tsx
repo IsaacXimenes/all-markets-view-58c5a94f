@@ -1,28 +1,24 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Package, FileText, ArrowRightLeft, Clock } from 'lucide-react';
+import { Wrench, ClipboardList } from 'lucide-react';
 
-interface EstoqueLayoutProps {
+interface OSLayoutProps {
   children: React.ReactNode;
   title: string;
 }
 
-export function EstoqueLayout({ children, title }: EstoqueLayoutProps) {
+export function OSLayout({ children, title }: OSLayoutProps) {
   const location = useLocation();
   
   const tabs = [
-    { name: 'Dashboard', href: '/estoque', icon: LayoutDashboard },
-    { name: 'Produtos', href: '/estoque/produtos', icon: Package },
-    { name: 'Produtos Pendentes', href: '/estoque/produtos-pendentes', icon: Clock },
-    { name: 'Notas de Compra', href: '/estoque/notas-compra', icon: FileText },
-    { name: 'Movimentações', href: '/estoque/movimentacoes', icon: ArrowRightLeft }
+    { name: 'Produtos para Análise', href: '/os/produtos-analise', icon: ClipboardList },
   ];
 
   return (
     <PageLayout title={title}>
       <div className="mb-6 border-b border-border">
-        <nav className="flex gap-1 overflow-x-auto">
+        <nav className="flex gap-1 overflow-x-auto pb-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = location.pathname === tab.href;
@@ -31,7 +27,7 @@ export function EstoqueLayout({ children, title }: EstoqueLayoutProps) {
                 key={tab.href}
                 to={tab.href}
                 className={cn(
-                  "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
+                  "flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
                   isActive
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"

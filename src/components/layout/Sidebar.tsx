@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { 
-  Package, Settings, ChevronRight, ChevronLeft, Home, Banknote, Users, Database, ShoppingCart
+  Package, Settings, ChevronRight, ChevronLeft, Home, Banknote, Users, Database, ShoppingCart, Wrench
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,7 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
     { title: 'Financeiro', icon: Banknote, href: '/financeiro/conferencia' },
     { title: 'Estoque', icon: Package, href: '/estoque' },
     { title: 'Vendas', icon: ShoppingCart, href: '/vendas' },
+    { title: 'Lista de Reparos (OS)', icon: Wrench, href: '/os/produtos-analise' },
     { title: 'Cadastros', icon: Database, href: '/cadastros' },
     { title: 'Configurações', icon: Settings, href: '/settings' },
   ];

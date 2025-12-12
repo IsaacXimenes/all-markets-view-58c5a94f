@@ -25,6 +25,8 @@ import FinanceiroConferenciaNotas from "./pages/FinanceiroConferenciaNotas";
 import Estoque from "./pages/Estoque";
 import EstoqueProdutos from "./pages/EstoqueProdutos";
 import EstoqueProdutoDetalhes from "./pages/EstoqueProdutoDetalhes";
+import EstoqueProdutosPendentes from "./pages/EstoqueProdutosPendentes";
+import EstoqueProdutoPendenteDetalhes from "./pages/EstoqueProdutoPendenteDetalhes";
 import EstoqueNotasCompra from "./pages/EstoqueNotasCompra";
 import EstoqueNotaDetalhes from "./pages/EstoqueNotaDetalhes";
 import EstoqueNotaCadastrar from "./pages/EstoqueNotaCadastrar";
@@ -43,6 +45,8 @@ import CadastrosContasFinanceiras from "./pages/CadastrosContasFinanceiras";
 import Vendas from "./pages/Vendas";
 import VendasNova from "./pages/VendasNova";
 import VendaDetalhes from "./pages/VendaDetalhes";
+import OSProdutosAnalise from "./pages/OSProdutosAnalise";
+import OSProdutoDetalhes from "./pages/OSProdutoDetalhes";
 
 const queryClient = new QueryClient();
 
@@ -73,10 +77,14 @@ const App = () => (
           <Route path="/estoque" element={<Estoque />} />
           <Route path="/estoque/produtos" element={<EstoqueProdutos />} />
           <Route path="/estoque/produto/:id" element={<EstoqueProdutoDetalhes />} />
+          <Route path="/estoque/produtos-pendentes" element={<EstoqueProdutosPendentes />} />
+          <Route path="/estoque/produto-pendente/:id" element={<EstoqueProdutoPendenteDetalhes />} />
           <Route path="/estoque/notas-compra" element={<EstoqueNotasCompra />} />
           <Route path="/estoque/nota/:id" element={<EstoqueNotaDetalhes />} />
           <Route path="/estoque/nota/cadastrar" element={<EstoqueNotaCadastrar />} />
           <Route path="/estoque/movimentacoes" element={<EstoqueMovimentacoes />} />
+          <Route path="/os/produtos-analise" element={<OSProdutosAnalise />} />
+          <Route path="/os/produto/:id" element={<OSProdutoDetalhes />} />
           <Route path="/cadastros" element={<Cadastros />} />
           <Route path="/cadastros/lojas" element={<CadastrosLojas />} />
           <Route path="/cadastros/clientes" element={<CadastrosClientes />} />
