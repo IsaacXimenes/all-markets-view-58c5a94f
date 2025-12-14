@@ -26,13 +26,21 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
   const navItems = [
     { title: 'Painel', icon: Home, href: '/' },
     { title: 'Recursos Humanos', icon: Users, href: '/rh' },
-    { title: 'Financeiro', icon: Banknote, href: '/financeiro/conferencia' },
+    { title: 'Financeiro', icon: Banknote, href: '/financeiro' },
     { title: 'Estoque', icon: Package, href: '/estoque' },
     { title: 'Vendas', icon: ShoppingCart, href: '/vendas' },
-    { title: 'Lista de Reparos (OS)', icon: Wrench, href: '/os/produtos-analise' },
+    { title: 'Lista de Reparos (OS)', icon: Wrench, href: '/os' },
     { title: 'Cadastros', icon: Database, href: '/cadastros' },
     { title: 'Configurações', icon: Settings, href: '/settings' },
   ];
+
+  // Verifica se a rota atual pertence ao módulo
+  const isActiveModule = (href: string) => {
+    if (href === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname.startsWith(href);
+  };
 
   return (
     <aside className={cn(
@@ -64,21 +72,35 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
       <ScrollArea className="flex-1 py-4">
         <nav className="grid gap-1 px-2">
           {navItems.map((item, index) => {
-            const isActive = location.pathname === item.href;
+            const isActive = isActiveModule(item.href);
             return (
               <Link
                 key={index}
-                to={item.href}
+                to={item.href === '/financeiro' ? '/financeiro/conferencia' : 
+                    item.href === '/os' ? '/os/produtos-analise' : item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground",
+                  "flex items-center gap-3 rounded-md px-3 py-2 transition-all duration-200 relative",
+                  isActive 
+                    ? "bg-primary text-primary-foreground font-semibold shadow-md" 
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   isCollapsed && "justify-center px-0"
                 )}
               >
-                <item.icon className={cn("h-5 w-5 shrink-0")} />
+                {/* Indicador lateral ativo */}
+                {isActive && (
+                  <div className={cn(
+                    "absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary-foreground rounded-r-full",
+                    isCollapsed && "hidden"
+                  )} />
+                )}
+                <item.icon className={cn(
+                  "h-5 w-5 shrink-0",
+                  isActive && "animate-pulse"
+                )} />
                 <span className={cn(
-                  "text-sm font-medium transition-opacity duration-200",
-                  isCollapsed ? "opacity-0 w-0" : "opacity-100"
+                  "text-sm transition-opacity duration-200",
+                  isCollapsed ? "opacity-0 w-0" : "opacity-100",
+                  isActive ? "font-semibold" : "font-medium"
                 )}>
                   {item.title}
                 </span>
