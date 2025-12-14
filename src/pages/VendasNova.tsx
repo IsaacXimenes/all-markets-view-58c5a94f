@@ -23,7 +23,8 @@ import {
 } from '@/utils/cadastrosApi';
 import { getProdutos, Produto, updateProduto } from '@/utils/estoqueApi';
 import { addVenda, getNextVendaNumber, getHistoricoComprasCliente, formatCurrency, ItemVenda, ItemTradeIn, Pagamento } from '@/utils/vendasApi';
-import { getProdutosCadastro, ProdutoCadastro } from '@/utils/cadastrosApi';
+import { getProdutosCadastro, ProdutoCadastro, calcularTipoPessoa } from '@/utils/cadastrosApi';
+import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
 
 const TIMER_DURATION = 120; // 2 minutos em segundos
 
@@ -39,6 +40,7 @@ export default function VendasNova() {
   const [contasFinanceiras] = useState<ContaFinanceira[]>(getContasFinanceiras());
   const [produtosEstoque] = useState<Produto[]>(getProdutos());
   const [produtosCadastro] = useState<ProdutoCadastro[]>(getProdutosCadastro());
+  const [produtosPendentes] = useState<ProdutoPendente[]>(getProdutosPendentes());
   
   // Info da venda
   const [vendaInfo] = useState(getNextVendaNumber());
@@ -68,7 +70,9 @@ export default function VendasNova() {
   // Itens da venda
   const [itens, setItens] = useState<ItemVenda[]>([]);
   const [showProdutoModal, setShowProdutoModal] = useState(false);
+  const [showPendentesTab, setShowPendentesTab] = useState(false);
   const [buscaProduto, setBuscaProduto] = useState('');
+  const [buscaModeloProduto, setBuscaModeloProduto] = useState('');
   const [filtroLojaProduto, setFiltroLojaProduto] = useState('');
   
   // Timer
@@ -252,13 +256,11 @@ export default function VendasNova() {
     return produtosEstoque.filter(p => {
       if (p.quantidade <= 0) return false;
       if (filtroLojaProduto && p.loja !== filtroLojaProduto) return false;
-      if (buscaProduto) {
-        const busca = buscaProduto.toLowerCase();
-        return p.modelo.toLowerCase().includes(busca) || p.imei.includes(busca);
-      }
+      if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
+      if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
       return true;
     });
-  }, [produtosEstoque, filtroLojaProduto, buscaProduto]);
+  }, [produtosEstoque, filtroLojaProduto, buscaProduto, buscaModeloProduto]);
 
   // Adicionar produto à venda
   const handleAddProduto = (produto: Produto) => {
@@ -1047,12 +1049,12 @@ export default function VendasNova() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>CPF</TableHead>
+                  <TableHead>CPF/CNPJ</TableHead>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Tipo</TableHead>
+                  <TableHead>Tipo Pessoa</TableHead>
+                  <TableHead>Tipo Cliente</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Telefone</TableHead>
-                  <TableHead>Cidade</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -1061,6 +1063,11 @@ export default function VendasNova() {
                   <TableRow key={cliente.id} className={cliente.status === 'Inativo' ? 'bg-destructive/10' : ''}>
                     <TableCell>{cliente.cpf}</TableCell>
                     <TableCell className="font-medium">{cliente.nome}</TableCell>
+                    <TableCell>
+                      <Badge className={cliente.tipoPessoa === 'Pessoa Jurídica' ? 'bg-blue-500' : 'bg-green-500'}>
+                        {cliente.tipoPessoa === 'Pessoa Jurídica' ? 'PJ' : 'PF'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge variant={cliente.tipoCliente === 'VIP' ? 'default' : 'secondary'}>
                         {cliente.tipoCliente}
@@ -1074,10 +1081,9 @@ export default function VendasNova() {
                       )}
                     </TableCell>
                     <TableCell>{cliente.telefone}</TableCell>
-                    <TableCell>{cliente.cidade}</TableCell>
                     <TableCell>
                       {cliente.status === 'Inativo' ? (
-                        <span className="text-destructive text-sm font-medium">Cliente bloqueado</span>
+                        <span className="text-destructive text-sm font-medium">Bloqueado</span>
                       ) : (
                         <Button 
                           size="sm" 
@@ -1197,14 +1203,44 @@ export default function VendasNova() {
       <Dialog open={showProdutoModal} onOpenChange={setShowProdutoModal}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Selecionar Produto do Estoque</DialogTitle>
+            <DialogTitle>Selecionar Produto</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Tabs para Estoque e Pendentes */}
+            <div className="flex border-b">
+              <button
+                className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                  !showPendentesTab 
+                    ? 'border-primary text-primary' 
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setShowPendentesTab(false)}
+              >
+                Produtos – Estoque
+              </button>
+              <button
+                className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                  showPendentesTab 
+                    ? 'border-primary text-primary' 
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setShowPendentesTab(true)}
+              >
+                Produtos – Pendentes
+              </button>
+            </div>
+            
             <div className="flex gap-2">
               <Input 
-                placeholder="Buscar por modelo ou IMEI..."
+                placeholder="Buscar por IMEI..."
                 value={buscaProduto}
                 onChange={(e) => setBuscaProduto(e.target.value)}
+                className="w-[200px]"
+              />
+              <Input 
+                placeholder="Buscar por modelo..."
+                value={buscaModeloProduto}
+                onChange={(e) => setBuscaModeloProduto(e.target.value)}
                 className="flex-1"
               />
               <Select value={filtroLojaProduto || 'all'} onValueChange={(val) => setFiltroLojaProduto(val === 'all' ? '' : val)}>
@@ -1213,62 +1249,137 @@ export default function VendasNova() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as Lojas</SelectItem>
-                  {['Loja Centro', 'Loja Norte', 'Loja Sul', 'Loja Shopping', 'Loja Oeste'].map(loja => (
-                    <SelectItem key={loja} value={loja}>{loja}</SelectItem>
+                  {lojas.map(loja => (
+                    <SelectItem key={loja.id} value={loja.nome}>{loja.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Produto</TableHead>
-                  <TableHead>IMEI</TableHead>
-                  <TableHead>Qtd</TableHead>
-                  <TableHead className="text-right">Valor Recomendado</TableHead>
-                  <TableHead>Loja</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {produtosFiltrados.map(produto => (
-                  <TableRow key={produto.id} className={produto.quantidade === 0 ? 'opacity-50' : ''}>
-                    <TableCell className="font-mono text-xs">{produto.id}</TableCell>
-                    <TableCell className="font-medium">{produto.modelo}</TableCell>
-                    <TableCell>{produto.imei}</TableCell>
-                    <TableCell>
-                      {produto.quantidade === 0 ? (
-                        <Badge variant="destructive">Indisponível</Badge>
-                      ) : (
-                        produto.quantidade
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(produto.valorVendaSugerido)}</TableCell>
-                    <TableCell>{produto.loja}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
+            {!showPendentesTab ? (
+              /* Aba Produtos Estoque */
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>IMEI</TableHead>
+                    <TableHead>Qtd</TableHead>
+                    <TableHead className="text-right">Valor Recomendado</TableHead>
+                    <TableHead>Loja</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {produtosFiltrados.map(produto => (
+                    <TableRow key={produto.id} className={produto.quantidade === 0 ? 'opacity-50' : ''}>
+                      <TableCell className="font-mono text-xs">{produto.id}</TableCell>
+                      <TableCell className="font-medium">{produto.modelo}</TableCell>
+                      <TableCell>{produto.imei}</TableCell>
+                      <TableCell>
+                        {produto.quantidade === 0 ? (
+                          <Badge variant="destructive">Indisponível</Badge>
+                        ) : (
+                          produto.quantidade
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">{formatCurrency(produto.valorVendaSugerido)}</TableCell>
+                      <TableCell>{produto.loja}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleVerDetalhes(produto)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm"
+                            disabled={produto.quantidade === 0}
+                            onClick={() => handleAddProduto(produto)}
+                          >
+                            Selecionar
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              /* Aba Produtos Pendentes (apenas consulta) */
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>IMEI</TableHead>
+                    <TableHead>Origem</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Loja</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {produtosPendentes.filter(p => {
+                    if (filtroLojaProduto && p.loja !== filtroLojaProduto) return false;
+                    if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
+                    if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
+                    return true;
+                  }).map(produto => (
+                    <TableRow key={produto.id}>
+                      <TableCell className="font-mono text-xs">{produto.id}</TableCell>
+                      <TableCell className="font-medium">{produto.modelo}</TableCell>
+                      <TableCell>{produto.imei}</TableCell>
+                      <TableCell>
+                        <Badge variant={produto.origemEntrada === 'Trade-In' ? 'secondary' : 'outline'}>
+                          {produto.origemEntrada}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="destructive">Bloqueado</Badge>
+                      </TableCell>
+                      <TableCell>{produto.loja}</TableCell>
+                      <TableCell>
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => handleVerDetalhes(produto)}
+                          onClick={() => {
+                            // Exibir detalhes do produto pendente
+                            setProdutoDetalhe({
+                              id: produto.id,
+                              imei: produto.imei,
+                              modelo: produto.modelo,
+                              cor: produto.cor,
+                              marca: produto.marca,
+                              tipo: produto.tipo,
+                              quantidade: 0,
+                              valorCusto: produto.valorCusto,
+                              valorVendaSugerido: 0,
+                              saudeBateria: produto.saudeBateria,
+                              loja: produto.loja,
+                              conferidoEstoque: false,
+                              conferidoAssistencia: false
+                            } as any);
+                            setShowDetalheProduto(true);
+                          }}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          size="sm"
-                          disabled={produto.quantidade === 0}
-                          onClick={() => handleAddProduto(produto)}
-                        >
-                          Selecionar
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {produtosPendentes.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        Nenhum produto pendente de conferência
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -1297,6 +1408,21 @@ export default function VendasNova() {
               </Select>
             </div>
             <div>
+              <label className="text-sm font-medium">Condição *</label>
+              <Select 
+                value={novoTradeIn.condicao || ''} 
+                onValueChange={(v) => setNovoTradeIn({ ...novoTradeIn, condicao: v as 'Novo' | 'Semi-novo' })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a condição" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Novo">Novo</SelectItem>
+                  <SelectItem value="Semi-novo">Semi-novo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <label className="text-sm font-medium">Descrição Detalhada</label>
               <Textarea 
                 value={novoTradeIn.descricao || ''}
@@ -1313,13 +1439,36 @@ export default function VendasNova() {
             </div>
             <div>
               <label className="text-sm font-medium">Valor do Abatimento *</label>
-              <Input 
-                type="number"
-                value={novoTradeIn.valorAbatimento || ''}
-                onChange={(e) => setNovoTradeIn({ ...novoTradeIn, valorAbatimento: Number(e.target.value) })}
-                placeholder="R$ 0,00"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                <Input 
+                  type="text"
+                  value={novoTradeIn.valorAbatimento ? novoTradeIn.valorAbatimento.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setNovoTradeIn({ ...novoTradeIn, valorAbatimento: Number(value) / 100 });
+                  }}
+                  className="pl-10"
+                  placeholder="0,00"
+                />
+              </div>
             </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="imeiValidado"
+                checked={novoTradeIn.imeiValidado || false}
+                onChange={(e) => setNovoTradeIn({ ...novoTradeIn, imeiValidado: e.target.checked })}
+                className="h-4 w-4"
+              />
+              <label htmlFor="imeiValidado" className="text-sm font-medium">IMEI Validado</label>
+            </div>
+            {!novoTradeIn.imeiValidado && (
+              <div className="bg-destructive/10 p-3 rounded-lg flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                <span className="text-sm">IMEI não validado bloqueia o registro da venda</span>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTradeInModal(false)}>Cancelar</Button>

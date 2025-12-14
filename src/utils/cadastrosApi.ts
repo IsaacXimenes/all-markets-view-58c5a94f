@@ -31,7 +31,14 @@ export interface Cliente {
   origemCliente: 'Assistência' | 'Venda';
   idsCompras: string[];
   tipoCliente: 'Novo' | 'Normal' | 'VIP';
+  tipoPessoa: 'Pessoa Física' | 'Pessoa Jurídica';
 }
+
+// Helper para calcular tipo de pessoa baseado no CPF/CNPJ
+export const calcularTipoPessoa = (cpfCnpj: string): 'Pessoa Física' | 'Pessoa Jurídica' => {
+  const numeros = cpfCnpj.replace(/\D/g, '');
+  return numeros.length <= 11 ? 'Pessoa Física' : 'Pessoa Jurídica';
+};
 
 export interface Colaborador {
   id: string;
@@ -126,11 +133,12 @@ let lojas: Loja[] = [
 ];
 
 let clientes: Cliente[] = [
-  { id: 'CLI-001', nome: 'João Silva', cpf: '123.456.789-00', telefone: '(11) 99999-1111', dataNascimento: '1985-05-15', email: 'joao@email.com', cep: '01310-100', endereco: 'Rua das Flores', numero: '123', bairro: 'Centro', cidade: 'São Paulo', estado: 'SP', status: 'Ativo', origemCliente: 'Venda', idsCompras: ['VEN-2025-0001', 'VEN-2025-0005', 'VEN-2025-0008'], tipoCliente: 'VIP' },
-  { id: 'CLI-002', nome: 'Maria Santos', cpf: '234.567.890-11', telefone: '(11) 99999-2222', dataNascimento: '1990-08-20', email: 'maria@email.com', cep: '02020-000', endereco: 'Av. Norte', numero: '456', bairro: 'Santana', cidade: 'São Paulo', estado: 'SP', status: 'Ativo', origemCliente: 'Venda', idsCompras: ['VEN-2025-0002'], tipoCliente: 'Normal' },
-  { id: 'CLI-003', nome: 'Pedro Oliveira', cpf: '345.678.901-22', telefone: '(11) 99999-3333', dataNascimento: '1988-12-10', email: 'pedro@email.com', cep: '04040-000', endereco: 'Rua Sul', numero: '789', bairro: 'Moema', cidade: 'São Paulo', estado: 'SP', status: 'Ativo', origemCliente: 'Assistência', idsCompras: [], tipoCliente: 'Novo' },
-  { id: 'CLI-004', nome: 'Ana Costa', cpf: '456.789.012-33', telefone: '(11) 99999-4444', dataNascimento: '1995-03-25', email: 'ana@email.com', cep: '05050-000', endereco: 'Av. Paulista', numero: '1000', bairro: 'Bela Vista', cidade: 'São Paulo', estado: 'SP', status: 'Ativo', origemCliente: 'Venda', idsCompras: ['VEN-2025-0003', 'VEN-2025-0006'], tipoCliente: 'VIP' },
-  { id: 'CLI-005', nome: 'Carlos Ferreira', cpf: '567.890.123-44', telefone: '(11) 99999-5555', dataNascimento: '1982-07-30', email: 'carlos@email.com', cep: '06060-000', endereco: 'Rua Augusta', numero: '500', bairro: 'Consolação', cidade: 'São Paulo', estado: 'SP', status: 'Inativo', origemCliente: 'Venda', idsCompras: ['VEN-2025-0004'], tipoCliente: 'Normal' },
+  { id: 'CLI-001', nome: 'João Silva', cpf: '123.456.789-00', telefone: '(11) 99999-1111', dataNascimento: '1985-05-15', email: 'joao@email.com', cep: '01310-100', endereco: 'Rua das Flores', numero: '123', bairro: 'Centro', cidade: 'São Paulo', estado: 'SP', status: 'Ativo', origemCliente: 'Venda', idsCompras: ['VEN-2025-0001', 'VEN-2025-0005', 'VEN-2025-0008'], tipoCliente: 'VIP', tipoPessoa: 'Pessoa Física' },
+  { id: 'CLI-002', nome: 'Maria Santos', cpf: '234.567.890-11', telefone: '(11) 99999-2222', dataNascimento: '1990-08-20', email: 'maria@email.com', cep: '02020-000', endereco: 'Av. Norte', numero: '456', bairro: 'Santana', cidade: 'São Paulo', estado: 'SP', status: 'Ativo', origemCliente: 'Venda', idsCompras: ['VEN-2025-0002'], tipoCliente: 'Normal', tipoPessoa: 'Pessoa Física' },
+  { id: 'CLI-003', nome: 'Pedro Oliveira', cpf: '345.678.901-22', telefone: '(11) 99999-3333', dataNascimento: '1988-12-10', email: 'pedro@email.com', cep: '04040-000', endereco: 'Rua Sul', numero: '789', bairro: 'Moema', cidade: 'São Paulo', estado: 'SP', status: 'Ativo', origemCliente: 'Assistência', idsCompras: [], tipoCliente: 'Novo', tipoPessoa: 'Pessoa Física' },
+  { id: 'CLI-004', nome: 'Ana Costa', cpf: '456.789.012-33', telefone: '(11) 99999-4444', dataNascimento: '1995-03-25', email: 'ana@email.com', cep: '05050-000', endereco: 'Av. Paulista', numero: '1000', bairro: 'Bela Vista', cidade: 'São Paulo', estado: 'SP', status: 'Ativo', origemCliente: 'Venda', idsCompras: ['VEN-2025-0003', 'VEN-2025-0006'], tipoCliente: 'VIP', tipoPessoa: 'Pessoa Física' },
+  { id: 'CLI-005', nome: 'Carlos Ferreira', cpf: '567.890.123-44', telefone: '(11) 99999-5555', dataNascimento: '1982-07-30', email: 'carlos@email.com', cep: '06060-000', endereco: 'Rua Augusta', numero: '500', bairro: 'Consolação', cidade: 'São Paulo', estado: 'SP', status: 'Inativo', origemCliente: 'Venda', idsCompras: ['VEN-2025-0004'], tipoCliente: 'Normal', tipoPessoa: 'Pessoa Física' },
+  { id: 'CLI-006', nome: 'Tech Solutions Ltda', cpf: '12.345.678/0001-99', telefone: '(11) 3333-4444', dataNascimento: '', email: 'contato@techsolutions.com.br', cep: '01310-200', endereco: 'Av. Brigadeiro Faria Lima', numero: '2000', bairro: 'Jardim Paulistano', cidade: 'São Paulo', estado: 'SP', status: 'Ativo', origemCliente: 'Venda', idsCompras: ['VEN-2025-0007'], tipoCliente: 'Normal', tipoPessoa: 'Pessoa Jurídica' },
 ];
 
 let colaboradores: Colaborador[] = [
@@ -280,7 +288,7 @@ export const deleteLoja = (id: string) => {
 export const getClientes = () => [...clientes];
 export const getClienteById = (id: string) => clientes.find(c => c.id === id);
 export const getClienteByCpf = (cpf: string) => clientes.find(c => c.cpf === cpf);
-export const addCliente = (cliente: Omit<Cliente, 'id' | 'tipoCliente'>) => {
+export const addCliente = (cliente: Omit<Cliente, 'id' | 'tipoCliente' | 'tipoPessoa'>) => {
   const newId = `CLI-${String(clientes.length + 1).padStart(3, '0')}`;
   const idsCompras = cliente.idsCompras || [];
   const newCliente: Cliente = { 
@@ -288,7 +296,8 @@ export const addCliente = (cliente: Omit<Cliente, 'id' | 'tipoCliente'>) => {
     id: newId, 
     idsCompras,
     tipoCliente: calcularTipoCliente(idsCompras),
-    origemCliente: cliente.origemCliente || 'Venda'
+    origemCliente: cliente.origemCliente || 'Venda',
+    tipoPessoa: calcularTipoPessoa(cliente.cpf)
   };
   clientes.push(newCliente);
   return newCliente;
