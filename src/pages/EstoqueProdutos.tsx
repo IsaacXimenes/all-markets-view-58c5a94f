@@ -248,11 +248,9 @@ export default function EstoqueProdutos() {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={cn(
-                      produto.origemEntrada === 'Trade-In' 
+                      produto.origemEntrada === 'Base de Troca' 
                         ? 'bg-purple-500/10 text-purple-600 border-purple-500/30'
-                        : produto.origemEntrada === 'Fornecedor'
-                        ? 'bg-green-500/10 text-green-600 border-green-500/30'
-                        : 'bg-blue-500/10 text-blue-600 border-blue-500/30'
+                        : 'bg-green-500/10 text-green-600 border-green-500/30'
                     )}>
                       {produto.origemEntrada}
                     </Badge>

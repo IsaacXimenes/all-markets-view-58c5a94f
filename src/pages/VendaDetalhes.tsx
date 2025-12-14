@@ -230,13 +230,13 @@ export default function VendaDetalhes() {
             </CardContent>
           </Card>
 
-          {/* Trade-In */}
+          {/* Base de Troca */}
           {venda.tradeIns.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Package className="h-5 w-5" />
-                  Trade-In ({venda.tradeIns.length})
+                  Base de Troca ({venda.tradeIns.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
@@ -355,7 +355,7 @@ export default function VendaDetalhes() {
                 </div>
                 {venda.totalTradeIn > 0 && (
                   <div className="flex justify-between text-green-600">
-                    <span>(-) Trade-In:</span>
+                    <span>(-) Base de Troca:</span>
                     <span className="font-medium">-{formatCurrency(venda.totalTradeIn)}</span>
                   </div>
                 )}

@@ -328,8 +328,7 @@ const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque
     statusNota: 'Concluído',
     origemEntrada: produto.origemEntrada,
     // PRESERVA A TIMELINE COMPLETA DO PRODUTO PENDENTE + LIBERAÇÃO
-    timeline: [...produto.timeline, timelineLiberacao],
-    custoAssistencia: produto.custoAssistencia // Armazena custo assistência separadamente
+    timeline: [...produto.timeline, timelineLiberacao]
   };
 
   // Adiciona ao estoque PRINCIPAL via estoqueApi

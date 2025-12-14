@@ -477,7 +477,7 @@ export const exportVendasToCSV = (data: Venda[], filename: string) => {
     'CPF': v.clienteCpf,
     'Origem': v.origemVenda,
     'Subtotal': v.subtotal,
-    'Trade-In': v.totalTradeIn,
+    'Base de Troca': v.totalTradeIn,
     'Total': v.total,
     'Lucro': v.lucro,
     'Margem %': v.margem.toFixed(2),

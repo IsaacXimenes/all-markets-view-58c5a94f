@@ -726,13 +726,13 @@ export default function VendasNova() {
           </CardContent>
         </Card>
 
-        {/* Trade-In */}
+        {/* Base de Troca */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Trade-In (Aparelhos de Troca)
+                Base de Troca (Aparelhos de Troca)
               </span>
               <Button variant="outline" onClick={() => setShowTradeInModal(true)}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -793,7 +793,7 @@ export default function VendasNova() {
             {tradeInNaoValidado && (
               <div className="mt-4 p-3 bg-destructive/10 rounded-lg flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
-                <span className="font-medium">Há trade-in com IMEI NÃO validado! Registrar venda desabilitado.</span>
+                <span className="font-medium">Há item de troca com IMEI NÃO validado! Registrar venda desabilitado.</span>
               </div>
             )}
           </CardContent>
@@ -958,7 +958,7 @@ export default function VendasNova() {
               </div>
               {totalTradeIn > 0 && (
                 <div className="flex justify-between text-green-600">
-                  <span>(-) Trade-In:</span>
+                  <span>(-) Base de Troca:</span>
                   <span className="font-medium">-{formatCurrency(totalTradeIn)}</span>
                 </div>
               )}
@@ -1333,7 +1333,7 @@ export default function VendasNova() {
                       <TableCell className="font-medium">{produto.modelo}</TableCell>
                       <TableCell>{produto.imei}</TableCell>
                       <TableCell>
-                        <Badge variant={produto.origemEntrada === 'Trade-In' ? 'secondary' : 'outline'}>
+                        <Badge variant={produto.origemEntrada === 'Base de Troca' ? 'secondary' : 'outline'}>
                           {produto.origemEntrada}
                         </Badge>
                       </TableCell>
@@ -1384,7 +1384,7 @@ export default function VendasNova() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Trade-In */}
+      {/* Modal Base de Troca */}
       <Dialog open={showTradeInModal} onOpenChange={setShowTradeInModal}>
         <DialogContent>
           <DialogHeader>
@@ -1642,7 +1642,7 @@ export default function VendasNova() {
               </div>
               {totalTradeIn > 0 && (
                 <div className="flex justify-between text-green-600">
-                  <span>Trade-In:</span>
+                  <span>Base de Troca:</span>
                   <span>-{formatCurrency(totalTradeIn)}</span>
                 </div>
               )}
