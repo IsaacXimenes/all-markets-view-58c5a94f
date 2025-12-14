@@ -177,7 +177,12 @@ let produtos: Produto[] = [
       { data: '2025-01-05', usuario: 'Roberto Alves', valorAntigo: null, valorNovo: 5499.00 }
     ],
     statusNota: 'Concluído',
-    origemEntrada: 'Nota de Entrada'
+    origemEntrada: 'Nota de Entrada',
+    timeline: [
+      { id: 'TL-0012-1', tipo: 'entrada', data: '2024-11-10T09:00:00', titulo: 'Entrada via Nota de Compra', descricao: 'Produto recebido via Nota NC-2025-0002', responsavel: 'Carlos Oliveira' },
+      { id: 'TL-0012-2', tipo: 'parecer_estoque', data: '2024-11-10T14:30:00', titulo: 'Análise Realizada', descricao: 'Produto em excelente estado, sem riscos ou marcas de uso', responsavel: 'Ana Costa' },
+      { id: 'TL-0012-3', tipo: 'liberacao', data: '2024-11-10T14:35:00', titulo: 'Produto Liberado', descricao: 'Produto liberado para venda', responsavel: 'Sistema' }
+    ]
   },
   {
     id: 'PROD-0013',
@@ -203,7 +208,13 @@ let produtos: Produto[] = [
       { data: '2025-01-06', usuario: 'Lucas Mendes', valorAntigo: null, valorNovo: 3599.00 }
     ],
     statusNota: 'Concluído',
-    origemEntrada: 'Trade-In'
+    origemEntrada: 'Trade-In',
+    timeline: [
+      { id: 'TL-0013-1', tipo: 'entrada', data: '2024-11-05T11:00:00', titulo: 'Entrada via Trade-In', descricao: 'Produto recebido via Trade-In - Venda VEN-2024-0089', responsavel: 'Maria Santos' },
+      { id: 'TL-0013-2', tipo: 'parecer_estoque', data: '2024-11-05T15:20:00', titulo: 'Encaminhado para Assistência', descricao: 'Bateria abaixo de 80%, encaminhar para verificação técnica', responsavel: 'Pedro Lima' },
+      { id: 'TL-0013-3', tipo: 'parecer_assistencia', data: '2024-11-06T10:00:00', titulo: 'Conferência Realizada', descricao: 'Bateria funcional apesar de degradada, produto pode ser vendido com desconto', responsavel: 'Lucas Ferreira' },
+      { id: 'TL-0013-4', tipo: 'liberacao', data: '2024-11-06T10:05:00', titulo: 'Produto Liberado', descricao: 'Produto liberado para venda', responsavel: 'Sistema' }
+    ]
   },
   {
     id: 'PROD-0014',
@@ -251,7 +262,10 @@ let produtos: Produto[] = [
     ],
     historicoValorRecomendado: [],
     statusNota: 'Pendente',
-    origemEntrada: 'Trade-In'
+    origemEntrada: 'Trade-In',
+    timeline: [
+      { id: 'TL-0015-1', tipo: 'entrada', data: '2024-11-20T08:30:00', titulo: 'Entrada via Trade-In', descricao: 'Produto recebido via Trade-In - Venda VEN-2024-0102', responsavel: 'Fernando Alves' }
+    ]
   },
   {
     id: 'PROD-0016',
@@ -301,7 +315,12 @@ let produtos: Produto[] = [
       { data: '2025-01-04', usuario: 'Lucas Mendes', valorAntigo: null, valorNovo: 2199.00 }
     ],
     statusNota: 'Concluído',
-    origemEntrada: 'Nota de Entrada'
+    origemEntrada: 'Nota de Entrada',
+    timeline: [
+      { id: 'TL-0017-1', tipo: 'entrada', data: '2024-11-12T10:00:00', titulo: 'Entrada via Nota de Compra', descricao: 'Produto recebido via Nota NC-2025-0005', responsavel: 'Carlos Oliveira' },
+      { id: 'TL-0017-2', tipo: 'parecer_estoque', data: '2024-11-12T14:00:00', titulo: 'Análise Realizada', descricao: 'Produto em bom estado, funcionamento normal', responsavel: 'Ana Costa' },
+      { id: 'TL-0017-3', tipo: 'liberacao', data: '2024-11-12T14:05:00', titulo: 'Produto Liberado', descricao: 'Produto liberado para venda', responsavel: 'Sistema' }
+    ]
   },
   {
     id: 'PROD-0018',
@@ -326,7 +345,12 @@ let produtos: Produto[] = [
       { data: '2025-01-03', usuario: 'Fernanda Lima', valorAntigo: null, valorNovo: 4799.00 }
     ],
     statusNota: 'Concluído',
-    origemEntrada: 'Trade-In'
+    origemEntrada: 'Trade-In',
+    timeline: [
+      { id: 'TL-0018-1', tipo: 'entrada', data: '2024-11-08T09:30:00', titulo: 'Entrada via Trade-In', descricao: 'Produto recebido via Trade-In - Venda VEN-2024-0078', responsavel: 'Maria Santos' },
+      { id: 'TL-0018-2', tipo: 'parecer_estoque', data: '2024-11-08T11:00:00', titulo: 'Análise Realizada', descricao: 'Produto em excelente estado, bateria acima de 85%', responsavel: 'Pedro Lima' },
+      { id: 'TL-0018-3', tipo: 'liberacao', data: '2024-11-08T11:05:00', titulo: 'Produto Liberado', descricao: 'Produto liberado para venda', responsavel: 'Sistema' }
+    ]
   },
   {
     id: 'PROD-0019',
@@ -370,7 +394,11 @@ let produtos: Produto[] = [
     ],
     historicoValorRecomendado: [],
     statusNota: 'Pendente',
-    origemEntrada: 'Nota de Entrada'
+    origemEntrada: 'Nota de Entrada',
+    timeline: [
+      { id: 'TL-0020-1', tipo: 'entrada', data: '2024-11-14T13:00:00', titulo: 'Entrada via Nota de Compra', descricao: 'Produto recebido via Nota NC-2025-0006', responsavel: 'Fernando Alves' },
+      { id: 'TL-0020-2', tipo: 'parecer_estoque', data: '2024-11-14T16:30:00', titulo: 'Análise Realizada', descricao: 'Produto em bom estado, bateria aceitável', responsavel: 'Ana Costa' }
+    ]
   },
   {
     id: 'PROD-0021',
@@ -393,7 +421,10 @@ let produtos: Produto[] = [
     ],
     historicoValorRecomendado: [],
     statusNota: 'Pendente',
-    origemEntrada: 'Trade-In'
+    origemEntrada: 'Trade-In',
+    timeline: [
+      { id: 'TL-0021-1', tipo: 'entrada', data: '2024-11-17T10:00:00', titulo: 'Entrada via Trade-In', descricao: 'Produto recebido via Trade-In - Venda VEN-2024-0098', responsavel: 'Maria Santos' }
+    ]
   }
 ];
 
