@@ -8,6 +8,17 @@ export interface HistoricoValorRecomendado {
   valorNovo: number;
 }
 
+// Interface de timeline importada/compatível com osApi
+export interface TimelineEntry {
+  id: string;
+  data: string;
+  tipo: 'entrada' | 'parecer_estoque' | 'parecer_assistencia' | 'despesa' | 'liberacao';
+  titulo: string;
+  descricao: string;
+  responsavel?: string;
+  valor?: number;
+}
+
 export interface Produto {
   id: string;
   imei: string;
@@ -30,6 +41,7 @@ export interface Produto {
   historicoValorRecomendado: HistoricoValorRecomendado[];
   statusNota: 'Pendente' | 'Concluído';
   origemEntrada: 'Trade-In' | 'Nota de Entrada' | 'Fornecedor';
+  timeline?: TimelineEntry[]; // Timeline de tratativas (pareceres estoque/assistência)
 }
 
 export interface NotaCompra {

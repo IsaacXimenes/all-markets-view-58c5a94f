@@ -265,6 +265,16 @@ export const getProdutosMigrados = (): Produto[] => {
 
 // Migrar produto para o estoque PRINCIPAL (via estoqueApi)
 const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque' | 'Assistência', responsavel: string): Produto => {
+  // Adiciona entrada de liberação na timeline
+  const timelineLiberacao: TimelineEntry = {
+    id: `TL-LIB-${Date.now()}`,
+    data: new Date().toISOString(),
+    tipo: 'liberacao',
+    titulo: 'Produto Liberado para Estoque',
+    descricao: `Produto liberado após ${origemDeferimento === 'Estoque' ? 'análise do estoque' : 'conferência da assistência'}`,
+    responsavel
+  };
+
   const novoProduto: Produto = {
     id: produto.id, // ID PERSISTENTE - nunca muda
     imei: produto.imei,
@@ -290,7 +300,9 @@ const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque
     ],
     historicoValorRecomendado: [],
     statusNota: 'Concluído',
-    origemEntrada: produto.origemEntrada === 'Trade-In' ? 'Trade-In' : 'Nota de Entrada'
+    origemEntrada: produto.origemEntrada === 'Trade-In' ? 'Trade-In' : 'Nota de Entrada',
+    // PRESERVA A TIMELINE COMPLETA DO PRODUTO PENDENTE + LIBERAÇÃO
+    timeline: [...produto.timeline, timelineLiberacao]
   };
 
   // Adiciona ao estoque PRINCIPAL via estoqueApi
