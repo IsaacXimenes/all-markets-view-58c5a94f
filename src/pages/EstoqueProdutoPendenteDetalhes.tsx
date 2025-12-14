@@ -74,12 +74,15 @@ export default function EstoqueProdutoPendenteDetalhes() {
     // Carregar colaboradores com permissão de Estoque
     const colaboradores = getColaboradores();
     const cargos = getCargos();
-    const cargosEstoque = cargos.filter(c => 
-      c.permissoes.includes('Estoque') || c.permissoes.includes('Admin')
-    ).map(c => c.funcao);
     
+    // Mapear IDs de cargos que têm permissão de Estoque
+    const cargosComEstoque = cargos.filter(c => 
+      c.permissoes.includes('Estoque') || c.permissoes.includes('Admin')
+    ).map(c => c.id);
+    
+    // Filtrar colaboradores cujo cargo (ID) está na lista de cargos com permissão
     const colabsEstoque = colaboradores.filter(c => 
-      cargosEstoque.includes(c.cargo)
+      cargosComEstoque.includes(c.cargo)
     );
     setColaboradoresEstoque(colabsEstoque);
   }, [id]);
