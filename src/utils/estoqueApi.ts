@@ -695,6 +695,21 @@ export const getEstoqueStats = () => {
   };
 };
 
+// Função para adicionar produto migrado do OS/Pendentes para o estoque principal
+export const addProdutoMigrado = (produto: Produto): Produto => {
+  // Verificar se o produto já existe (evitar duplicatas)
+  const existente = produtos.find(p => p.id === produto.id);
+  if (existente) {
+    console.warn(`Produto ${produto.id} já existe no estoque. Atualizando...`);
+    Object.assign(existente, produto);
+    return existente;
+  }
+  
+  produtos.push(produto);
+  console.log(`Produto ${produto.id} migrado com sucesso para o estoque principal.`);
+  return produto;
+};
+
 export const exportToCSV = (data: any[], filename: string) => {
   if (data.length === 0) return;
   

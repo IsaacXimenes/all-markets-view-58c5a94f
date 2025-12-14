@@ -1,5 +1,5 @@
 // API para Lista de Reparos (OS)
-import { Produto } from './estoqueApi';
+import { Produto, addProdutoMigrado } from './estoqueApi';
 import { generateProductId, registerProductId, isProductIdRegistered } from './idManager';
 
 export interface ParecerEstoque {
@@ -263,10 +263,10 @@ export const getProdutosMigrados = (): Produto[] => {
   return [...produtosMigrados];
 };
 
-// Migrar produto para o estoque
+// Migrar produto para o estoque PRINCIPAL (via estoqueApi)
 const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque' | 'Assistência', responsavel: string): Produto => {
   const novoProduto: Produto = {
-    id: produto.id,
+    id: produto.id, // ID PERSISTENTE - nunca muda
     imei: produto.imei,
     imagem: produto.imagem,
     marca: produto.marca,
@@ -293,7 +293,13 @@ const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque
     origemEntrada: produto.origemEntrada === 'Trade-In' ? 'Trade-In' : 'Nota de Entrada'
   };
 
+  // Adiciona ao estoque PRINCIPAL via estoqueApi
+  addProdutoMigrado(novoProduto);
+  
+  // Também mantém na lista local para referência
   produtosMigrados.push(novoProduto);
+  
+  console.log(`[OS API] Produto ${produto.id} migrado para estoque principal com sucesso!`);
   return novoProduto;
 };
 
