@@ -1,4 +1,5 @@
 // API para Lista de Reparos (OS)
+import { Produto } from './estoqueApi';
 
 export interface ParecerEstoque {
   id: string;
@@ -53,11 +54,11 @@ export interface ProdutoPendente {
   statusGeral: 'Pendente Estoque' | 'Em Análise Assistência' | 'Aguardando Peça' | 'Liberado';
 }
 
-// Dados mockados de produtos pendentes
+// Dados mockados de produtos pendentes - IDs PROD-XXXX para rastreabilidade
 let produtosPendentes: ProdutoPendente[] = [
-  // 3 via Nota de Entrada
+  // 3 produtos em Produtos Pendentes
   {
-    id: 'PEND-0001',
+    id: 'PROD-0001',
     imei: '352999888777001',
     marca: 'Apple',
     modelo: 'iPhone 13 Pro',
@@ -76,7 +77,7 @@ let produtosPendentes: ProdutoPendente[] = [
         data: '2025-01-10T09:30:00',
         tipo: 'entrada',
         titulo: 'Entrada via Nota de Compra',
-        descricao: 'Produto recebido da nota NC-2025-0010 - Fornecedor TechSupply Imports',
+        descricao: 'Produto PROD-0001 recebido da nota NC-2025-0010 - Fornecedor TechSupply Imports',
         responsavel: 'Lucas Mendes'
       }
     ],
@@ -84,49 +85,34 @@ let produtosPendentes: ProdutoPendente[] = [
     statusGeral: 'Pendente Estoque'
   },
   {
-    id: 'PEND-0002',
+    id: 'PROD-0002',
     imei: '352999888777002',
     marca: 'Apple',
     modelo: 'iPhone 14',
     cor: 'Azul',
     tipo: 'Seminovo',
     condicao: 'Semi-novo',
-    origemEntrada: 'Nota de Entrada',
-    notaOuVendaId: 'NC-2025-0011',
+    origemEntrada: 'Trade-In',
+    notaOuVendaId: 'VEN-2025-0050',
     valorCusto: 3500.00,
     saudeBateria: 91,
     loja: 'Loja Shopping',
     dataEntrada: '2025-01-11',
-    parecerEstoque: {
-      id: 'PE-001',
-      data: '2025-01-11T14:20:00',
-      status: 'Análise Realizada – Produto em ótimo estado',
-      observacoes: 'Produto em excelente estado, sem riscos ou danos. Bateria em ótima condição.',
-      responsavel: 'Fernanda Lima'
-    },
     timeline: [
       {
         id: 'TL-002',
         data: '2025-01-11T10:00:00',
         tipo: 'entrada',
-        titulo: 'Entrada via Nota de Compra',
-        descricao: 'Produto recebido da nota NC-2025-0011 - Fornecedor MobileWorld Atacado',
+        titulo: 'Entrada via Trade-In',
+        descricao: 'Produto PROD-0002 recebido como trade-in na venda VEN-2025-0050',
         responsavel: 'Roberto Alves'
-      },
-      {
-        id: 'TL-003',
-        data: '2025-01-11T14:20:00',
-        tipo: 'parecer_estoque',
-        titulo: 'Parecer Estoque - Aprovado',
-        descricao: 'Análise Realizada – Produto em ótimo estado. Produto em excelente estado, sem riscos ou danos.',
-        responsavel: 'Fernanda Lima'
       }
     ],
     custoAssistencia: 0,
-    statusGeral: 'Pendente Estoque' // Será liberado automaticamente
+    statusGeral: 'Pendente Estoque'
   },
   {
-    id: 'PEND-0003',
+    id: 'PROD-0003',
     imei: '352999888777003',
     marca: 'Apple',
     modelo: 'iPhone 12 Mini',
@@ -139,37 +125,22 @@ let produtosPendentes: ProdutoPendente[] = [
     saudeBateria: 72,
     loja: 'Loja Norte',
     dataEntrada: '2025-01-09',
-    parecerEstoque: {
-      id: 'PE-002',
-      data: '2025-01-09T16:00:00',
-      status: 'Encaminhado para conferência da Assistência',
-      observacoes: 'Bateria com saúde abaixo de 80%, necessita avaliação da assistência.',
-      responsavel: 'Lucas Mendes'
-    },
     timeline: [
       {
         id: 'TL-004',
         data: '2025-01-09T08:30:00',
         tipo: 'entrada',
         titulo: 'Entrada via Nota de Compra',
-        descricao: 'Produto recebido da nota NC-2025-0012 - Fornecedor FastCell Distribuição',
+        descricao: 'Produto PROD-0003 recebido da nota NC-2025-0012 - Fornecedor FastCell Distribuição',
         responsavel: 'Ana Paula'
-      },
-      {
-        id: 'TL-005',
-        data: '2025-01-09T16:00:00',
-        tipo: 'parecer_estoque',
-        titulo: 'Parecer Estoque - Encaminhado Assistência',
-        descricao: 'Encaminhado para conferência da Assistência. Bateria com saúde abaixo de 80%.',
-        responsavel: 'Lucas Mendes'
       }
     ],
     custoAssistencia: 0,
-    statusGeral: 'Em Análise Assistência'
+    statusGeral: 'Pendente Estoque'
   },
-  // 2 via Trade-In
+  // 2 produtos em OS > Produtos para Análise (já encaminhados para assistência)
   {
-    id: 'PEND-0004',
+    id: 'PROD-0004',
     imei: '352999888777004',
     marca: 'Apple',
     modelo: 'iPhone 11 Pro',
@@ -189,20 +160,13 @@ let produtosPendentes: ProdutoPendente[] = [
       observacoes: 'Trade-in com bateria degradada, encaminhar para troca de bateria.',
       responsavel: 'Roberto Alves'
     },
-    parecerAssistencia: {
-      id: 'PA-001',
-      data: '2025-01-10T09:00:00',
-      status: 'Aguardando peça',
-      observacoes: 'Aguardando chegada de bateria nova do fornecedor.',
-      responsavel: 'Carlos Técnico'
-    },
     timeline: [
       {
         id: 'TL-006',
         data: '2025-01-08T10:00:00',
         tipo: 'entrada',
         titulo: 'Entrada via Trade-In',
-        descricao: 'Produto recebido como trade-in na venda VEN-2025-0045 - Cliente Maria Silva',
+        descricao: 'Produto PROD-0004 recebido como trade-in na venda VEN-2025-0045 - Cliente Maria Silva',
         responsavel: 'Vendedor João'
       },
       {
@@ -210,31 +174,23 @@ let produtosPendentes: ProdutoPendente[] = [
         data: '2025-01-08T11:30:00',
         tipo: 'parecer_estoque',
         titulo: 'Parecer Estoque - Encaminhado Assistência',
-        descricao: 'Encaminhado para conferência da Assistência. Bateria degradada.',
+        descricao: 'PROD-0004 encaminhado para conferência da Assistência. Bateria degradada.',
         responsavel: 'Roberto Alves'
-      },
-      {
-        id: 'TL-008',
-        data: '2025-01-10T09:00:00',
-        tipo: 'parecer_assistencia',
-        titulo: 'Parecer Assistência - Aguardando Peça',
-        descricao: 'Aguardando chegada de bateria nova do fornecedor.',
-        responsavel: 'Carlos Técnico'
       }
     ],
     custoAssistencia: 0,
-    statusGeral: 'Aguardando Peça'
+    statusGeral: 'Em Análise Assistência'
   },
   {
-    id: 'PEND-0005',
+    id: 'PROD-0005',
     imei: '352999888777005',
     marca: 'Apple',
     modelo: 'iPhone 13',
     cor: 'Rosa',
     tipo: 'Seminovo',
     condicao: 'Semi-novo',
-    origemEntrada: 'Trade-In',
-    notaOuVendaId: 'VEN-2025-0048',
+    origemEntrada: 'Nota de Entrada',
+    notaOuVendaId: 'NC-2025-0015',
     valorCusto: 2200.00,
     saudeBateria: 82,
     loja: 'Loja Oeste',
@@ -246,25 +202,13 @@ let produtosPendentes: ProdutoPendente[] = [
       observacoes: 'Tela com pequeno risco, encaminhar para polimento.',
       responsavel: 'Fernanda Lima'
     },
-    parecerAssistencia: {
-      id: 'PA-002',
-      data: '2025-01-09T14:00:00',
-      status: 'Ajustes realizados',
-      observacoes: 'Polimento realizado na tela e troca de película. Produto pronto.',
-      responsavel: 'Carlos Técnico',
-      pecas: [
-        { descricao: 'Kit de polimento profissional', valor: 80.00, fornecedor: 'PhoneParts Brasil' },
-        { descricao: 'Película de vidro temperado', valor: 45.00, fornecedor: 'TechSupply Imports' },
-        { descricao: 'Mão de obra técnica', valor: 255.00, fornecedor: 'Interno' }
-      ]
-    },
     timeline: [
       {
         id: 'TL-009',
         data: '2025-01-07T10:30:00',
         tipo: 'entrada',
-        titulo: 'Entrada via Trade-In',
-        descricao: 'Produto recebido como trade-in na venda VEN-2025-0048 - Cliente Pedro Santos',
+        titulo: 'Entrada via Nota de Compra',
+        descricao: 'Produto PROD-0005 recebido da nota NC-2025-0015 - Fornecedor TechnoImports',
         responsavel: 'Vendedora Ana'
       },
       {
@@ -272,53 +216,24 @@ let produtosPendentes: ProdutoPendente[] = [
         data: '2025-01-07T15:00:00',
         tipo: 'parecer_estoque',
         titulo: 'Parecer Estoque - Encaminhado Assistência',
-        descricao: 'Encaminhado para conferência da Assistência. Tela com pequeno risco.',
+        descricao: 'PROD-0005 encaminhado para conferência da Assistência. Tela com pequeno risco.',
         responsavel: 'Fernanda Lima'
-      },
-      {
-        id: 'TL-011',
-        data: '2025-01-09T14:00:00',
-        tipo: 'parecer_assistencia',
-        titulo: 'Parecer Assistência - Ajustes Realizados',
-        descricao: 'Polimento realizado na tela e troca de película. Produto pronto.',
-        responsavel: 'Carlos Técnico'
-      },
-      {
-        id: 'TL-012',
-        data: '2025-01-09T14:00:00',
-        tipo: 'despesa',
-        titulo: 'Despesa - Kit de polimento profissional',
-        descricao: 'Fornecedor: PhoneParts Brasil',
-        valor: 80.00,
-        responsavel: 'Carlos Técnico'
-      },
-      {
-        id: 'TL-013',
-        data: '2025-01-09T14:00:00',
-        tipo: 'despesa',
-        titulo: 'Despesa - Película de vidro temperado',
-        descricao: 'Fornecedor: TechSupply Imports',
-        valor: 45.00,
-        responsavel: 'Carlos Técnico'
-      },
-      {
-        id: 'TL-014',
-        data: '2025-01-09T14:00:00',
-        tipo: 'despesa',
-        titulo: 'Despesa - Mão de obra técnica',
-        descricao: 'Fornecedor: Interno',
-        valor: 255.00,
-        responsavel: 'Carlos Técnico'
       }
     ],
-    custoAssistencia: 380.00,
-    statusGeral: 'Em Análise Assistência' // Ainda precisa do parecer "Produto conferido"
+    custoAssistencia: 0,
+    statusGeral: 'Em Análise Assistência'
   }
 ];
 
+// Lista de produtos migrados para o estoque (para integração)
+let produtosMigrados: Produto[] = [];
+
 // Funções de API
 export const getProdutosPendentes = (): ProdutoPendente[] => {
-  return [...produtosPendentes];
+  // Retorna apenas produtos pendentes de parecer do estoque
+  return produtosPendentes.filter(p => 
+    !p.parecerEstoque || p.parecerEstoque.status !== 'Encaminhado para conferência da Assistência'
+  );
 };
 
 export const getProdutoPendenteById = (id: string): ProdutoPendente | null => {
@@ -332,14 +247,52 @@ export const getProdutosParaAnaliseOS = (): ProdutoPendente[] => {
   );
 };
 
+export const getProdutosMigrados = (): Produto[] => {
+  return [...produtosMigrados];
+};
+
+// Migrar produto para o estoque
+const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque' | 'Assistência', responsavel: string): Produto => {
+  const novoProduto: Produto = {
+    id: produto.id,
+    imei: produto.imei,
+    imagem: produto.imagem,
+    marca: produto.marca,
+    modelo: produto.modelo,
+    cor: produto.cor,
+    tipo: produto.tipo,
+    quantidade: 1,
+    valorCusto: produto.valorCusto + produto.custoAssistencia,
+    valorVendaSugerido: (produto.valorCusto + produto.custoAssistencia) * 1.8,
+    saudeBateria: produto.saudeBateria,
+    loja: produto.loja,
+    estoqueConferido: true,
+    assistenciaConferida: origemDeferimento === 'Assistência',
+    condicao: produto.condicao === 'Semi-novo' ? 'Seminovo' : 'Lacrado',
+    historicoCusto: [
+      { 
+        data: new Date().toISOString().split('T')[0], 
+        fornecedor: produto.origemEntrada === 'Trade-In' ? 'Trade-In' : 'Nota de Entrada', 
+        valor: produto.valorCusto 
+      }
+    ],
+    historicoValorRecomendado: [],
+    statusNota: 'Concluído',
+    origemEntrada: produto.origemEntrada === 'Trade-In' ? 'Trade-In' : 'Nota de Entrada'
+  };
+
+  produtosMigrados.push(novoProduto);
+  return novoProduto;
+};
+
 export const salvarParecerEstoque = (
   id: string, 
   status: ParecerEstoque['status'], 
   observacoes: string, 
   responsavel: string
-): ProdutoPendente | null => {
+): { produto: ProdutoPendente | null; migrado: boolean; produtoMigrado?: Produto } => {
   const produto = produtosPendentes.find(p => p.id === id);
-  if (!produto) return null;
+  if (!produto) return { produto: null, migrado: false };
 
   const parecer: ParecerEstoque = {
     id: `PE-${Date.now()}`,
@@ -351,25 +304,47 @@ export const salvarParecerEstoque = (
 
   produto.parecerEstoque = parecer;
   
-  // Adicionar na timeline
+  // Adicionar na timeline com ID do produto
   produto.timeline.push({
     id: `TL-${Date.now()}`,
     data: new Date().toISOString(),
     tipo: 'parecer_estoque',
     titulo: status === 'Análise Realizada – Produto em ótimo estado' 
-      ? 'Parecer Estoque - Aprovado' 
-      : 'Parecer Estoque - Encaminhado Assistência',
+      ? `Deferido Estoque – ${id}` 
+      : `Parecer Estoque - Encaminhado Assistência – ${id}`,
     descricao: `${status}. ${observacoes}`,
     responsavel
   });
 
-  // Atualizar status geral
-  if (status === 'Encaminhado para conferência da Assistência') {
-    produto.statusGeral = 'Em Análise Assistência';
-  }
-  // Se aprovado direto, será migrado pela função de liberação
+  // Se aprovado direto pelo estoque, migrar automaticamente
+  if (status === 'Análise Realizada – Produto em ótimo estado') {
+    // Adicionar registro de liberação na timeline
+    produto.timeline.push({
+      id: `TL-${Date.now()}-lib`,
+      data: new Date().toISOString(),
+      tipo: 'liberacao',
+      titulo: `Deferido Estoque – ID ${id} liberado para estoque`,
+      descricao: `Produto ${id} aprovado pelo estoque e liberado para venda.`,
+      responsavel
+    });
 
-  return produto;
+    produto.statusGeral = 'Liberado';
+    
+    // Migrar para estoque
+    const produtoMigrado = migrarParaEstoque(produto, 'Estoque', responsavel);
+    
+    // Remover da lista de pendentes
+    const index = produtosPendentes.findIndex(p => p.id === id);
+    if (index !== -1) {
+      produtosPendentes.splice(index, 1);
+    }
+
+    return { produto, migrado: true, produtoMigrado };
+  } else {
+    // Encaminhado para assistência
+    produto.statusGeral = 'Em Análise Assistência';
+    return { produto, migrado: false };
+  }
 };
 
 export const salvarParecerAssistencia = (
@@ -378,9 +353,9 @@ export const salvarParecerAssistencia = (
   observacoes: string,
   responsavel: string,
   pecas?: { descricao: string; valor: number; fornecedor: string }[]
-): ProdutoPendente | null => {
+): { produto: ProdutoPendente | null; migrado: boolean; produtoMigrado?: Produto } => {
   const produto = produtosPendentes.find(p => p.id === id);
-  if (!produto) return null;
+  if (!produto) return { produto: null, migrado: false };
 
   const parecer: ParecerAssistencia = {
     id: `PA-${Date.now()}`,
@@ -398,7 +373,7 @@ export const salvarParecerAssistencia = (
     id: `TL-${Date.now()}`,
     data: new Date().toISOString(),
     tipo: 'parecer_assistencia',
-    titulo: `Parecer Assistência - ${status}`,
+    titulo: `Parecer Assistência - ${status} – ${id}`,
     descricao: observacoes,
     responsavel
   });
@@ -421,53 +396,55 @@ export const salvarParecerAssistencia = (
     produto.custoAssistencia = (produto.custoAssistencia || 0) + custoTotal;
   }
 
-  // Atualizar status geral
-  if (status === 'Aguardando peça') {
-    produto.statusGeral = 'Aguardando Peça';
-  } else if (status === 'Produto conferido' || status === 'Ajustes realizados') {
-    // Pode ser liberado se todas condições atendidas
-    produto.statusGeral = 'Em Análise Assistência';
-  }
+  // Se produto conferido pela assistência, migrar automaticamente
+  if (status === 'Produto conferido') {
+    // Adicionar registro de liberação na timeline
+    produto.timeline.push({
+      id: `TL-${Date.now()}-lib`,
+      data: new Date().toISOString(),
+      tipo: 'liberacao',
+      titulo: `Deferido Assistência – ID ${id} liberado para estoque`,
+      descricao: `Produto ${id} conferido pela assistência e liberado para venda.`,
+      responsavel
+    });
 
-  return produto;
+    produto.statusGeral = 'Liberado';
+    
+    // Migrar para estoque
+    const produtoMigrado = migrarParaEstoque(produto, 'Assistência', responsavel);
+    
+    // Remover da lista de pendentes
+    const index = produtosPendentes.findIndex(p => p.id === id);
+    if (index !== -1) {
+      produtosPendentes.splice(index, 1);
+    }
+
+    return { produto, migrado: true, produtoMigrado };
+  } else if (status === 'Aguardando peça') {
+    produto.statusGeral = 'Aguardando Peça';
+    return { produto, migrado: false };
+  } else {
+    // Ajustes realizados - ainda precisa do "Produto conferido"
+    produto.statusGeral = 'Em Análise Assistência';
+    return { produto, migrado: false };
+  }
 };
 
 export const liberarProdutoPendente = (id: string): boolean => {
+  // Esta função é mantida por compatibilidade mas a migração agora é automática
   const index = produtosPendentes.findIndex(p => p.id === id);
   if (index === -1) return false;
-
-  const produto = produtosPendentes[index];
-  
-  // Verificar se pode ser liberado
-  const parecerEstoqueOK = produto.parecerEstoque?.status === 'Análise Realizada – Produto em ótimo estado';
-  const parecerAssistenciaOK = produto.parecerAssistencia?.status === 'Produto conferido';
-  
-  // Pode liberar se: estoque OK OU (encaminhado p/ assistência E assistência OK)
-  const podeLiberar = parecerEstoqueOK || 
-    (produto.parecerEstoque?.status === 'Encaminhado para conferência da Assistência' && parecerAssistenciaOK);
-
-  if (!podeLiberar) return false;
-
-  // Adicionar na timeline
-  produto.timeline.push({
-    id: `TL-${Date.now()}`,
-    data: new Date().toISOString(),
-    tipo: 'liberacao',
-    titulo: 'Produto Liberado para Estoque',
-    descricao: 'Produto passou por todas as conferências e foi liberado para venda.',
-    responsavel: 'Sistema'
-  });
-
-  produto.statusGeral = 'Liberado';
-  
-  // Remover da lista de pendentes (será tratado na UI)
-  produtosPendentes.splice(index, 1);
-  
   return true;
 };
 
 export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeline' | 'custoAssistencia' | 'statusGeral'>): ProdutoPendente => {
-  const newId = `PEND-${String(produtosPendentes.length + 1).padStart(4, '0')}`;
+  // Gerar ID único no formato PROD-XXXX
+  const existingIds = produtosPendentes.map(p => {
+    const match = p.id.match(/PROD-(\d+)/);
+    return match ? parseInt(match[1]) : 0;
+  });
+  const maxId = Math.max(0, ...existingIds);
+  const newId = `PROD-${String(maxId + 1).padStart(4, '0')}`;
   
   const newProduto: ProdutoPendente = {
     ...produto,
@@ -478,7 +455,7 @@ export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeli
         data: new Date().toISOString(),
         tipo: 'entrada',
         titulo: produto.origemEntrada === 'Trade-In' ? 'Entrada via Trade-In' : 'Entrada via Nota de Compra',
-        descricao: `Produto recebido ${produto.origemEntrada === 'Trade-In' ? 'como trade-in' : 'via nota de compra'} - ${produto.notaOuVendaId || 'N/A'}`,
+        descricao: `Produto ${newId} recebido ${produto.origemEntrada === 'Trade-In' ? 'como trade-in' : 'via nota de compra'} - ${produto.notaOuVendaId || 'N/A'}`,
         responsavel: 'Sistema'
       }
     ],

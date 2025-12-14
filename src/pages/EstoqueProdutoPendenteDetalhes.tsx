@@ -31,7 +31,6 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   getProdutoPendenteById, 
   salvarParecerEstoque, 
-  liberarProdutoPendente,
   ProdutoPendente,
   TimelineEntry
 } from '@/utils/osApi';
@@ -101,19 +100,19 @@ export default function EstoqueProdutoPendenteDetalhes() {
     
     const resultado = salvarParecerEstoque(id, statusParecer, parecerObservacoes, parecerResponsavel);
     
-    if (resultado) {
-      // Se for aprovado direto, liberar para estoque
-      if (statusParecer === 'Análise Realizada – Produto em ótimo estado') {
-        liberarProdutoPendente(id);
+    if (resultado.produto) {
+      // Se foi aprovado direto e migrado para o estoque
+      if (resultado.migrado && statusParecer === 'Análise Realizada – Produto em ótimo estado') {
         toast({
-          title: "Produto liberado!",
-          description: "Produto aprovado e liberado para o estoque.",
+          title: "Produto deferido!",
+          description: `Produto ID ${id} deferido pelo Estoque – liberado para estoque`,
+          className: "bg-green-500 text-white border-green-600"
         });
         navigate('/estoque/produtos-pendentes');
       } else {
         toast({
           title: "Parecer salvo!",
-          description: "Produto encaminhado para a Lista de Reparos (OS).",
+          description: `Produto ${id} encaminhado para a Lista de Reparos (OS).`,
         });
         navigate('/os/produtos-analise');
       }

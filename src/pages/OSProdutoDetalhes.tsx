@@ -34,7 +34,6 @@ import { useToast } from '@/hooks/use-toast';
 import { 
   getProdutoPendenteById, 
   salvarParecerAssistencia,
-  liberarProdutoPendente,
   ProdutoPendente,
   TimelineEntry
 } from '@/utils/osApi';
@@ -150,18 +149,18 @@ export default function OSProdutoDetalhes() {
       pecasFormatadas.length > 0 ? pecasFormatadas : undefined
     );
     
-    if (resultado) {
-      if (statusParecer === 'Produto conferido') {
-        liberarProdutoPendente(id);
+    if (resultado.produto) {
+      if (resultado.migrado && statusParecer === 'Produto conferido') {
         toast({
-          title: "Produto liberado!",
-          description: "Produto conferido e liberado para o estoque.",
+          title: "Produto deferido!",
+          description: `Produto ID ${id} deferido pela Assistência – liberado para estoque`,
+          className: "bg-green-500 text-white border-green-600"
         });
         navigate('/estoque/produtos');
       } else {
         toast({
           title: "Parecer salvo!",
-          description: "Parecer da assistência registrado com sucesso.",
+          description: `Parecer da assistência para ${id} registrado com sucesso.`,
         });
         // Recarregar dados
         const data = getProdutoPendenteById(id);
