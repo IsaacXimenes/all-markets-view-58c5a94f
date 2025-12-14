@@ -15,6 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { 
   ArrowLeft, 
   Package, 
@@ -28,19 +36,21 @@ import {
   User,
   DollarSign,
   Plus,
-  Trash2
+  Trash2,
+  ShieldCheck
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   getProdutoPendenteById, 
   salvarParecerAssistencia,
   ProdutoPendente,
-  TimelineEntry
+  TimelineEntry,
+  calcularSLA
 } from '@/utils/osApi';
 import { getColaboradores, getCargos, getFornecedores } from '@/utils/cadastrosApi';
 
 const formatCurrency = (value: number) => {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 };
 
 const formatDateTime = (dateString: string) => {
@@ -58,6 +68,7 @@ interface PecaForm {
   descricao: string;
   valor: string;
   fornecedor: string;
+  origemPeca: 'Fornecedor' | 'Tinha na Assistência' | '';
 }
 
 export default function OSProdutoDetalhes() {
@@ -74,7 +85,11 @@ export default function OSProdutoDetalhes() {
   const [parecerObservacoes, setParecerObservacoes] = useState('');
   const [parecerResponsavel, setParecerResponsavel] = useState('');
   const [pecas, setPecas] = useState<PecaForm[]>([]);
-  const [novoFornecedor, setNovoFornecedor] = useState('');
+
+  // Modal de confirmação dupla
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmResponsavel, setConfirmResponsavel] = useState('');
+  const [confirmData, setConfirmData] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     if (id) {
@@ -90,7 +105,7 @@ export default function OSProdutoDetalhes() {
   }, [id]);
 
   const handleAddPeca = () => {
-    setPecas([...pecas, { descricao: '', valor: '', fornecedor: '' }]);
+    setPecas([...pecas, { descricao: '', valor: '', fornecedor: '', origemPeca: '' }]);
   };
 
   const handleRemovePeca = (index: number) => {
@@ -99,7 +114,7 @@ export default function OSProdutoDetalhes() {
 
   const handlePecaChange = (index: number, field: keyof PecaForm, value: string) => {
     const newPecas = [...pecas];
-    newPecas[index][field] = value;
+    newPecas[index][field] = value as never;
     setPecas(newPecas);
   };
 
@@ -108,7 +123,7 @@ export default function OSProdutoDetalhes() {
     return parseFloat(cleaned) || 0;
   };
 
-  const handleSalvarParecer = () => {
+  const handleAbrirConfirmacao = () => {
     if (!id || !parecerStatus || !parecerResponsavel) {
       toast({
         title: "Campos obrigatórios",
@@ -120,25 +135,41 @@ export default function OSProdutoDetalhes() {
 
     // Validar peças se for "Ajustes realizados"
     if (parecerStatus === 'Ajustes realizados') {
-      const pecasValidas = pecas.filter(p => p.descricao && p.valor && p.fornecedor);
+      const pecasValidas = pecas.filter(p => p.descricao && p.valor && p.fornecedor && p.origemPeca);
       if (pecasValidas.length === 0) {
         toast({
           title: "Adicione as peças",
-          description: "Para ajustes realizados, adicione pelo menos uma peça/despesa.",
+          description: "Para ajustes realizados, adicione pelo menos uma peça/despesa com origem.",
           variant: "destructive"
         });
         return;
       }
     }
+    
+    setConfirmResponsavel('');
+    setConfirmData(new Date().toISOString().split('T')[0]);
+    setConfirmDialogOpen(true);
+  };
 
-    const statusParecer = parecerStatus as 'Produto conferido' | 'Aguardando peça' | 'Ajustes realizados';
+  const handleConfirmarParecer = () => {
+    if (!id || confirmResponsavel !== parecerResponsavel) {
+      toast({
+        title: "Confirmação inválida",
+        description: "O nome do responsável não confere.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const statusParecer = parecerStatus as 'Validado pela assistência' | 'Aguardando peça' | 'Ajustes realizados';
     
     const pecasFormatadas = pecas
       .filter(p => p.descricao && p.valor && p.fornecedor)
       .map(p => ({
         descricao: p.descricao,
         valor: parseValor(p.valor),
-        fornecedor: p.fornecedor
+        fornecedor: p.fornecedor,
+        origemPeca: p.origemPeca as 'Fornecedor' | 'Tinha na Assistência' | undefined
       }));
 
     const resultado = salvarParecerAssistencia(
@@ -149,11 +180,13 @@ export default function OSProdutoDetalhes() {
       pecasFormatadas.length > 0 ? pecasFormatadas : undefined
     );
     
+    setConfirmDialogOpen(false);
+
     if (resultado.produto) {
-      if (resultado.migrado && statusParecer === 'Produto conferido') {
+      if (resultado.migrado && statusParecer === 'Validado pela assistência') {
         toast({
           title: "Produto deferido!",
-          description: `Produto ID ${id} deferido pela Assistência – liberado para estoque`,
+          description: `Produto ID ${id} validado pela Assistência – liberado para estoque`,
           className: "bg-green-500 text-white border-green-600"
         });
         navigate('/estoque/produtos');
@@ -186,6 +219,8 @@ export default function OSProdutoDetalhes() {
     }
   };
 
+  const confirmacaoValida = confirmResponsavel === parecerResponsavel && confirmData;
+
   if (!produto) {
     return (
       <OSLayout title="Produto não encontrado">
@@ -201,12 +236,13 @@ export default function OSProdutoDetalhes() {
   }
 
   const custoTotalPecas = pecas.reduce((acc, p) => acc + parseValor(p.valor), 0);
+  const sla = calcularSLA(produto.dataEntrada);
 
   return (
     <OSLayout title="Detalhes do Produto - Assistência">
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <Button variant="outline" onClick={() => navigate('/os/produtos-analise')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
@@ -216,11 +252,19 @@ export default function OSProdutoDetalhes() {
             <p className="text-sm text-muted-foreground">IMEI: {produto.imei}</p>
           </div>
           <Badge variant="outline" className={
-            produto.origemEntrada === 'Trade-In' 
+            produto.origemEntrada === 'Base de Troca' 
               ? 'bg-purple-500/10 text-purple-600 border-purple-500/30 ml-auto'
               : 'bg-blue-500/10 text-blue-600 border-blue-500/30 ml-auto'
           }>
             {produto.origemEntrada}
+          </Badge>
+          {/* SLA Badge */}
+          <Badge variant="outline" className={
+            sla.cor === 'vermelho' ? 'bg-red-500/20 text-red-600 border-red-500/30' :
+            sla.cor === 'amarelo' ? 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30' :
+            'bg-muted'
+          }>
+            SLA: {sla.dias} dias
           </Badge>
         </div>
 
@@ -251,7 +295,7 @@ export default function OSProdutoDetalhes() {
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Custo Original</Label>
-                  <p>{formatCurrency(produto.valorCusto)}</p>
+                  <p className="font-medium">{formatCurrency(produto.valorCustoOriginal)}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Custo Assistência</Label>
@@ -260,10 +304,11 @@ export default function OSProdutoDetalhes() {
                   </p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Custo Total</Label>
-                  <p className="font-bold">
-                    {formatCurrency(produto.valorCusto + produto.custoAssistencia)}
+                  <Label className="text-muted-foreground">Valor Produto</Label>
+                  <p className="font-bold text-primary">
+                    {formatCurrency(produto.valorCustoOriginal)}
                   </p>
+                  <p className="text-xs text-muted-foreground">(Valor original preservado)</p>
                 </div>
               </div>
 
@@ -316,7 +361,7 @@ export default function OSProdutoDetalhes() {
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Produto conferido">Produto conferido</SelectItem>
+                    <SelectItem value="Validado pela assistência">Validado pela assistência</SelectItem>
                     <SelectItem value="Aguardando peça">Aguardando peça</SelectItem>
                     <SelectItem value="Ajustes realizados">Ajustes realizados</SelectItem>
                   </SelectContent>
@@ -361,41 +406,57 @@ export default function OSProdutoDetalhes() {
                   </div>
 
                   {pecas.map((peca, index) => (
-                    <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-2 p-3 bg-muted/30 rounded-lg">
-                      <Input
-                        placeholder="Descrição da peça"
-                        value={peca.descricao}
-                        onChange={(e) => handlePecaChange(index, 'descricao', e.target.value)}
-                      />
-                      <Input
-                        placeholder="Valor R$"
-                        value={peca.valor}
-                        onChange={(e) => {
-                          let value = e.target.value.replace(/[^\d,]/g, '');
-                          handlePecaChange(index, 'valor', value);
-                        }}
-                      />
-                      <Select 
-                        value={peca.fornecedor} 
-                        onValueChange={(v) => handlePecaChange(index, 'fornecedor', v)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Fornecedor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {fornecedores.map((f) => (
-                            <SelectItem key={f} value={f}>{f}</SelectItem>
-                          ))}
-                          <SelectItem value="Interno">Interno</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleRemovePeca(index)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
+                    <div key={index} className="space-y-2 p-3 bg-muted/30 rounded-lg">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <Input
+                          placeholder="Descrição da peça"
+                          value={peca.descricao}
+                          onChange={(e) => handlePecaChange(index, 'descricao', e.target.value)}
+                        />
+                        <Input
+                          placeholder="Valor R$"
+                          value={peca.valor}
+                          onChange={(e) => {
+                            let value = e.target.value.replace(/[^\d,]/g, '');
+                            handlePecaChange(index, 'valor', value);
+                          }}
+                        />
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <Select 
+                          value={peca.fornecedor} 
+                          onValueChange={(v) => handlePecaChange(index, 'fornecedor', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Fornecedor" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {fornecedores.map((f) => (
+                              <SelectItem key={f} value={f}>{f}</SelectItem>
+                            ))}
+                            <SelectItem value="Interno">Interno</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select 
+                          value={peca.origemPeca} 
+                          onValueChange={(v) => handlePecaChange(index, 'origemPeca', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Peça veio de" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Fornecedor">Fornecedor</SelectItem>
+                            <SelectItem value="Tinha na Assistência">Tinha na Assistência</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleRemovePeca(index)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
 
@@ -404,6 +465,10 @@ export default function OSProdutoDetalhes() {
                       Total Peças: {formatCurrency(custoTotalPecas)}
                     </div>
                   )}
+
+                  <p className="text-xs text-muted-foreground">
+                    Nota: O custo da assistência é registrado separadamente e NÃO altera o valor original do produto.
+                  </p>
                 </div>
               )}
 
@@ -411,7 +476,8 @@ export default function OSProdutoDetalhes() {
                 Data/Hora: {new Date().toLocaleString('pt-BR')} (automático)
               </div>
 
-              <Button onClick={handleSalvarParecer} className="w-full">
+              <Button onClick={handleAbrirConfirmacao} className="w-full">
+                <ShieldCheck className="h-4 w-4 mr-2" />
                 Salvar Parecer Assistência
               </Button>
             </CardContent>
@@ -463,6 +529,57 @@ export default function OSProdutoDetalhes() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Modal de Confirmação Dupla */}
+        <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                Confirmar Parecer
+              </DialogTitle>
+              <DialogDescription>
+                Confirmar parecer "{parecerStatus}" para o produto ID {id}?
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Digite o nome do responsável para confirmar *</Label>
+                <Input 
+                  placeholder={parecerResponsavel}
+                  value={confirmResponsavel}
+                  onChange={(e) => setConfirmResponsavel(e.target.value)}
+                />
+                {confirmResponsavel && confirmResponsavel !== parecerResponsavel && (
+                  <p className="text-sm text-destructive">O nome não confere com o responsável selecionado</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Data de Confirmação</Label>
+                <Input 
+                  type="date"
+                  value={confirmData}
+                  onChange={(e) => setConfirmData(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleConfirmarParecer}
+                disabled={!confirmacaoValida}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Confirmar Parecer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </OSLayout>
   );

@@ -13,13 +13,14 @@ export interface ParecerEstoque {
 export interface ParecerAssistencia {
   id: string;
   data: string;
-  status: 'Produto conferido' | 'Aguardando peça' | 'Ajustes realizados';
+  status: 'Validado pela assistência' | 'Aguardando peça' | 'Ajustes realizados';
   observacoes: string;
   responsavel: string;
   pecas?: {
     descricao: string;
     valor: number;
     fornecedor: string;
+    origemPeca?: 'Fornecedor' | 'Tinha na Assistência';
   }[];
 }
 
@@ -42,9 +43,10 @@ export interface ProdutoPendente {
   cor: string;
   tipo: 'Novo' | 'Seminovo';
   condicao: 'Novo' | 'Semi-novo';
-  origemEntrada: 'Trade-In' | 'Nota de Entrada';
+  origemEntrada: 'Base de Troca' | 'Fornecedor';
   notaOuVendaId?: string;
   valorCusto: number;
+  valorCustoOriginal: number; // Valor original preservado (não soma custo assistência)
   saudeBateria: number;
   loja: string;
   dataEntrada: string;
@@ -58,7 +60,7 @@ export interface ProdutoPendente {
 // Dados mockados de produtos pendentes - IDs PROD-XXXX únicos para rastreabilidade
 // IMPORTANTE: Estes IDs são DIFERENTES dos IDs em estoqueApi.ts para evitar duplicação
 let produtosPendentes: ProdutoPendente[] = [
-  // 3 produtos em Produtos Pendentes (IDs PROD-0001 a PROD-0003)
+  // 3 produtos em Produtos Pendentes (IDs PROD-0001 a PROD-0003) - com SLA variado
   {
     id: 'PROD-0001',
     imei: '352999888777001',
@@ -67,18 +69,19 @@ let produtosPendentes: ProdutoPendente[] = [
     cor: 'Grafite',
     tipo: 'Seminovo',
     condicao: 'Semi-novo',
-    origemEntrada: 'Nota de Entrada',
+    origemEntrada: 'Fornecedor',
     notaOuVendaId: 'NC-2025-0010',
     valorCusto: 3100.00,
+    valorCustoOriginal: 3100.00,
     saudeBateria: 86,
     loja: 'Loja Centro',
-    dataEntrada: '2025-01-10',
+    dataEntrada: '2025-12-13', // 1 dia atrás - SLA normal
     timeline: [
       {
         id: 'TL-001',
-        data: '2025-01-10T09:30:00',
+        data: '2025-12-13T09:30:00',
         tipo: 'entrada',
-        titulo: 'Entrada via Nota de Compra',
+        titulo: 'Entrada via Fornecedor',
         descricao: 'Produto PROD-0001 recebido da nota NC-2025-0010 - Fornecedor TechSupply Imports',
         responsavel: 'Lucas Mendes'
       }
@@ -94,19 +97,20 @@ let produtosPendentes: ProdutoPendente[] = [
     cor: 'Azul',
     tipo: 'Seminovo',
     condicao: 'Semi-novo',
-    origemEntrada: 'Trade-In',
+    origemEntrada: 'Base de Troca',
     notaOuVendaId: 'VEN-2025-0050',
     valorCusto: 3500.00,
+    valorCustoOriginal: 3500.00,
     saudeBateria: 91,
     loja: 'Loja Shopping',
-    dataEntrada: '2025-01-11',
+    dataEntrada: '2025-12-10', // 4 dias atrás - SLA amarelo
     timeline: [
       {
         id: 'TL-002',
-        data: '2025-01-11T10:00:00',
+        data: '2025-12-10T10:00:00',
         tipo: 'entrada',
-        titulo: 'Entrada via Trade-In',
-        descricao: 'Produto PROD-0002 recebido como trade-in na venda VEN-2025-0050',
+        titulo: 'Entrada via Base de Troca',
+        descricao: 'Produto PROD-0002 recebido como base de troca na venda VEN-2025-0050',
         responsavel: 'Roberto Alves'
       }
     ],
@@ -121,18 +125,19 @@ let produtosPendentes: ProdutoPendente[] = [
     cor: 'Branco',
     tipo: 'Seminovo',
     condicao: 'Semi-novo',
-    origemEntrada: 'Nota de Entrada',
+    origemEntrada: 'Fornecedor',
     notaOuVendaId: 'NC-2025-0012',
     valorCusto: 1800.00,
+    valorCustoOriginal: 1800.00,
     saudeBateria: 72,
     loja: 'Loja Norte',
-    dataEntrada: '2025-01-09',
+    dataEntrada: '2025-12-08', // 6 dias atrás - SLA vermelho
     timeline: [
       {
         id: 'TL-004',
-        data: '2025-01-09T08:30:00',
+        data: '2025-12-08T08:30:00',
         tipo: 'entrada',
-        titulo: 'Entrada via Nota de Compra',
+        titulo: 'Entrada via Fornecedor',
         descricao: 'Produto PROD-0003 recebido da nota NC-2025-0012 - Fornecedor FastCell Distribuição',
         responsavel: 'Ana Paula'
       }
@@ -149,31 +154,32 @@ let produtosPendentes: ProdutoPendente[] = [
     cor: 'Verde Meia-Noite',
     tipo: 'Seminovo',
     condicao: 'Semi-novo',
-    origemEntrada: 'Trade-In',
+    origemEntrada: 'Base de Troca',
     notaOuVendaId: 'VEN-2025-0045',
     valorCusto: 1500.00,
+    valorCustoOriginal: 1500.00,
     saudeBateria: 78,
     loja: 'Loja Sul',
-    dataEntrada: '2025-01-08',
+    dataEntrada: '2025-12-09', // 5 dias atrás - SLA vermelho
     parecerEstoque: {
       id: 'PE-003',
-      data: '2025-01-08T11:30:00',
+      data: '2025-12-09T11:30:00',
       status: 'Encaminhado para conferência da Assistência',
-      observacoes: 'Trade-in com bateria degradada, encaminhar para troca de bateria.',
+      observacoes: 'Base de troca com bateria degradada, encaminhar para troca de bateria.',
       responsavel: 'Roberto Alves'
     },
     timeline: [
       {
         id: 'TL-006',
-        data: '2025-01-08T10:00:00',
+        data: '2025-12-09T10:00:00',
         tipo: 'entrada',
-        titulo: 'Entrada via Trade-In',
-        descricao: 'Produto PROD-0004 recebido como trade-in na venda VEN-2025-0045 - Cliente Maria Silva',
+        titulo: 'Entrada via Base de Troca',
+        descricao: 'Produto PROD-0004 recebido como base de troca na venda VEN-2025-0045 - Cliente Maria Silva',
         responsavel: 'Vendedor João'
       },
       {
         id: 'TL-007',
-        data: '2025-01-08T11:30:00',
+        data: '2025-12-09T11:30:00',
         tipo: 'parecer_estoque',
         titulo: 'Parecer Estoque - Encaminhado Assistência',
         descricao: 'PROD-0004 encaminhado para conferência da Assistência. Bateria degradada.',
@@ -191,15 +197,16 @@ let produtosPendentes: ProdutoPendente[] = [
     cor: 'Rosa',
     tipo: 'Seminovo',
     condicao: 'Semi-novo',
-    origemEntrada: 'Nota de Entrada',
+    origemEntrada: 'Fornecedor',
     notaOuVendaId: 'NC-2025-0015',
     valorCusto: 2200.00,
+    valorCustoOriginal: 2200.00,
     saudeBateria: 82,
     loja: 'Loja Oeste',
-    dataEntrada: '2025-01-07',
+    dataEntrada: '2025-12-11', // 3 dias atrás - SLA amarelo
     parecerEstoque: {
       id: 'PE-004',
-      data: '2025-01-07T15:00:00',
+      data: '2025-12-11T15:00:00',
       status: 'Encaminhado para conferência da Assistência',
       observacoes: 'Tela com pequeno risco, encaminhar para polimento.',
       responsavel: 'Fernanda Lima'
@@ -207,15 +214,15 @@ let produtosPendentes: ProdutoPendente[] = [
     timeline: [
       {
         id: 'TL-009',
-        data: '2025-01-07T10:30:00',
+        data: '2025-12-11T10:30:00',
         tipo: 'entrada',
-        titulo: 'Entrada via Nota de Compra',
+        titulo: 'Entrada via Fornecedor',
         descricao: 'Produto PROD-0005 recebido da nota NC-2025-0015 - Fornecedor TechnoImports',
         responsavel: 'Vendedora Ana'
       },
       {
         id: 'TL-010',
-        data: '2025-01-07T15:00:00',
+        data: '2025-12-11T15:00:00',
         tipo: 'parecer_estoque',
         titulo: 'Parecer Estoque - Encaminhado Assistência',
         descricao: 'PROD-0005 encaminhado para conferência da Assistência. Tela com pequeno risco.',
@@ -263,7 +270,25 @@ export const getProdutosMigrados = (): Produto[] => {
   return [...produtosMigrados];
 };
 
+// Calcular SLA em dias
+export const calcularSLA = (dataEntrada: string): { dias: number; cor: 'normal' | 'amarelo' | 'vermelho' } => {
+  const hoje = new Date();
+  const entrada = new Date(dataEntrada);
+  const diffTime = Math.abs(hoje.getTime() - entrada.getTime());
+  const dias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  let cor: 'normal' | 'amarelo' | 'vermelho' = 'normal';
+  if (dias >= 5) {
+    cor = 'vermelho';
+  } else if (dias >= 3) {
+    cor = 'amarelo';
+  }
+  
+  return { dias, cor };
+};
+
 // Migrar produto para o estoque PRINCIPAL (via estoqueApi)
+// IMPORTANTE: NÃO soma custo assistência ao valor original
 const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque' | 'Assistência', responsavel: string): Produto => {
   // Adiciona entrada de liberação na timeline
   const timelineLiberacao: TimelineEntry = {
@@ -275,6 +300,7 @@ const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque
     responsavel
   };
 
+  // Usar valor original, NÃO somar custo assistência
   const novoProduto: Produto = {
     id: produto.id, // ID PERSISTENTE - nunca muda
     imei: produto.imei,
@@ -284,8 +310,8 @@ const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque
     cor: produto.cor,
     tipo: produto.tipo,
     quantidade: 1,
-    valorCusto: produto.valorCusto + produto.custoAssistencia,
-    valorVendaSugerido: (produto.valorCusto + produto.custoAssistencia) * 1.8,
+    valorCusto: produto.valorCustoOriginal, // VALOR ORIGINAL PRESERVADO
+    valorVendaSugerido: produto.valorCustoOriginal * 1.8, // Baseado no original
     saudeBateria: produto.saudeBateria,
     loja: produto.loja,
     estoqueConferido: true,
@@ -294,15 +320,16 @@ const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque
     historicoCusto: [
       { 
         data: new Date().toISOString().split('T')[0], 
-        fornecedor: produto.origemEntrada === 'Trade-In' ? 'Trade-In' : 'Nota de Entrada', 
-        valor: produto.valorCusto 
+        fornecedor: produto.origemEntrada, 
+        valor: produto.valorCustoOriginal 
       }
     ],
     historicoValorRecomendado: [],
     statusNota: 'Concluído',
-    origemEntrada: produto.origemEntrada === 'Trade-In' ? 'Trade-In' : 'Nota de Entrada',
+    origemEntrada: produto.origemEntrada,
     // PRESERVA A TIMELINE COMPLETA DO PRODUTO PENDENTE + LIBERAÇÃO
-    timeline: [...produto.timeline, timelineLiberacao]
+    timeline: [...produto.timeline, timelineLiberacao],
+    custoAssistencia: produto.custoAssistencia // Armazena custo assistência separadamente
   };
 
   // Adiciona ao estoque PRINCIPAL via estoqueApi
@@ -382,7 +409,7 @@ export const salvarParecerAssistencia = (
   status: ParecerAssistencia['status'],
   observacoes: string,
   responsavel: string,
-  pecas?: { descricao: string; valor: number; fornecedor: string }[]
+  pecas?: { descricao: string; valor: number; fornecedor: string; origemPeca?: 'Fornecedor' | 'Tinha na Assistência' }[]
 ): { produto: ProdutoPendente | null; migrado: boolean; produtoMigrado?: Produto } => {
   const produto = produtosPendentes.find(p => p.id === id);
   if (!produto) return { produto: null, migrado: false };
@@ -408,7 +435,7 @@ export const salvarParecerAssistencia = (
     responsavel
   });
 
-  // Adicionar despesas na timeline
+  // Adicionar despesas na timeline (apenas para registro, NÃO soma ao custo do produto)
   if (pecas && pecas.length > 0) {
     let custoTotal = 0;
     pecas.forEach(peca => {
@@ -418,23 +445,24 @@ export const salvarParecerAssistencia = (
         data: new Date().toISOString(),
         tipo: 'despesa',
         titulo: `Despesa - ${peca.descricao}`,
-        descricao: `Fornecedor: ${peca.fornecedor}`,
+        descricao: `Fornecedor: ${peca.fornecedor} | Origem: ${peca.origemPeca || 'N/A'}`,
         valor: peca.valor,
         responsavel
       });
     });
+    // Custo assistência é registrado mas NÃO altera valor do produto
     produto.custoAssistencia = (produto.custoAssistencia || 0) + custoTotal;
   }
 
-  // Se produto conferido pela assistência, migrar automaticamente
-  if (status === 'Produto conferido') {
+  // Se produto validado pela assistência, migrar automaticamente
+  if (status === 'Validado pela assistência') {
     // Adicionar registro de liberação na timeline
     produto.timeline.push({
       id: `TL-${Date.now()}-lib`,
       data: new Date().toISOString(),
       tipo: 'liberacao',
       titulo: `Deferido Assistência – ID ${id} liberado para estoque`,
-      descricao: `Produto ${id} conferido pela assistência e liberado para venda.`,
+      descricao: `Produto ${id} validado pela assistência e liberado para venda.`,
       responsavel
     });
 
@@ -454,7 +482,7 @@ export const salvarParecerAssistencia = (
     produto.statusGeral = 'Aguardando Peça';
     return { produto, migrado: false };
   } else {
-    // Ajustes realizados - ainda precisa do "Produto conferido"
+    // Ajustes realizados - ainda precisa do "Validado pela assistência"
     produto.statusGeral = 'Em Análise Assistência';
     return { produto, migrado: false };
   }
@@ -467,7 +495,7 @@ export const liberarProdutoPendente = (id: string): boolean => {
   return true;
 };
 
-export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeline' | 'custoAssistencia' | 'statusGeral'>): ProdutoPendente => {
+export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeline' | 'custoAssistencia' | 'statusGeral' | 'valorCustoOriginal'>): ProdutoPendente => {
   // Gerar ID único usando o sistema centralizado
   const newId = generateProductId();
   
@@ -480,13 +508,14 @@ export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeli
   const newProduto: ProdutoPendente = {
     ...produto,
     id: newId,
+    valorCustoOriginal: produto.valorCusto, // Preserva valor original
     timeline: [
       {
         id: `TL-${Date.now()}`,
         data: new Date().toISOString(),
         tipo: 'entrada',
-        titulo: produto.origemEntrada === 'Trade-In' ? 'Entrada via Trade-In' : 'Entrada via Nota de Compra',
-        descricao: `Produto ${newId} recebido ${produto.origemEntrada === 'Trade-In' ? 'como trade-in' : 'via nota de compra'} - ${produto.notaOuVendaId || 'N/A'}`,
+        titulo: produto.origemEntrada === 'Base de Troca' ? 'Entrada via Base de Troca' : 'Entrada via Fornecedor',
+        descricao: `Produto ${newId} recebido ${produto.origemEntrada === 'Base de Troca' ? 'como base de troca' : 'via nota de compra'} - ${produto.notaOuVendaId || 'N/A'}`,
         responsavel: 'Sistema'
       }
     ],
@@ -498,37 +527,19 @@ export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeli
   return newProduto;
 };
 
-// Função para adicionar produto pendente com ID específico (para trade-ins)
-export const addProdutoPendenteComId = (
-  id: string,
-  produto: Omit<ProdutoPendente, 'id' | 'timeline' | 'custoAssistencia' | 'statusGeral'>
-): ProdutoPendente => {
-  // Validar que o ID não está duplicado
-  if (isProductIdRegistered(id)) {
-    console.error(`Erro de rastreabilidade – ID duplicado detectado: ${id}`);
-    throw new Error(`Erro de rastreabilidade – ID duplicado detectado: ${id}`);
-  }
+// Exportar para CSV
+export const exportToCSV = (data: object[], filename: string) => {
+  if (data.length === 0) return;
   
-  // Registrar o ID
-  registerProductId(id);
+  const headers = Object.keys(data[0]);
+  const csvContent = [
+    headers.join(';'),
+    ...data.map(row => headers.map(h => (row as Record<string, unknown>)[h]).join(';'))
+  ].join('\n');
   
-  const newProduto: ProdutoPendente = {
-    ...produto,
-    id,
-    timeline: [
-      {
-        id: `TL-${Date.now()}`,
-        data: new Date().toISOString(),
-        tipo: 'entrada',
-        titulo: produto.origemEntrada === 'Trade-In' ? 'Entrada via Trade-In' : 'Entrada via Nota de Compra',
-        descricao: `Produto ${id} recebido ${produto.origemEntrada === 'Trade-In' ? 'como trade-in' : 'via nota de compra'} - ${produto.notaOuVendaId || 'N/A'}`,
-        responsavel: 'Sistema'
-      }
-    ],
-    custoAssistencia: 0,
-    statusGeral: 'Pendente Estoque'
-  };
-
-  produtosPendentes.push(newProduto);
-  return newProduto;
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
 };

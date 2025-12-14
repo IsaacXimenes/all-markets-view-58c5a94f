@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -14,6 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { 
   ArrowLeft, 
   Package, 
@@ -25,19 +34,21 @@ import {
   MapPin,
   Calendar,
   User,
-  DollarSign
+  DollarSign,
+  ShieldCheck
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { 
   getProdutoPendenteById, 
   salvarParecerEstoque, 
   ProdutoPendente,
-  TimelineEntry
+  TimelineEntry,
+  calcularSLA
 } from '@/utils/osApi';
 import { getColaboradores, getCargos } from '@/utils/cadastrosApi';
 
 const formatCurrency = (value: number) => {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 };
 
 const formatDateTime = (dateString: string) => {
@@ -64,6 +75,11 @@ export default function EstoqueProdutoPendenteDetalhes() {
   const [parecerObservacoes, setParecerObservacoes] = useState('');
   const [parecerResponsavel, setParecerResponsavel] = useState('');
 
+  // Modal de confirmação dupla
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmResponsavel, setConfirmResponsavel] = useState('');
+  const [confirmData, setConfirmData] = useState(new Date().toISOString().split('T')[0]);
+
   useEffect(() => {
     if (id) {
       const data = getProdutoPendenteById(id);
@@ -86,11 +102,26 @@ export default function EstoqueProdutoPendenteDetalhes() {
     setColaboradoresEstoque(colabsEstoque);
   }, [id]);
 
-  const handleSalvarParecer = () => {
+  const handleAbrirConfirmacao = () => {
     if (!id || !parecerStatus || !parecerResponsavel) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos do parecer.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setConfirmResponsavel('');
+    setConfirmData(new Date().toISOString().split('T')[0]);
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmarParecer = () => {
+    if (!id || confirmResponsavel !== parecerResponsavel) {
+      toast({
+        title: "Confirmação inválida",
+        description: "O nome do responsável não confere.",
         variant: "destructive"
       });
       return;
@@ -100,6 +131,8 @@ export default function EstoqueProdutoPendenteDetalhes() {
     
     const resultado = salvarParecerEstoque(id, statusParecer, parecerObservacoes, parecerResponsavel);
     
+    setConfirmDialogOpen(false);
+
     if (resultado.produto) {
       // Se foi aprovado direto e migrado para o estoque
       if (resultado.migrado && statusParecer === 'Análise Realizada – Produto em ótimo estado') {
@@ -136,6 +169,8 @@ export default function EstoqueProdutoPendenteDetalhes() {
     }
   };
 
+  const confirmacaoValida = confirmResponsavel === parecerResponsavel && confirmData;
+
   if (!produto) {
     return (
       <EstoqueLayout title="Produto não encontrado">
@@ -149,6 +184,8 @@ export default function EstoqueProdutoPendenteDetalhes() {
       </EstoqueLayout>
     );
   }
+
+  const sla = calcularSLA(produto.dataEntrada);
 
   return (
     <EstoqueLayout title="Detalhes do Produto Pendente">
@@ -164,11 +201,19 @@ export default function EstoqueProdutoPendenteDetalhes() {
             <p className="text-sm text-muted-foreground">IMEI: {produto.imei}</p>
           </div>
           <Badge variant="outline" className={
-            produto.origemEntrada === 'Trade-In' 
+            produto.origemEntrada === 'Base de Troca' 
               ? 'bg-purple-500/10 text-purple-600 border-purple-500/30 ml-auto'
               : 'bg-blue-500/10 text-blue-600 border-blue-500/30 ml-auto'
           }>
             {produto.origemEntrada}
+          </Badge>
+          {/* SLA Badge */}
+          <Badge variant="outline" className={
+            sla.cor === 'vermelho' ? 'bg-red-500/20 text-red-600 border-red-500/30' :
+            sla.cor === 'amarelo' ? 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30' :
+            'bg-muted'
+          }>
+            SLA: {sla.dias} dias
           </Badge>
         </div>
 
@@ -216,8 +261,8 @@ export default function EstoqueProdutoPendenteDetalhes() {
                   </p>
                 </div>
                 <div>
-                  <Label className="text-muted-foreground">Valor de Custo</Label>
-                  <p className="font-medium">{formatCurrency(produto.valorCusto)}</p>
+                  <Label className="text-muted-foreground">Valor de Custo (Original)</Label>
+                  <p className="font-medium">{formatCurrency(produto.valorCustoOriginal)}</p>
                 </div>
               </div>
 
@@ -339,7 +384,8 @@ export default function EstoqueProdutoPendenteDetalhes() {
                     Data/Hora: {new Date().toLocaleString('pt-BR')} (automático)
                   </div>
 
-                  <Button onClick={handleSalvarParecer} className="w-full">
+                  <Button onClick={handleAbrirConfirmacao} className="w-full">
+                    <ShieldCheck className="h-4 w-4 mr-2" />
                     Salvar Parecer Estoque
                   </Button>
                 </>
@@ -393,6 +439,57 @@ export default function EstoqueProdutoPendenteDetalhes() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Modal de Confirmação Dupla */}
+        <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                Confirmar Parecer
+              </DialogTitle>
+              <DialogDescription>
+                Confirmar parecer "{parecerStatus}" para o produto ID {id}?
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Digite o nome do responsável para confirmar *</Label>
+                <Input 
+                  placeholder={parecerResponsavel}
+                  value={confirmResponsavel}
+                  onChange={(e) => setConfirmResponsavel(e.target.value)}
+                />
+                {confirmResponsavel && confirmResponsavel !== parecerResponsavel && (
+                  <p className="text-sm text-destructive">O nome não confere com o responsável selecionado</p>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Data de Confirmação</Label>
+                <Input 
+                  type="date"
+                  value={confirmData}
+                  onChange={(e) => setConfirmData(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleConfirmarParecer}
+                disabled={!confirmacaoValida}
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Confirmar Parecer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </EstoqueLayout>
   );

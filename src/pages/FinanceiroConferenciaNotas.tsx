@@ -1,14 +1,15 @@
 import { useState, useMemo } from 'react';
 import { FinanceiroLayout } from '@/components/layout/FinanceiroLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getNotasCompra, finalizarNota, NotaCompra } from '@/utils/estoqueApi';
-import { getContasFinanceiras, getColaboradores, getCargos } from '@/utils/cadastrosApi';
-import { Eye, CheckCircle } from 'lucide-react';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+import { getContasFinanceiras, getColaboradores, getCargos, getFornecedores } from '@/utils/cadastrosApi';
+import { Eye, CheckCircle, Download, Filter, X, Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
@@ -24,11 +25,20 @@ export default function FinanceiroConferenciaNotas() {
   const contasFinanceiras = getContasFinanceiras().filter(c => c.status === 'Ativo');
   const colaboradores = getColaboradores();
   const cargos = getCargos();
+  const fornecedoresList = getFornecedores();
   
   const [contaPagamento, setContaPagamento] = useState('');
   const [formaPagamento, setFormaPagamento] = useState('');
   const [parcelas, setParcelas] = useState('1');
   const [responsavelFinanceiro, setResponsavelFinanceiro] = useState('');
+
+  // Filtros - igual à Conferência de Contas
+  const [filters, setFilters] = useState({
+    dataInicio: '',
+    dataFim: '',
+    fornecedor: 'todos',
+    palavraChave: ''
+  });
 
   // Filtrar colaboradores que têm permissão "Financeiro"
   const colaboradoresFinanceiros = useMemo(() => {
@@ -39,7 +49,30 @@ export default function FinanceiroConferenciaNotas() {
     return colaboradores.filter(col => cargosComPermissaoFinanceiro.includes(col.cargo));
   }, [colaboradores, cargos]);
 
-  const notasPendentes = notas.filter(n => n.status === 'Pendente');
+  // Filtrar e ordenar notas (pendentes no topo, depois por data)
+  const filteredNotas = useMemo(() => {
+    let filtered = notas.filter(nota => {
+      if (filters.dataInicio && nota.data < filters.dataInicio) return false;
+      if (filters.dataFim && nota.data > filters.dataFim) return false;
+      if (filters.fornecedor !== 'todos' && nota.fornecedor !== filters.fornecedor) return false;
+      if (filters.palavraChave && !nota.numeroNota.toLowerCase().includes(filters.palavraChave.toLowerCase()) && 
+          !nota.fornecedor.toLowerCase().includes(filters.palavraChave.toLowerCase())) return false;
+      return true;
+    });
+
+    // Ordenar: pendentes primeiro (por data mais recente), depois concluídos (por data mais recente)
+    return filtered.sort((a, b) => {
+      if (a.status === 'Pendente' && b.status !== 'Pendente') return -1;
+      if (a.status !== 'Pendente' && b.status === 'Pendente') return 1;
+      return new Date(b.data).getTime() - new Date(a.data).getTime();
+    });
+  }, [notas, filters]);
+
+  const totalPendente = useMemo(() => {
+    return filteredNotas
+      .filter(n => n.status === 'Pendente')
+      .reduce((acc, n) => acc + n.valorTotal, 0);
+  }, [filteredNotas]);
 
   const handleVerNota = (nota: NotaCompra) => {
     setNotaSelecionada(nota);
@@ -83,53 +116,179 @@ export default function FinanceiroConferenciaNotas() {
     }
   };
 
+  const handleExport = () => {
+    const dataToExport = filteredNotas.map(n => ({
+      ID: n.id,
+      Data: new Date(n.data).toLocaleDateString('pt-BR'),
+      'Nº Nota': n.numeroNota,
+      Fornecedor: n.fornecedor,
+      'Valor Total': formatCurrency(n.valorTotal),
+      Status: n.status
+    }));
+    
+    const csvContent = Object.keys(dataToExport[0] || {}).join(';') + '\n' +
+      dataToExport.map(row => Object.values(row).join(';')).join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `conferencia-notas-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    
+    toast.success('Dados exportados com sucesso!');
+  };
+
+  const handleLimpar = () => {
+    setFilters({
+      dataInicio: '',
+      dataFim: '',
+      fornecedor: 'todos',
+      palavraChave: ''
+    });
+  };
+
   return (
     <FinanceiroLayout title="Conferência de Notas de Entrada">
-      <div className="space-y-4">
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Nº Nota</TableHead>
-                <TableHead>Fornecedor</TableHead>
-                <TableHead>Valor Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {notasPendentes.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Nenhuma nota pendente de conferência
-                  </TableCell>
-                </TableRow>
-              ) : (
-                notasPendentes.map(nota => (
-                  <TableRow key={nota.id}>
-                    <TableCell className="font-mono text-xs">{nota.id}</TableCell>
-                    <TableCell>{new Date(nota.data).toLocaleDateString('pt-BR')}</TableCell>
-                    <TableCell className="font-mono text-xs">{nota.numeroNota}</TableCell>
-                    <TableCell>{nota.fornecedor}</TableCell>
-                    <TableCell className="font-semibold">
-                      {formatCurrency(nota.valorTotal)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="destructive">{nota.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleVerNota(nota)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+      <div className="space-y-6">
+        {/* Filtros - Igual à Conferência de Contas */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filtros
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <Label htmlFor="dataInicio">Data Início</Label>
+                <Input
+                  id="dataInicio"
+                  type="date"
+                  value={filters.dataInicio}
+                  onChange={(e) => setFilters({ ...filters, dataInicio: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="dataFim">Data Fim</Label>
+                <Input
+                  id="dataFim"
+                  type="date"
+                  value={filters.dataFim}
+                  onChange={(e) => setFilters({ ...filters, dataFim: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="fornecedor">Fornecedor</Label>
+                <Select value={filters.fornecedor} onValueChange={(value) => setFilters({ ...filters, fornecedor: value })}>
+                  <SelectTrigger id="fornecedor">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    {fornecedoresList.map(f => (
+                      <SelectItem key={f.id} value={f.nome}>{f.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="palavraChave">Palavra-chave</Label>
+                <Input
+                  id="palavraChave"
+                  placeholder="Buscar..."
+                  value={filters.palavraChave}
+                  onChange={(e) => setFilters({ ...filters, palavraChave: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button variant="outline" onClick={handleLimpar}>
+                <X className="h-4 w-4 mr-2" />
+                Limpar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tabela de Notas */}
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <CardTitle>Notas de Entrada</CardTitle>
+              <Button onClick={handleExport} variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Exportar CSV
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Nº Nota</TableHead>
+                    <TableHead>Fornecedor</TableHead>
+                    <TableHead>Valor Total</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredNotas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        Nenhuma nota encontrada
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredNotas.map(nota => (
+                      <TableRow 
+                        key={nota.id}
+                        className={nota.status === 'Pendente' ? 'bg-destructive/20' : 'bg-green-500/20'}
+                      >
+                        <TableCell className="font-mono text-xs">{nota.id}</TableCell>
+                        <TableCell>{new Date(nota.data).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell className="font-mono text-xs">{nota.numeroNota}</TableCell>
+                        <TableCell>{nota.fornecedor}</TableCell>
+                        <TableCell className="font-semibold">
+                          {formatCurrency(nota.valorTotal)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={nota.status === 'Concluído' ? 'default' : 'destructive'}>
+                            {nota.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {nota.status === 'Pendente' ? (
+                            <Button size="sm" onClick={() => handleVerNota(nota)}>
+                              <Check className="h-4 w-4 mr-1" />
+                              Conferir
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" size="sm" onClick={() => handleVerNota(nota)}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+            <div className="mt-4 pt-4 border-t flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">
+                {filteredNotas.filter(n => n.status === 'Pendente').length} nota(s) pendente(s)
+              </span>
+              <span className="text-lg font-bold">
+                Total Pendente: {formatCurrency(totalPendente)}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -173,96 +332,100 @@ export default function FinanceiroConferenciaNotas() {
                     </div>
                   </div>
 
-                  <div className="border-t pt-4">
-                    <h3 className="font-semibold mb-3 text-primary">Seção "Pagamento" (Habilitada)</h3>
-                    <div className="grid gap-4">
-                      <div>
-                        <Label htmlFor="contaPagamento">Conta de Pagamento *</Label>
-                        <Select value={contaPagamento} onValueChange={setContaPagamento}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a conta" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {contasFinanceiras.map(c => (
-                              <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="formaPagamento">Forma de Pagamento *</Label>
-                        <Select value={formaPagamento} onValueChange={setFormaPagamento}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Pix">Pix</SelectItem>
-                            <SelectItem value="Transferência Bancária">Transferência Bancária</SelectItem>
-                            <SelectItem value="Boleto">Boleto</SelectItem>
-                            <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
-                            <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {mostrarCampoParcelas && (
+                  {notaSelecionada.status === 'Pendente' && (
+                    <div className="border-t pt-4">
+                      <h3 className="font-semibold mb-3 text-primary">Seção "Pagamento" (Habilitada)</h3>
+                      <div className="grid gap-4">
                         <div>
-                          <Label htmlFor="parcelas">Nº de Parcelas *</Label>
-                          <Input 
-                            id="parcelas" 
-                            type="number" 
-                            min="1" 
-                            value={parcelas}
-                            onChange={(e) => setParcelas(e.target.value)}
-                          />
-                          {!parcelas && (
-                            <p className="text-sm text-destructive mt-1">Informe o número de parcelas</p>
+                          <Label htmlFor="contaPagamento">Conta de Pagamento *</Label>
+                          <Select value={contaPagamento} onValueChange={setContaPagamento}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a conta" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {contasFinanceiras.map(c => (
+                                <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <Label htmlFor="formaPagamento">Forma de Pagamento *</Label>
+                          <Select value={formaPagamento} onValueChange={setFormaPagamento}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Pix">Pix</SelectItem>
+                              <SelectItem value="Transferência Bancária">Transferência Bancária</SelectItem>
+                              <SelectItem value="Boleto">Boleto</SelectItem>
+                              <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+                              <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {mostrarCampoParcelas && (
+                          <div>
+                            <Label htmlFor="parcelas">Nº de Parcelas *</Label>
+                            <Input 
+                              id="parcelas" 
+                              type="number" 
+                              min="1" 
+                              value={parcelas}
+                              onChange={(e) => setParcelas(e.target.value)}
+                            />
+                            {!parcelas && (
+                              <p className="text-sm text-destructive mt-1">Informe o número de parcelas</p>
+                            )}
+                          </div>
+                        )}
+
+                        <div>
+                          <Label htmlFor="responsavelFinanceiro">Responsável Financeiro *</Label>
+                          <Select value={responsavelFinanceiro} onValueChange={setResponsavelFinanceiro}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o responsável" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {colaboradoresFinanceiros.map(col => (
+                                <SelectItem key={col.id} value={col.nome}>{col.nome}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {!responsavelFinanceiro && (
+                            <p className="text-sm text-muted-foreground mt-1">Selecione um colaborador com permissão financeira</p>
                           )}
                         </div>
-                      )}
 
-                      <div>
-                        <Label htmlFor="responsavelFinanceiro">Responsável Financeiro *</Label>
-                        <Select value={responsavelFinanceiro} onValueChange={setResponsavelFinanceiro}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o responsável" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {colaboradoresFinanceiros.map(col => (
-                              <SelectItem key={col.id} value={col.nome}>{col.nome}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {!responsavelFinanceiro && (
-                          <p className="text-sm text-muted-foreground mt-1">Selecione um colaborador com permissão financeira</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <Label>Valor Total</Label>
-                        <Input 
-                          value={formatCurrency(notaSelecionada.valorTotal)} 
-                          disabled 
-                          className="font-bold text-lg"
-                        />
+                        <div>
+                          <Label>Valor Total</Label>
+                          <Input 
+                            value={formatCurrency(notaSelecionada.valorTotal)} 
+                            disabled 
+                            className="font-bold text-lg"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end gap-2 pt-4 border-t">
                   <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                    Cancelar
+                    {notaSelecionada.status === 'Pendente' ? 'Cancelar' : 'Fechar'}
                   </Button>
-                  <Button 
-                    onClick={handleFinalizarNota}
-                    className="bg-green-600 hover:bg-green-700"
-                    disabled={botaoDesabilitado}
-                  >
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Finalizar Nota
-                  </Button>
+                  {notaSelecionada.status === 'Pendente' && (
+                    <Button 
+                      onClick={handleFinalizarNota}
+                      className="bg-green-600 hover:bg-green-700"
+                      disabled={botaoDesabilitado}
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Finalizar Nota
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
