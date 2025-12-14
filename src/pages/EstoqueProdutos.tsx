@@ -213,6 +213,7 @@ export default function EstoqueProdutos() {
                 <TableHead>IMEI</TableHead>
                 <TableHead>Produto</TableHead>
                 <TableHead>Tipo</TableHead>
+                <TableHead>Origem</TableHead>
                 <TableHead>Qtd</TableHead>
                 <TableHead>Custo</TableHead>
                 <TableHead>Venda Recomendada</TableHead>
@@ -243,6 +244,17 @@ export default function EstoqueProdutos() {
                   <TableCell>
                     <Badge variant={produto.tipo === 'Novo' ? 'default' : 'secondary'}>
                       {produto.tipo}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={cn(
+                      produto.origemEntrada === 'Trade-In' 
+                        ? 'bg-purple-500/10 text-purple-600 border-purple-500/30'
+                        : produto.origemEntrada === 'Fornecedor'
+                        ? 'bg-green-500/10 text-green-600 border-green-500/30'
+                        : 'bg-blue-500/10 text-blue-600 border-blue-500/30'
+                    )}>
+                      {produto.origemEntrada}
                     </Badge>
                   </TableCell>
                   <TableCell>{produto.quantidade}</TableCell>

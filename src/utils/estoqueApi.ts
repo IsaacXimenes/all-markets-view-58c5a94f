@@ -27,6 +27,7 @@ export interface Produto {
   historicoCusto: { data: string; fornecedor: string; valor: number }[];
   historicoValorRecomendado: HistoricoValorRecomendado[];
   statusNota: 'Pendente' | 'Concluído';
+  origemEntrada: 'Trade-In' | 'Nota de Entrada' | 'Fornecedor';
 }
 
 export interface NotaCompra {
@@ -109,7 +110,8 @@ let produtos: Produto[] = [
     historicoValorRecomendado: [
       { data: '2025-01-10', usuario: 'Lucas Mendes', valorAntigo: null, valorNovo: 12999.00 }
     ],
-    statusNota: 'Concluído'
+    statusNota: 'Concluído',
+    origemEntrada: 'Fornecedor'
   },
   {
     id: 'PROD-0002',
@@ -134,7 +136,8 @@ let produtos: Produto[] = [
     historicoValorRecomendado: [
       { data: '2025-01-08', usuario: 'Fernanda Lima', valorAntigo: null, valorNovo: 10999.00 }
     ],
-    statusNota: 'Concluído'
+    statusNota: 'Concluído',
+    origemEntrada: 'Fornecedor'
   },
   {
     id: 'PROD-0003',
@@ -159,7 +162,8 @@ let produtos: Produto[] = [
     historicoValorRecomendado: [
       { data: '2025-01-05', usuario: 'Roberto Alves', valorAntigo: null, valorNovo: 5499.00 }
     ],
-    statusNota: 'Concluído'
+    statusNota: 'Concluído',
+    origemEntrada: 'Nota de Entrada'
   },
   {
     id: 'PROD-0004',
@@ -184,7 +188,8 @@ let produtos: Produto[] = [
     historicoValorRecomendado: [
       { data: '2025-01-06', usuario: 'Lucas Mendes', valorAntigo: null, valorNovo: 3599.00 }
     ],
-    statusNota: 'Concluído'
+    statusNota: 'Concluído',
+    origemEntrada: 'Trade-In'
   },
   {
     id: 'PROD-0005',
@@ -208,7 +213,8 @@ let produtos: Produto[] = [
     historicoValorRecomendado: [
       { data: '2025-01-09', usuario: 'Fernanda Lima', valorAntigo: null, valorNovo: 8999.00 }
     ],
-    statusNota: 'Concluído'
+    statusNota: 'Concluído',
+    origemEntrada: 'Fornecedor'
   },
   {
     id: 'PROD-0006',
@@ -230,7 +236,8 @@ let produtos: Produto[] = [
       { data: '2024-11-20', fornecedor: 'GlobalCell Supply', valor: 1900.00 }
     ],
     historicoValorRecomendado: [],
-    statusNota: 'Pendente'
+    statusNota: 'Pendente',
+    origemEntrada: 'Trade-In'
   },
   {
     id: 'PROD-0007',
@@ -254,7 +261,8 @@ let produtos: Produto[] = [
     historicoValorRecomendado: [
       { data: '2025-01-07', usuario: 'Roberto Alves', valorAntigo: null, valorNovo: 9499.00 }
     ],
-    statusNota: 'Concluído'
+    statusNota: 'Concluído',
+    origemEntrada: 'Fornecedor'
   },
   {
     id: 'PROD-0008',
@@ -278,7 +286,8 @@ let produtos: Produto[] = [
     historicoValorRecomendado: [
       { data: '2025-01-04', usuario: 'Lucas Mendes', valorAntigo: null, valorNovo: 2199.00 }
     ],
-    statusNota: 'Concluído'
+    statusNota: 'Concluído',
+    origemEntrada: 'Nota de Entrada'
   },
   {
     id: 'PROD-0009',
@@ -302,7 +311,8 @@ let produtos: Produto[] = [
     historicoValorRecomendado: [
       { data: '2025-01-03', usuario: 'Fernanda Lima', valorAntigo: null, valorNovo: 4799.00 }
     ],
-    statusNota: 'Concluído'
+    statusNota: 'Concluído',
+    origemEntrada: 'Trade-In'
   },
   {
     id: 'PROD-0010',
@@ -323,7 +333,8 @@ let produtos: Produto[] = [
       { data: '2024-11-25', fornecedor: 'Apple Distribuidor BR', valor: 6400.00 }
     ],
     historicoValorRecomendado: [],
-    statusNota: 'Pendente'
+    statusNota: 'Pendente',
+    origemEntrada: 'Fornecedor'
   },
   {
     id: 'PROD-0011',
@@ -344,7 +355,8 @@ let produtos: Produto[] = [
       { data: '2024-11-14', fornecedor: 'FastCell Distribuição', valor: 3400.00 }
     ],
     historicoValorRecomendado: [],
-    statusNota: 'Pendente'
+    statusNota: 'Pendente',
+    origemEntrada: 'Nota de Entrada'
   },
   {
     id: 'PROD-0012',
@@ -366,7 +378,8 @@ let produtos: Produto[] = [
       { data: '2024-11-17', fornecedor: 'MegaTech Distribuidor', valor: 1600.00 }
     ],
     historicoValorRecomendado: [],
-    statusNota: 'Pendente'
+    statusNota: 'Pendente',
+    origemEntrada: 'Trade-In'
   }
 ];
 
