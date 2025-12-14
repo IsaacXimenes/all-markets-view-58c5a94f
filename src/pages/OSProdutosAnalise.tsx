@@ -133,6 +133,7 @@ export default function OSProdutosAnalise() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>ID</TableHead>
                   <TableHead>IMEI</TableHead>
                   <TableHead>Produto</TableHead>
                   <TableHead>Modelo</TableHead>
@@ -148,13 +149,14 @@ export default function OSProdutosAnalise() {
               <TableBody>
                 {produtos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                       Nenhum produto em análise na assistência
                     </TableCell>
                   </TableRow>
                 ) : (
                   produtos.map((produto) => (
                     <TableRow key={produto.id}>
+                      <TableCell className="font-mono text-xs font-medium text-primary">{produto.id}</TableCell>
                       <TableCell className="font-mono text-xs">{produto.imei}</TableCell>
                       <TableCell>
                         <div>
