@@ -219,7 +219,7 @@ export default function CadastrosClientes() {
                   <TableCell className="text-xs">{cliente.email}</TableCell>
                   <TableCell>{cliente.cidade}/{cliente.estado}</TableCell>
                   <TableCell>
-                    <Badge variant={cliente.origemCliente === 'Venda' ? 'default' : 'secondary'}>
+                    <Badge className={cliente.origemCliente === 'Venda' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-orange-500 hover:bg-orange-600'}>
                       {cliente.origemCliente}
                     </Badge>
                   </TableCell>
@@ -319,13 +319,22 @@ export default function CadastrosClientes() {
             </div>
             <div className="space-y-2">
               <Label>Origem do Cliente</Label>
-              <Select value={form.origemCliente} onValueChange={v => setForm({ ...form, origemCliente: v as 'Assistência' | 'Venda' })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Venda">Venda</SelectItem>
-                  <SelectItem value="Assistência">Assistência</SelectItem>
-                </SelectContent>
-              </Select>
+              {editingCliente ? (
+                <div className="pt-2">
+                  <Badge className={form.origemCliente === 'Venda' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-orange-500 hover:bg-orange-600'}>
+                    {form.origemCliente}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground mt-1">A origem não pode ser alterada</p>
+                </div>
+              ) : (
+                <Select value={form.origemCliente} onValueChange={v => setForm({ ...form, origemCliente: v as 'Assistência' | 'Venda' })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Venda">Venda</SelectItem>
+                    <SelectItem value="Assistência">Assistência</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Status</Label>

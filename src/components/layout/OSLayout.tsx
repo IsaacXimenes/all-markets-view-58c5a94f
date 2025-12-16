@@ -13,6 +13,7 @@ export function OSLayout({ children, title }: OSLayoutProps) {
   
   const tabs = [
     { name: 'Produtos para Análise', href: '/os/produtos-analise', icon: ClipboardList },
+    { name: 'Assistência', href: '/os/assistencia', icon: Wrench },
   ];
 
   return (
@@ -21,7 +22,7 @@ export function OSLayout({ children, title }: OSLayoutProps) {
         <nav className="flex gap-1 overflow-x-auto pb-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
-            const isActive = location.pathname === tab.href;
+            const isActive = location.pathname === tab.href || location.pathname.startsWith(tab.href + '/');
             return (
               <Link
                 key={tab.href}

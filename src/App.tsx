@@ -47,6 +47,8 @@ import VendasNova from "./pages/VendasNova";
 import VendaDetalhes from "./pages/VendaDetalhes";
 import OSProdutosAnalise from "./pages/OSProdutosAnalise";
 import OSProdutoDetalhes from "./pages/OSProdutoDetalhes";
+import OSAssistencia from "./pages/OSAssistencia";
+import OSAssistenciaNova from "./pages/OSAssistenciaNova";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +87,8 @@ const App = () => (
           <Route path="/estoque/movimentacoes" element={<EstoqueMovimentacoes />} />
           <Route path="/os/produtos-analise" element={<OSProdutosAnalise />} />
           <Route path="/os/produto/:id" element={<OSProdutoDetalhes />} />
+          <Route path="/os/assistencia" element={<OSAssistencia />} />
+          <Route path="/os/assistencia/nova" element={<OSAssistenciaNova />} />
           <Route path="/cadastros" element={<Cadastros />} />
           <Route path="/cadastros/lojas" element={<CadastrosLojas />} />
           <Route path="/cadastros/clientes" element={<CadastrosClientes />} />
