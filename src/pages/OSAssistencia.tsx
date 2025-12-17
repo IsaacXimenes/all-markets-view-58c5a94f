@@ -169,7 +169,7 @@ export default function OSAssistencia() {
       {/* Filtros */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="space-y-2">
               <Label>Data Início</Label>
               <Input
@@ -206,21 +206,18 @@ export default function OSAssistencia() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-end gap-2">
+              <Button onClick={() => navigate('/os/assistencia/nova')} className="flex-1">
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Assistência
+              </Button>
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Ações */}
-      <div className="flex justify-between items-center mb-4">
-        <Button onClick={() => navigate('/os/assistencia/nova')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nova Assistência
-        </Button>
-        <Button variant="outline" onClick={handleExport}>
-          <Download className="mr-2 h-4 w-4" />
-          Exportar CSV
-        </Button>
-      </div>
 
       {/* Tabela */}
       <div className="rounded-md border overflow-x-auto">

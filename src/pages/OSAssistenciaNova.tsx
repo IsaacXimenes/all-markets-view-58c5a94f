@@ -584,8 +584,8 @@ export default function OSAssistenciaNova() {
                         className="bg-muted font-medium"
                       />
                     </div>
-                    <div className="flex items-end justify-between">
-                      <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex items-center gap-6">
                         <div className="flex items-center gap-2">
                           <Checkbox
                             checked={peca.pecaNoEstoque}
@@ -599,6 +599,13 @@ export default function OSAssistenciaNova() {
                             onCheckedChange={checked => handlePecaChange(index, 'pecaDeFornecedor', checked)}
                           />
                           <Label className="text-sm">Fornecedor</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={peca.servicoTerceirizado}
+                            onCheckedChange={checked => handlePecaChange(index, 'servicoTerceirizado', checked)}
+                          />
+                          <Label className="text-sm">Serviço Terceirizado</Label>
                         </div>
                       </div>
                       <Button variant="ghost" size="sm" onClick={() => removePeca(index)}>
@@ -622,16 +629,6 @@ export default function OSAssistenciaNova() {
                       </div>
                     </div>
                   )}
-
-                  <div className="flex items-center gap-4 pt-2">
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={peca.servicoTerceirizado}
-                        onCheckedChange={checked => handlePecaChange(index, 'servicoTerceirizado', checked)}
-                      />
-                      <Label className="text-sm">Serviço Terceirizado</Label>
-                    </div>
-                  </div>
 
                   {peca.servicoTerceirizado && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
