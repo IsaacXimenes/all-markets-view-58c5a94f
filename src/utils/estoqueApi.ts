@@ -42,6 +42,7 @@ export interface Produto {
   statusNota: 'Pendente' | 'Concluído';
   origemEntrada: 'Base de Troca' | 'Fornecedor';
   timeline?: TimelineEntry[]; // Timeline de tratativas (pareceres estoque/assistência)
+  custoAssistencia?: number; // Soma das peças/serviços de assistência
 }
 
 export interface NotaCompra {

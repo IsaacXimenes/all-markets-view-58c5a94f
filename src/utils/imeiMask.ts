@@ -37,3 +37,6 @@ export const displayIMEI = (imei: string): string => {
   if (digits.length !== 15) return imei; // Retorna original se não tiver 15 dígitos
   return formatIMEI(digits);
 };
+
+// Alias para aplicar máscara em inputs
+export const applyIMEIMask = formatIMEI;

@@ -33,6 +33,7 @@ import {
 import { Plus, Trash2, Search, AlertTriangle, Clock, User, History, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { formatIMEI, applyIMEIMask } from '@/utils/imeiMask';
 
 interface PecaForm {
   peca: string;
@@ -45,6 +46,7 @@ interface PecaForm {
   unidadeServico: string;
   pecaNoEstoque: boolean;
   pecaDeFornecedor: boolean;
+  nomeRespFornecedor: string;
 }
 
 interface PagamentoForm {
@@ -75,7 +77,7 @@ export default function OSAssistenciaNova() {
 
   // Peças
   const [pecas, setPecas] = useState<PecaForm[]>([
-    { peca: '', imei: '', valor: '', percentual: '', servicoTerceirizado: false, descricaoTerceirizado: '', fornecedorId: '', unidadeServico: '', pecaNoEstoque: false, pecaDeFornecedor: false }
+    { peca: '', imei: '', valor: '', percentual: '', servicoTerceirizado: false, descricaoTerceirizado: '', fornecedorId: '', unidadeServico: '', pecaNoEstoque: false, pecaDeFornecedor: false, nomeRespFornecedor: '' }
   ]);
 
   // Pagamentos
@@ -156,7 +158,7 @@ export default function OSAssistenciaNova() {
   };
 
   const addPeca = () => {
-    setPecas([...pecas, { peca: '', imei: '', valor: '', percentual: '', servicoTerceirizado: false, descricaoTerceirizado: '', fornecedorId: '', unidadeServico: '', pecaNoEstoque: false, pecaDeFornecedor: false }]);
+    setPecas([...pecas, { peca: '', imei: '', valor: '', percentual: '', servicoTerceirizado: false, descricaoTerceirizado: '', fornecedorId: '', unidadeServico: '', pecaNoEstoque: false, pecaDeFornecedor: false, nomeRespFornecedor: '' }]);
   };
 
   const removePeca = (index: number) => {
@@ -538,9 +540,9 @@ export default function OSAssistenciaNova() {
                       <Label>IMEI (se aplicável)</Label>
                       <Input
                         value={peca.imei}
-                        onChange={e => handlePecaChange(index, 'imei', e.target.value)}
-                        placeholder="IMEI"
-                        maxLength={15}
+                        onChange={e => handlePecaChange(index, 'imei', applyIMEIMask(e.target.value))}
+                        placeholder="WW-XXXXXX-YYYYYY-Z"
+                        maxLength={18}
                       />
                     </div>
                     <div className="space-y-2">
@@ -631,7 +633,7 @@ export default function OSAssistenciaNova() {
                   )}
 
                   {peca.servicoTerceirizado && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t">
                       <div className="space-y-2">
                         <Label>Descrição do Serviço Terceirizado</Label>
                         <Input
@@ -650,6 +652,15 @@ export default function OSAssistenciaNova() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nome Resp. Fornecedor *</Label>
+                        <Input
+                          value={peca.nomeRespFornecedor}
+                          onChange={e => handlePecaChange(index, 'nomeRespFornecedor', e.target.value)}
+                          placeholder="Nome do responsável..."
+                          className={!peca.nomeRespFornecedor ? 'border-destructive' : ''}
+                        />
                       </div>
                     </div>
                   )}

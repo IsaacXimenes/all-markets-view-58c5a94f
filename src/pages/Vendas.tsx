@@ -92,60 +92,62 @@ export default function Vendas() {
 
   return (
     <VendasLayout title="Gestão de Vendas">
-      {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10">
-                <ShoppingCart className="h-5 w-5 text-primary" />
+      {/* Dashboard Cards - Sticky */}
+      <div className="sticky top-0 z-10 bg-background pb-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <ShoppingCart className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Vendas do Período</p>
+                  <p className="text-2xl font-bold">{totais.quantidade}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Vendas do Período</p>
-                <p className="text-2xl font-bold">{totais.quantidade}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-500/10">
+                  <DollarSign className="h-5 w-5 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Vendas</p>
+                  <p className="text-2xl font-bold">{formatCurrency(totais.totalVendas)}</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <DollarSign className="h-5 w-5 text-green-500" />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-500/10">
+                  <TrendingUp className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Lucro Total</p>
+                  <p className="text-2xl font-bold">{formatCurrency(totais.totalLucro)}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Vendas</p>
-                <p className="text-2xl font-bold">{formatCurrency(totais.totalVendas)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-500/10">
+                  <Percent className="h-5 w-5 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Margem Média</p>
+                  <p className="text-2xl font-bold">{totais.margemMedia.toFixed(2)}%</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <TrendingUp className="h-5 w-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Lucro Total</p>
-                <p className="text-2xl font-bold">{formatCurrency(totais.totalLucro)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/10">
-                <Percent className="h-5 w-5 text-purple-500" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Margem Média</p>
-                <p className="text-2xl font-bold">{totais.margemMedia.toFixed(2)}%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Filtros */}

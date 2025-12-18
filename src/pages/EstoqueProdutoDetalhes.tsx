@@ -8,6 +8,7 @@ import { ArrowLeft, Upload, Printer, Clock, Package, Wrench, CheckCircle, AlertC
 import { getProdutos, Produto, TimelineEntry } from '@/utils/estoqueApi';
 import { cn } from '@/lib/utils';
 import QRCode from 'qrcode';
+import { formatIMEI } from '@/utils/imeiMask';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -187,7 +188,7 @@ export default function EstoqueProdutoDetalhes() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">IMEI</p>
-                  <p className="font-mono font-semibold">{produto.imei}</p>
+                  <p className="font-mono font-semibold">{formatIMEI(produto.imei)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Marca</p>
@@ -233,12 +234,22 @@ export default function EstoqueProdutoDetalhes() {
             <CardTitle>Financeiro e Estoque</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Valor de Custo</p>
                 <p className="text-2xl font-bold">
                   {formatCurrency(produto.valorCusto)}
                 </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Custo Assistência</p>
+                {produto.custoAssistencia ? (
+                  <p className="text-2xl font-bold text-orange-600">
+                    {formatCurrency(produto.custoAssistencia)}
+                  </p>
+                ) : (
+                  <p className="text-lg text-muted-foreground">-</p>
+                )}
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Venda Recomendada</p>

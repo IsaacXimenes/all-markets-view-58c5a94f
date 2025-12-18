@@ -12,6 +12,7 @@ import { getOrdensServico, calcularSLADias, formatCurrency, exportOSToCSV, Ordem
 import { getClientes, getLojas, getColaboradoresByPermissao } from '@/utils/cadastrosApi';
 import { Plus, Eye, FileText, Download, AlertTriangle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatIMEI } from '@/utils/imeiMask';
 
 export default function OSAssistencia() {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export default function OSAssistencia() {
   const [filtroDataFim, setFiltroDataFim] = useState('');
   const [filtroIMEI, setFiltroIMEI] = useState('');
   const [filtroTecnico, setFiltroTecnico] = useState('todos');
+  const [filtroStatus, setFiltroStatus] = useState('todos');
 
   const ordensFiltradas = useMemo(() => {
     return ordensServico.filter(os => {
@@ -42,7 +44,7 @@ export default function OSAssistencia() {
 
       // Filtro por IMEI
       if (filtroIMEI) {
-        const hasIMEI = os.pecas.some(p => p.imei?.includes(filtroIMEI));
+        const hasIMEI = os.pecas.some(p => p.imei?.includes(filtroIMEI.replace(/-/g, '')));
         if (!hasIMEI) return false;
       }
 
@@ -51,9 +53,14 @@ export default function OSAssistencia() {
         if (os.tecnicoId !== filtroTecnico) return false;
       }
 
+      // Filtro por status
+      if (filtroStatus && filtroStatus !== 'todos') {
+        if (os.status !== filtroStatus) return false;
+      }
+
       return true;
     }).sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
-  }, [ordensServico, filtroDataInicio, filtroDataFim, filtroIMEI, filtroTecnico]);
+  }, [ordensServico, filtroDataInicio, filtroDataFim, filtroIMEI, filtroTecnico, filtroStatus]);
 
   const getClienteNome = (clienteId: string) => {
     return clientes.find(c => c.id === clienteId)?.nome || '-';
@@ -120,7 +127,7 @@ export default function OSAssistencia() {
 
   const getIMEI = (os: OrdemServico) => {
     const pecaComIMEI = os.pecas.find(p => p.imei);
-    return pecaComIMEI?.imei || '-';
+    return pecaComIMEI?.imei ? formatIMEI(pecaComIMEI.imei) : '-';
   };
 
   // Stats
@@ -132,44 +139,46 @@ export default function OSAssistencia() {
 
   return (
     <OSLayout title="Assistência">
-      {/* Dashboard Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{totalOS}</div>
-            <div className="text-xs text-muted-foreground">Total de OS</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-green-600">{osConcluidas}</div>
-            <div className="text-xs text-muted-foreground">Concluídas</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-blue-600">{osEmAndamento}</div>
-            <div className="text-xs text-muted-foreground">Em Serviço</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-yellow-600">{osAguardando}</div>
-            <div className="text-xs text-muted-foreground">Aguardando Peça</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{formatCurrency(valorTotal)}</div>
-            <div className="text-xs text-muted-foreground">Valor Total</div>
-          </CardContent>
-        </Card>
+      {/* Dashboard Cards - Sticky */}
+      <div className="sticky top-0 z-10 bg-background pb-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold">{totalOS}</div>
+              <div className="text-xs text-muted-foreground">Total de OS</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-green-600">{osConcluidas}</div>
+              <div className="text-xs text-muted-foreground">Concluídas</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-blue-600">{osEmAndamento}</div>
+              <div className="text-xs text-muted-foreground">Em Serviço</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-yellow-600">{osAguardando}</div>
+              <div className="text-xs text-muted-foreground">Aguardando Peça</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold">{formatCurrency(valorTotal)}</div>
+              <div className="text-xs text-muted-foreground">Valor Total</div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Filtros */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div className="space-y-2">
               <Label>Data Início</Label>
               <Input
@@ -191,7 +200,7 @@ export default function OSAssistencia() {
               <Input
                 placeholder="Buscar por IMEI..."
                 value={filtroIMEI}
-                onChange={e => setFiltroIMEI(e.target.value)}
+                onChange={e => setFiltroIMEI(formatIMEI(e.target.value))}
               />
             </div>
             <div className="space-y-2">
@@ -203,6 +212,18 @@ export default function OSAssistencia() {
                   {tecnicos.map(t => (
                     <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="Serviço concluído">Serviço concluído</SelectItem>
+                  <SelectItem value="Em serviço">Em serviço</SelectItem>
+                  <SelectItem value="Aguardando Peça">Aguardando Peça</SelectItem>
                 </SelectContent>
               </Select>
             </div>
