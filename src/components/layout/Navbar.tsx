@@ -1,10 +1,10 @@
 
 import React from 'react';
-import { Search, Bell, User } from 'lucide-react';
+import { Search, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
 
 interface NavbarProps {
   className?: string;
@@ -28,14 +28,7 @@ export function Navbar({ className }: NavbarProps) {
         </div>
         
         <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="relative h-9 w-9"
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary animate-pulse" />
-          </Button>
+          <NotificationBell />
           
           <Avatar className="h-9 w-9 transition-transform duration-200 hover:scale-105">
             <AvatarFallback className="bg-primary/10 text-primary">

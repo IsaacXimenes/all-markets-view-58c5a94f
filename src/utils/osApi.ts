@@ -5,9 +5,10 @@ import { generateProductId, registerProductId, isProductIdRegistered } from './i
 export interface ParecerEstoque {
   id: string;
   data: string;
-  status: 'Análise Realizada – Produto em ótimo estado' | 'Encaminhado para conferência da Assistência';
+  status: 'Análise Realizada – Produto em ótimo estado' | 'Encaminhado para conferência da Assistência' | 'Produto revisado e deferido';
   observacoes: string;
   responsavel: string;
+  contadorEncaminhamento?: number;
 }
 
 export interface ParecerAssistencia {
@@ -54,7 +55,8 @@ export interface ProdutoPendente {
   parecerAssistencia?: ParecerAssistencia;
   timeline: TimelineEntry[];
   custoAssistencia: number;
-  statusGeral: 'Pendente Estoque' | 'Em Análise Assistência' | 'Aguardando Peça' | 'Liberado';
+  statusGeral: 'Pendente Estoque' | 'Em Análise Assistência' | 'Aguardando Peça' | 'Liberado' | 'Retornado da Assistência';
+  contadorEncaminhamentos: number;
 }
 
 // Dados mockados de produtos pendentes - IDs PROD-XXXX únicos para rastreabilidade
@@ -87,7 +89,8 @@ let produtosPendentes: ProdutoPendente[] = [
       }
     ],
     custoAssistencia: 0,
-    statusGeral: 'Pendente Estoque'
+    statusGeral: 'Pendente Estoque',
+    contadorEncaminhamentos: 0
   },
   {
     id: 'PROD-0002',
@@ -115,7 +118,8 @@ let produtosPendentes: ProdutoPendente[] = [
       }
     ],
     custoAssistencia: 0,
-    statusGeral: 'Pendente Estoque'
+    statusGeral: 'Pendente Estoque',
+    contadorEncaminhamentos: 0
   },
   {
     id: 'PROD-0003',
@@ -143,7 +147,8 @@ let produtosPendentes: ProdutoPendente[] = [
       }
     ],
     custoAssistencia: 0,
-    statusGeral: 'Pendente Estoque'
+    statusGeral: 'Pendente Estoque',
+    contadorEncaminhamentos: 0
   },
   // 2 produtos em OS > Produtos para Análise (já encaminhados para assistência) - IDs PROD-0004 e PROD-0005
   {
@@ -187,7 +192,8 @@ let produtosPendentes: ProdutoPendente[] = [
       }
     ],
     custoAssistencia: 0,
-    statusGeral: 'Em Análise Assistência'
+    statusGeral: 'Em Análise Assistência',
+    contadorEncaminhamentos: 1
   },
   {
     id: 'PROD-0005',
@@ -230,7 +236,8 @@ let produtosPendentes: ProdutoPendente[] = [
       }
     ],
     custoAssistencia: 0,
-    statusGeral: 'Em Análise Assistência'
+    statusGeral: 'Em Análise Assistência',
+    contadorEncaminhamentos: 1
   }
 ];
 
@@ -249,9 +256,9 @@ let produtosMigrados: Produto[] = [];
 
 // Funções de API
 export const getProdutosPendentes = (): ProdutoPendente[] => {
-  // Retorna apenas produtos pendentes de parecer do estoque
+  // Retorna produtos pendentes de parecer do estoque OU retornados da assistência para revisão final
   return produtosPendentes.filter(p => 
-    !p.parecerEstoque || p.parecerEstoque.status !== 'Encaminhado para conferência da Assistência'
+    p.statusGeral === 'Pendente Estoque' || p.statusGeral === 'Retornado da Assistência'
   );
 };
 
@@ -260,9 +267,9 @@ export const getProdutoPendenteById = (id: string): ProdutoPendente | null => {
 };
 
 export const getProdutosParaAnaliseOS = (): ProdutoPendente[] => {
-  // Retorna apenas produtos encaminhados para assistência
+  // Retorna produtos encaminhados para assistência ou aguardando peça
   return produtosPendentes.filter(p => 
-    p.parecerEstoque?.status === 'Encaminhado para conferência da Assistência'
+    p.statusGeral === 'Em Análise Assistência' || p.statusGeral === 'Aguardando Peça'
   );
 };
 
@@ -350,31 +357,41 @@ export const salvarParecerEstoque = (
   const produto = produtosPendentes.find(p => p.id === id);
   if (!produto) return { produto: null, migrado: false };
 
+  // Auto-incremento para encaminhamentos para assistência
+  let contadorEncaminhamento = produto.contadorEncaminhamentos || 0;
+  
+  if (status === 'Encaminhado para conferência da Assistência') {
+    contadorEncaminhamento++;
+    produto.contadorEncaminhamentos = contadorEncaminhamento;
+  }
+
   const parecer: ParecerEstoque = {
     id: `PE-${Date.now()}`,
     data: new Date().toISOString(),
     status,
     observacoes,
-    responsavel
+    responsavel,
+    contadorEncaminhamento: status === 'Encaminhado para conferência da Assistência' ? contadorEncaminhamento : undefined
   };
 
   produto.parecerEstoque = parecer;
   
-  // Adicionar na timeline com ID do produto
+  // Adicionar na timeline com ID do produto e contador
   produto.timeline.push({
     id: `TL-${Date.now()}`,
     data: new Date().toISOString(),
     tipo: 'parecer_estoque',
     titulo: status === 'Análise Realizada – Produto em ótimo estado' 
       ? `Deferido Estoque – ${id}` 
-      : `Parecer Estoque - Encaminhado Assistência – ${id}`,
+      : status === 'Produto revisado e deferido'
+        ? `Produto Revisado e Deferido – ${id}`
+        : `Parecer Estoque - Encaminhado Assistência (${contadorEncaminhamento}) – ${id}`,
     descricao: `${status}. ${observacoes}`,
     responsavel
   });
 
-  // Se aprovado direto pelo estoque, migrar automaticamente
-  if (status === 'Análise Realizada – Produto em ótimo estado') {
-    // Adicionar registro de liberação na timeline
+  // Se aprovado direto pelo estoque OU produto revisado e deferido
+  if (status === 'Análise Realizada – Produto em ótimo estado' || status === 'Produto revisado e deferido') {
     produto.timeline.push({
       id: `TL-${Date.now()}-lib`,
       data: new Date().toISOString(),
@@ -386,10 +403,8 @@ export const salvarParecerEstoque = (
 
     produto.statusGeral = 'Liberado';
     
-    // Migrar para estoque
     const produtoMigrado = migrarParaEstoque(produto, 'Estoque', responsavel);
     
-    // Remover da lista de pendentes
     const index = produtosPendentes.findIndex(p => p.id === id);
     if (index !== -1) {
       produtosPendentes.splice(index, 1);
@@ -409,7 +424,7 @@ export const salvarParecerAssistencia = (
   observacoes: string,
   responsavel: string,
   pecas?: { descricao: string; valor: number; fornecedor: string; origemPeca?: 'Fornecedor' | 'Tinha na Assistência' }[]
-): { produto: ProdutoPendente | null; migrado: boolean; produtoMigrado?: Produto } => {
+): { produto: ProdutoPendente | null; migrado: boolean; produtoMigrado?: Produto; retornadoPendentes?: boolean } => {
   const produto = produtosPendentes.find(p => p.id === id);
   if (!produto) return { produto: null, migrado: false };
 
@@ -453,35 +468,28 @@ export const salvarParecerAssistencia = (
     produto.custoAssistencia = (produto.custoAssistencia || 0) + custoTotal;
   }
 
-  // Se produto validado pela assistência, migrar automaticamente
+  // Se produto validado pela assistência -> RETORNA para Produtos Pendentes para revisão final do Estoque
   if (status === 'Validado pela assistência') {
-    // Adicionar registro de liberação na timeline
     produto.timeline.push({
-      id: `TL-${Date.now()}-lib`,
+      id: `TL-${Date.now()}-ret`,
       data: new Date().toISOString(),
-      tipo: 'liberacao',
-      titulo: `Deferido Assistência – ID ${id} liberado para estoque`,
-      descricao: `Produto ${id} validado pela assistência e liberado para venda.`,
+      tipo: 'parecer_assistencia',
+      titulo: `Retornado para Revisão Final – ${id}`,
+      descricao: `Produto ${id} validado pela assistência. Aguardando revisão final do Estoque para deferimento.`,
       responsavel
     });
 
-    produto.statusGeral = 'Liberado';
-    
-    // Migrar para estoque
-    const produtoMigrado = migrarParaEstoque(produto, 'Assistência', responsavel);
-    
-    // Remover da lista de pendentes
-    const index = produtosPendentes.findIndex(p => p.id === id);
-    if (index !== -1) {
-      produtosPendentes.splice(index, 1);
-    }
+    // Muda status para Retornado da Assistência (vai aparecer em Produtos Pendentes)
+    produto.statusGeral = 'Retornado da Assistência';
+    // Limpa parecer estoque para permitir novo parecer de deferimento
+    produto.parecerEstoque = undefined;
 
-    return { produto, migrado: true, produtoMigrado };
+    return { produto, migrado: false, retornadoPendentes: true };
   } else if (status === 'Aguardando peça') {
     produto.statusGeral = 'Aguardando Peça';
     return { produto, migrado: false };
   } else {
-    // Ajustes realizados - ainda precisa do "Validado pela assistência"
+    // Ajustes realizados - ainda está na assistência
     produto.statusGeral = 'Em Análise Assistência';
     return { produto, migrado: false };
   }
@@ -494,7 +502,7 @@ export const liberarProdutoPendente = (id: string): boolean => {
   return true;
 };
 
-export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeline' | 'custoAssistencia' | 'statusGeral' | 'valorCustoOriginal'>): ProdutoPendente => {
+export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeline' | 'custoAssistencia' | 'statusGeral' | 'valorCustoOriginal' | 'contadorEncaminhamentos'>): ProdutoPendente => {
   // Gerar ID único usando o sistema centralizado
   const newId = generateProductId();
   
@@ -519,7 +527,8 @@ export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeli
       }
     ],
     custoAssistencia: 0,
-    statusGeral: 'Pendente Estoque'
+    statusGeral: 'Pendente Estoque',
+    contadorEncaminhamentos: 0
   };
 
   produtosPendentes.push(newProduto);

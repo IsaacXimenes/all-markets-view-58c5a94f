@@ -118,10 +118,10 @@ export default function EstoqueProdutoPendenteDetalhes() {
   };
 
   const handleConfirmarParecer = () => {
-    if (!id || confirmResponsavel !== parecerResponsavel) {
+    if (!id || !confirmResponsavel) {
       toast({
         title: "Confirmação inválida",
-        description: "O nome do responsável não confere.",
+        description: "Selecione o responsável.",
         variant: "destructive"
       });
       return;
@@ -169,7 +169,7 @@ export default function EstoqueProdutoPendenteDetalhes() {
     }
   };
 
-  const confirmacaoValida = confirmResponsavel === parecerResponsavel && confirmData;
+  const confirmacaoValida = confirmResponsavel && confirmData;
 
   if (!produto) {
     return (
@@ -344,12 +344,20 @@ export default function EstoqueProdutoPendenteDetalhes() {
                         <SelectValue placeholder="Selecione o status" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Análise Realizada – Produto em ótimo estado">
-                          Análise Realizada – Produto em ótimo estado
-                        </SelectItem>
-                        <SelectItem value="Encaminhado para conferência da Assistência">
-                          Encaminhado para conferência da Assistência
-                        </SelectItem>
+                        {produto.statusGeral === 'Retornado da Assistência' ? (
+                          <SelectItem value="Produto revisado e deferido">
+                            Produto revisado e deferido
+                          </SelectItem>
+                        ) : (
+                          <>
+                            <SelectItem value="Análise Realizada – Produto em ótimo estado">
+                              Análise Realizada – Produto em ótimo estado
+                            </SelectItem>
+                            <SelectItem value="Encaminhado para conferência da Assistência">
+                              Encaminhado para conferência da Assistência
+                            </SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -455,15 +463,19 @@ export default function EstoqueProdutoPendenteDetalhes() {
             
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Digite o nome do responsável para confirmar *</Label>
-                <Input 
-                  placeholder={parecerResponsavel}
-                  value={confirmResponsavel}
-                  onChange={(e) => setConfirmResponsavel(e.target.value)}
-                />
-                {confirmResponsavel && confirmResponsavel !== parecerResponsavel && (
-                  <p className="text-sm text-destructive">O nome não confere com o responsável selecionado</p>
-                )}
+                <Label>Responsável (Confirmar) *</Label>
+                <Select value={confirmResponsavel} onValueChange={setConfirmResponsavel}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {colaboradoresEstoque.map((colab) => (
+                      <SelectItem key={colab.id} value={colab.nome}>
+                        {colab.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-2">
