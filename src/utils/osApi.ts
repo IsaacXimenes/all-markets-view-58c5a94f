@@ -256,10 +256,8 @@ let produtosMigrados: Produto[] = [];
 
 // Funções de API
 export const getProdutosPendentes = (): ProdutoPendente[] => {
-  // Retorna produtos pendentes de parecer do estoque OU retornados da assistência para revisão final
-  return produtosPendentes.filter(p => 
-    p.statusGeral === 'Pendente Estoque' || p.statusGeral === 'Retornado da Assistência'
-  );
+  // Retorna TODOS os produtos não liberados para manter visibilidade durante todo o fluxo
+  return produtosPendentes.filter(p => p.statusGeral !== 'Liberado');
 };
 
 export const getProdutoPendenteById = (id: string): ProdutoPendente | null => {

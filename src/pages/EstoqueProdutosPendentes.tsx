@@ -21,10 +21,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Eye, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle } from 'lucide-react';
+import { Eye, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, Wrench, RotateCcw } from 'lucide-react';
 import { getProdutosPendentes, ProdutoPendente, calcularSLA, exportToCSV } from '@/utils/osApi';
 import { getLojas } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
+import { formatIMEI } from '@/utils/imeiMask';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -35,21 +36,18 @@ export default function EstoqueProdutosPendentes() {
   const [produtosPendentes, setProdutosPendentes] = useState<ProdutoPendente[]>([]);
   const lojas = getLojas();
 
-  // Filtros - igual à aba Produtos
+  // Filtros - igual à aba Produtos + filtro de status
   const [filters, setFilters] = useState({
     imei: '',
     modelo: '',
-    loja: 'todas'
+    loja: 'todas',
+    status: 'todos'
   });
 
   useEffect(() => {
+    // Busca todos os produtos não liberados (visíveis durante todo o fluxo)
     const data = getProdutosPendentes();
-    // Filtrar apenas produtos que ainda não foram liberados e não estão na OS
-    const pendentesEstoque = data.filter(p => 
-      p.statusGeral === 'Pendente Estoque' || 
-      (p.parecerEstoque?.status === 'Análise Realizada – Produto em ótimo estado' && p.statusGeral !== 'Liberado')
-    );
-    setProdutosPendentes(pendentesEstoque);
+    setProdutosPendentes(data);
   }, []);
 
   // Filtrar produtos
@@ -58,18 +56,28 @@ export default function EstoqueProdutosPendentes() {
       if (filters.imei && !produto.imei.toLowerCase().includes(filters.imei.toLowerCase())) return false;
       if (filters.modelo && !produto.modelo.toLowerCase().includes(filters.modelo.toLowerCase())) return false;
       if (filters.loja !== 'todas' && produto.loja !== filters.loja) return false;
+      if (filters.status !== 'todos' && produto.statusGeral !== filters.status) return false;
       return true;
     });
   }, [produtosPendentes, filters]);
 
   const getStatusBadge = (produto: ProdutoPendente) => {
-    if (!produto.parecerEstoque) {
-      return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">Aguardando Parecer</Badge>;
+    // Badge baseado no statusGeral para maior clareza visual
+    switch (produto.statusGeral) {
+      case 'Pendente Estoque':
+        if (!produto.parecerEstoque) {
+          return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">Aguardando Parecer</Badge>;
+        }
+        return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">Aprovado</Badge>;
+      case 'Em Análise Assistência':
+        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">Em Assistência</Badge>;
+      case 'Aguardando Peça':
+        return <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">Aguardando Peça</Badge>;
+      case 'Retornado da Assistência':
+        return <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500/30">Revisão Final</Badge>;
+      default:
+        return <Badge variant="outline" className="bg-gray-500/10 text-gray-600 border-gray-500/30">{produto.statusGeral}</Badge>;
     }
-    if (produto.parecerEstoque.status === 'Análise Realizada – Produto em ótimo estado') {
-      return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">Aprovado</Badge>;
-    }
-    return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">Encaminhado Assis.</Badge>;
   };
 
   const getOrigemBadge = (origem: string) => {
@@ -106,18 +114,30 @@ export default function EstoqueProdutosPendentes() {
     );
   };
 
-  const getSLARowClass = (dataEntrada: string) => {
+  const getStatusRowClass = (produto: ProdutoPendente, dataEntrada: string) => {
     const { cor } = calcularSLA(dataEntrada);
+    // Prioridade: SLA crítico > status geral
     if (cor === 'vermelho') return 'bg-red-500/10';
     if (cor === 'amarelo') return 'bg-yellow-500/10';
-    return '';
+    // Cores por status quando SLA normal
+    switch (produto.statusGeral) {
+      case 'Em Análise Assistência':
+        return 'bg-blue-500/5';
+      case 'Aguardando Peça':
+        return 'bg-orange-500/5';
+      case 'Retornado da Assistência':
+        return 'bg-purple-500/5';
+      default:
+        return '';
+    }
   };
 
   const stats = {
     totalPendentes: filteredProdutos.length,
-    aguardandoParecer: filteredProdutos.filter(p => !p.parecerEstoque).length,
-    aprovados: filteredProdutos.filter(p => p.parecerEstoque?.status === 'Análise Realizada – Produto em ótimo estado').length,
-    encaminhados: filteredProdutos.filter(p => p.parecerEstoque?.status === 'Encaminhado para conferência da Assistência').length,
+    pendenteEstoque: filteredProdutos.filter(p => p.statusGeral === 'Pendente Estoque').length,
+    emAssistencia: filteredProdutos.filter(p => p.statusGeral === 'Em Análise Assistência').length,
+    aguardandoPeca: filteredProdutos.filter(p => p.statusGeral === 'Aguardando Peça').length,
+    retornados: filteredProdutos.filter(p => p.statusGeral === 'Retornado da Assistência').length,
   };
 
   const handleExport = () => {
@@ -141,18 +161,18 @@ export default function EstoqueProdutosPendentes() {
   };
 
   const handleLimpar = () => {
-    setFilters({ imei: '', modelo: '', loja: 'todas' });
+    setFilters({ imei: '', modelo: '', loja: 'todas', status: 'todos' });
   };
 
   return (
     <EstoqueLayout title="Produtos Pendentes">
-      {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      {/* Dashboard Cards - Sticky */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 sticky top-0 z-10 bg-background py-2">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Package className="h-4 w-4" />
-              Total Pendentes
+              Total
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -164,35 +184,47 @@ export default function EstoqueProdutosPendentes() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Clock className="h-4 w-4 text-yellow-500" />
-              Aguardando Parecer
+              Pendente Estoque
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.aguardandoParecer}</div>
+            <div className="text-2xl font-bold text-yellow-600">{stats.pendenteEstoque}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              Aprovados (Liberar)
+              <Wrench className="h-4 w-4 text-blue-500" />
+              Em Assistência
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.aprovados}</div>
+            <div className="text-2xl font-bold text-blue-600">{stats.emAssistencia}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-blue-500" />
-              Encaminhados Assis.
+              <AlertTriangle className="h-4 w-4 text-orange-500" />
+              Aguard. Peça
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.encaminhados}</div>
+            <div className="text-2xl font-bold text-orange-600">{stats.aguardandoPeca}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <RotateCcw className="h-4 w-4 text-purple-500" />
+              Revisão Final
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{stats.retornados}</div>
           </CardContent>
         </Card>
       </div>
@@ -239,15 +271,30 @@ export default function EstoqueProdutosPendentes() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end gap-2">
-              <Button variant="outline" onClick={handleLimpar} className="flex-1">
-                Limpar
-              </Button>
-              <Button variant="outline" onClick={handleExport}>
-                <Download className="h-4 w-4 mr-2" />
-                CSV
-              </Button>
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
+                <SelectTrigger id="status">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="Pendente Estoque">Pendente Estoque</SelectItem>
+                  <SelectItem value="Em Análise Assistência">Em Assistência</SelectItem>
+                  <SelectItem value="Aguardando Peça">Aguardando Peça</SelectItem>
+                  <SelectItem value="Retornado da Assistência">Revisão Final</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <Button variant="outline" onClick={handleLimpar}>
+              Limpar
+            </Button>
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="h-4 w-4 mr-2" />
+              CSV
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -282,9 +329,9 @@ export default function EstoqueProdutosPendentes() {
                   </TableRow>
                 ) : (
                   filteredProdutos.map((produto) => (
-                    <TableRow key={produto.id} className={getSLARowClass(produto.dataEntrada)}>
+                    <TableRow key={produto.id} className={getStatusRowClass(produto, produto.dataEntrada)}>
                       <TableCell className="font-mono text-xs">{produto.id}</TableCell>
-                      <TableCell className="font-mono text-xs">{produto.imei}</TableCell>
+                      <TableCell className="font-mono text-xs">{formatIMEI(produto.imei)}</TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{produto.modelo}</div>
