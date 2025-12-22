@@ -1,5 +1,5 @@
 import React from 'react';
-import { PageLayout } from '@/components/layout/PageLayout';
+import { RHLayout } from '@/components/layout/RHLayout';
 import { mockStores, mockEmployees, getBirthdaysThisWeek, getStoreById } from '@/utils/rhApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,7 +43,7 @@ export default function RecursosHumanos() {
   };
   
   return (
-    <PageLayout title="Recursos Humanos">
+    <RHLayout title="Recursos Humanos">
       <div className="space-y-6">
         {/* Lojas em Cards Expansíveis */}
         <Card>
@@ -179,6 +179,6 @@ export default function RecursosHumanos() {
           </Card>
         )}
       </div>
-    </PageLayout>
+    </RHLayout>
   );
 }
