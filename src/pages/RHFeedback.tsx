@@ -20,19 +20,15 @@ import {
   Download, 
   AlertTriangle, 
   Clock, 
-  FileText, 
   User,
-  ChevronRight,
-  Lock
+  Lock,
+  Plus,
+  Eye
 } from 'lucide-react';
 import {
   getFeedbacks,
   getFeedbacksByColaborador,
-  getColaboradoresComFeedback,
   getTodosColaboradoresParaFeedback,
-  getUltimaNotificacao,
-  getProximaAnotacao,
-  getContadorFeedbacks,
   addFeedback,
   getUsuarioLogado,
   exportFeedbacksToCSV,
@@ -46,7 +42,9 @@ export default function RHFeedback() {
   const [showOnlyWithFeedback, setShowOnlyWithFeedback] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isRegistrarDialogOpen, setIsRegistrarDialogOpen] = useState(false);
+  const [isDetalhesDialogOpen, setIsDetalhesDialogOpen] = useState(false);
   const [selectedColaborador, setSelectedColaborador] = useState<ColaboradorFeedback | null>(null);
+  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackRegistro | null>(null);
   const [feedbackForm, setFeedbackForm] = useState({
     tipo: '' as 'Advertência' | 'Advertência (2)' | 'Suspensão' | 'Suspensão (2)' | 'Suspensão (3)',
     texto: ''
@@ -55,21 +53,30 @@ export default function RHFeedback() {
 
   const usuarioLogado = getUsuarioLogado();
   const lojas = getLojas();
+  const todosColaboradores = getTodosColaboradoresParaFeedback();
 
-  // Colaboradores filtrados
-  const colaboradores = useMemo(() => {
-    const todos = showOnlyWithFeedback 
-      ? getColaboradoresComFeedback() 
-      : getTodosColaboradoresParaFeedback();
+  // Feedbacks filtrados para tabela principal
+  const feedbacksFiltrados = useMemo(() => {
+    let lista = getFeedbacks();
     
-    if (!searchTerm) return todos;
+    if (showOnlyWithFeedback) {
+      // Já mostra todos os feedbacks
+    }
     
-    return todos.filter(c => 
-      c.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.cpf.includes(searchTerm) ||
-      c.cargo.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [showOnlyWithFeedback, searchTerm, refreshKey]);
+    if (searchTerm) {
+      lista = lista.filter(f => {
+        const colaborador = todosColaboradores.find(c => c.id === f.colaboradorId);
+        return (
+          f.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          f.colaboradorId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          colaborador?.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          f.tipo.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      });
+    }
+    
+    return lista;
+  }, [searchTerm, refreshKey, todosColaboradores, showOnlyWithFeedback]);
 
   // Helper para nome da loja
   const getNomeLoja = (lojaId: string) => {
@@ -77,18 +84,41 @@ export default function RHFeedback() {
     return loja?.nome.replace('Thiago Imports ', '') || lojaId;
   };
 
-  // Abrir modal de registro
-  const handleOpenRegistrar = (colaborador: ColaboradorFeedback) => {
-    const qtdFeedbacks = getContadorFeedbacks(colaborador.id);
-    let tipoSugerido: FeedbackRegistro['tipo'] = 'Advertência';
-    
-    if (qtdFeedbacks === 1) tipoSugerido = 'Advertência (2)';
-    else if (qtdFeedbacks === 2) tipoSugerido = 'Suspensão';
-    else if (qtdFeedbacks >= 3) tipoSugerido = `Suspensão (${qtdFeedbacks - 1})` as FeedbackRegistro['tipo'];
-    
-    setSelectedColaborador(colaborador);
-    setFeedbackForm({ tipo: tipoSugerido, texto: '' });
+  // Helper para dados do colaborador
+  const getColaborador = (colaboradorId: string) => {
+    return todosColaboradores.find(c => c.id === colaboradorId);
+  };
+
+  // Abrir modal de registro (novo feedback)
+  const handleOpenRegistrar = () => {
+    setSelectedColaborador(null);
+    setFeedbackForm({ tipo: 'Advertência', texto: '' });
     setIsRegistrarDialogOpen(true);
+  };
+
+  // Selecionar colaborador no modal de registro
+  const handleSelectColaborador = (colaboradorId: string) => {
+    const colaborador = todosColaboradores.find(c => c.id === colaboradorId);
+    if (colaborador) {
+      const feedbacksColaborador = getFeedbacksByColaborador(colaborador.id);
+      const qtd = feedbacksColaborador.length;
+      let tipoSugerido: FeedbackRegistro['tipo'] = 'Advertência';
+      
+      if (qtd === 1) tipoSugerido = 'Advertência (2)';
+      else if (qtd === 2) tipoSugerido = 'Suspensão';
+      else if (qtd >= 3) tipoSugerido = `Suspensão (${qtd - 1})` as FeedbackRegistro['tipo'];
+      
+      setSelectedColaborador(colaborador);
+      setFeedbackForm({ tipo: tipoSugerido, texto: '' });
+    }
+  };
+
+  // Abrir modal de detalhes
+  const handleVerDetalhes = (feedback: FeedbackRegistro) => {
+    const colaborador = todosColaboradores.find(c => c.id === feedback.colaboradorId);
+    setSelectedFeedback(feedback);
+    setSelectedColaborador(colaborador || null);
+    setIsDetalhesDialogOpen(true);
   };
 
   // Salvar feedback
@@ -119,20 +149,23 @@ export default function RHFeedback() {
 
   // Exportar tabela principal
   const handleExportTable = () => {
-    const dataExport = colaboradores.map(c => ({
-      'ID': c.id,
-      'Nome': c.nome,
-      'CPF': c.cpf,
-      'Cargo': c.cargo,
-      'Loja': getNomeLoja(c.loja),
-      'Última Notificação': getUltimaNotificacao(c.id) 
-        ? format(getUltimaNotificacao(c.id)!, 'dd/MM/yyyy HH:mm', { locale: ptBR })
-        : 'Sem registros',
-      'Próx Anotação': getProximaAnotacao(c.id),
-      'Total Feedbacks': getContadorFeedbacks(c.id)
-    }));
+    const dataExport = feedbacksFiltrados.map(f => {
+      const colaborador = getColaborador(f.colaboradorId);
+      return {
+        'ID Feedback': f.id,
+        'ID Colaborador': f.colaboradorId,
+        'Nome Colaborador': colaborador?.nome || '-',
+        'Cargo': colaborador?.cargo || '-',
+        'Loja': colaborador ? getNomeLoja(colaborador.loja) : '-',
+        'Tipo': f.tipo,
+        'Data/Hora': format(f.dataHora, 'dd/MM/yyyy HH:mm', { locale: ptBR }),
+        'Gestor': f.gestorNome,
+        'Descrição': f.texto,
+        'Referência Anterior': f.referenciaAnterior || '-'
+      };
+    });
 
-    exportFeedbacksToCSV(dataExport, 'feedback_colaboradores.csv');
+    exportFeedbacksToCSV(dataExport, 'feedbacks_export.csv');
     toast({ title: 'Exportado', description: 'Arquivo CSV gerado com sucesso' });
   };
 
@@ -142,11 +175,11 @@ export default function RHFeedback() {
 
     const feedbacksColaborador = getFeedbacksByColaborador(selectedColaborador.id);
     const dataExport = feedbacksColaborador.map(f => ({
-      'ID': f.id,
+      'ID Feedback': f.id,
       'Data/Hora': format(f.dataHora, 'dd/MM/yyyy HH:mm', { locale: ptBR }),
       'Gestor': f.gestorNome,
       'Tipo': f.tipo,
-      'Texto': f.texto,
+      'Descrição': f.texto,
       'Referência Anterior': f.referenciaAnterior || '-'
     }));
 
@@ -183,6 +216,12 @@ export default function RHFeedback() {
                 Gestão de FeedBack
               </CardTitle>
               <div className="flex items-center gap-2">
+                {usuarioLogado.isGestor && (
+                  <Button onClick={handleOpenRegistrar} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Registrar FeedBack
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={handleExportTable}>
                   <Download className="h-4 w-4 mr-2" />
                   Exportar CSV
@@ -194,7 +233,7 @@ export default function RHFeedback() {
             <div className="flex flex-col sm:flex-row gap-4 mb-4">
               <div className="flex-1">
                 <Input 
-                  placeholder="Buscar por nome, CPF ou cargo..." 
+                  placeholder="Buscar por ID, nome, colaborador ou tipo..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -211,98 +250,79 @@ export default function RHFeedback() {
               </div>
             </div>
 
-            {/* Tabela principal */}
+            {/* Tabela principal de feedbacks */}
             <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>ID Feedback</TableHead>
+                    <TableHead>ID Colaborador</TableHead>
                     <TableHead>Colaborador</TableHead>
-                    <TableHead className="hidden md:table-cell">CPF</TableHead>
-                    <TableHead className="hidden sm:table-cell">Cargo</TableHead>
+                    <TableHead className="hidden md:table-cell">Cargo</TableHead>
                     <TableHead className="hidden lg:table-cell">Loja</TableHead>
-                    <TableHead>Última Notificação</TableHead>
-                    <TableHead>Próx Anotação</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Data/Hora</TableHead>
+                    <TableHead className="hidden sm:table-cell">Gestor</TableHead>
                     <TableHead className="text-center">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {colaboradores.length === 0 ? (
+                  {feedbacksFiltrados.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                        {showOnlyWithFeedback 
-                          ? 'Nenhum colaborador com registro de feedback encontrado'
-                          : 'Nenhum colaborador encontrado'}
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                        Nenhum feedback encontrado
                       </TableCell>
                     </TableRow>
                   ) : (
-                    colaboradores.map((colaborador) => {
-                      const ultimaNotificacao = getUltimaNotificacao(colaborador.id);
-                      const proxAnotacao = getProximaAnotacao(colaborador.id);
-                      const qtdFeedbacks = getContadorFeedbacks(colaborador.id);
+                    feedbacksFiltrados.map((feedback) => {
+                      const colaborador = getColaborador(feedback.colaboradorId);
 
                       return (
-                        <TableRow key={colaborador.id}>
+                        <TableRow key={feedback.id}>
+                          <TableCell className="font-mono text-xs font-medium">
+                            {feedback.id}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {feedback.colaboradorId}
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <User className="h-4 w-4 text-muted-foreground" />
-                              <div>
-                                <p className="font-medium">{colaborador.nome}</p>
-                                <p className="text-xs text-muted-foreground sm:hidden">{colaborador.cargo}</p>
-                              </div>
-                              {qtdFeedbacks > 0 && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {qtdFeedbacks}
-                                </Badge>
-                              )}
+                              <span className="font-medium">{colaborador?.nome || '-'}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="hidden md:table-cell font-mono text-xs">
-                            {colaborador.cpf}
+                          <TableCell className="hidden md:table-cell">
+                            {colaborador?.cargo || '-'}
                           </TableCell>
-                          <TableCell className="hidden sm:table-cell">{colaborador.cargo}</TableCell>
-                          <TableCell className="hidden lg:table-cell">{getNomeLoja(colaborador.loja)}</TableCell>
-                          <TableCell>
-                            {ultimaNotificacao ? (
-                              <div className="flex items-center gap-1 text-sm">
-                                <Clock className="h-3 w-3 text-muted-foreground" />
-                                {format(ultimaNotificacao, 'dd/MM/yyyy HH:mm', { locale: ptBR })}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">Sem registros</span>
-                            )}
+                          <TableCell className="hidden lg:table-cell">
+                            {colaborador ? getNomeLoja(colaborador.loja) : '-'}
                           </TableCell>
                           <TableCell>
                             <Badge 
-                              variant={
-                                proxAnotacao === 'Sem registros' ? 'outline' :
-                                proxAnotacao.includes('Suspensão') ? 'destructive' : 'secondary'
-                              }
+                              variant={feedback.tipo.includes('Suspensão') ? 'destructive' : 'secondary'}
                             >
-                              {proxAnotacao}
+                              {feedback.tipo}
                             </Badge>
                           </TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <div className="flex items-center gap-1 text-sm">
+                              <Clock className="h-3 w-3 text-muted-foreground" />
+                              {format(feedback.dataHora, 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden sm:table-cell text-muted-foreground">
+                            {feedback.gestorNome}
+                          </TableCell>
                           <TableCell className="text-center">
-                            {usuarioLogado.isGestor ? (
-                              <Button 
-                                size="sm" 
-                                onClick={() => handleOpenRegistrar(colaborador)}
-                                className="gap-1"
-                              >
-                                <FileText className="h-4 w-4" />
-                                <span className="hidden sm:inline">Registrar</span>
-                                <ChevronRight className="h-4 w-4" />
-                              </Button>
-                            ) : (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                disabled
-                                className="gap-1"
-                              >
-                                <Lock className="h-4 w-4" />
-                                <span className="hidden sm:inline">Restrito</span>
-                              </Button>
-                            )}
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleVerDetalhes(feedback)}
+                              className="gap-1"
+                            >
+                              <Eye className="h-4 w-4" />
+                              <span className="hidden sm:inline">Ver Detalhes</span>
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );
@@ -315,25 +335,33 @@ export default function RHFeedback() {
         </Card>
       </div>
 
-      {/* Modal de Registro de Feedback */}
-      <Dialog open={isRegistrarDialogOpen} onOpenChange={setIsRegistrarDialogOpen}>
+      {/* Modal de Ver Detalhes */}
+      <Dialog open={isDetalhesDialogOpen} onOpenChange={setIsDetalhesDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquareWarning className="h-5 w-5" />
-              Registrar FeedBack - {selectedColaborador?.nome}
+              Detalhes do FeedBack - {selectedFeedback?.id}
             </DialogTitle>
           </DialogHeader>
           
           <ScrollArea className="flex-1 pr-4">
             <div className="space-y-6">
-              {/* Info do colaborador */}
+              {/* Info do feedback */}
               <Card className="bg-muted/50">
                 <CardContent className="pt-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-muted-foreground">CPF:</span>
-                      <span className="ml-2 font-mono">{selectedColaborador?.cpf}</span>
+                      <span className="text-muted-foreground">ID Feedback:</span>
+                      <span className="ml-2 font-mono font-medium">{selectedFeedback?.id}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">ID Colaborador:</span>
+                      <span className="ml-2 font-mono">{selectedFeedback?.colaboradorId}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Colaborador:</span>
+                      <span className="ml-2 font-medium">{selectedColaborador?.nome}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Cargo:</span>
@@ -344,57 +372,45 @@ export default function RHFeedback() {
                       <span className="ml-2">{selectedColaborador && getNomeLoja(selectedColaborador.loja)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Total Feedbacks:</span>
-                      <span className="ml-2">{selectedColaborador && getContadorFeedbacks(selectedColaborador.id)}</span>
+                      <span className="text-muted-foreground">CPF:</span>
+                      <span className="ml-2 font-mono">{selectedColaborador?.cpf}</span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Formulário */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Tipo de Notificação *</Label>
-                  <Select 
-                    value={feedbackForm.tipo} 
-                    onValueChange={(value: FeedbackRegistro['tipo']) => setFeedbackForm({...feedbackForm, tipo: value})}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Advertência">Advertência</SelectItem>
-                      <SelectItem value="Advertência (2)">Advertência (2)</SelectItem>
-                      <SelectItem value="Suspensão">Suspensão</SelectItem>
-                      <SelectItem value="Suspensão (2)">Suspensão (2)</SelectItem>
-                      <SelectItem value="Suspensão (3)">Suspensão (3)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Descrição do Feedback *</Label>
-                  <Textarea 
-                    value={feedbackForm.texto}
-                    onChange={(e) => setFeedbackForm({...feedbackForm, texto: e.target.value})}
-                    placeholder="Descreva detalhadamente o motivo do feedback..."
-                    rows={4}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                  <div>
-                    <span>Gestor:</span>
-                    <span className="ml-2 font-medium text-foreground">{usuarioLogado.nome}</span>
-                  </div>
-                  <div>
-                    <span>Data/Hora:</span>
-                    <span className="ml-2 font-medium text-foreground">
-                      {format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+              {/* Detalhes do feedback selecionado */}
+              <Card>
+                <CardContent className="pt-4 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Badge 
+                      variant={selectedFeedback?.tipo.includes('Suspensão') ? 'destructive' : 'secondary'}
+                      className="text-sm"
+                    >
+                      {selectedFeedback?.tipo}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedFeedback && format(selectedFeedback.dataHora, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                     </span>
                   </div>
-                </div>
-              </div>
+                  <div>
+                    <Label className="text-muted-foreground">Descrição</Label>
+                    <p className="mt-1 text-sm">{selectedFeedback?.texto}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Gestor:</span>
+                      <span className="ml-2">{selectedFeedback?.gestorNome}</span>
+                    </div>
+                    {selectedFeedback?.referenciaAnterior && (
+                      <div>
+                        <span className="text-muted-foreground">Ref. Anterior:</span>
+                        <span className="ml-2 font-mono">{selectedFeedback.referenciaAnterior}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
               <Separator />
 
@@ -403,7 +419,7 @@ export default function RHFeedback() {
                 <div className="flex items-center justify-between">
                   <h4 className="font-semibold flex items-center gap-2">
                     <Clock className="h-4 w-4" />
-                    Histórico de Notificações
+                    Histórico Completo do Colaborador
                   </h4>
                   {timelineColaborador.length > 0 && (
                     <Button variant="outline" size="sm" onClick={handleExportColaborador}>
@@ -415,12 +431,15 @@ export default function RHFeedback() {
 
                 {timelineColaborador.length === 0 ? (
                   <p className="text-muted-foreground text-sm text-center py-4">
-                    Nenhum registro anterior para este colaborador
+                    Nenhum registro para este colaborador
                   </p>
                 ) : (
                   <div className="space-y-3">
                     {timelineColaborador.map((feedback, index) => (
-                      <Card key={feedback.id} className="relative">
+                      <Card 
+                        key={feedback.id} 
+                        className={`relative ${feedback.id === selectedFeedback?.id ? 'ring-2 ring-primary' : ''}`}
+                      >
                         {index < timelineColaborador.length - 1 && (
                           <div className="absolute left-6 top-full h-3 w-0.5 bg-border" />
                         )}
@@ -441,6 +460,9 @@ export default function RHFeedback() {
                                 <span className="text-xs font-mono text-muted-foreground">
                                   {feedback.id}
                                 </span>
+                                {feedback.id === selectedFeedback?.id && (
+                                  <Badge variant="outline" className="text-xs">Atual</Badge>
+                                )}
                               </div>
                               <p className="text-sm mt-1">{feedback.texto}</p>
                               <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
@@ -464,10 +486,194 @@ export default function RHFeedback() {
           </ScrollArea>
 
           <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsDetalhesDialogOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Registro de Feedback */}
+      <Dialog open={isRegistrarDialogOpen} onOpenChange={setIsRegistrarDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Registrar Novo FeedBack
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-6">
+              {/* Seleção do colaborador */}
+              <div className="space-y-2">
+                <Label>Selecionar Colaborador *</Label>
+                <Select 
+                  value={selectedColaborador?.id || ''} 
+                  onValueChange={handleSelectColaborador}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um colaborador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {todosColaboradores.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.id} - {c.nome} ({c.cargo})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedColaborador && (
+                <>
+                  {/* Info do colaborador */}
+                  <Card className="bg-muted/50">
+                    <CardContent className="pt-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">ID:</span>
+                          <span className="ml-2 font-mono">{selectedColaborador.id}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">CPF:</span>
+                          <span className="ml-2 font-mono">{selectedColaborador.cpf}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Cargo:</span>
+                          <span className="ml-2">{selectedColaborador.cargo}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Loja:</span>
+                          <span className="ml-2">{getNomeLoja(selectedColaborador.loja)}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Total Feedbacks:</span>
+                          <span className="ml-2">{timelineColaborador.length}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Formulário */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Tipo de Notificação *</Label>
+                      <Select 
+                        value={feedbackForm.tipo} 
+                        onValueChange={(value: FeedbackRegistro['tipo']) => setFeedbackForm({...feedbackForm, tipo: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Advertência">Advertência</SelectItem>
+                          <SelectItem value="Advertência (2)">Advertência (2)</SelectItem>
+                          <SelectItem value="Suspensão">Suspensão</SelectItem>
+                          <SelectItem value="Suspensão (2)">Suspensão (2)</SelectItem>
+                          <SelectItem value="Suspensão (3)">Suspensão (3)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Descrição do Feedback *</Label>
+                      <Textarea 
+                        value={feedbackForm.texto}
+                        onChange={(e) => setFeedbackForm({...feedbackForm, texto: e.target.value})}
+                        placeholder="Descreva detalhadamente o motivo do feedback..."
+                        rows={4}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                      <div>
+                        <span>Gestor:</span>
+                        <span className="ml-2 font-medium text-foreground">{usuarioLogado.nome}</span>
+                      </div>
+                      <div>
+                        <span>Data/Hora:</span>
+                        <span className="ml-2 font-medium text-foreground">
+                          {format(new Date(), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Timeline */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Histórico de Notificações
+                      </h4>
+                      {timelineColaborador.length > 0 && (
+                        <Button variant="outline" size="sm" onClick={handleExportColaborador}>
+                          <Download className="h-4 w-4 mr-2" />
+                          Exportar Histórico
+                        </Button>
+                      )}
+                    </div>
+
+                    {timelineColaborador.length === 0 ? (
+                      <p className="text-muted-foreground text-sm text-center py-4">
+                        Nenhum registro anterior para este colaborador
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {timelineColaborador.map((feedback, index) => (
+                          <Card key={feedback.id} className="relative">
+                            {index < timelineColaborador.length - 1 && (
+                              <div className="absolute left-6 top-full h-3 w-0.5 bg-border" />
+                            )}
+                            <CardContent className="py-3">
+                              <div className="flex items-start gap-3">
+                                <div className={`p-2 rounded-full ${
+                                  feedback.tipo.includes('Suspensão') 
+                                    ? 'bg-destructive/10 text-destructive' 
+                                    : 'bg-warning/10 text-warning'
+                                }`}>
+                                  <AlertTriangle className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <Badge variant={feedback.tipo.includes('Suspensão') ? 'destructive' : 'secondary'}>
+                                      {feedback.tipo}
+                                    </Badge>
+                                    <span className="text-xs font-mono text-muted-foreground">
+                                      {feedback.id}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm mt-1">{feedback.texto}</p>
+                                  <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                                    <span>
+                                      {format(feedback.dataHora, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                    </span>
+                                    <span>Gestor: {feedback.gestorNome}</span>
+                                    {feedback.referenciaAnterior && (
+                                      <span>Ref: {feedback.referenciaAnterior}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setIsRegistrarDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSalvarFeedback}>
+            <Button onClick={handleSalvarFeedback} disabled={!selectedColaborador}>
               Registrar FeedBack
             </Button>
           </DialogFooter>
