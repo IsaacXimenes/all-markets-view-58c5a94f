@@ -39,8 +39,11 @@ export default function FinanceiroNotasAssistencia() {
     dataInicio: '',
     dataFim: '',
     fornecedor: 'todos',
-    palavraChave: ''
+    lojaSolicitante: 'todos',
+    status: 'todos'
   });
+
+  const lojasSolicitantes = ['Loja Centro', 'Loja Shopping', 'Loja Norte', 'Loja Sul', 'Loja Oeste', 'Loja Leste'];
 
   // Filtrar colaboradores que têm permissão "Financeiro"
   const colaboradoresFinanceiros = useMemo(() => {
@@ -57,7 +60,8 @@ export default function FinanceiroNotasAssistencia() {
       if (filters.dataInicio && nota.dataCriacao < filters.dataInicio) return false;
       if (filters.dataFim && nota.dataCriacao > filters.dataFim) return false;
       if (filters.fornecedor !== 'todos' && nota.fornecedor !== filters.fornecedor) return false;
-      if (filters.palavraChave && !nota.id.toLowerCase().includes(filters.palavraChave.toLowerCase())) return false;
+      if (filters.lojaSolicitante !== 'todos' && nota.lojaSolicitante !== filters.lojaSolicitante) return false;
+      if (filters.status !== 'todos' && nota.status !== filters.status) return false;
       return true;
     });
 
@@ -132,7 +136,8 @@ export default function FinanceiroNotasAssistencia() {
       dataInicio: '',
       dataFim: '',
       fornecedor: 'todos',
-      palavraChave: ''
+      lojaSolicitante: 'todos',
+      status: 'todos'
     });
   };
 
@@ -148,7 +153,7 @@ export default function FinanceiroNotasAssistencia() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
                 <Label htmlFor="dataInicio">Data Início</Label>
                 <Input
@@ -182,13 +187,31 @@ export default function FinanceiroNotasAssistencia() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="palavraChave">Palavra-chave</Label>
-                <Input
-                  id="palavraChave"
-                  placeholder="Buscar..."
-                  value={filters.palavraChave}
-                  onChange={(e) => setFilters({ ...filters, palavraChave: e.target.value })}
-                />
+                <Label htmlFor="lojaSolicitante">Loja Solicitante</Label>
+                <Select value={filters.lojaSolicitante} onValueChange={(value) => setFilters({ ...filters, lojaSolicitante: value })}>
+                  <SelectTrigger id="lojaSolicitante">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todas</SelectItem>
+                    {lojasSolicitantes.map(l => (
+                      <SelectItem key={l} value={l}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="Pendente">Pendente</SelectItem>
+                    <SelectItem value="Concluído">Conferido</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="flex justify-end mt-4">
@@ -218,10 +241,11 @@ export default function FinanceiroNotasAssistencia() {
                   <TableRow>
                     <TableHead>ID</TableHead>
                     <TableHead>Data</TableHead>
-                    <TableHead>Lote</TableHead>
                     <TableHead>Fornecedor</TableHead>
-                    <TableHead>Itens</TableHead>
-                    <TableHead>Valor Total</TableHead>
+                    <TableHead>Loja Solicitante</TableHead>
+                    <TableHead>OS Vinculada</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead className="text-right">Valor Total</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
@@ -229,7 +253,7 @@ export default function FinanceiroNotasAssistencia() {
                 <TableBody>
                   {filteredNotas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                         Nenhuma nota encontrada
                       </TableCell>
                     </TableRow>
@@ -241,9 +265,12 @@ export default function FinanceiroNotasAssistencia() {
                       >
                         <TableCell className="font-mono text-xs">{nota.id}</TableCell>
                         <TableCell>{new Date(nota.dataCriacao).toLocaleDateString('pt-BR')}</TableCell>
-                        <TableCell className="font-mono text-xs">{nota.loteId}</TableCell>
                         <TableCell>{getFornecedorNome(nota.fornecedor)}</TableCell>
-                        <TableCell>{nota.itens.length}</TableCell>
+                        <TableCell>{nota.lojaSolicitante}</TableCell>
+                        <TableCell className="font-mono text-xs">{nota.osId || '-'}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">Peças</Badge>
+                        </TableCell>
                         <TableCell className="font-semibold">
                           {formatCurrency(nota.valorTotal)}
                         </TableCell>

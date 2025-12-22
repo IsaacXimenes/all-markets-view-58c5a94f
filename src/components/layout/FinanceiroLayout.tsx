@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { FileCheck, Plus, Building2, MinusCircle } from 'lucide-react';
+import { FileCheck, MinusCircle, Wrench } from 'lucide-react';
 
 interface FinanceiroLayoutProps {
   children: React.ReactNode;
@@ -15,7 +15,8 @@ export function FinanceiroLayout({ children, title }: FinanceiroLayoutProps) {
     { name: 'Conferência de Contas', href: '/financeiro/conferencia', icon: FileCheck },
     { name: 'Despesas Fixas', href: '/financeiro/despesas-fixas', icon: MinusCircle },
     { name: 'Despesas Variáveis', href: '/financeiro/despesas-variaveis', icon: MinusCircle },
-    { name: 'Conferência de Notas', href: '/financeiro/conferencia-notas-entrada', icon: FileCheck }
+    { name: 'Conferência de Notas', href: '/financeiro/conferencia-notas-entrada', icon: FileCheck },
+    { name: 'Notas Pendentes - Assistência', href: '/financeiro/notas-assistencia', icon: Wrench }
   ];
 
   return (

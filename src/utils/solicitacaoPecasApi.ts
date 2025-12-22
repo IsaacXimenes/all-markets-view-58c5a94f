@@ -32,6 +32,8 @@ export interface NotaAssistencia {
   id: string;
   loteId: string;
   fornecedor: string;
+  lojaSolicitante: string;
+  osId?: string;
   dataCriacao: string;
   valorTotal: number;
   status: 'Pendente' | 'Concluído';
@@ -43,6 +45,7 @@ export interface NotaAssistencia {
   responsavelFinanceiro?: string;
   formaPagamento?: string;
   contaPagamento?: string;
+  dataConferencia?: string;
 }
 
 // Mock data
@@ -143,19 +146,132 @@ let lotes: LotePecas[] = [
 ];
 
 let notasAssistencia: NotaAssistencia[] = [
+  // Notas Pendentes
+  {
+    id: 'NOTA-ASS-002',
+    loteId: 'LOTE-003',
+    fornecedor: 'FORN-003',
+    lojaSolicitante: 'Loja Centro',
+    osId: 'OS-2025-0020',
+    dataCriacao: '2025-01-18T10:00:00',
+    valorTotal: 450,
+    status: 'Pendente',
+    itens: [
+      { peca: 'Bateria iPhone 13 Pro', quantidade: 1, valorUnitario: 280 },
+      { peca: 'Película de vidro', quantidade: 2, valorUnitario: 85 }
+    ]
+  },
+  {
+    id: 'NOTA-ASS-003',
+    loteId: 'LOTE-004',
+    fornecedor: 'FORN-005',
+    lojaSolicitante: 'Loja Shopping',
+    osId: 'OS-2025-0018',
+    dataCriacao: '2025-01-17T14:30:00',
+    valorTotal: 890,
+    status: 'Pendente',
+    itens: [
+      { peca: 'Tela LCD iPhone 14', quantidade: 1, valorUnitario: 750 },
+      { peca: 'Cola B7000', quantidade: 2, valorUnitario: 35 },
+      { peca: 'Ferramentas Troca Tela', quantidade: 1, valorUnitario: 70 }
+    ]
+  },
+  {
+    id: 'NOTA-ASS-004',
+    loteId: 'LOTE-005',
+    fornecedor: 'FORN-001',
+    lojaSolicitante: 'Loja Norte',
+    osId: 'OS-2025-0015',
+    dataCriacao: '2025-01-16T09:00:00',
+    valorTotal: 1250,
+    status: 'Pendente',
+    itens: [
+      { peca: 'Módulo Câmera iPhone 15 Pro', quantidade: 1, valorUnitario: 1100 },
+      { peca: 'Flex Power', quantidade: 1, valorUnitario: 150 }
+    ]
+  },
+  {
+    id: 'NOTA-ASS-005',
+    loteId: 'LOTE-006',
+    fornecedor: 'FORN-002',
+    lojaSolicitante: 'Loja Sul',
+    osId: 'OS-2025-0012',
+    dataCriacao: '2025-01-15T11:00:00',
+    valorTotal: 320,
+    status: 'Pendente',
+    itens: [
+      { peca: 'Conector de Carga iPhone 12', quantidade: 2, valorUnitario: 120 },
+      { peca: 'Alto-falante auricular', quantidade: 1, valorUnitario: 80 }
+    ]
+  },
+  {
+    id: 'NOTA-ASS-006',
+    loteId: 'LOTE-007',
+    fornecedor: 'FORN-003',
+    lojaSolicitante: 'Loja Oeste',
+    osId: 'OS-2025-0010',
+    dataCriacao: '2025-01-14T15:00:00',
+    valorTotal: 580,
+    status: 'Pendente',
+    itens: [
+      { peca: 'Bateria iPhone 14 Pro Max', quantidade: 1, valorUnitario: 380 },
+      { peca: 'Adesivo bateria', quantidade: 2, valorUnitario: 25 },
+      { peca: 'Parafusos Pentalobe', quantidade: 1, valorUnitario: 150 }
+    ]
+  },
+  // Notas Finalizadas/Conferidas
   {
     id: 'NOTA-ASS-001',
     loteId: 'LOTE-002',
     fornecedor: 'FORN-005',
+    lojaSolicitante: 'Loja Centro',
+    osId: 'OS-2025-0005',
     dataCriacao: '2025-01-12T14:00:00',
     valorTotal: 320,
     status: 'Concluído',
     itens: [
       { peca: 'Tela LCD iPhone 11', quantidade: 1, valorUnitario: 320 }
     ],
-    responsavelFinanceiro: 'Ana Costa',
+    responsavelFinanceiro: 'Fernanda Lima',
     formaPagamento: 'Pix',
-    contaPagamento: 'Conta Principal'
+    contaPagamento: 'Conta Bancária Principal',
+    dataConferencia: '2025-01-13'
+  },
+  {
+    id: 'NOTA-ASS-007',
+    loteId: 'LOTE-008',
+    fornecedor: 'FORN-001',
+    lojaSolicitante: 'Loja Shopping',
+    osId: 'OS-2025-0003',
+    dataCriacao: '2025-01-08T10:00:00',
+    valorTotal: 420,
+    status: 'Concluído',
+    itens: [
+      { peca: 'Bateria iPhone 11', quantidade: 2, valorUnitario: 180 },
+      { peca: 'Adesivo bateria', quantidade: 2, valorUnitario: 30 }
+    ],
+    responsavelFinanceiro: 'Lucas Mendes',
+    formaPagamento: 'Transferência Bancária',
+    contaPagamento: 'Conta Digital Administrativo',
+    dataConferencia: '2025-01-09'
+  },
+  {
+    id: 'NOTA-ASS-008',
+    loteId: 'LOTE-009',
+    fornecedor: 'FORN-002',
+    lojaSolicitante: 'Loja Norte',
+    osId: 'OS-2025-0001',
+    dataCriacao: '2025-01-05T09:00:00',
+    valorTotal: 780,
+    status: 'Concluído',
+    itens: [
+      { peca: 'Módulo câmera frontal iPhone 14', quantidade: 1, valorUnitario: 450 },
+      { peca: 'Face ID Flex', quantidade: 1, valorUnitario: 330 }
+    ],
+    responsavelFinanceiro: 'Fernanda Lima',
+    formaPagamento: 'Boleto',
+    contaPagamento: 'Conta Bancária Principal',
+    dataConferencia: '2025-01-07'
   }
 ];
 
@@ -257,6 +373,8 @@ export const enviarLote = (loteId: string): { lote: LotePecas; nota: NotaAssiste
     id: `NOTA-ASS-${String(notaAssistenciaCounter++).padStart(3, '0')}`,
     loteId,
     fornecedor: lote.fornecedorId,
+    lojaSolicitante: solicitacoesDoLote[0]?.lojaSolicitante || 'Loja Centro',
+    osId: solicitacoesDoLote[0]?.osId,
     dataCriacao: new Date().toISOString(),
     valorTotal: lote.valorTotal,
     status: 'Pendente',
