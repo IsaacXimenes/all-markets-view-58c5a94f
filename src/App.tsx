@@ -93,7 +93,7 @@ const App = () => (
           <Route path="/os/assistencia" element={<OSAssistencia />} />
           <Route path="/os/assistencia/nova" element={<OSAssistenciaNova />} />
           <Route path="/os/assistencia/:id" element={<OSAssistenciaDetalhes />} />
-          <Route path="/os/solicitacoes-pecas" element={<OSSolicitacoesPecas />} />
+          <Route path="/estoque/solicitacoes-pecas" element={<OSSolicitacoesPecas />} />
           <Route path="/financeiro/notas-assistencia" element={<FinanceiroNotasAssistencia />} />
           <Route path="/cadastros" element={<Cadastros />} />
           <Route path="/cadastros/lojas" element={<CadastrosLojas />} />

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { OSLayout } from '@/components/layout/OSLayout';
+import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -246,7 +246,7 @@ export default function OSSolicitacoesPecas() {
   const lotesPendentes = lotes.filter(l => l.status === 'Pendente');
 
   return (
-    <OSLayout title="Solicitações de Peças">
+    <EstoqueLayout title="Solicitações de Peças">
       {/* Dashboard Cards */}
       <div className="sticky top-0 z-10 bg-background pb-4">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
@@ -601,6 +601,6 @@ export default function OSSolicitacoesPecas() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </OSLayout>
+    </EstoqueLayout>
   );
 }
