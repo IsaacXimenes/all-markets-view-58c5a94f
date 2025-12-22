@@ -222,7 +222,8 @@ export default function OSSolicitacoesPecas() {
       nome: novoFornecedorNome,
       cnpj: '',
       telefone: '',
-      produtos: [],
+      endereco: '',
+      responsavel: '',
       status: 'Ativo'
     });
     setNovoFornecedorNome('');
