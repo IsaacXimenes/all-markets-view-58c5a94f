@@ -18,6 +18,7 @@ import Settings from "./pages/Settings";
 import RecursosHumanos from "./pages/RecursosHumanos";
 import LojaRH from "./pages/LojaRH";
 import FuncionarioDetalhes from "./pages/FuncionarioDetalhes";
+import RHFeedback from "./pages/RHFeedback";
 import FinanceiroConferencia from "./pages/FinanceiroConferencia";
 import FinanceiroDespesasFixas from "./pages/FinanceiroDespesasFixas";
 import FinanceiroDespesasVariaveis from "./pages/FinanceiroDespesasVariaveis";
@@ -75,6 +76,7 @@ const App = () => (
           <Route path="/rh" element={<RecursosHumanos />} />
           <Route path="/rh/loja/:id" element={<LojaRH />} />
           <Route path="/rh/funcionario/:id" element={<FuncionarioDetalhes />} />
+          <Route path="/rh/feedback" element={<RHFeedback />} />
           <Route path="/financeiro/conferencia" element={<FinanceiroConferencia />} />
           <Route path="/financeiro/despesas-fixas" element={<FinanceiroDespesasFixas />} />
           <Route path="/financeiro/despesas-variaveis" element={<FinanceiroDespesasVariaveis />} />
