@@ -53,6 +53,7 @@ import OSAssistenciaNova from "./pages/OSAssistenciaNova";
 import OSAssistenciaDetalhes from "./pages/OSAssistenciaDetalhes";
 import OSSolicitacoesPecas from "./pages/OSSolicitacoesPecas";
 import FinanceiroNotasAssistencia from "./pages/FinanceiroNotasAssistencia";
+import Relatorios from "./pages/Relatorios";
 
 const queryClient = new QueryClient();
 
@@ -111,6 +112,7 @@ const App = () => (
           <Route path="/vendas" element={<Vendas />} />
           <Route path="/vendas/nova" element={<VendasNova />} />
           <Route path="/vendas/:id" element={<VendaDetalhes />} />
+          <Route path="/relatorios" element={<Relatorios />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
