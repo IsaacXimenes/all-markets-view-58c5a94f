@@ -298,18 +298,20 @@ export default function Relatorios() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Vendas por Loja */}
-              <Card className="border-2 hover:border-primary/50 transition-colors">
-                <CardContent className="p-6 text-center">
-                  <div className="p-4 rounded-full bg-green-500/10 w-fit mx-auto mb-4">
-                    <Store className="h-8 w-8 text-green-500" />
+              <Card className="border-2 hover:border-primary/50 transition-colors h-full flex flex-col">
+                <CardContent className="p-6 flex flex-col flex-1">
+                  <div className="flex-1 flex flex-col items-center text-center">
+                    <div className="p-4 rounded-full bg-green-500/10 mb-4">
+                      <Store className="h-8 w-8 text-green-500" />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">Vendas por Loja</h3>
+                    <p className="text-sm text-muted-foreground flex-1">
+                      Exportar relatório de vendas com data, loja, valor e lucro.
+                    </p>
                   </div>
-                  <h3 className="font-semibold text-lg mb-2">Vendas por Loja</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Exportar relatório de vendas com data, loja, valor e lucro.
-                  </p>
-                  <Button onClick={handleExportVendasLoja} className="w-full gap-2">
+                  <Button onClick={handleExportVendasLoja} className="w-full gap-2 mt-4">
                     <Download className="h-4 w-4" />
                     Exportar CSV
                   </Button>
@@ -317,16 +319,18 @@ export default function Relatorios() {
               </Card>
 
               {/* Custo Assistência Mensal */}
-              <Card className="border-2 hover:border-primary/50 transition-colors">
-                <CardContent className="p-6 text-center">
-                  <div className="p-4 rounded-full bg-orange-500/10 w-fit mx-auto mb-4">
-                    <Wrench className="h-8 w-8 text-orange-500" />
+              <Card className="border-2 hover:border-primary/50 transition-colors h-full flex flex-col">
+                <CardContent className="p-6 flex flex-col flex-1">
+                  <div className="flex-1 flex flex-col items-center text-center">
+                    <div className="p-4 rounded-full bg-orange-500/10 mb-4">
+                      <Wrench className="h-8 w-8 text-orange-500" />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">Custo Assistência</h3>
+                    <p className="text-sm text-muted-foreground flex-1">
+                      Exportar custos de OS por loja, peça, valor total e prejuízo.
+                    </p>
                   </div>
-                  <h3 className="font-semibold text-lg mb-2">Custo Assistência Mensal</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Exportar custos de OS por loja, peça, valor total e prejuízo.
-                  </p>
-                  <Button onClick={handleExportCustoAssistencia} className="w-full gap-2" variant="outline">
+                  <Button onClick={handleExportCustoAssistencia} className="w-full gap-2 mt-4">
                     <Download className="h-4 w-4" />
                     Exportar CSV
                   </Button>
@@ -334,16 +338,18 @@ export default function Relatorios() {
               </Card>
 
               {/* Feedbacks por Colaborador */}
-              <Card className="border-2 hover:border-primary/50 transition-colors">
-                <CardContent className="p-6 text-center">
-                  <div className="p-4 rounded-full bg-purple-500/10 w-fit mx-auto mb-4">
-                    <MessageSquareWarning className="h-8 w-8 text-purple-500" />
+              <Card className="border-2 hover:border-primary/50 transition-colors h-full flex flex-col">
+                <CardContent className="p-6 flex flex-col flex-1">
+                  <div className="flex-1 flex flex-col items-center text-center">
+                    <div className="p-4 rounded-full bg-purple-500/10 mb-4">
+                      <MessageSquareWarning className="h-8 w-8 text-purple-500" />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">Feedbacks</h3>
+                    <p className="text-sm text-muted-foreground flex-1">
+                      Exportar feedbacks com colaborador, data, tipo e texto.
+                    </p>
                   </div>
-                  <h3 className="font-semibold text-lg mb-2">Feedbacks por Colaborador</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Exportar feedbacks com colaborador, data, tipo e texto.
-                  </p>
-                  <Button onClick={handleExportFeedbacks} className="w-full gap-2" variant="outline">
+                  <Button onClick={handleExportFeedbacks} className="w-full gap-2 mt-4">
                     <Download className="h-4 w-4" />
                     Exportar CSV
                   </Button>
