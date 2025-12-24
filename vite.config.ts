@@ -8,6 +8,12 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    // SPA fallback for direct URL access
+    historyApiFallback: true,
+  },
+  // Preview server also needs SPA fallback
+  preview: {
+    port: 8080,
   },
   plugins: [
     react(),
@@ -17,6 +23,14 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+    },
+  },
+  // Build configuration for SPA
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
     },
   },
 }));
