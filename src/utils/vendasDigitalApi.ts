@@ -63,12 +63,12 @@ export const calcularSLA = (dataHora: string): number => {
   return diffDays;
 };
 
-// Mock data - 5 pré-cadastros (3 pendentes, 1 ajuste, 1 finalizada)
+// Mock data - 5 pré-cadastros ordenados por data recente primeiro
 let vendasDigitais: VendaDigital[] = [
   {
     id: 'VEN-DIG-2025-0001',
     numero: 1,
-    dataHora: new Date(Date.now() - 0 * 24 * 60 * 60 * 1000).toISOString(), // hoje
+    dataHora: new Date(Date.now() - 0.5 * 60 * 60 * 1000).toISOString(), // 30 min atrás (mais recente)
     responsavelVendaId: 'COL-007',
     responsavelVendaNome: 'Rafael Digital',
     clienteNome: 'Carlos Mendes',
@@ -77,7 +77,7 @@ let vendasDigitais: VendaDigital[] = [
     timeline: [
       {
         id: 'TL-001',
-        data: new Date(Date.now() - 0 * 24 * 60 * 60 * 1000).toISOString(),
+        data: new Date(Date.now() - 0.5 * 60 * 60 * 1000).toISOString(),
         acao: 'Pré-cadastro enviado',
         responsavel: 'Rafael Digital',
         responsavelId: 'COL-007'
@@ -87,7 +87,7 @@ let vendasDigitais: VendaDigital[] = [
   {
     id: 'VEN-DIG-2025-0002',
     numero: 2,
-    dataHora: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 dia (amarelo)
+    dataHora: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 horas atrás
     responsavelVendaId: 'COL-008',
     responsavelVendaNome: 'Camila Online',
     clienteNome: 'Patricia Lima',
@@ -96,7 +96,7 @@ let vendasDigitais: VendaDigital[] = [
     timeline: [
       {
         id: 'TL-002',
-        data: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        data: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
         acao: 'Pré-cadastro enviado',
         responsavel: 'Camila Online',
         responsavelId: 'COL-008'
@@ -106,7 +106,7 @@ let vendasDigitais: VendaDigital[] = [
   {
     id: 'VEN-DIG-2025-0003',
     numero: 3,
-    dataHora: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 dias (vermelho)
+    dataHora: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 dia atrás
     responsavelVendaId: 'COL-009',
     responsavelVendaNome: 'Bruno Web',
     clienteNome: 'Fernando Souza',
@@ -115,7 +115,7 @@ let vendasDigitais: VendaDigital[] = [
     timeline: [
       {
         id: 'TL-003',
-        data: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        data: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
         acao: 'Pré-cadastro enviado',
         responsavel: 'Bruno Web',
         responsavelId: 'COL-009'
@@ -125,13 +125,12 @@ let vendasDigitais: VendaDigital[] = [
   {
     id: 'VEN-DIG-2025-0004',
     numero: 4,
-    dataHora: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 dias
+    dataHora: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 dias atrás
     responsavelVendaId: 'COL-007',
     responsavelVendaNome: 'Rafael Digital',
     clienteNome: 'Amanda Torres',
     valorTotal: 9800.00,
-    status: 'Ajuste Solicitado',
-    motivoAjuste: 'Valor do produto incorreto. Favor verificar preço atualizado no sistema.',
+    status: 'Pendente',
     timeline: [
       {
         id: 'TL-004',
@@ -139,54 +138,27 @@ let vendasDigitais: VendaDigital[] = [
         acao: 'Pré-cadastro enviado',
         responsavel: 'Rafael Digital',
         responsavelId: 'COL-007'
-      },
-      {
-        id: 'TL-005',
-        data: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        acao: 'Ajuste solicitado',
-        responsavel: 'Lucas Finalizador',
-        responsavelId: 'COL-010',
-        detalhes: 'Valor do produto incorreto. Favor verificar preço atualizado no sistema.'
       }
     ]
   },
   {
     id: 'VEN-DIG-2025-0005',
     numero: 5,
-    dataHora: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+    dataHora: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 dias atrás (mais antigo)
     responsavelVendaId: 'COL-008',
     responsavelVendaNome: 'Camila Online',
     clienteNome: 'Roberto Almeida',
-    clienteId: 'CLI-001',
     valorTotal: 14500.00,
-    status: 'Concluída Digital',
-    finalizadorId: 'COL-010',
-    finalizadorNome: 'Lucas Finalizador',
-    dataFinalizacao: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    status: 'Pendente',
     timeline: [
       {
-        id: 'TL-006',
-        data: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+        id: 'TL-005',
+        data: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
         acao: 'Pré-cadastro enviado',
         responsavel: 'Camila Online',
         responsavelId: 'COL-008'
-      },
-      {
-        id: 'TL-007',
-        data: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        acao: 'Venda finalizada',
-        responsavel: 'Lucas Finalizador',
-        responsavelId: 'COL-010'
       }
-    ],
-    dadosCompletos: {
-      itens: [],
-      tradeIns: [],
-      pagamentos: [],
-      observacoes: 'Venda digital finalizada com sucesso',
-      origemVenda: 'Online',
-      localRetirada: 'LOJA-001'
-    }
+    ]
   }
 ];
 

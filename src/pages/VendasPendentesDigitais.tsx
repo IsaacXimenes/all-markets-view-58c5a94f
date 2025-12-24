@@ -7,15 +7,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Download, CheckCircle, AlertTriangle, Clock, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
   getVendasDigitais, 
   calcularSLA, 
-  solicitarAjuste,
   formatCurrency,
   exportVendasDigitaisToCSV,
   VendaDigital
@@ -25,45 +21,35 @@ export default function VendasPendentesDigitais() {
   const navigate = useNavigate();
   const [vendas] = useState<VendaDigital[]>(getVendasDigitais());
   const [statusFiltro, setStatusFiltro] = useState('');
-  const [responsavelFiltro, setResponsavelFiltro] = useState('');
   const [busca, setBusca] = useState('');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
-  
-  // Modal ajuste
-  const [modalAjuste, setModalAjuste] = useState(false);
-  const [vendaSelecionada, setVendaSelecionada] = useState<VendaDigital | null>(null);
-  const [motivoAjuste, setMotivoAjuste] = useState('');
 
+  // Filtrar e ordenar por data/hora descendente (mais novo primeiro)
   const vendasFiltradas = useMemo(() => {
-    return vendas.filter(v => {
-      if (statusFiltro && v.status !== statusFiltro) return false;
-      if (responsavelFiltro && v.responsavelVendaId !== responsavelFiltro) return false;
-      if (busca) {
-        const termo = busca.toLowerCase();
-        if (!v.id.toLowerCase().includes(termo) && 
-            !v.clienteNome.toLowerCase().includes(termo)) return false;
-      }
-      if (dataInicio) {
-        const data = new Date(v.dataHora);
-        const inicio = new Date(dataInicio);
-        if (data < inicio) return false;
-      }
-      if (dataFim) {
-        const data = new Date(v.dataHora);
-        const fim = new Date(dataFim);
-        fim.setHours(23, 59, 59);
-        if (data > fim) return false;
-      }
-      return true;
-    });
-  }, [vendas, statusFiltro, responsavelFiltro, busca, dataInicio, dataFim]);
-
-  const responsaveis = useMemo(() => {
-    const unique = new Map<string, string>();
-    vendas.forEach(v => unique.set(v.responsavelVendaId, v.responsavelVendaNome));
-    return Array.from(unique.entries()).map(([id, nome]) => ({ id, nome }));
-  }, [vendas]);
+    return vendas
+      .filter(v => {
+        if (statusFiltro && v.status !== statusFiltro) return false;
+        if (busca) {
+          const termo = busca.toLowerCase();
+          if (!v.id.toLowerCase().includes(termo) && 
+              !v.clienteNome.toLowerCase().includes(termo)) return false;
+        }
+        if (dataInicio) {
+          const data = new Date(v.dataHora);
+          const inicio = new Date(dataInicio);
+          if (data < inicio) return false;
+        }
+        if (dataFim) {
+          const data = new Date(v.dataHora);
+          const fim = new Date(dataFim);
+          fim.setHours(23, 59, 59);
+          if (data > fim) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
+  }, [vendas, statusFiltro, busca, dataInicio, dataFim]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -84,33 +70,6 @@ export default function VendasPendentesDigitais() {
     if (dias >= 3) return 'bg-destructive/20';
     if (dias >= 2) return 'bg-warning/20';
     return '';
-  };
-
-  const handlePedirAjuste = (venda: VendaDigital) => {
-    setVendaSelecionada(venda);
-    setMotivoAjuste('');
-    setModalAjuste(true);
-  };
-
-  const confirmarAjuste = () => {
-    if (!vendaSelecionada || !motivoAjuste.trim()) {
-      toast.error('Informe o motivo do ajuste');
-      return;
-    }
-
-    solicitarAjuste(
-      vendaSelecionada.id,
-      'COL-010',
-      'Lucas Finalizador',
-      motivoAjuste
-    );
-
-    toast.warning('Ajuste solicitado', {
-      description: `Venda ${vendaSelecionada.id} – motivo: ${motivoAjuste.substring(0, 30)}...`
-    });
-
-    setModalAjuste(false);
-    setVendaSelecionada(null);
   };
 
   const handleFinalizar = (vendaId: string) => {
@@ -209,24 +168,13 @@ export default function VendasPendentesDigitais() {
                       </TableCell>
                       <TableCell>{getStatusBadge(venda.status)}</TableCell>
                       <TableCell>
-                        {venda.status !== 'Concluída Digital' && (
-                          <div className="flex gap-2">
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleFinalizar(venda.id)}
-                              disabled={venda.status === 'Ajuste Solicitado'}
-                            >
-                              Finalizar
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handlePedirAjuste(venda)}
-                              disabled={venda.status === 'Ajuste Solicitado'}
-                            >
-                              Pedir Ajuste
-                            </Button>
-                          </div>
+                        {venda.status !== 'Concluída Digital' && venda.status !== 'Ajuste Solicitado' && (
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleFinalizar(venda.id)}
+                          >
+                            Finalizar
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>
@@ -244,37 +192,6 @@ export default function VendasPendentesDigitais() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Modal Ajuste */}
-      <Dialog open={modalAjuste} onOpenChange={setModalAjuste}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Solicitar Ajuste</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Venda: <strong>{vendaSelecionada?.id}</strong>
-            </p>
-            <div className="space-y-2">
-              <Label>Motivo do Ajuste *</Label>
-              <Textarea
-                placeholder="Descreva o motivo do ajuste..."
-                value={motivoAjuste}
-                onChange={(e) => setMotivoAjuste(e.target.value)}
-                rows={4}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setModalAjuste(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={confirmarAjuste} disabled={!motivoAjuste.trim()}>
-              Confirmar Ajuste
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </VendasLayout>
   );
 }
