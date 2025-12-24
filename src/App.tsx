@@ -46,6 +46,9 @@ import CadastrosContasFinanceiras from "./pages/CadastrosContasFinanceiras";
 import Vendas from "./pages/Vendas";
 import VendasNova from "./pages/VendasNova";
 import VendaDetalhes from "./pages/VendaDetalhes";
+import VendasNovaDigital from "./pages/VendasNovaDigital";
+import VendasPendentesDigitais from "./pages/VendasPendentesDigitais";
+import VendasFinalizarDigital from "./pages/VendasFinalizarDigital";
 import OSProdutosAnalise from "./pages/OSProdutosAnalise";
 import OSProdutoDetalhes from "./pages/OSProdutoDetalhes";
 import OSAssistencia from "./pages/OSAssistencia";
@@ -111,6 +114,9 @@ const App = () => (
           <Route path="/cadastros/contas-financeiras" element={<CadastrosContasFinanceiras />} />
           <Route path="/vendas" element={<Vendas />} />
           <Route path="/vendas/nova" element={<VendasNova />} />
+          <Route path="/vendas/nova-digital" element={<VendasNovaDigital />} />
+          <Route path="/vendas/pendentes-digitais" element={<VendasPendentesDigitais />} />
+          <Route path="/vendas/finalizar-digital/:id" element={<VendasFinalizarDigital />} />
           <Route path="/vendas/:id" element={<VendaDetalhes />} />
           <Route path="/relatorios" element={<Relatorios />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -1,20 +1,35 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { ShoppingCart, Plus, History } from 'lucide-react';
+import { History, Plus, Smartphone, ClipboardList } from 'lucide-react';
 
 interface VendasLayoutProps {
   children: React.ReactNode;
   title: string;
 }
 
+// Mock: verificar permissões do usuário logado
+const usuarioLogadoId = 'COL-007'; // Simulando usuário com permissão Digital
+const temPermissaoDigital = true; // Em produção: verificar via API
+const temPermissaoFinalizador = true; // Em produção: verificar via API
+
 export function VendasLayout({ children, title }: VendasLayoutProps) {
   const location = useLocation();
   
-  const tabs = [
+  const baseTabs = [
     { name: 'Histórico de Vendas', href: '/vendas', icon: History },
     { name: 'Nova Venda', href: '/vendas/nova', icon: Plus },
   ];
+
+  const digitalTabs = temPermissaoDigital ? [
+    { name: 'Nova Venda - Digital', href: '/vendas/nova-digital', icon: Smartphone },
+  ] : [];
+
+  const finalizadorTabs = temPermissaoFinalizador ? [
+    { name: 'Pendentes Digitais', href: '/vendas/pendentes-digitais', icon: ClipboardList },
+  ] : [];
+
+  const tabs = [...baseTabs, ...digitalTabs, ...finalizadorTabs];
 
   return (
     <PageLayout title={title}>
