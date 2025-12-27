@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { Wrench, ClipboardList } from 'lucide-react';
+import { Wrench, ClipboardList, Package } from 'lucide-react';
 
 interface OSLayoutProps {
   children: React.ReactNode;
@@ -14,6 +14,7 @@ export function OSLayout({ children, title }: OSLayoutProps) {
   const tabs = [
     { name: 'Produtos para Análise', href: '/os/produtos-analise', icon: ClipboardList },
     { name: 'Assistência', href: '/os/assistencia', icon: Wrench },
+    { name: 'Solicitações de Peças', href: '/os/solicitacoes-pecas', icon: Package },
   ];
 
   return (

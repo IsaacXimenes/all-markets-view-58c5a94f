@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, Package, FileText, ArrowRightLeft, Clock, ClipboardList, Headphones } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, ArrowRightLeft, Clock, Headphones } from 'lucide-react';
 
 interface EstoqueLayoutProps {
   children: React.ReactNode;
@@ -17,8 +17,7 @@ export function EstoqueLayout({ children, title }: EstoqueLayoutProps) {
     { name: 'Acessórios', href: '/estoque/acessorios', icon: Headphones },
     { name: 'Produtos Pendentes', href: '/estoque/produtos-pendentes', icon: Clock },
     { name: 'Notas de Compra', href: '/estoque/notas-compra', icon: FileText },
-    { name: 'Movimentações', href: '/estoque/movimentacoes', icon: ArrowRightLeft },
-    { name: 'Solicitações de Peças', href: '/estoque/solicitacoes-pecas', icon: ClipboardList }
+    { name: 'Movimentações', href: '/estoque/movimentacoes', icon: ArrowRightLeft }
   ];
 
   return (

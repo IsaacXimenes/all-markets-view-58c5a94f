@@ -97,12 +97,12 @@ const App = () => (
           <Route path="/estoque/nota/cadastrar" element={<EstoqueNotaCadastrar />} />
           <Route path="/estoque/movimentacoes" element={<EstoqueMovimentacoes />} />
           <Route path="/estoque/acessorios" element={<EstoqueAcessorios />} />
-          <Route path="/estoque/solicitacoes-pecas" element={<OSSolicitacoesPecas />} />
           <Route path="/os/produtos-analise" element={<OSProdutosAnalise />} />
           <Route path="/os/produto/:id" element={<OSProdutoDetalhes />} />
           <Route path="/os/assistencia" element={<OSAssistencia />} />
           <Route path="/os/assistencia/nova" element={<OSAssistenciaNova />} />
           <Route path="/os/assistencia/:id" element={<OSAssistenciaDetalhes />} />
+          <Route path="/os/solicitacoes-pecas" element={<OSSolicitacoesPecas />} />
           <Route path="/financeiro/notas-assistencia" element={<FinanceiroNotasAssistencia />} />
           <Route path="/cadastros" element={<Cadastros />} />
           <Route path="/cadastros/lojas" element={<CadastrosLojas />} />
