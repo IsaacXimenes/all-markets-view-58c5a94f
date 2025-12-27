@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { History, Plus, Smartphone, ClipboardList } from 'lucide-react';
+import { History, Plus, Smartphone, ClipboardList, Headphones } from 'lucide-react';
 
 interface VendasLayoutProps {
   children: React.ReactNode;
@@ -19,6 +19,7 @@ export function VendasLayout({ children, title }: VendasLayoutProps) {
   const baseTabs = [
     { name: 'Histórico de Vendas', href: '/vendas', icon: History },
     { name: 'Nova Venda', href: '/vendas/nova', icon: Plus },
+    { name: 'Vendas - Acessórios', href: '/vendas/acessorios', icon: Headphones },
   ];
 
   const digitalTabs = temPermissaoDigital ? [
