@@ -205,8 +205,8 @@ export default function Vendas() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>ID Venda</TableHead>
                   <TableHead>Data/Hora</TableHead>
-                  <TableHead>ID</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Resp. Venda</TableHead>
                   <TableHead>Loja</TableHead>
@@ -248,10 +248,10 @@ export default function Vendas() {
                   
                   return (
                     <TableRow key={venda.id} className={getRowBgClass()}>
+                      <TableCell className="font-medium">{venda.id}</TableCell>
                       <TableCell className="whitespace-nowrap">
                         {new Date(venda.dataHora).toLocaleString('pt-BR')}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{venda.id}</TableCell>
                       <TableCell className="font-medium">{venda.clienteNome}</TableCell>
                       <TableCell>{getColaboradorNome(venda.vendedor)}</TableCell>
                       <TableCell>{getLojaName(venda.lojaVenda)}</TableCell>

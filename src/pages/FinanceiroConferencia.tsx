@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FinanceiroLayout } from '@/components/layout/FinanceiroLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,37 +9,55 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Check, Download, Filter, X } from 'lucide-react';
-import { getPagamentos, conferirPagamento, exportToCSV, Pagamento } from '@/utils/financeApi';
-import { getContasFinanceiras, getColaboradores, getCargos } from '@/utils/cadastrosApi';
+import { Check, Download, Filter, X, Eye, Clock, CheckCircle2 } from 'lucide-react';
+import { getContasFinanceiras, getColaboradores, getCargos, getLojas } from '@/utils/cadastrosApi';
+import { 
+  getVendasConferencia, 
+  finalizarVendaFinanceiro, 
+  formatCurrency, 
+  VendaConferencia,
+  StatusConferencia 
+} from '@/utils/conferenciaGestorApi';
 import { toast } from 'sonner';
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-};
-
 export default function FinanceiroConferencia() {
-  const [pagamentos, setPagamentos] = useState(getPagamentos());
+  const navigate = useNavigate();
+  const [vendas, setVendas] = useState<VendaConferencia[]>([]);
   const contasFinanceiras = getContasFinanceiras();
   const colaboradores = getColaboradores();
   const cargos = getCargos();
+  const lojas = getLojas();
   
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [pagamentoSelecionado, setPagamentoSelecionado] = useState<Pagamento | null>(null);
+  const [vendaSelecionada, setVendaSelecionada] = useState<VendaConferencia | null>(null);
   const [contaSelecionada, setContaSelecionada] = useState('');
-  const [meioPagamentoSelecionado, setMeioPagamentoSelecionado] = useState('');
-  const [parcelas, setParcelas] = useState('');
   const [responsavelSelecionado, setResponsavelSelecionado] = useState('');
   
   const [filters, setFilters] = useState({
     dataInicio: '',
     dataFim: '',
-    conta: 'todas',
-    meioPagamento: 'todos',
-    palavraChave: ''
+    loja: 'todas',
+    status: 'todos'
   });
 
-  // Filtrar colaboradores que têm permissão "Financeiro"
+  useEffect(() => {
+    const todasVendas = getVendasConferencia();
+    // Filtrar apenas vendas que passaram pelo gestor (Conferência - Financeiro ou Concluído)
+    const vendasFinanceiro = todasVendas.filter(v => 
+      v.status === 'Conferência - Financeiro' || v.status === 'Concluído'
+    );
+    setVendas(vendasFinanceiro);
+  }, []);
+
+  const recarregarVendas = () => {
+    const todasVendas = getVendasConferencia();
+    const vendasFinanceiro = todasVendas.filter(v => 
+      v.status === 'Conferência - Financeiro' || v.status === 'Concluído'
+    );
+    setVendas(vendasFinanceiro);
+  };
+
+  // Filtrar colaboradores com permissão "Financeiro"
   const colaboradoresFinanceiros = useMemo(() => {
     const cargosComPermissaoFinanceiro = cargos
       .filter(c => c.permissoes.includes('Financeiro'))
@@ -47,65 +66,92 @@ export default function FinanceiroConferencia() {
     return colaboradores.filter(col => cargosComPermissaoFinanceiro.includes(col.cargo));
   }, [colaboradores, cargos]);
 
-  const handleAbrirConferencia = (pagamento: Pagamento) => {
-    setPagamentoSelecionado(pagamento);
+  const handleAbrirConferencia = (venda: VendaConferencia) => {
+    setVendaSelecionada(venda);
     setContaSelecionada('');
-    setMeioPagamentoSelecionado('');
-    setParcelas('');
     setResponsavelSelecionado('');
     setDialogOpen(true);
   };
 
   const handleConferir = () => {
-    if (!contaSelecionada || !meioPagamentoSelecionado || !responsavelSelecionado) {
+    if (!contaSelecionada || !responsavelSelecionado) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
 
-    if ((meioPagamentoSelecionado === 'Cartão Crédito' || meioPagamentoSelecionado === 'Boleto') && !parcelas) {
-      toast.error('Informe o número de parcelas');
-      return;
-    }
+    if (vendaSelecionada) {
+      const responsavel = colaboradoresFinanceiros.find(c => c.id === responsavelSelecionado);
+      const resultado = finalizarVendaFinanceiro(
+        vendaSelecionada.id,
+        responsavelSelecionado,
+        responsavel?.nome || 'Responsável'
+      );
 
-    if (pagamentoSelecionado && conferirPagamento(pagamentoSelecionado.id)) {
-      setPagamentos(getPagamentos());
-      setDialogOpen(false);
-      toast.success('Pagamento conferido com sucesso!');
+      if (resultado) {
+        recarregarVendas();
+        setDialogOpen(false);
+        toast.success(`Venda ${vendaSelecionada.vendaId} finalizada com sucesso!`);
+      }
     }
   };
 
-  const mostrarCampoParcelas = meioPagamentoSelecionado === 'Cartão Crédito' || meioPagamentoSelecionado === 'Boleto';
-  const botaoDesabilitado = !contaSelecionada || !meioPagamentoSelecionado || !responsavelSelecionado || (mostrarCampoParcelas && !parcelas);
+  const botaoDesabilitado = !contaSelecionada || !responsavelSelecionado;
 
-  const filteredPagamentos = useMemo(() => {
-    return pagamentos.filter(pag => {
-      if (filters.dataInicio && pag.data < filters.dataInicio) return false;
-      if (filters.dataFim && pag.data > filters.dataFim) return false;
-      if (filters.conta !== 'todas' && pag.conta !== filters.conta) return false;
-      if (filters.meioPagamento !== 'todos' && pag.meioPagamento !== filters.meioPagamento) return false;
-      if (filters.palavraChave && !pag.descricao.toLowerCase().includes(filters.palavraChave.toLowerCase())) return false;
+  const filteredVendas = useMemo(() => {
+    return vendas.filter(v => {
+      if (filters.dataInicio && new Date(v.dataRegistro) < new Date(filters.dataInicio)) return false;
+      if (filters.dataFim) {
+        const dataFim = new Date(filters.dataFim);
+        dataFim.setHours(23, 59, 59);
+        if (new Date(v.dataRegistro) > dataFim) return false;
+      }
+      if (filters.loja !== 'todas' && v.lojaId !== filters.loja) return false;
+      if (filters.status !== 'todos' && v.status !== filters.status) return false;
       return true;
+    }).sort((a, b) => {
+      // Pendentes primeiro
+      if (a.status === 'Conferência - Financeiro' && b.status === 'Concluído') return -1;
+      if (a.status === 'Concluído' && b.status === 'Conferência - Financeiro') return 1;
+      return new Date(b.dataRegistro).getTime() - new Date(a.dataRegistro).getTime();
     });
-  }, [pagamentos, filters]);
+  }, [vendas, filters]);
 
-  const totalPendente = useMemo(() => {
-    return filteredPagamentos
-      .filter(p => p.status === 'Pendente')
-      .reduce((acc, p) => acc + p.valor, 0);
-  }, [filteredPagamentos]);
+  const pendentes = vendas.filter(v => v.status === 'Conferência - Financeiro').length;
+  const concluidos = vendas.filter(v => v.status === 'Concluído').length;
+  const totalPendente = vendas
+    .filter(v => v.status === 'Conferência - Financeiro')
+    .reduce((acc, v) => acc + v.valorTotal, 0);
 
   const handleExport = () => {
-    const dataToExport = filteredPagamentos.map(p => ({
-      ID: p.id,
-      Data: p.data,
-      Descrição: p.descricao,
-      Valor: formatCurrency(p.valor),
-      'Meio Pagamento': p.meioPagamento,
-      Conta: p.conta,
-      Loja: p.loja,
-      Status: p.status
+    const dataToExport = filteredVendas.map(v => ({
+      'ID Venda': v.vendaId,
+      'Data': new Date(v.dataRegistro).toLocaleDateString('pt-BR'),
+      'Loja': v.lojaNome,
+      'Cliente': v.clienteNome,
+      'Valor': formatCurrency(v.valorTotal),
+      'Status': v.status,
+      'Gestor': v.gestorNome || '-',
+      'Data Conferência Gestor': v.dataConferencia ? new Date(v.dataConferencia).toLocaleDateString('pt-BR') : '-'
     }));
-    exportToCSV(dataToExport, `conferencia-contas-${new Date().toISOString().split('T')[0]}.csv`);
+
+    const headers = Object.keys(dataToExport[0]).join(',');
+    const rows = dataToExport.map(item => 
+      Object.values(item).map(value => 
+        typeof value === 'string' && value.includes(',') ? `"${value}"` : value
+      ).join(',')
+    );
+    
+    const csv = [headers, ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `conferencia-financeiro-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     toast.success('Dados exportados com sucesso!');
   };
 
@@ -113,14 +159,73 @@ export default function FinanceiroConferencia() {
     setFilters({
       dataInicio: '',
       dataFim: '',
-      conta: 'todas',
-      meioPagamento: 'todos',
-      palavraChave: ''
+      loja: 'todas',
+      status: 'todos'
     });
   };
 
+  const getStatusBadge = (status: StatusConferencia) => {
+    switch (status) {
+      case 'Conferência - Financeiro':
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white whitespace-nowrap">Conferência - Financeiro</Badge>;
+      case 'Concluído':
+        return <Badge className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap">Concluído</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  const getRowClassName = (status: StatusConferencia) => {
+    switch (status) {
+      case 'Conferência - Financeiro':
+        return 'bg-yellow-50 dark:bg-yellow-950/30 hover:bg-yellow-100 dark:hover:bg-yellow-950/50';
+      case 'Concluído':
+        return 'bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-950/50';
+      default:
+        return '';
+    }
+  };
+
   return (
-    <FinanceiroLayout title="Conferência de Contas">
+    <FinanceiroLayout title="Conferência de Contas - Vendas">
+      {/* Cards de resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Pendentes</p>
+                <p className="text-3xl font-bold text-yellow-600">{pendentes}</p>
+              </div>
+              <Clock className="h-10 w-10 text-yellow-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Concluídos</p>
+                <p className="text-3xl font-bold text-green-600">{concluidos}</p>
+              </div>
+              <CheckCircle2 className="h-10 w-10 text-green-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Pendente</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalPendente)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="space-y-6">
         <Card>
           <CardHeader>
@@ -130,7 +235,7 @@ export default function FinanceiroConferencia() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
                 <Label htmlFor="dataInicio">Data Início</Label>
                 <Input
@@ -150,45 +255,31 @@ export default function FinanceiroConferencia() {
                 />
               </div>
               <div>
-                <Label htmlFor="conta">Conta</Label>
-                <Select value={filters.conta} onValueChange={(value) => setFilters({ ...filters, conta: value })}>
-                  <SelectTrigger id="conta">
+                <Label htmlFor="loja">Loja</Label>
+                <Select value={filters.loja} onValueChange={(value) => setFilters({ ...filters, loja: value })}>
+                  <SelectTrigger id="loja">
                     <SelectValue placeholder="Todas" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todas">Todas</SelectItem>
-                    {contasFinanceiras.map(c => (
-                      <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
+                    {lojas.map(l => (
+                      <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="meioPagamento">Meio de Pagamento</Label>
-                <Select value={filters.meioPagamento} onValueChange={(value) => setFilters({ ...filters, meioPagamento: value })}>
-                  <SelectTrigger id="meioPagamento">
+                <Label htmlFor="status">Status</Label>
+                <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
+                  <SelectTrigger id="status">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="Pix">Pix</SelectItem>
-                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                    <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
-                    <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
-                    <SelectItem value="Transferência">Transferência</SelectItem>
-                    <SelectItem value="Boleto">Boleto</SelectItem>
-                    <SelectItem value="Outro">Outro</SelectItem>
+                    <SelectItem value="Conferência - Financeiro">Conferência - Financeiro</SelectItem>
+                    <SelectItem value="Concluído">Concluído</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div>
-                <Label htmlFor="palavraChave">Palavra-chave</Label>
-                <Input
-                  id="palavraChave"
-                  placeholder="Buscar..."
-                  value={filters.palavraChave}
-                  onChange={(e) => setFilters({ ...filters, palavraChave: e.target.value })}
-                />
               </div>
               <div className="flex items-end gap-2">
                 <Button variant="outline" onClick={handleLimpar} className="flex-1">
@@ -203,7 +294,7 @@ export default function FinanceiroConferencia() {
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <CardTitle>Pagamentos Pendentes de Conferência</CardTitle>
+              <CardTitle>Vendas para Conferência Financeira</CardTitle>
               <Button onClick={handleExport} variant="outline">
                 <Download className="h-4 w-4 mr-2" />
                 Exportar CSV
@@ -215,51 +306,67 @@ export default function FinanceiroConferencia() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
+                    <TableHead>ID Venda</TableHead>
                     <TableHead>Data</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Meio Pagto</TableHead>
-                    <TableHead>Conta</TableHead>
                     <TableHead>Loja</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Responsável Venda</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead>Gestor</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPagamentos.map((pag) => (
-                    <TableRow 
-                      key={pag.id}
-                      className={pag.status === 'Pendente' ? 'bg-destructive/20' : 'bg-green-500/20'}
-                    >
-                      <TableCell className="font-mono text-xs">{pag.id}</TableCell>
-                      <TableCell>{new Date(pag.data).toLocaleDateString('pt-BR')}</TableCell>
-                      <TableCell>{pag.descricao}</TableCell>
-                      <TableCell className="font-semibold">{formatCurrency(pag.valor)}</TableCell>
-                      <TableCell>{pag.meioPagamento}</TableCell>
-                      <TableCell className="text-xs">{pag.conta}</TableCell>
-                      <TableCell>{pag.loja}</TableCell>
-                      <TableCell>
-                        <Badge variant={pag.status === 'Conferido' ? 'default' : 'destructive'}>
-                          {pag.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {pag.status === 'Pendente' && (
-                          <Button size="sm" onClick={() => handleAbrirConferencia(pag)}>
-                            <Check className="h-4 w-4 mr-1" />
-                            Conferir
-                          </Button>
-                        )}
+                  {filteredVendas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        Nenhuma venda encontrada
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    filteredVendas.map((venda) => (
+                      <TableRow 
+                        key={venda.id}
+                        className={getRowClassName(venda.status)}
+                      >
+                        <TableCell className="font-medium">{venda.vendaId}</TableCell>
+                        <TableCell>{new Date(venda.dataRegistro).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell className="max-w-[150px] truncate">{venda.lojaNome}</TableCell>
+                        <TableCell>{venda.clienteNome}</TableCell>
+                        <TableCell>{venda.vendedorNome}</TableCell>
+                        <TableCell className="text-right font-semibold">{formatCurrency(venda.valorTotal)}</TableCell>
+                        <TableCell className="text-xs">{venda.gestorNome || '-'}</TableCell>
+                        <TableCell>
+                          {getStatusBadge(venda.status)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => navigate(`/vendas/conferencia-gestor/${venda.id}`)}
+                              title="Ver detalhes"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {venda.status === 'Conferência - Financeiro' && (
+                              <Button size="sm" onClick={() => handleAbrirConferencia(venda)}>
+                                <Check className="h-4 w-4 mr-1" />
+                                Finalizar
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
             <div className="mt-4 pt-4 border-t flex justify-between items-center">
               <span className="text-sm text-muted-foreground">
-                {filteredPagamentos.filter(p => p.status === 'Pendente').length} pagamento(s) pendente(s)
+                {filteredVendas.filter(v => v.status === 'Conferência - Financeiro').length} venda(s) pendente(s)
               </span>
               <span className="text-lg font-bold">
                 Total Pendente: {formatCurrency(totalPendente)}
@@ -271,23 +378,34 @@ export default function FinanceiroConferencia() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Conferir Pagamento</DialogTitle>
+              <DialogTitle>Finalizar Conferência - {vendaSelecionada?.vendaId}</DialogTitle>
             </DialogHeader>
-            {pagamentoSelecionado && (
+            {vendaSelecionada && (
               <div className="space-y-4">
-                <div>
-                  <Label>Descrição</Label>
-                  <Input value={pagamentoSelecionado.descricao} disabled />
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Cliente</p>
+                    <p className="font-medium">{vendaSelecionada.clienteNome}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Valor</p>
+                    <p className="font-medium">{formatCurrency(vendaSelecionada.valorTotal)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Gestor que conferiu</p>
+                    <p className="font-medium">{vendaSelecionada.gestorNome}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Data conferência gestor</p>
+                    <p className="font-medium">
+                      {vendaSelecionada.dataConferencia 
+                        ? new Date(vendaSelecionada.dataConferencia).toLocaleDateString('pt-BR')
+                        : '-'}
+                    </p>
+                  </div>
                 </div>
                 <div>
-                  <Label>Valor</Label>
-                  <Input 
-                    value={formatCurrency(pagamentoSelecionado.valor)} 
-                    disabled 
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="contaConferencia">Conta *</Label>
+                  <Label htmlFor="contaConferencia">Conta de Destino *</Label>
                   <Select value={contaSelecionada} onValueChange={setContaSelecionada}>
                     <SelectTrigger id="contaConferencia">
                       <SelectValue placeholder="Selecione a conta" />
@@ -300,52 +418,19 @@ export default function FinanceiroConferencia() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="meioPagamentoConferencia">Meio de Pagamento *</Label>
-                  <Select value={meioPagamentoSelecionado} onValueChange={setMeioPagamentoSelecionado}>
-                    <SelectTrigger id="meioPagamentoConferencia">
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pix">Pix</SelectItem>
-                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                      <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
-                      <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
-                      <SelectItem value="Transferência">Transferência</SelectItem>
-                      <SelectItem value="Boleto">Boleto</SelectItem>
-                      <SelectItem value="Outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {mostrarCampoParcelas && (
-                  <div>
-                    <Label htmlFor="parcelas">Nº de Parcelas *</Label>
-                    <Input 
-                      id="parcelas"
-                      type="number"
-                      min="1"
-                      value={parcelas}
-                      onChange={(e) => setParcelas(e.target.value)}
-                      placeholder="Ex: 3"
-                    />
-                    {!parcelas && (
-                      <p className="text-sm text-destructive mt-1">Informe o número de parcelas</p>
-                    )}
-                  </div>
-                )}
-                <div>
-                  <Label htmlFor="responsavel">Responsável *</Label>
+                  <Label htmlFor="responsavel">Responsável pela Conferência *</Label>
                   <Select value={responsavelSelecionado} onValueChange={setResponsavelSelecionado}>
                     <SelectTrigger id="responsavel">
                       <SelectValue placeholder="Selecione o responsável" />
                     </SelectTrigger>
                     <SelectContent>
                       {colaboradoresFinanceiros.map(col => (
-                        <SelectItem key={col.id} value={col.nome}>{col.nome}</SelectItem>
+                        <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {!responsavelSelecionado && (
-                    <p className="text-sm text-muted-foreground mt-1">Selecione um colaborador com permissão financeira</p>
+                  {colaboradoresFinanceiros.length === 0 && (
+                    <p className="text-sm text-muted-foreground mt-1">Nenhum colaborador com permissão financeira</p>
                   )}
                 </div>
                 <div className="flex justify-end gap-2 pt-4">
@@ -357,7 +442,7 @@ export default function FinanceiroConferencia() {
                     disabled={botaoDesabilitado}
                   >
                     <Check className="mr-2 h-4 w-4" />
-                    Conferir
+                    Finalizar Conferência
                   </Button>
                 </div>
               </div>
