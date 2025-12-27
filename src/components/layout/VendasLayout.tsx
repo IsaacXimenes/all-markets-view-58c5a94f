@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { History, Plus, Smartphone, ClipboardList, Headphones } from 'lucide-react';
+import { History, Plus, Smartphone, ClipboardList, Headphones, ShieldCheck } from 'lucide-react';
 
 interface VendasLayoutProps {
   children: React.ReactNode;
@@ -9,9 +9,10 @@ interface VendasLayoutProps {
 }
 
 // Mock: verificar permissões do usuário logado
-const usuarioLogadoId = 'COL-007'; // Simulando usuário com permissão Digital
-const temPermissaoDigital = true; // Em produção: verificar via API
-const temPermissaoFinalizador = true; // Em produção: verificar via API
+const usuarioLogadoId = 'COL-007';
+const temPermissaoDigital = true;
+const temPermissaoFinalizador = true;
+const temPermissaoGestor = true; // Nova permissão para gestor
 
 export function VendasLayout({ children, title }: VendasLayoutProps) {
   const location = useLocation();
@@ -30,7 +31,11 @@ export function VendasLayout({ children, title }: VendasLayoutProps) {
     { name: 'Pendentes Digitais', href: '/vendas/pendentes-digitais', icon: ClipboardList },
   ] : [];
 
-  const tabs = [...baseTabs, ...digitalTabs, ...finalizadorTabs];
+  const gestorTabs = temPermissaoGestor ? [
+    { name: 'Conferências - Gestor', href: '/vendas/conferencia-gestor', icon: ShieldCheck },
+  ] : [];
+
+  const tabs = [...baseTabs, ...digitalTabs, ...finalizadorTabs, ...gestorTabs];
 
   return (
     <PageLayout title={title}>
@@ -38,7 +43,7 @@ export function VendasLayout({ children, title }: VendasLayoutProps) {
         <nav className="flex gap-1 overflow-x-auto pb-1">
           {tabs.map((tab) => {
             const Icon = tab.icon;
-            const isActive = location.pathname === tab.href;
+            const isActive = location.pathname === tab.href || location.pathname.startsWith(tab.href + '/');
             return (
               <Link
                 key={tab.href}

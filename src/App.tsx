@@ -49,6 +49,8 @@ import VendasNovaDigital from "./pages/VendasNovaDigital";
 import VendasPendentesDigitais from "./pages/VendasPendentesDigitais";
 import VendasFinalizarDigital from "./pages/VendasFinalizarDigital";
 import VendasAcessorios from "./pages/VendasAcessorios";
+import VendasConferenciaGestor from "./pages/VendasConferenciaGestor";
+import VendasConferenciaGestorDetalhes from "./pages/VendasConferenciaGestorDetalhes";
 import EstoqueAcessorios from "./pages/EstoqueAcessorios";
 import OSProdutosAnalise from "./pages/OSProdutosAnalise";
 import OSProdutoDetalhes from "./pages/OSProdutoDetalhes";
@@ -120,6 +122,8 @@ const App = () => (
           <Route path="/vendas/pendentes-digitais" element={<VendasPendentesDigitais />} />
           <Route path="/vendas/finalizar-digital/:id" element={<VendasFinalizarDigital />} />
           <Route path="/vendas/acessorios" element={<VendasAcessorios />} />
+          <Route path="/vendas/conferencia-gestor" element={<VendasConferenciaGestor />} />
+          <Route path="/vendas/conferencia-gestor/:id" element={<VendasConferenciaGestorDetalhes />} />
           <Route path="/vendas/:id" element={<VendaDetalhes />} />
           <Route path="/relatorios" element={<Relatorios />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
