@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Download, Eye, TrendingUp, DollarSign, Percent, ShoppingCart } from 'lucide-react';
 import { getVendas, exportVendasToCSV, formatCurrency, Venda } from '@/utils/vendasApi';
 import { getLojas, getColaboradores, Loja, Colaborador } from '@/utils/cadastrosApi';
+import { getStatusConferenciaByVendaId, StatusConferencia } from '@/utils/conferenciaGestorApi';
 
 export default function Vendas() {
   const navigate = useNavigate();
@@ -215,6 +216,7 @@ export default function Vendas() {
                   <TableHead className="text-right">V. Venda</TableHead>
                   <TableHead className="text-right">Lucro</TableHead>
                   <TableHead className="text-right">Margem %</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -222,9 +224,30 @@ export default function Vendas() {
                 {vendasFiltradas.map((venda) => {
                   const calc = calcularTotaisVenda(venda);
                   const isPrejuizo = calc.lucro < 0;
+                  const statusConferencia = getStatusConferenciaByVendaId(venda.id);
+                  
+                  const getStatusBadge = (status: StatusConferencia | null) => {
+                    if (!status) return <Badge variant="outline">-</Badge>;
+                    switch (status) {
+                      case 'Conferência - Gestor':
+                        return <Badge variant="destructive" className="whitespace-nowrap text-xs">Conf. Gestor</Badge>;
+                      case 'Conferência - Financeiro':
+                        return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white whitespace-nowrap text-xs">Conf. Financeiro</Badge>;
+                      case 'Concluído':
+                        return <Badge className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap text-xs">Concluído</Badge>;
+                    }
+                  };
+
+                  const getRowBgClass = () => {
+                    if (isPrejuizo) return 'bg-destructive/10';
+                    if (statusConferencia === 'Conferência - Gestor') return 'bg-red-50 dark:bg-red-950/20';
+                    if (statusConferencia === 'Conferência - Financeiro') return 'bg-yellow-50 dark:bg-yellow-950/20';
+                    if (statusConferencia === 'Concluído') return 'bg-green-50 dark:bg-green-950/20';
+                    return '';
+                  };
                   
                   return (
-                    <TableRow key={venda.id} className={isPrejuizo ? 'bg-destructive/10' : ''}>
+                    <TableRow key={venda.id} className={getRowBgClass()}>
                       <TableCell className="whitespace-nowrap">
                         {new Date(venda.dataHora).toLocaleString('pt-BR')}
                       </TableCell>
@@ -251,6 +274,9 @@ export default function Vendas() {
                         >
                           {calc.margem.toFixed(2)}%
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(statusConferencia)}
                       </TableCell>
                       <TableCell>
                         <Button 

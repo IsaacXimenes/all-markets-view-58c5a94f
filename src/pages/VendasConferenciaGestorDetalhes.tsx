@@ -9,9 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, CheckCircle2, Clock, Send, User, Package, CreditCard, TrendingUp, FileText } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Clock, Send, User, Package, CreditCard, TrendingUp, FileText, DollarSign } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { getVendaConferenciaById, validarVendaGestor, getGestores, formatCurrency, VendaConferencia } from '@/utils/conferenciaGestorApi';
+import { getVendaConferenciaById, validarVendaGestor, getGestores, formatCurrency, VendaConferencia, StatusConferencia } from '@/utils/conferenciaGestorApi';
 
 export default function VendasConferenciaGestorDetalhes() {
   const { id } = useParams();
@@ -65,7 +65,19 @@ export default function VendasConferenciaGestorDetalhes() {
       case 'registro': return <FileText className="h-4 w-4" />;
       case 'conferencia_gestor': return <CheckCircle2 className="h-4 w-4" />;
       case 'envio_financeiro': return <Send className="h-4 w-4" />;
+      case 'finalizado': return <DollarSign className="h-4 w-4" />;
       default: return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  const getStatusBadge = (status: StatusConferencia) => {
+    switch (status) {
+      case 'Conferência - Gestor':
+        return <Badge variant="destructive">Conferência - Gestor</Badge>;
+      case 'Conferência - Financeiro':
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Conferência - Financeiro</Badge>;
+      case 'Concluído':
+        return <Badge className="bg-green-600 hover:bg-green-700 text-white">Concluído</Badge>;
     }
   };
 
@@ -82,14 +94,12 @@ export default function VendasConferenciaGestorDetalhes() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-lg">Venda {venda.vendaId}</CardTitle>
-              <Badge variant={venda.status === 'Em Conferência' ? 'destructive' : 'default'} className={venda.status !== 'Em Conferência' ? 'bg-green-600' : ''}>
-                {venda.status}
-              </Badge>
+              {getStatusBadge(venda.status)}
             </CardHeader>
             <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div><span className="text-muted-foreground">Data:</span><br/><strong>{new Date(venda.dataRegistro).toLocaleString('pt-BR')}</strong></div>
               <div><span className="text-muted-foreground">Loja:</span><br/><strong>{venda.lojaNome}</strong></div>
-              <div><span className="text-muted-foreground">Vendedor:</span><br/><strong>{venda.vendedorNome}</strong></div>
+              <div><span className="text-muted-foreground">Responsável:</span><br/><strong>{venda.vendedorNome}</strong></div>
               <div><span className="text-muted-foreground">Tipo:</span><br/><Badge variant="outline">{venda.tipoVenda}</Badge></div>
             </CardContent>
           </Card>
@@ -124,8 +134,25 @@ export default function VendasConferenciaGestorDetalhes() {
             </Card>
           )}
 
+          {/* Trade-Ins */}
+          {venda.dadosVenda.tradeIns && venda.dadosVenda.tradeIns.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Package className="h-4 w-4" /> Trade-In</CardTitle></CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader><TableRow><TableHead>Modelo</TableHead><TableHead>IMEI</TableHead><TableHead className="text-right">Abatimento</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {venda.dadosVenda.tradeIns.map((ti: any, i: number) => (
+                      <TableRow key={i}><TableCell>{ti.modelo}</TableCell><TableCell>{ti.imei}</TableCell><TableCell className="text-right text-orange-600">-{formatCurrency(ti.valorAbatimento)}</TableCell></TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Pagamentos */}
-          {venda.dadosVenda.pagamentos?.length > 0 && (
+          {venda.dadosVenda.pagamentos && venda.dadosVenda.pagamentos.length > 0 && (
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><CreditCard className="h-4 w-4" /> Pagamentos</CardTitle></CardHeader>
               <CardContent>
@@ -165,7 +192,13 @@ export default function VendasConferenciaGestorDetalhes() {
                 {venda.timeline.map((evento, i) => (
                   <div key={evento.id} className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <div className="p-2 rounded-full bg-primary/10 text-primary">{getTimelineIcon(evento.tipo)}</div>
+                      <div className={`p-2 rounded-full ${
+                        evento.tipo === 'finalizado' 
+                          ? 'bg-green-100 text-green-600 dark:bg-green-950 dark:text-green-400' 
+                          : 'bg-primary/10 text-primary'
+                      }`}>
+                        {getTimelineIcon(evento.tipo)}
+                      </div>
                       {i < venda.timeline.length - 1 && <div className="w-0.5 h-full bg-border mt-2" />}
                     </div>
                     <div className="flex-1 pb-4">
@@ -181,7 +214,7 @@ export default function VendasConferenciaGestorDetalhes() {
           </Card>
 
           {/* Botão Validar */}
-          {venda.status === 'Em Conferência' && (
+          {venda.status === 'Conferência - Gestor' && (
             <Button className="w-full" size="lg" onClick={() => setShowModal(true)}>
               <CheckCircle2 className="h-5 w-5 mr-2" /> Validar Venda
             </Button>

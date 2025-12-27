@@ -2,6 +2,8 @@
 import { addNotification } from './notificationsApi';
 import { getColaboradores, getCargos, getLojas, Colaborador, Cargo, Loja } from './cadastrosApi';
 
+export type StatusConferencia = 'Conferência - Gestor' | 'Conferência - Financeiro' | 'Concluído';
+
 export interface TimelineEvento {
   id: string;
   tipo: 'registro' | 'conferencia_gestor' | 'envio_financeiro' | 'finalizado';
@@ -23,13 +25,16 @@ export interface VendaConferencia {
   clienteNome: string;
   valorTotal: number;
   tipoVenda: 'Normal' | 'Digital' | 'Acessórios';
-  status: 'Em Conferência' | 'Conferida pelo Gestor' | 'Enviada ao Financeiro';
+  status: StatusConferencia;
   slaDias: number;
   timeline: TimelineEvento[];
   gestorConferencia?: string;
   gestorNome?: string;
   observacaoGestor?: string;
   dataConferencia?: string;
+  financeiroResponsavel?: string;
+  financeiroNome?: string;
+  dataFinalizacao?: string;
   // Dados completos da venda para exibição
   dadosVenda: {
     clienteCpf?: string;
@@ -62,9 +67,9 @@ const calcularSLA = (dataRegistro: string): number => {
   return diffDays;
 };
 
-// Dados mockados com vendas variadas
+// Dados mockados com vendas variadas - 5 "Conferência - Gestor", 3 "Conferência - Financeiro", 2 "Concluído"
 let vendasConferencia: VendaConferencia[] = [
-  // 5 Vendas "Em Conferência" com SLA variando
+  // 5 Vendas "Conferência - Gestor" com SLA variando
   {
     id: 'CONF-001',
     vendaId: 'VEN-2025-0008',
@@ -76,7 +81,7 @@ let vendasConferencia: VendaConferencia[] = [
     clienteNome: 'Ricardo Mendes',
     valorTotal: 15800.00,
     tipoVenda: 'Normal',
-    status: 'Em Conferência',
+    status: 'Conferência - Gestor',
     slaDias: 0,
     timeline: [
       {
@@ -123,7 +128,7 @@ let vendasConferencia: VendaConferencia[] = [
     clienteNome: 'Fernanda Lima',
     valorTotal: 8900.00,
     tipoVenda: 'Digital',
-    status: 'Em Conferência',
+    status: 'Conferência - Gestor',
     slaDias: 1,
     timeline: [
       {
@@ -170,7 +175,7 @@ let vendasConferencia: VendaConferencia[] = [
     clienteNome: 'Bruno Santos',
     valorTotal: 2350.00,
     tipoVenda: 'Acessórios',
-    status: 'Em Conferência',
+    status: 'Conferência - Gestor',
     slaDias: 2,
     timeline: [
       {
@@ -215,7 +220,7 @@ let vendasConferencia: VendaConferencia[] = [
     clienteNome: 'Carla Oliveira',
     valorTotal: 22500.00,
     tipoVenda: 'Normal',
-    status: 'Em Conferência',
+    status: 'Conferência - Gestor',
     slaDias: 3,
     timeline: [
       {
@@ -264,7 +269,7 @@ let vendasConferencia: VendaConferencia[] = [
     clienteNome: 'Paulo Ferreira',
     valorTotal: 11200.00,
     tipoVenda: 'Normal',
-    status: 'Em Conferência',
+    status: 'Conferência - Gestor',
     slaDias: 5,
     timeline: [
       {
@@ -302,7 +307,7 @@ let vendasConferencia: VendaConferencia[] = [
       observacoes: 'Cliente por indicação - trade-in de iPhone 12'
     }
   },
-  // 5 Vendas "Conferida pelo Gestor" com timeline completa
+  // 3 Vendas "Conferência - Financeiro"
   {
     id: 'CONF-006',
     vendaId: 'VEN-2025-0013',
@@ -314,7 +319,7 @@ let vendasConferencia: VendaConferencia[] = [
     clienteNome: 'Amanda Rodrigues',
     valorTotal: 9800.00,
     tipoVenda: 'Normal',
-    status: 'Conferida pelo Gestor',
+    status: 'Conferência - Financeiro',
     slaDias: 0,
     gestorConferencia: 'COL-001',
     gestorNome: 'Lucas Mendes',
@@ -376,7 +381,7 @@ let vendasConferencia: VendaConferencia[] = [
     clienteNome: 'Diego Martins',
     valorTotal: 5600.00,
     tipoVenda: 'Digital',
-    status: 'Conferida pelo Gestor',
+    status: 'Conferência - Financeiro',
     slaDias: 0,
     gestorConferencia: 'COL-002',
     gestorNome: 'Fernanda Lima',
@@ -432,7 +437,7 @@ let vendasConferencia: VendaConferencia[] = [
     clienteNome: 'Letícia Souza',
     valorTotal: 3200.00,
     tipoVenda: 'Acessórios',
-    status: 'Conferida pelo Gestor',
+    status: 'Conferência - Financeiro',
     slaDias: 0,
     gestorConferencia: 'COL-001',
     gestorNome: 'Lucas Mendes',
@@ -481,6 +486,7 @@ let vendasConferencia: VendaConferencia[] = [
       margem: 52.38
     }
   },
+  // 2 Vendas "Concluído" com timeline completa
   {
     id: 'CONF-009',
     vendaId: 'VEN-2025-0016',
@@ -492,12 +498,15 @@ let vendasConferencia: VendaConferencia[] = [
     clienteNome: 'Rafael Costa',
     valorTotal: 18500.00,
     tipoVenda: 'Normal',
-    status: 'Conferida pelo Gestor',
+    status: 'Concluído',
     slaDias: 0,
     gestorConferencia: 'COL-002',
     gestorNome: 'Fernanda Lima',
     observacaoGestor: 'Venda conferida. Cliente VIP.',
     dataConferencia: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
+    financeiroResponsavel: 'COL-006',
+    financeiroNome: 'Carlos Eduardo',
+    dataFinalizacao: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     timeline: [
       {
         id: 'TL-009-1',
@@ -522,6 +531,14 @@ let vendasConferencia: VendaConferencia[] = [
         titulo: 'Enviada ao Financeiro',
         descricao: 'Venda migrada para conferência financeira',
         dataHora: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: 'TL-009-4',
+        tipo: 'finalizado',
+        titulo: 'Concluído',
+        descricao: 'Venda finalizada pelo financeiro',
+        dataHora: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+        responsavel: 'Carlos Eduardo'
       }
     ],
     dadosVenda: {
@@ -551,12 +568,15 @@ let vendasConferencia: VendaConferencia[] = [
     clienteNome: 'Gabriela Pereira',
     valorTotal: 7200.00,
     tipoVenda: 'Normal',
-    status: 'Conferida pelo Gestor',
+    status: 'Concluído',
     slaDias: 0,
     gestorConferencia: 'COL-001',
     gestorNome: 'Lucas Mendes',
     observacaoGestor: 'Trade-in verificado presencialmente.',
     dataConferencia: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString(),
+    financeiroResponsavel: 'COL-006',
+    financeiroNome: 'Carlos Eduardo',
+    dataFinalizacao: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
     timeline: [
       {
         id: 'TL-010-1',
@@ -581,6 +601,14 @@ let vendasConferencia: VendaConferencia[] = [
         titulo: 'Enviada ao Financeiro',
         descricao: 'Venda migrada para conferência financeira',
         dataHora: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: 'TL-010-4',
+        tipo: 'finalizado',
+        titulo: 'Concluído',
+        descricao: 'Venda finalizada pelo financeiro',
+        dataHora: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
+        responsavel: 'Carlos Eduardo'
       }
     ],
     dadosVenda: {
@@ -611,16 +639,22 @@ export const getVendasConferencia = (): VendaConferencia[] => {
   // Atualiza SLA antes de retornar
   return vendasConferencia.map(v => ({
     ...v,
-    slaDias: v.status === 'Em Conferência' ? calcularSLA(v.dataRegistro) : v.slaDias
+    slaDias: v.status === 'Conferência - Gestor' ? calcularSLA(v.dataRegistro) : v.slaDias
   }));
 };
 
 export const getVendaConferenciaById = (id: string): VendaConferencia | null => {
   const venda = vendasConferencia.find(v => v.id === id);
-  if (venda && venda.status === 'Em Conferência') {
+  if (venda && venda.status === 'Conferência - Gestor') {
     venda.slaDias = calcularSLA(venda.dataRegistro);
   }
   return venda || null;
+};
+
+// Buscar status de conferência por vendaId
+export const getStatusConferenciaByVendaId = (vendaId: string): StatusConferencia | null => {
+  const venda = vendasConferencia.find(v => v.vendaId === vendaId);
+  return venda?.status || null;
 };
 
 export const validarVendaGestor = (
@@ -655,7 +689,7 @@ export const validarVendaGestor = (
 
   vendasConferencia[index] = {
     ...vendasConferencia[index],
-    status: 'Conferida pelo Gestor',
+    status: 'Conferência - Financeiro',
     gestorConferencia: gestorId,
     gestorNome: gestorNome,
     observacaoGestor: observacao,
@@ -665,6 +699,41 @@ export const validarVendaGestor = (
       ...vendasConferencia[index].timeline,
       timelineConferencia,
       timelineFinanceiro
+    ]
+  };
+
+  return vendasConferencia[index];
+};
+
+// Finalizar venda no financeiro
+export const finalizarVendaFinanceiro = (
+  id: string,
+  responsavelId: string,
+  responsavelNome: string
+): VendaConferencia | null => {
+  const index = vendasConferencia.findIndex(v => v.id === id);
+  if (index === -1) return null;
+
+  const agora = new Date().toISOString();
+  
+  const timelineFinalizado: TimelineEvento = {
+    id: `TL-${id}-FINAL`,
+    tipo: 'finalizado',
+    titulo: 'Concluído',
+    descricao: 'Venda finalizada pelo financeiro',
+    dataHora: agora,
+    responsavel: responsavelNome
+  };
+
+  vendasConferencia[index] = {
+    ...vendasConferencia[index],
+    status: 'Concluído',
+    financeiroResponsavel: responsavelId,
+    financeiroNome: responsavelNome,
+    dataFinalizacao: agora,
+    timeline: [
+      ...vendasConferencia[index].timeline,
+      timelineFinalizado
     ]
   };
 
@@ -696,7 +765,7 @@ export const adicionarVendaParaConferencia = (
     clienteNome,
     valorTotal,
     tipoVenda,
-    status: 'Em Conferência',
+    status: 'Conferência - Gestor',
     slaDias: 0,
     timeline: [
       {
@@ -789,7 +858,7 @@ export const exportConferenciaToCSV = (data: VendaConferencia[], filename: strin
     'ID Venda': v.vendaId,
     'Data Registro': new Date(v.dataRegistro).toLocaleString('pt-BR'),
     'Loja': v.lojaNome,
-    'Vendedor': v.vendedorNome,
+    'Responsável Venda': v.vendedorNome,
     'Cliente': v.clienteNome,
     'Valor Total': v.valorTotal,
     'Tipo Venda': v.tipoVenda,
@@ -797,7 +866,9 @@ export const exportConferenciaToCSV = (data: VendaConferencia[], filename: strin
     'SLA (dias)': v.slaDias,
     'Gestor Conferência': v.gestorNome || '-',
     'Data Conferência': v.dataConferencia ? new Date(v.dataConferencia).toLocaleString('pt-BR') : '-',
-    'Observação Gestor': v.observacaoGestor || '-'
+    'Observação Gestor': v.observacaoGestor || '-',
+    'Financeiro Responsável': v.financeiroNome || '-',
+    'Data Finalização': v.dataFinalizacao ? new Date(v.dataFinalizacao).toLocaleString('pt-BR') : '-'
   }));
   
   const headers = Object.keys(csvData[0]).join(',');

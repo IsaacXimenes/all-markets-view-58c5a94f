@@ -20,12 +20,13 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Download, Filter, X, Clock, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Eye, Download, Filter, X, Clock, CheckCircle2, AlertTriangle, DollarSign } from 'lucide-react';
 import { 
   getVendasConferencia, 
   exportConferenciaToCSV, 
   formatCurrency,
-  VendaConferencia 
+  VendaConferencia,
+  StatusConferencia
 } from '@/utils/conferenciaGestorApi';
 import { getLojas, getColaboradores } from '@/utils/cadastrosApi';
 
@@ -39,7 +40,7 @@ export default function VendasConferenciaGestor() {
   const [filtroDataInicio, setFiltroDataInicio] = useState('');
   const [filtroDataFim, setFiltroDataFim] = useState('');
   const [filtroLoja, setFiltroLoja] = useState('todas');
-  const [filtroVendedor, setFiltroVendedor] = useState('todos');
+  const [filtroResponsavel, setFiltroResponsavel] = useState('todos');
   const [filtroStatus, setFiltroStatus] = useState('todos');
 
   useEffect(() => {
@@ -71,9 +72,9 @@ export default function VendasConferenciaGestor() {
       resultado = resultado.filter(v => v.lojaId === filtroLoja);
     }
 
-    // Filtro por vendedor
-    if (filtroVendedor !== 'todos') {
-      resultado = resultado.filter(v => v.vendedorId === filtroVendedor);
+    // Filtro por responsável
+    if (filtroResponsavel !== 'todos') {
+      resultado = resultado.filter(v => v.vendedorId === filtroResponsavel);
     }
 
     // Filtro por status
@@ -81,26 +82,33 @@ export default function VendasConferenciaGestor() {
       resultado = resultado.filter(v => v.status === filtroStatus);
     }
 
-    // Ordenação: pendentes primeiro (mais recente), depois conferidas
+    // Ordenação: Conferência - Gestor primeiro, depois Conferência - Financeiro, depois Concluído
     resultado.sort((a, b) => {
-      if (a.status === 'Em Conferência' && b.status !== 'Em Conferência') return -1;
-      if (a.status !== 'Em Conferência' && b.status === 'Em Conferência') return 1;
+      const ordem: Record<StatusConferencia, number> = {
+        'Conferência - Gestor': 0,
+        'Conferência - Financeiro': 1,
+        'Concluído': 2
+      };
+      if (ordem[a.status] !== ordem[b.status]) {
+        return ordem[a.status] - ordem[b.status];
+      }
       return new Date(b.dataRegistro).getTime() - new Date(a.dataRegistro).getTime();
     });
 
     return resultado;
-  }, [vendas, filtroDataInicio, filtroDataFim, filtroLoja, filtroVendedor, filtroStatus]);
+  }, [vendas, filtroDataInicio, filtroDataFim, filtroLoja, filtroResponsavel, filtroStatus]);
 
   // Contadores
-  const pendentes = vendas.filter(v => v.status === 'Em Conferência').length;
-  const conferidas = vendas.filter(v => v.status === 'Conferida pelo Gestor').length;
-  const urgentes = vendas.filter(v => v.status === 'Em Conferência' && v.slaDias >= 3).length;
+  const pendentesGestor = vendas.filter(v => v.status === 'Conferência - Gestor').length;
+  const pendentesFinanceiro = vendas.filter(v => v.status === 'Conferência - Financeiro').length;
+  const concluidos = vendas.filter(v => v.status === 'Concluído').length;
+  const urgentes = vendas.filter(v => v.status === 'Conferência - Gestor' && v.slaDias >= 3).length;
 
   const limparFiltros = () => {
     setFiltroDataInicio('');
     setFiltroDataFim('');
     setFiltroLoja('todas');
-    setFiltroVendedor('todos');
+    setFiltroResponsavel('todos');
     setFiltroStatus('todos');
   };
 
@@ -109,26 +117,22 @@ export default function VendasConferenciaGestor() {
     exportConferenciaToCSV(vendasFiltradas, `conferencia-vendas-gestor-${dataAtual}.csv`);
   };
 
-  // Cor do SLA
-  const getSLAColor = (dias: number, status: string) => {
-    if (status !== 'Em Conferência') return 'text-muted-foreground';
-    if (dias <= 1) return 'text-green-600 dark:text-green-400';
-    if (dias === 2) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-red-600 dark:text-red-400';
-  };
-
-  const getSLABadge = (dias: number, status: string) => {
-    if (status !== 'Em Conferência') return null;
+  const getSLABadge = (dias: number, status: StatusConferencia) => {
+    if (status !== 'Conferência - Gestor') return null;
     if (dias <= 1) return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">{dias} dia(s)</Badge>;
     if (dias === 2) return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950 dark:text-yellow-300 dark:border-yellow-800">{dias} dias</Badge>;
     return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800">{dias} dias</Badge>;
   };
 
-  const getStatusBadge = (status: string) => {
-    if (status === 'Em Conferência') {
-      return <Badge variant="destructive" className="whitespace-nowrap">Em Conferência</Badge>;
+  const getStatusBadge = (status: StatusConferencia) => {
+    switch (status) {
+      case 'Conferência - Gestor':
+        return <Badge variant="destructive" className="whitespace-nowrap">Conferência - Gestor</Badge>;
+      case 'Conferência - Financeiro':
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white whitespace-nowrap">Conferência - Financeiro</Badge>;
+      case 'Concluído':
+        return <Badge className="bg-green-600 hover:bg-green-700 text-white whitespace-nowrap">Concluído</Badge>;
     }
-    return <Badge variant="default" className="bg-green-600 hover:bg-green-700 whitespace-nowrap">Conferida</Badge>;
   };
 
   const getTipoVendaBadge = (tipo: string) => {
@@ -142,16 +146,27 @@ export default function VendasConferenciaGestor() {
     }
   };
 
+  const getRowClassName = (status: StatusConferencia) => {
+    switch (status) {
+      case 'Conferência - Gestor':
+        return 'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50';
+      case 'Conferência - Financeiro':
+        return 'bg-yellow-50 dark:bg-yellow-950/30 hover:bg-yellow-100 dark:hover:bg-yellow-950/50';
+      case 'Concluído':
+        return 'bg-green-50 dark:bg-green-950/30 hover:bg-green-100 dark:hover:bg-green-950/50';
+    }
+  };
+
   return (
     <VendasLayout title="Conferências de Vendas - Gestor">
       {/* Cards de resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Pendentes</p>
-                <p className="text-3xl font-bold text-destructive">{pendentes}</p>
+                <p className="text-sm text-muted-foreground">Conferência - Gestor</p>
+                <p className="text-3xl font-bold text-destructive">{pendentesGestor}</p>
               </div>
               <Clock className="h-10 w-10 text-destructive opacity-50" />
             </div>
@@ -174,8 +189,20 @@ export default function VendasConferenciaGestor() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Conferidas</p>
-                <p className="text-3xl font-bold text-green-600">{conferidas}</p>
+                <p className="text-sm text-muted-foreground">Conferência - Financeiro</p>
+                <p className="text-3xl font-bold text-yellow-600">{pendentesFinanceiro}</p>
+              </div>
+              <DollarSign className="h-10 w-10 text-yellow-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Concluído</p>
+                <p className="text-3xl font-bold text-green-600">{concluidos}</p>
               </div>
               <CheckCircle2 className="h-10 w-10 text-green-500 opacity-50" />
             </div>
@@ -224,8 +251,8 @@ export default function VendasConferenciaGestor() {
               </Select>
             </div>
             <div>
-              <label className="text-sm text-muted-foreground mb-1 block">Vendedor</label>
-              <Select value={filtroVendedor} onValueChange={setFiltroVendedor}>
+              <label className="text-sm text-muted-foreground mb-1 block">Responsável pela Venda</label>
+              <Select value={filtroResponsavel} onValueChange={setFiltroResponsavel}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
@@ -245,8 +272,9 @@ export default function VendasConferenciaGestor() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="Em Conferência">Em Conferência</SelectItem>
-                  <SelectItem value="Conferida pelo Gestor">Conferida pelo Gestor</SelectItem>
+                  <SelectItem value="Conferência - Gestor">Conferência - Gestor</SelectItem>
+                  <SelectItem value="Conferência - Financeiro">Conferência - Financeiro</SelectItem>
+                  <SelectItem value="Concluído">Concluído</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -274,7 +302,7 @@ export default function VendasConferenciaGestor() {
                   <TableHead>ID Venda</TableHead>
                   <TableHead>Data/Hora</TableHead>
                   <TableHead>Loja</TableHead>
-                  <TableHead>Responsável</TableHead>
+                  <TableHead>Responsável pela Venda</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Valor Total</TableHead>
@@ -294,10 +322,7 @@ export default function VendasConferenciaGestor() {
                   vendasFiltradas.map(venda => (
                     <TableRow 
                       key={venda.id}
-                      className={venda.status === 'Em Conferência' 
-                        ? 'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50' 
-                        : ''
-                      }
+                      className={getRowClassName(venda.status)}
                     >
                       <TableCell className="font-medium">{venda.vendaId}</TableCell>
                       <TableCell className="whitespace-nowrap">
@@ -340,11 +365,14 @@ export default function VendasConferenciaGestor() {
       </Card>
 
       {/* Rodapé com total */}
-      <div className="mt-4 flex justify-between items-center text-sm text-muted-foreground">
+      <div className="mt-4 flex flex-wrap justify-between items-center text-sm text-muted-foreground gap-2">
         <span>Exibindo {vendasFiltradas.length} de {vendas.length} registros</span>
-        <span>
-          Total pendentes: <strong className="text-destructive">{pendentes}</strong> | 
-          Conferidas: <strong className="text-green-600">{conferidas}</strong>
+        <span className="flex flex-wrap gap-2">
+          <span>Gestor: <strong className="text-destructive">{pendentesGestor}</strong></span>
+          <span>|</span>
+          <span>Financeiro: <strong className="text-yellow-600">{pendentesFinanceiro}</strong></span>
+          <span>|</span>
+          <span>Concluído: <strong className="text-green-600">{concluidos}</strong></span>
         </span>
       </div>
     </VendasLayout>
