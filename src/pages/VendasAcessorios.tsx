@@ -28,7 +28,7 @@ import {
   VendaAcessorio 
 } from '@/utils/acessoriosApi';
 
-const TIMER_DURATION = 120;
+const TIMER_DURATION = 1800; // 30 minutos em segundos
 
 export default function VendasAcessorios() {
   const navigate = useNavigate();

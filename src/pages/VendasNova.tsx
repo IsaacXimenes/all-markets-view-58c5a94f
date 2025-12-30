@@ -27,7 +27,7 @@ import { getAcessorios, Acessorio, subtrairEstoqueAcessorio, VendaAcessorio, for
 import { getProdutosCadastro, ProdutoCadastro, calcularTipoPessoa } from '@/utils/cadastrosApi';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
 
-const TIMER_DURATION = 120; // 2 minutos em segundos
+const TIMER_DURATION = 1800; // 30 minutos em segundos
 
 export default function VendasNova() {
   const navigate = useNavigate();

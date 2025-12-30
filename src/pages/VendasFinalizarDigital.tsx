@@ -32,7 +32,7 @@ import { addVenda, getHistoricoComprasCliente, ItemVenda, ItemTradeIn, Pagamento
 import { getProdutosCadastro, ProdutoCadastro } from '@/utils/cadastrosApi';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
 
-const TIMER_DURATION = 120;
+const TIMER_DURATION = 1800; // 30 minutos em segundos
 
 export default function VendasFinalizarDigital() {
   const { id } = useParams<{ id: string }>();
