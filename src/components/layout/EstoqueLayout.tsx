@@ -15,6 +15,7 @@ export function EstoqueLayout({ children, title }: EstoqueLayoutProps) {
     { name: 'Dashboard', href: '/estoque', icon: LayoutDashboard },
     { name: 'Produtos', href: '/estoque/produtos', icon: Package },
     { name: 'Acessórios', href: '/estoque/acessorios', icon: Headphones },
+    { name: 'Peças', href: '/estoque/pecas', icon: Package },
     { name: 'Produtos Pendentes', href: '/estoque/produtos-pendentes', icon: Clock },
     { name: 'Notas de Compra', href: '/estoque/notas-compra', icon: FileText },
     { name: 'Movimentações', href: '/estoque/movimentacoes', icon: ArrowRightLeft }

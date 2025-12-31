@@ -27,6 +27,7 @@ export default function OSAssistencia() {
   const [filtroIMEI, setFiltroIMEI] = useState('');
   const [filtroTecnico, setFiltroTecnico] = useState('todos');
   const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [filtroSetor, setFiltroSetor] = useState('todos');
 
   const ordensFiltradas = useMemo(() => {
     return ordensServico.filter(os => {
@@ -58,9 +59,14 @@ export default function OSAssistencia() {
         if (os.status !== filtroStatus) return false;
       }
 
+      // Filtro por setor
+      if (filtroSetor && filtroSetor !== 'todos') {
+        if (os.setor !== filtroSetor) return false;
+      }
+
       return true;
     }).sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
-  }, [ordensServico, filtroDataInicio, filtroDataFim, filtroIMEI, filtroTecnico, filtroStatus]);
+  }, [ordensServico, filtroDataInicio, filtroDataFim, filtroIMEI, filtroTecnico, filtroStatus, filtroSetor]);
 
   const getClienteNome = (clienteId: string) => {
     return clientes.find(c => c.id === clienteId)?.nome || '-';
@@ -189,7 +195,7 @@ export default function OSAssistencia() {
       {/* Filtros */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
             <div className="space-y-2">
               <Label>Data Início</Label>
               <Input
@@ -238,6 +244,18 @@ export default function OSAssistencia() {
                   <SelectItem value="Solicitação Enviada">Solicitação Enviada</SelectItem>
                   <SelectItem value="Em Análise">Em Análise</SelectItem>
                   <SelectItem value="Peça Recebida">Peça Recebida</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Setor</Label>
+              <Select value={filtroSetor} onValueChange={setFiltroSetor}>
+                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="GARANTIA">Garantia</SelectItem>
+                  <SelectItem value="ASSISTÊNCIA">Assistência</SelectItem>
+                  <SelectItem value="TROCA">Troca</SelectItem>
                 </SelectContent>
               </Select>
             </div>
