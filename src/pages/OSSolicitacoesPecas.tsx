@@ -42,6 +42,7 @@ export default function OSSolicitacoesPecas() {
   const [filtroLoja, setFiltroLoja] = useState('todos');
   const [filtroPeca, setFiltroPeca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [filtroNumeroOS, setFiltroNumeroOS] = useState('');
 
   // Modal aprovar
   const [aprovarOpen, setAprovarOpen] = useState(false);
@@ -67,9 +68,10 @@ export default function OSSolicitacoesPecas() {
       if (filtroLoja !== 'todos' && s.lojaSolicitante !== filtroLoja) return false;
       if (filtroPeca && !s.peca.toLowerCase().includes(filtroPeca.toLowerCase())) return false;
       if (filtroStatus !== 'todos' && s.status !== filtroStatus) return false;
+      if (filtroNumeroOS && !s.osId.toLowerCase().includes(filtroNumeroOS.toLowerCase())) return false;
       return true;
     }).sort((a, b) => new Date(b.dataSolicitacao).getTime() - new Date(a.dataSolicitacao).getTime());
-  }, [solicitacoes, filtroLoja, filtroPeca, filtroStatus]);
+  }, [solicitacoes, filtroLoja, filtroPeca, filtroStatus, filtroNumeroOS]);
 
   const getLojaNome = (lojaId: string) => lojas.find(l => l.id === lojaId)?.nome || lojaId;
   const getFornecedorNome = (fornId: string) => fornecedores.find(f => f.id === fornId)?.nome || fornId;
@@ -293,7 +295,7 @@ export default function OSSolicitacoesPecas() {
           {/* Filtros */}
           <Card>
             <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                 <div className="space-y-2">
                   <Label>Loja Solicitante</Label>
                   <Select value={filtroLoja} onValueChange={setFiltroLoja}>
@@ -305,6 +307,14 @@ export default function OSSolicitacoesPecas() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Número da OS</Label>
+                  <Input
+                    placeholder="Buscar OS..."
+                    value={filtroNumeroOS}
+                    onChange={e => setFiltroNumeroOS(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Peça</Label>
@@ -327,11 +337,25 @@ export default function OSSolicitacoesPecas() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-end gap-2 md:col-span-2">
+                <div className="flex items-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setFiltroLoja('todos');
+                      setFiltroNumeroOS('');
+                      setFiltroPeca('');
+                      setFiltroStatus('todos');
+                    }}
+                    className="w-full"
+                  >
+                    Limpar Filtros
+                  </Button>
+                </div>
+                <div className="flex items-end">
                   <Button 
                     onClick={handleCriarLote} 
                     disabled={selecionadas.length === 0}
-                    className="flex-1"
+                    className="w-full"
                   >
                     <Layers className="h-4 w-4 mr-2" />
                     Criar Lote ({selecionadas.length})

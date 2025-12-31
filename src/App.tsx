@@ -52,12 +52,14 @@ import VendasAcessorios from "./pages/VendasAcessorios";
 import VendasConferenciaGestor from "./pages/VendasConferenciaGestor";
 import VendasConferenciaGestorDetalhes from "./pages/VendasConferenciaGestorDetalhes";
 import EstoqueAcessorios from "./pages/EstoqueAcessorios";
+import EstoquePecas from "./pages/EstoquePecas";
 import OSProdutosAnalise from "./pages/OSProdutosAnalise";
 import OSProdutoDetalhes from "./pages/OSProdutoDetalhes";
 import OSAssistencia from "./pages/OSAssistencia";
 import OSAssistenciaNova from "./pages/OSAssistenciaNova";
 import OSAssistenciaDetalhes from "./pages/OSAssistenciaDetalhes";
 import OSSolicitacoesPecas from "./pages/OSSolicitacoesPecas";
+import OSHistoricoNotas from "./pages/OSHistoricoNotas";
 import FinanceiroNotasAssistencia from "./pages/FinanceiroNotasAssistencia";
 import Relatorios from "./pages/Relatorios";
 
@@ -98,12 +100,14 @@ const App = () => (
           <Route path="/estoque/nota/cadastrar" element={<EstoqueNotaCadastrar />} />
           <Route path="/estoque/movimentacoes" element={<EstoqueMovimentacoes />} />
           <Route path="/estoque/acessorios" element={<EstoqueAcessorios />} />
+          <Route path="/estoque/pecas" element={<EstoquePecas />} />
           <Route path="/os/produtos-analise" element={<OSProdutosAnalise />} />
           <Route path="/os/produto/:id" element={<OSProdutoDetalhes />} />
           <Route path="/os/assistencia" element={<OSAssistencia />} />
           <Route path="/os/assistencia/nova" element={<OSAssistenciaNova />} />
           <Route path="/os/assistencia/:id" element={<OSAssistenciaDetalhes />} />
           <Route path="/os/solicitacoes-pecas" element={<OSSolicitacoesPecas />} />
+          <Route path="/os/historico-notas" element={<OSHistoricoNotas />} />
           <Route path="/financeiro/notas-assistencia" element={<FinanceiroNotasAssistencia />} />
           <Route path="/cadastros" element={<Cadastros />} />
           <Route path="/cadastros/lojas" element={<CadastrosLojas />} />
