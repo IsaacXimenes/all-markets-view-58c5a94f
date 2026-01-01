@@ -1,48 +1,128 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { getMovimentacoes, getLojas, exportToCSV, addMovimentacao } from '@/utils/estoqueApi';
+import { getLojas } from '@/utils/estoqueApi';
+import { getAcessorios, Acessorio } from '@/utils/acessoriosApi';
+import { getLojas as getLojasApi, Loja } from '@/utils/cadastrosApi';
 import { Download, Plus } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 
-export default function EstoqueMovimentacoes() {
-  const [movimentacoes, setMovimentacoes] = useState(getMovimentacoes());
+interface MovimentacaoAcessorio {
+  id: string;
+  data: string;
+  acessorio: string;
+  acessorioId: string;
+  quantidade: number;
+  origem: string;
+  destino: string;
+  responsavel: string;
+  motivo: string;
+}
+
+// Mock data
+const mockMovimentacoes: MovimentacaoAcessorio[] = [
+  {
+    id: 'MOV-ACESS-001',
+    data: '2024-01-15',
+    acessorio: 'Capa iPhone 14 Pro Silicone',
+    acessorioId: 'ACESS-001',
+    quantidade: 5,
+    origem: 'Loja Centro',
+    destino: 'Loja Shopping',
+    responsavel: 'Maria Souza',
+    motivo: 'Reposição de estoque'
+  },
+  {
+    id: 'MOV-ACESS-002',
+    data: '2024-01-16',
+    acessorio: 'Película Vidro Samsung S23',
+    acessorioId: 'ACESS-002',
+    quantidade: 10,
+    origem: 'Matriz',
+    destino: 'Loja Centro',
+    responsavel: 'João Silva',
+    motivo: 'Transferência'
+  },
+  {
+    id: 'MOV-ACESS-003',
+    data: '2024-01-18',
+    acessorio: 'Carregador USB-C 20W',
+    acessorioId: 'ACESS-003',
+    quantidade: 3,
+    origem: 'Loja Shopping',
+    destino: 'Loja Centro',
+    responsavel: 'Ana Costa',
+    motivo: 'Devolução'
+  }
+];
+
+let movimentacoesData = [...mockMovimentacoes];
+
+export default function EstoqueMovimentacoesAcessorios() {
+  const [movimentacoes, setMovimentacoes] = useState<MovimentacaoAcessorio[]>(movimentacoesData);
   const [origemFilter, setOrigemFilter] = useState<string>('todas');
   const [destinoFilter, setDestinoFilter] = useState<string>('todas');
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const movimentacoesFiltradas = movimentacoes.filter(m => {
-    if (origemFilter !== 'todas' && m.origem !== origemFilter) return false;
-    if (destinoFilter !== 'todas' && m.destino !== destinoFilter) return false;
-    return true;
-  });
+  const lojas = getLojasApi().filter(l => l.status === 'Ativo');
+  const acessorios = getAcessorios();
+
+  const movimentacoesFiltradas = useMemo(() => {
+    return movimentacoes.filter(m => {
+      if (origemFilter !== 'todas' && m.origem !== origemFilter) return false;
+      if (destinoFilter !== 'todas' && m.destino !== destinoFilter) return false;
+      return true;
+    });
+  }, [movimentacoes, origemFilter, destinoFilter]);
 
   const handleExport = () => {
-    exportToCSV(movimentacoesFiltradas, 'movimentacoes-estoque.csv');
+    const headers = ['ID', 'Data', 'Acessório', 'Quantidade', 'Origem', 'Destino', 'Responsável', 'Motivo'];
+    const rows = movimentacoesFiltradas.map(m => [
+      m.id,
+      new Date(m.data).toLocaleDateString('pt-BR'),
+      m.acessorio,
+      m.quantidade.toString(),
+      m.origem,
+      m.destino,
+      m.responsavel,
+      m.motivo
+    ]);
+    
+    const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'movimentacoes-acessorios.csv';
+    link.click();
   };
 
   const handleRegistrarMovimentacao = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
-    const novaMovimentacao = addMovimentacao({
+    const acessorioId = formData.get('acessorioId') as string;
+    const acessorio = acessorios.find(a => a.id === acessorioId);
+    
+    const novaMovimentacao: MovimentacaoAcessorio = {
+      id: `MOV-ACESS-${Date.now()}`,
       data: formData.get('data') as string,
-      produto: formData.get('produto') as string,
-      imei: formData.get('imei') as string,
+      acessorio: acessorio?.descricao || '',
+      acessorioId,
       quantidade: parseInt(formData.get('quantidade') as string),
       origem: formData.get('origem') as string,
       destino: formData.get('destino') as string,
       responsavel: formData.get('responsavel') as string,
       motivo: formData.get('motivo') as string
-    });
+    };
 
-    setMovimentacoes([...movimentacoes, novaMovimentacao]);
+    movimentacoesData = [...movimentacoesData, novaMovimentacao];
+    setMovimentacoes(movimentacoesData);
     setDialogOpen(false);
     toast({
       title: 'Movimentação registrada',
@@ -51,7 +131,7 @@ export default function EstoqueMovimentacoes() {
   };
 
   return (
-    <EstoqueLayout title="Movimentações - Aparelhos">
+    <EstoqueLayout title="Movimentações - Acessórios">
       <div className="space-y-4">
         <div className="flex flex-wrap gap-4">
           <Select value={origemFilter} onValueChange={setOrigemFilter}>
@@ -60,8 +140,8 @@ export default function EstoqueMovimentacoes() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas as origens</SelectItem>
-              {getLojas().map(loja => (
-                <SelectItem key={loja} value={loja}>{loja}</SelectItem>
+              {lojas.map(loja => (
+                <SelectItem key={loja.id} value={loja.nome}>{loja.nome}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -72,8 +152,8 @@ export default function EstoqueMovimentacoes() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todos os destinos</SelectItem>
-              {getLojas().map(loja => (
-                <SelectItem key={loja} value={loja}>{loja}</SelectItem>
+              {lojas.map(loja => (
+                <SelectItem key={loja.id} value={loja.nome}>{loja.nome}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -88,7 +168,7 @@ export default function EstoqueMovimentacoes() {
               </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>Registrar Movimentação</DialogTitle>
+                  <DialogTitle>Registrar Movimentação de Acessório</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleRegistrarMovimentacao} className="space-y-4">
                   <div>
@@ -97,13 +177,19 @@ export default function EstoqueMovimentacoes() {
                   </div>
 
                   <div>
-                    <Label htmlFor="produto">Produto</Label>
-                    <Input id="produto" name="produto" required />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="imei">IMEI</Label>
-                    <Input id="imei" name="imei" required />
+                    <Label htmlFor="acessorioId">Acessório</Label>
+                    <Select name="acessorioId" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {acessorios.filter(a => a.quantidade > 0).map(acessorio => (
+                          <SelectItem key={acessorio.id} value={acessorio.id}>
+                            {acessorio.descricao} (Qtd: {acessorio.quantidade})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>
@@ -119,8 +205,8 @@ export default function EstoqueMovimentacoes() {
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          {getLojas().map(loja => (
-                            <SelectItem key={loja} value={loja}>{loja}</SelectItem>
+                          {lojas.map(loja => (
+                            <SelectItem key={loja.id} value={loja.nome}>{loja.nome}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -133,8 +219,8 @@ export default function EstoqueMovimentacoes() {
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          {getLojas().map(loja => (
-                            <SelectItem key={loja} value={loja}>{loja}</SelectItem>
+                          {lojas.map(loja => (
+                            <SelectItem key={loja.id} value={loja.nome}>{loja.nome}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -174,8 +260,7 @@ export default function EstoqueMovimentacoes() {
               <TableRow>
                 <TableHead>ID</TableHead>
                 <TableHead>Data</TableHead>
-                <TableHead>Produto</TableHead>
-                <TableHead>IMEI</TableHead>
+                <TableHead>Acessório</TableHead>
                 <TableHead>Qtd</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead>Destino</TableHead>
@@ -188,8 +273,7 @@ export default function EstoqueMovimentacoes() {
                 <TableRow key={mov.id}>
                   <TableCell className="font-mono text-xs">{mov.id}</TableCell>
                   <TableCell>{new Date(mov.data).toLocaleDateString('pt-BR')}</TableCell>
-                  <TableCell>{mov.produto}</TableCell>
-                  <TableCell className="font-mono text-xs">{mov.imei}</TableCell>
+                  <TableCell>{mov.acessorio}</TableCell>
                   <TableCell>{mov.quantidade}</TableCell>
                   <TableCell>{mov.origem}</TableCell>
                   <TableCell>{mov.destino}</TableCell>

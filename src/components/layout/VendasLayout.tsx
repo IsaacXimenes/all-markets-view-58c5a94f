@@ -20,7 +20,7 @@ export function VendasLayout({ children, title }: VendasLayoutProps) {
   const baseTabs = [
     { name: 'Histórico de Vendas', href: '/vendas', icon: History },
     { name: 'Nova Venda', href: '/vendas/nova', icon: Plus },
-    { name: 'Vendas - Acessórios', href: '/vendas/acessorios', icon: Headphones },
+    { name: 'Venda - Balcão', href: '/vendas/balcao', icon: Headphones },
   ];
 
   const digitalTabs = temPermissaoDigital ? [

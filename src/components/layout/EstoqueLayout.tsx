@@ -13,12 +13,13 @@ export function EstoqueLayout({ children, title }: EstoqueLayoutProps) {
   
   const tabs = [
     { name: 'Dashboard', href: '/estoque', icon: LayoutDashboard },
-    { name: 'Produtos', href: '/estoque/produtos', icon: Package },
+    { name: 'Aparelhos', href: '/estoque/produtos', icon: Package },
     { name: 'Acessórios', href: '/estoque/acessorios', icon: Headphones },
     { name: 'Peças', href: '/estoque/pecas', icon: Package },
-    { name: 'Produtos Pendentes', href: '/estoque/produtos-pendentes', icon: Clock },
+    { name: 'Aparelhos Pendentes', href: '/estoque/produtos-pendentes', icon: Clock },
     { name: 'Notas de Compra', href: '/estoque/notas-compra', icon: FileText },
-    { name: 'Movimentações', href: '/estoque/movimentacoes', icon: ArrowRightLeft }
+    { name: 'Movimentações - Aparelhos', href: '/estoque/movimentacoes', icon: ArrowRightLeft },
+    { name: 'Movimentações - Acessórios', href: '/estoque/movimentacoes-acessorios', icon: ArrowRightLeft }
   ];
 
   return (

@@ -31,6 +31,7 @@ import EstoqueNotasCompra from "./pages/EstoqueNotasCompra";
 import EstoqueNotaDetalhes from "./pages/EstoqueNotaDetalhes";
 import EstoqueNotaCadastrar from "./pages/EstoqueNotaCadastrar";
 import EstoqueMovimentacoes from "./pages/EstoqueMovimentacoes";
+import EstoqueMovimentacoesAcessorios from "./pages/EstoqueMovimentacoesAcessorios";
 import Cadastros from "./pages/Cadastros";
 import CadastrosLojas from "./pages/CadastrosLojas";
 import CadastrosClientes from "./pages/CadastrosClientes";
@@ -99,6 +100,7 @@ const App = () => (
           <Route path="/estoque/nota/:id" element={<EstoqueNotaDetalhes />} />
           <Route path="/estoque/nota/cadastrar" element={<EstoqueNotaCadastrar />} />
           <Route path="/estoque/movimentacoes" element={<EstoqueMovimentacoes />} />
+          <Route path="/estoque/movimentacoes-acessorios" element={<EstoqueMovimentacoesAcessorios />} />
           <Route path="/estoque/acessorios" element={<EstoqueAcessorios />} />
           <Route path="/estoque/pecas" element={<EstoquePecas />} />
           <Route path="/os/produtos-analise" element={<OSProdutosAnalise />} />
@@ -125,7 +127,7 @@ const App = () => (
           <Route path="/vendas/nova-digital" element={<VendasNovaDigital />} />
           <Route path="/vendas/pendentes-digitais" element={<VendasPendentesDigitais />} />
           <Route path="/vendas/finalizar-digital/:id" element={<VendasFinalizarDigital />} />
-          <Route path="/vendas/acessorios" element={<VendasAcessorios />} />
+          <Route path="/vendas/balcao" element={<VendasAcessorios />} />
           <Route path="/vendas/conferencia-gestor" element={<VendasConferenciaGestor />} />
           <Route path="/vendas/conferencia-gestor/:id" element={<VendasConferenciaGestorDetalhes />} />
           <Route path="/vendas/:id" element={<VendaDetalhes />} />

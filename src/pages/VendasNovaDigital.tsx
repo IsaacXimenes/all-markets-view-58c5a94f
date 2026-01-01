@@ -22,6 +22,7 @@ export default function VendasNovaDigital() {
   const [responsavelId, setResponsavelId] = useState('');
   const [clienteNome, setClienteNome] = useState('');
   const [valorTotal, setValorTotal] = useState('');
+  const [observacao, setObservacao] = useState('');
   const [loading, setLoading] = useState(false);
 
   const year = new Date().getFullYear();
@@ -147,6 +148,18 @@ export default function VendasNovaDigital() {
                   onChange={handleValorChange}
                 />
               </div>
+            </div>
+
+            {/* Observação */}
+            <div className="space-y-2">
+              <Label htmlFor="observacao">Observação</Label>
+              <textarea
+                id="observacao"
+                className="w-full min-h-[80px] px-3 py-2 rounded-md border border-input bg-background text-sm resize-none"
+                placeholder="Observações adicionais (opcional)"
+                value={observacao}
+                onChange={(e) => setObservacao(e.target.value)}
+              />
             </div>
 
             {/* Resumo */}

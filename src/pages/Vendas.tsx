@@ -20,6 +20,9 @@ export default function Vendas() {
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [lojaFiltro, setLojaFiltro] = useState('');
+  const [modeloFiltro, setModeloFiltro] = useState('');
+  const [imeiFiltro, setImeiFiltro] = useState('');
+  const [vendedorFiltro, setVendedorFiltro] = useState('');
 
   const getLojaName = (id: string) => {
     const loja = lojas.find(l => l.id === id);
@@ -66,9 +69,25 @@ export default function Vendas() {
       
       if (lojaFiltro && v.lojaVenda !== lojaFiltro) return false;
       
+      if (vendedorFiltro && v.vendedor !== vendedorFiltro) return false;
+      
+      if (modeloFiltro) {
+        const temModelo = v.itens.some(item => 
+          item.produto.toLowerCase().includes(modeloFiltro.toLowerCase())
+        );
+        if (!temModelo) return false;
+      }
+      
+      if (imeiFiltro) {
+        const temImei = v.itens.some(item => 
+          item.imei.includes(imeiFiltro)
+        );
+        if (!temImei) return false;
+      }
+      
       return true;
     });
-  }, [vendas, dataInicio, dataFim, lojaFiltro]);
+  }, [vendas, dataInicio, dataFim, lojaFiltro, vendedorFiltro, modeloFiltro, imeiFiltro]);
 
   const totais = useMemo(() => {
     let totalVendas = 0;
@@ -154,7 +173,7 @@ export default function Vendas() {
       {/* Filtros */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Data Início</label>
               <Input
@@ -185,6 +204,36 @@ export default function Vendas() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Modelo</label>
+              <Input
+                placeholder="Buscar modelo..."
+                value={modeloFiltro}
+                onChange={(e) => setModeloFiltro(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">IMEI</label>
+              <Input
+                placeholder="Buscar IMEI..."
+                value={imeiFiltro}
+                onChange={(e) => setImeiFiltro(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Resp. Venda</label>
+              <Select value={vendedorFiltro || 'all'} onValueChange={(val) => setVendedorFiltro(val === 'all' ? '' : val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {colaboradores.map(col => (
+                    <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-end gap-2">
               <Button onClick={() => navigate('/vendas/nova')} className="flex-1">
                 <Plus className="h-4 w-4 mr-2" />
@@ -208,6 +257,8 @@ export default function Vendas() {
                   <TableHead>ID Venda</TableHead>
                   <TableHead>Data/Hora</TableHead>
                   <TableHead>Cliente</TableHead>
+                  <TableHead>Modelo</TableHead>
+                  <TableHead>IMEI</TableHead>
                   <TableHead>Resp. Venda</TableHead>
                   <TableHead>Loja</TableHead>
                   <TableHead>Resp. Loja</TableHead>
@@ -225,6 +276,10 @@ export default function Vendas() {
                   const calc = calcularTotaisVenda(venda);
                   const isPrejuizo = calc.lucro < 0;
                   const statusConferencia = getStatusConferenciaByVendaId(venda.id);
+                  
+                  // Pegar modelos e IMEIs dos itens
+                  const modelos = venda.itens.map(i => i.produto).join(', ');
+                  const imeis = venda.itens.map(i => i.imei).join(', ');
                   
                   const getStatusBadge = (status: StatusConferencia | null) => {
                     if (!status) return <Badge variant="outline">-</Badge>;
@@ -253,6 +308,8 @@ export default function Vendas() {
                         {new Date(venda.dataHora).toLocaleString('pt-BR')}
                       </TableCell>
                       <TableCell className="font-medium">{venda.clienteNome}</TableCell>
+                      <TableCell className="max-w-[150px] truncate" title={modelos}>{modelos || '-'}</TableCell>
+                      <TableCell className="font-mono text-xs max-w-[120px] truncate" title={imeis}>{imeis || '-'}</TableCell>
                       <TableCell>{getColaboradorNome(venda.vendedor)}</TableCell>
                       <TableCell>{getLojaName(venda.lojaVenda)}</TableCell>
                       <TableCell className="text-muted-foreground">{getResponsavelLoja(venda.lojaVenda)}</TableCell>

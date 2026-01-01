@@ -283,18 +283,17 @@ export default function VendasAcessorios() {
     setNovoPagamento({});
   };
 
-  // Validar venda
+  // Validar venda - removido localRetirada
   const canSubmit = useMemo(() => {
     return (
       lojaVenda &&
       vendedor &&
       clienteId &&
       origemVenda &&
-      localRetirada &&
       acessorios.length > 0 &&
       valorPendente <= 0
     );
-  }, [lojaVenda, vendedor, clienteId, origemVenda, localRetirada, acessorios.length, valorPendente]);
+  }, [lojaVenda, vendedor, clienteId, origemVenda, acessorios.length, valorPendente]);
 
   const handleRegistrarVenda = () => {
     if (!canSubmit) return;
@@ -334,7 +333,7 @@ export default function VendasAcessorios() {
   };
 
   return (
-    <VendasLayout title="Venda de Acessórios">
+    <VendasLayout title="Venda - Balcão">
       <div className="mb-4">
         <Button variant="ghost" onClick={() => navigate('/vendas')} className="gap-2">
           <span>←</span> Voltar
@@ -452,19 +451,6 @@ export default function VendasAcessorios() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <label className="text-sm font-medium">Local de Retirada *</label>
-                <Select value={localRetirada} onValueChange={setLocalRetirada}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o local" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lojas.filter(l => l.status === 'Ativo').map(loja => (
-                      <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -479,7 +465,7 @@ export default function VendasAcessorios() {
               </span>
               <Button onClick={() => setShowAcessorioModal(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Selecionar Acessório
+                Selecionar Acessórios
               </Button>
             </CardTitle>
           </CardHeader>
@@ -582,61 +568,20 @@ export default function VendasAcessorios() {
           </CardContent>
         </Card>
 
-        {/* Retirada */}
+        {/* Observações */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Truck className="h-5 w-5" />
-              Retirada / Logística
+              <FileText className="h-5 w-5" />
+              Observações
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="text-sm font-medium">Tipo de Retirada</label>
-                <Select 
-                  value={tipoRetirada} 
-                  onValueChange={(v) => setTipoRetirada(v as any)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Retirada Balcão">Retirada Balcão</SelectItem>
-                    <SelectItem value="Entrega">Entrega</SelectItem>
-                    <SelectItem value="Retirada em Outra Loja">Retirada em Outra Loja</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              {tipoRetirada === 'Entrega' && (
-                <div>
-                  <label className="text-sm font-medium">Taxa de Entrega</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                    <Input 
-                      type="text"
-                      value={taxaEntrega.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        setTaxaEntrega(Number(value) / 100);
-                      }}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            <div className="mt-4">
-              <label className="text-sm font-medium">Observações</label>
-              <Textarea 
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-                placeholder="Observações da venda..."
-                className="mt-1"
-              />
-            </div>
+            <Textarea 
+              value={observacoes}
+              onChange={(e) => setObservacoes(e.target.value)}
+              placeholder="Observações da venda..."
+            />
           </CardContent>
         </Card>
 
