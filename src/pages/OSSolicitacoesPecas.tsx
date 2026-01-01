@@ -232,7 +232,6 @@ export default function OSSolicitacoesPecas() {
       toast({ title: 'Sucesso', description: 'Lote atualizado!' });
     }
   };
-    }
 
   const handleCriarLote = () => {
     if (selecionadas.length === 0) {
@@ -262,14 +261,9 @@ export default function OSSolicitacoesPecas() {
       toast({ title: 'Sucesso', description: `Lote ${novoLote.id} criado com ${selecionadas.length} solicitações!` });
     }
   };
+
   const handleEnviarLote = (loteId: string) => {
     const resultado = enviarLote(loteId);
-    if (resultado) {
-      setSolicitacoes(getSolicitacoes());
-      setLotes(getLotes());
-      toast({ title: 'Sucesso', description: `Lote ${loteId} enviado! Nota ${resultado.nota.id} criada no Financeiro.` });
-    }
-  };
     if (resultado) {
       setSolicitacoes(getSolicitacoes());
       setLotes(getLotes());
@@ -279,7 +273,7 @@ export default function OSSolicitacoesPecas() {
 
   const handleAdicionarFornecedor = () => {
     if (!novoFornecedorNome.trim()) return;
-    const novo = addFornecedor({
+    addFornecedor({
       nome: novoFornecedorNome,
       cnpj: '',
       telefone: '',
@@ -289,8 +283,7 @@ export default function OSSolicitacoesPecas() {
     });
     setNovoFornecedorNome('');
     setNovoFornecedorOpen(false);
-    setFormAprovar({ ...formAprovar, fornecedorId: novo.id });
-    toast({ title: 'Sucesso', description: `Fornecedor ${novo.nome} adicionado!` });
+    toast({ title: 'Sucesso', description: `Fornecedor ${novoFornecedorNome} adicionado!` });
   };
 
   const formatCurrencyInput = (value: string) => {
@@ -574,89 +567,100 @@ export default function OSSolicitacoesPecas() {
         </TabsContent>
       </Tabs>
 
-      {/* Modal Aprovar */}
+      {/* Modal Aprovar - Com campos por peça */}
       <Dialog open={aprovarOpen} onOpenChange={setAprovarOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Aprovar Solicitação</DialogTitle>
+            <DialogTitle>Aprovar Solicitação ({solicitacoesSelecionadasAprovar.length} peça(s))</DialogTitle>
           </DialogHeader>
           
-          {solicitacaoSelecionada && (
-            <div className="space-y-4">
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="font-medium">{solicitacaoSelecionada.peca}</p>
-                <p className="text-sm text-muted-foreground">
-                  OS: {solicitacaoSelecionada.osId} | Qtd: {solicitacaoSelecionada.quantidade}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">{solicitacaoSelecionada.justificativa}</p>
-              </div>
-
-              <div className="grid gap-4">
-                <div className="space-y-2">
-                  <Label>Fornecedor *</Label>
-                  <div className="flex gap-2">
-                    <Select value={formAprovar.fornecedorId} onValueChange={v => setFormAprovar({...formAprovar, fornecedorId: v})}>
-                      <SelectTrigger className="flex-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+          <div className="space-y-4">
+            {/* Lista de peças com campos individuais */}
+            {solicitacoesSelecionadasAprovar.map((sol, idx) => (
+              <div key={sol.id} className="p-4 border rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{sol.peca}</p>
+                    <p className="text-sm text-muted-foreground">
+                      OS: {sol.osId} | Qtd: {sol.quantidade}
+                    </p>
+                  </div>
+                  <Badge variant="secondary">Peça {idx + 1}</Badge>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Fornecedor *</Label>
+                    <Select 
+                      value={fornecedoresPorPeca[sol.id]?.fornecedorId || ''} 
+                      onValueChange={v => setFornecedoresPorPeca({
+                        ...fornecedoresPorPeca, 
+                        [sol.id]: { ...fornecedoresPorPeca[sol.id], fornecedorId: v }
+                      })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                       <SelectContent>
                         {fornecedores.map(f => (
                           <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button variant="outline" size="icon" onClick={() => setNovoFornecedorOpen(true)}>
-                      <Plus className="h-4 w-4" />
-                    </Button>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Valor da Peça (R$) *</Label>
-                  <Input
-                    value={formAprovar.valorPeca}
-                    onChange={e => setFormAprovar({...formAprovar, valorPeca: formatCurrencyInput(e.target.value)})}
-                    placeholder="R$ 0,00"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Responsável pela Compra *</Label>
-                  <Select value={formAprovar.responsavelCompra} onValueChange={v => setFormAprovar({...formAprovar, responsavelCompra: v})}>
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      {colaboradores.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Data Recebimento</Label>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Valor (R$) *</Label>
                     <Input
-                      type="date"
-                      value={formAprovar.dataRecebimento}
-                      onChange={e => setFormAprovar({...formAprovar, dataRecebimento: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Data Envio Loja</Label>
-                    <Input
-                      type="date"
-                      value={formAprovar.dataEnvio}
-                      onChange={e => setFormAprovar({...formAprovar, dataEnvio: e.target.value})}
+                      value={fornecedoresPorPeca[sol.id]?.valorPeca || ''}
+                      onChange={e => setFornecedoresPorPeca({
+                        ...fornecedoresPorPeca,
+                        [sol.id]: { ...fornecedoresPorPeca[sol.id], valorPeca: formatCurrencyInput(e.target.value) }
+                      })}
+                      placeholder="R$ 0,00"
                     />
                   </div>
                 </div>
               </div>
+            ))}
+
+            {/* Campos globais */}
+            <div className="border-t pt-4 space-y-4">
+              <div className="space-y-2">
+                <Label>Responsável pela Compra *</Label>
+                <Select value={responsavelCompraGlobal} onValueChange={setResponsavelCompraGlobal}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {colaboradores.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data Recebimento</Label>
+                  <Input
+                    type="date"
+                    value={dataRecebimentoGlobal}
+                    onChange={e => setDataRecebimentoGlobal(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data Envio Loja</Label>
+                  <Input
+                    type="date"
+                    value={dataEnvioGlobal}
+                    onChange={e => setDataEnvioGlobal(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
-          )}
+          </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setAprovarOpen(false)}>Cancelar</Button>
             <Button onClick={handleAprovar}>
               <Check className="h-4 w-4 mr-2" />
-              Salvar Aprovação
+              Aprovar {solicitacoesSelecionadasAprovar.length} Peça(s)
             </Button>
           </DialogFooter>
         </DialogContent>
