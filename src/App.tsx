@@ -39,6 +39,8 @@ import CadastrosColaboradores from "./pages/CadastrosColaboradores";
 import CadastrosFornecedores from "./pages/CadastrosFornecedores";
 import CadastrosOrigensVenda from "./pages/CadastrosOrigensVenda";
 import CadastrosProdutos from "./pages/CadastrosProdutos";
+import CadastrosPecas from "./pages/CadastrosPecas";
+import CadastrosAcessorios from "./pages/CadastrosAcessorios";
 import CadastrosTiposDesconto from "./pages/CadastrosTiposDesconto";
 import CadastrosCargos from "./pages/CadastrosCargos";
 import CadastrosModelosPagamento from "./pages/CadastrosModelosPagamento";
@@ -53,7 +55,6 @@ import VendasAcessorios from "./pages/VendasAcessorios";
 import VendasConferenciaGestor from "./pages/VendasConferenciaGestor";
 import VendasConferenciaGestorDetalhes from "./pages/VendasConferenciaGestorDetalhes";
 import EstoqueAcessorios from "./pages/EstoqueAcessorios";
-import EstoquePecas from "./pages/EstoquePecas";
 import OSProdutosAnalise from "./pages/OSProdutosAnalise";
 import OSProdutoDetalhes from "./pages/OSProdutoDetalhes";
 import OSAssistencia from "./pages/OSAssistencia";
@@ -61,6 +62,7 @@ import OSAssistenciaNova from "./pages/OSAssistenciaNova";
 import OSAssistenciaDetalhes from "./pages/OSAssistenciaDetalhes";
 import OSSolicitacoesPecas from "./pages/OSSolicitacoesPecas";
 import OSHistoricoNotas from "./pages/OSHistoricoNotas";
+import OSPecas from "./pages/OSPecas";
 import FinanceiroNotasAssistencia from "./pages/FinanceiroNotasAssistencia";
 import Relatorios from "./pages/Relatorios";
 
@@ -102,7 +104,6 @@ const App = () => (
           <Route path="/estoque/movimentacoes" element={<EstoqueMovimentacoes />} />
           <Route path="/estoque/movimentacoes-acessorios" element={<EstoqueMovimentacoesAcessorios />} />
           <Route path="/estoque/acessorios" element={<EstoqueAcessorios />} />
-          <Route path="/estoque/pecas" element={<EstoquePecas />} />
           <Route path="/os/produtos-analise" element={<OSProdutosAnalise />} />
           <Route path="/os/produto/:id" element={<OSProdutoDetalhes />} />
           <Route path="/os/assistencia" element={<OSAssistencia />} />
@@ -110,6 +111,7 @@ const App = () => (
           <Route path="/os/assistencia/:id" element={<OSAssistenciaDetalhes />} />
           <Route path="/os/solicitacoes-pecas" element={<OSSolicitacoesPecas />} />
           <Route path="/os/historico-notas" element={<OSHistoricoNotas />} />
+          <Route path="/os/pecas" element={<OSPecas />} />
           <Route path="/financeiro/notas-assistencia" element={<FinanceiroNotasAssistencia />} />
           <Route path="/cadastros" element={<Cadastros />} />
           <Route path="/cadastros/lojas" element={<CadastrosLojas />} />
@@ -118,6 +120,8 @@ const App = () => (
           <Route path="/cadastros/fornecedores" element={<CadastrosFornecedores />} />
           <Route path="/cadastros/origens-venda" element={<CadastrosOrigensVenda />} />
           <Route path="/cadastros/produtos" element={<CadastrosProdutos />} />
+          <Route path="/cadastros/pecas" element={<CadastrosPecas />} />
+          <Route path="/cadastros/acessorios" element={<CadastrosAcessorios />} />
           <Route path="/cadastros/tipos-desconto" element={<CadastrosTiposDesconto />} />
           <Route path="/cadastros/cargos" element={<CadastrosCargos />} />
           <Route path="/cadastros/modelos-pagamento" element={<CadastrosModelosPagamento />} />

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
+import { OSLayout } from '@/components/layout/OSLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { getLojas } from '@/utils/cadastrosApi';
 import { Download, Eye, Plus, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-export default function EstoquePecas() {
+export default function OSPecas() {
   const { toast } = useToast();
   const [pecas, setPecas] = useState<Peca[]>(getPecas());
   const lojas = getLojas();
@@ -79,7 +79,7 @@ export default function EstoquePecas() {
   };
 
   const handleExport = () => {
-    exportPecasToCSV(pecasFiltradas, 'pecas-estoque.csv');
+    exportPecasToCSV(pecasFiltradas, 'pecas-assistencia.csv');
     toast({ title: 'Sucesso', description: 'CSV exportado com sucesso!' });
   };
 
@@ -124,7 +124,7 @@ export default function EstoquePecas() {
   const pecasDisponiveis = pecasFiltradas.filter(p => p.status === 'Disponível').length;
 
   return (
-    <EstoqueLayout title="Peças">
+    <OSLayout title="Peças">
       {/* Dashboard Cards */}
       <div className="sticky top-0 z-10 bg-background pb-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -379,6 +379,6 @@ export default function EstoquePecas() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </EstoqueLayout>
+    </OSLayout>
   );
 }

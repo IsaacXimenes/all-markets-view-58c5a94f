@@ -14,6 +14,7 @@ export function OSLayout({ children, title }: OSLayoutProps) {
   const tabs = [
     { name: 'Produtos para Análise', href: '/os/produtos-analise', icon: ClipboardList },
     { name: 'Assistência', href: '/os/assistencia', icon: Wrench },
+    { name: 'Peças', href: '/os/pecas', icon: Package },
     { name: 'Solicitações de Peças', href: '/os/solicitacoes-pecas', icon: Package },
     { name: 'Histórico de Notas', href: '/os/historico-notas', icon: ClipboardList },
   ];
