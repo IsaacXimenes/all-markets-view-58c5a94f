@@ -166,6 +166,7 @@ export default function EstoqueAcessorios() {
                     <TableHead>ID</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Categoria</TableHead>
+                    <TableHead>Loja</TableHead>
                     <TableHead className="text-right">Estoque Disponível</TableHead>
                     <TableHead className="text-right">Valor Custo</TableHead>
                     <TableHead className="text-center">Ações</TableHead>
@@ -178,6 +179,9 @@ export default function EstoqueAcessorios() {
                       <TableCell className="font-medium">{acessorio.descricao}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{acessorio.categoria}</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {acessorio.lojas.join(', ')}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -210,7 +214,7 @@ export default function EstoqueAcessorios() {
                   ))}
                   {acessoriosFiltrados.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         Nenhum acessório encontrado.
                       </TableCell>
                     </TableRow>
