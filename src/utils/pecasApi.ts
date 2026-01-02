@@ -120,10 +120,6 @@ export const deletePeca = (id: string): boolean => {
   return true;
 };
 
-export const formatCurrency = (value: number): string => {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-};
-
 export const exportPecasToCSV = (data: Peca[], filename: string): void => {
   const headers = ['ID', 'Descrição', 'Loja', 'Modelo', 'Valor Custo', 'Valor Recomendado', 'Quantidade', 'Data Entrada', 'Origem', 'Status'];
   const rows = data.map(p => [

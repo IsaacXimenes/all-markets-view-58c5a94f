@@ -8,11 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Download, Plus, Trash2 } from 'lucide-react';
-import { getDespesas, addDespesa, deleteDespesa, exportToCSV } from '@/utils/financeApi';
+import { getDespesas, addDespesa, deleteDespesa } from '@/utils/financeApi';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
 
-import { formatCurrency } from '@/utils/formatUtils';
+import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 
 export default function FinanceiroDespesasVariaveis() {
   const [despesas, setDespesas] = useState(getDespesas());

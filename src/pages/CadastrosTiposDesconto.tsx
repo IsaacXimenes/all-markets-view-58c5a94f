@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { getTiposDesconto, addTipoDesconto, updateTipoDesconto, deleteTipoDesconto, exportToCSV, TipoDesconto } from '@/utils/cadastrosApi';
+import { getTiposDesconto, addTipoDesconto, updateTipoDesconto, deleteTipoDesconto, TipoDesconto } from '@/utils/cadastrosApi';
+import { exportToCSV } from '@/utils/formatUtils';
 import { Plus, Pencil, Trash2, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 

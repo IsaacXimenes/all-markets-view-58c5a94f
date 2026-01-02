@@ -7,7 +7,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { getCargos, addCargo, updateCargo, deleteCargo, exportToCSV, Cargo } from '@/utils/cadastrosApi';
+import { getCargos, addCargo, updateCargo, deleteCargo, Cargo } from '@/utils/cadastrosApi';
+import { exportToCSV } from '@/utils/formatUtils';
 import { Plus, Pencil, Trash2, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 

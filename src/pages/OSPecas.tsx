@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { getPecas, Peca, formatCurrency, exportPecasToCSV, addPeca } from '@/utils/pecasApi';
+import { getPecas, Peca, exportPecasToCSV, addPeca } from '@/utils/pecasApi';
+import { formatCurrency } from '@/utils/formatUtils';
 import { getLojas } from '@/utils/cadastrosApi';
 import { Download, Eye, Plus, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';

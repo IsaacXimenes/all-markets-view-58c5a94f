@@ -22,11 +22,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Eye, Wrench, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle } from 'lucide-react';
-import { getProdutosParaAnaliseOS, ProdutoPendente, calcularSLA, exportToCSV } from '@/utils/osApi';
+import { getProdutosParaAnaliseOS, ProdutoPendente, calcularSLA } from '@/utils/osApi';
 import { getLojas } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
 
-import { formatCurrency } from '@/utils/formatUtils';
+import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 
 export default function OSProdutosAnalise() {
   const navigate = useNavigate();

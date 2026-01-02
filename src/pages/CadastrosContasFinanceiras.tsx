@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { getContasFinanceiras, addContaFinanceira, updateContaFinanceira, deleteContaFinanceira, getLojas, exportToCSV, ContaFinanceira, formatCurrency, getLojaById } from '@/utils/cadastrosApi';
+import { getContasFinanceiras, addContaFinanceira, updateContaFinanceira, deleteContaFinanceira, getLojas, ContaFinanceira, getLojaById } from '@/utils/cadastrosApi';
+import { exportToCSV, formatCurrency } from '@/utils/formatUtils';
 import { Plus, Pencil, Trash2, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 

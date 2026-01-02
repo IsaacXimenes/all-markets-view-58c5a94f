@@ -1,49 +1,42 @@
-
 import React, { useState } from 'react';
-import { 
-  useProductData, useCategoryData, useSalesMetrics,
-  mockProducts, mockCategories, mockSalesMetrics, mockNews,
-  generatePriceHistory 
-} from '@/utils/productsApi';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { StockCard } from '@/components/stocks/StockCard';
-import { StockChart } from '@/components/stocks/StockChart';
-import { MarketOverview } from '@/components/markets/MarketOverview';
-import { CurrencyExchange } from '@/components/currencies/CurrencyExchange';
-import { NewsCard } from '@/components/news/NewsCard';
 import { StatsCard } from '@/components/ui/StatsCard';
 import { RankingVendedores } from '@/components/dashboard/RankingVendedores';
-import { BarChart3, TrendingDown, TrendingUp, Wallet2, Package, ShoppingCart } from 'lucide-react';
+import { Wallet2, Package, ShoppingCart, Users, Wrench, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getVendas } from '@/utils/vendasApi';
+import { getProdutos } from '@/utils/estoqueApi';
+import { getOrdensServico } from '@/utils/assistenciaApi';
+import { getColaboradores } from '@/utils/cadastrosApi';
+import { formatCurrency } from '@/utils/formatUtils';
 
 export function Dashboard() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState(mockProducts[0]);
   
-  // Use nossos hooks para dados em tempo real
-  const products = useProductData(mockProducts);
-  const categories = useCategoryData(mockCategories);
-  const salesMetrics = useSalesMetrics(mockSalesMetrics);
-  
-  // Gerar histórico de preços para o produto selecionado
-  const selectedProductHistory = generatePriceHistory(30, selectedProduct.price, 2);
-  
-  // Gerar histórico para os cards de produtos
-  const productsWithHistory = products.map(product => {
-    return {
-      ...product,
-      priceHistory: generatePriceHistory(30, product.price, 2)
-    };
-  });
+  // Dados reais do sistema
+  const vendas = getVendas();
+  const produtos = getProdutos();
+  const ordensServico = getOrdensServico();
+  const colaboradores = getColaboradores();
   
   // Calcular estatísticas
-  const productsInStock = products.filter(p => p.stock > 0);
-  const lowStock = products.filter(p => p.stock < 50);
+  const vendasHoje = vendas.filter(v => {
+    const hoje = new Date().toISOString().split('T')[0];
+    return v.dataHora.split('T')[0] === hoje;
+  });
   
-  const topSeller = [...products].sort((a, b) => b.sales - a.sales)[0];
-  const totalRevenue = products.reduce((sum, p) => sum + (p.price * p.sales), 0);
-  const totalSales = products.reduce((sum, p) => sum + p.sales, 0);
+  const receitaHoje = vendasHoje.reduce((sum, v) => sum + v.total, 0);
+  const receitaTotal = vendas.reduce((sum, v) => sum + v.total, 0);
+  
+  const produtosEmEstoque = produtos.filter(p => p.quantidade > 0).length;
+  const produtosBaixoEstoque = produtos.filter(p => p.quantidade > 0 && p.quantidade < 5).length;
+  
+  const osAbertas = ordensServico.filter(os => os.status !== 'Serviço concluído').length;
+  const osUrgentes = ordensServico.filter(os => os.status === 'Aguardando Peça').length;
+  
+  const colaboradoresAtivos = colaboradores.length;
   
   const toggleSidebar = () => {
     setIsSidebarCollapsed(prev => !prev);
@@ -59,89 +52,96 @@ export function Dashboard() {
         <main className="flex-1 transition-all duration-300 overflow-hidden">
           <div className="container max-w-full h-full p-4 lg:p-6 flex flex-col animate-fade-in">
             <div className="bg-muted/30 rounded-lg p-4 mb-4 text-center border border-border">
-              <h1 className="text-2xl font-bold">Painel da Loja</h1>
+              <h1 className="text-2xl font-bold">Painel de Gestão</h1>
             </div>
             
             {/* Stats Row */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4 animate-slide-up" style={{ '--delay': '100ms' } as React.CSSProperties}>
               <StatsCard 
-                title="Receita Total" 
-                value={`R$ ${(totalRevenue / 1000000).toFixed(2)}M`}
-                trend={5.2}
+                title="Receita Hoje" 
+                value={formatCurrency(receitaHoje)}
+                description={`${vendasHoje.length} vendas`}
                 icon={<Wallet2 />}
                 className="bg-primary/5"
               />
               <StatsCard 
                 title="Vendas Totais" 
-                value={totalSales.toLocaleString()}
-                description="Unidades vendidas"
+                value={formatCurrency(receitaTotal)}
+                description={`${vendas.length} vendas`}
                 icon={<ShoppingCart />}
                 className="bg-primary/5"
               />
               <StatsCard 
-                title="Mais Vendido" 
-                value={topSeller.name}
-                trend={((topSeller.sales / totalSales) * 100)}
-                trendLabel={`${topSeller.sales} vendas`}
-                icon={<TrendingUp />}
-                className="bg-success/5"
+                title="Estoque" 
+                value={produtosEmEstoque.toString()}
+                trend={produtosBaixoEstoque > 0 ? -produtosBaixoEstoque : 0}
+                trendLabel={produtosBaixoEstoque > 0 ? `${produtosBaixoEstoque} com estoque baixo` : 'Estoque OK'}
+                icon={<Package />}
+                className={produtosBaixoEstoque > 0 ? "bg-danger/5" : "bg-success/5"}
               />
               <StatsCard 
-                title="Produtos em Estoque" 
-                value={productsInStock.length.toString()}
-                trend={lowStock.length > 0 ? -lowStock.length : 0}
-                trendLabel={lowStock.length > 0 ? `${lowStock.length} com estoque baixo` : 'Estoque bom'}
-                icon={<Package />}
-                className={lowStock.length > 0 ? "bg-danger/5" : "bg-success/5"}
+                title="OS Abertas" 
+                value={osAbertas.toString()}
+                trend={osUrgentes > 0 ? -osUrgentes : 0}
+                trendLabel={osUrgentes > 0 ? `${osUrgentes} aguardando peça` : 'Sem urgências'}
+                icon={<Wrench />}
+                className={osUrgentes > 0 ? "bg-warning/5" : "bg-success/5"}
               />
             </div>
             
             {/* Main Content Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0">
-              {/* Left column - Product list */}
-              <div className="lg:col-span-1 flex flex-col animate-slide-up overflow-hidden" style={{ '--delay': '200ms' } as React.CSSProperties}>
-                <h2 className="text-xl font-semibold mb-3">Produtos em Destaque</h2>
-                <div className="space-y-3 overflow-y-auto">
-                  {productsWithHistory.slice(0, 5).map((product) => (
-                    <StockCard 
-                      key={product.id} 
-                      stock={{
-                        symbol: product.id,
-                        name: product.name,
-                        price: product.price,
-                        change: product.discount || 0,
-                        changePercent: product.discount ? ((product.discount / product.price) * 100) : 0,
-                        volume: product.sales,
-                        marketCap: product.stock,
-                        lastUpdated: product.lastUpdated
-                      }}
-                      priceHistory={product.priceHistory}
-                      onClick={() => setSelectedProduct(product)}
-                      className={selectedProduct.id === product.id ? "ring-2 ring-primary" : ""}
-                    />
-                  ))}
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
+              {/* Left column - Resumo Rápido */}
+              <div className="lg:col-span-2 flex flex-col gap-4 animate-slide-up overflow-hidden" style={{ '--delay': '200ms' } as React.CSSProperties}>
+                <Card className="flex-1">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Resumo do Sistema
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 bg-muted/50 rounded-lg">
+                        <p className="text-2xl font-bold text-primary">{vendas.length}</p>
+                        <p className="text-sm text-muted-foreground">Vendas</p>
+                      </div>
+                      <div className="text-center p-4 bg-muted/50 rounded-lg">
+                        <p className="text-2xl font-bold text-primary">{produtos.length}</p>
+                        <p className="text-sm text-muted-foreground">Produtos</p>
+                      </div>
+                      <div className="text-center p-4 bg-muted/50 rounded-lg">
+                        <p className="text-2xl font-bold text-primary">{ordensServico.length}</p>
+                        <p className="text-sm text-muted-foreground">Ordens de Serviço</p>
+                      </div>
+                      <div className="text-center p-4 bg-muted/50 rounded-lg">
+                        <p className="text-2xl font-bold text-primary">{colaboradoresAtivos}</p>
+                        <p className="text-sm text-muted-foreground">Colaboradores</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-6">
+                      <h3 className="font-semibold mb-3">Últimas Vendas</h3>
+                      <div className="space-y-2">
+                        {vendas.slice(0, 5).map(venda => (
+                          <div key={venda.id} className="flex justify-between items-center p-2 bg-muted/30 rounded">
+                            <div>
+                              <p className="font-medium text-sm">{venda.clienteNome}</p>
+                              <p className="text-xs text-muted-foreground">{new Date(venda.dataHora).toLocaleDateString('pt-BR')}</p>
+                            </div>
+                            <span className="font-semibold text-primary">{formatCurrency(venda.total)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
               
-              {/* Middle column - Chart and news */}
-              <div className="lg:col-span-2 flex flex-col gap-4 animate-slide-up overflow-hidden" style={{ '--delay': '300ms' } as React.CSSProperties}>
-                <div className="flex-1 min-h-0">
-                  <StockChart 
-                    symbol={selectedProduct.id} 
-                    name={selectedProduct.name} 
-                    currentPrice={selectedProduct.price}
-                    volatility={2.5}
-                  />
-                </div>
-                <div className="flex-1 min-h-0 overflow-hidden">
-                  <NewsCard news={mockNews} className="h-full" />
-                </div>
+              {/* Right column - Ranking de Vendedores */}
+              <div className="lg:col-span-1 flex flex-col gap-4 animate-slide-up overflow-hidden" style={{ '--delay': '300ms' } as React.CSSProperties}>
+                <RankingVendedores />
               </div>
-              
-            {/* Right column - Ranking de Vendedores */}
-            <div className="lg:col-span-1 flex flex-col gap-4 animate-slide-up overflow-hidden" style={{ '--delay': '400ms' } as React.CSSProperties}>
-              <RankingVendedores />
-            </div>
             </div>
           </div>
         </main>

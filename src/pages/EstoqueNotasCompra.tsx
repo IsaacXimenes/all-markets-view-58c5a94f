@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getNotasCompra, getFornecedores, exportToCSV } from '@/utils/estoqueApi';
+import { getNotasCompra, getFornecedores } from '@/utils/estoqueApi';
+import { exportToCSV } from '@/utils/formatUtils';
 import { Download, Plus, Eye } from 'lucide-react';
 
 export default function EstoqueNotasCompra() {

@@ -22,12 +22,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Eye, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, Wrench, RotateCcw } from 'lucide-react';
-import { getProdutosPendentes, ProdutoPendente, calcularSLA, exportToCSV } from '@/utils/osApi';
+import { getProdutosPendentes, ProdutoPendente, calcularSLA } from '@/utils/osApi';
 import { getLojas } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
 import { formatIMEI } from '@/utils/imeiMask';
 
-import { formatCurrency } from '@/utils/formatUtils';
+import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 
 export default function EstoqueProdutosPendentes() {
   const navigate = useNavigate();

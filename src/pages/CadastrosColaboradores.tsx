@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { getColaboradores, addColaborador, updateColaborador, deleteColaborador, getCargos, getModelosPagamento, exportToCSV, Colaborador, getCargoById, getModeloPagamentoById } from '@/utils/cadastrosApi';
+import { getColaboradores, addColaborador, updateColaborador, deleteColaborador, getCargos, getModelosPagamento, Colaborador, getCargoById, getModeloPagamentoById } from '@/utils/cadastrosApi';
+import { exportToCSV } from '@/utils/formatUtils';
 import { Plus, Pencil, Trash2, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 

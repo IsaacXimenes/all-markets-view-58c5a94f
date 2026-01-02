@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Download, Edit, Plus, Trash2 } from 'lucide-react';
-import { getContas, getLojas, addConta, updateConta, deleteConta, exportToCSV, Conta } from '@/utils/financeApi';
+import { getContas, getLojas, addConta, updateConta, deleteConta, Conta } from '@/utils/financeApi';
+import { exportToCSV } from '@/utils/formatUtils';
 import { toast } from 'sonner';
 
 export default function FinanceiroContas() {
