@@ -246,7 +246,7 @@ export default function VendaDetalhes() {
                       <TableHead>Modelo</TableHead>
                       <TableHead>Descrição</TableHead>
                       <TableHead>IMEI</TableHead>
-                      <TableHead className="text-right">Valor Abatimento</TableHead>
+                      <TableHead className="text-right">Valor de Compra Usado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

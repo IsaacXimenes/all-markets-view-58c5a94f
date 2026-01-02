@@ -814,14 +814,14 @@ export default function VendasNova() {
               </span>
               <Button onClick={() => setShowAcessorioModal(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Selecionar Acessório
+                Selecionar Acessórios
               </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {acessoriosVenda.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                Nenhum acessório adicionado. Clique em "Selecionar Acessório" para adicionar.
+                Nenhum acessório adicionado. Clique em "Selecionar Acessórios" para adicionar.
               </div>
             ) : (
               <Table>
@@ -951,7 +951,7 @@ export default function VendasNova() {
                     <TableHead>Condição</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>IMEI Validado</TableHead>
-                    <TableHead className="text-right">Valor Abatimento</TableHead>
+                    <TableHead className="text-right">Valor de Compra Usado</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1134,73 +1134,66 @@ export default function VendasNova() {
         {/* Resumo */}
         <Card className={`border-2 ${isPrejuizo ? 'border-destructive' : 'border-primary'}`}>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Resumo da Venda
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Resumo
+              </span>
+              {isPrejuizo && (
+                <Badge variant="destructive" className="text-lg px-4 py-1">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  PREJUÍZO
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Valor de Custo:</span>
-                <span className="font-medium">{formatCurrency(valorCustoTotal)}</span>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">Subtotal Aparelhos</p>
+                <p className="text-xl font-bold">{formatCurrency(subtotal)}</p>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Valor Recomendado:</span>
-                <span className="font-medium">{formatCurrency(valorRecomendadoTotal)}</span>
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">Subtotal Acessórios</p>
+                <p className="text-xl font-bold">{formatCurrency(totalAcessorios)}</p>
               </div>
-              <Separator />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal Produtos:</span>
-                <span className="font-medium">{formatCurrency(subtotal)}</span>
+              <div className="p-3 bg-green-100 dark:bg-green-950/30 rounded-lg">
+                <p className="text-sm text-muted-foreground">Base de Troca</p>
+                <p className="text-xl font-bold text-green-600">-{formatCurrency(totalTradeIn)}</p>
               </div>
-              {totalAcessorios > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">(+) Subtotal Acessórios:</span>
-                  <span className="font-medium">{formatCurrency(totalAcessorios)}</span>
-                </div>
-              )}
-              {totalTradeIn > 0 && (
-                <div className="flex justify-between text-green-600">
-                  <span>(-) Base de Troca:</span>
-                  <span className="font-medium">-{formatCurrency(totalTradeIn)}</span>
-                </div>
-              )}
-              {taxaEntrega > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">(+) Taxa de Entrega:</span>
-                  <span className="font-medium">{formatCurrency(taxaEntrega)}</span>
-                </div>
-              )}
-              <Separator />
-              <div className="flex justify-between text-lg">
-                <span className="font-bold">Valor de Venda:</span>
-                <span className="font-bold">{formatCurrency(total)}</span>
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">Taxa Entrega</p>
+                <p className="text-xl font-bold">{formatCurrency(taxaEntrega)}</p>
               </div>
-              <Separator />
-              <div className={`flex justify-between p-2 rounded-lg ${isPrejuizo ? 'bg-destructive/10' : ''}`}>
-                <span className={isPrejuizo ? 'text-destructive font-medium' : 'text-blue-600'}>
-                  {isPrejuizo && <AlertTriangle className="h-4 w-4 inline mr-1" />}
-                  Lucro Projetado:
-                </span>
-                <span className={`font-medium ${isPrejuizo ? 'text-destructive' : 'text-blue-600'}`}>
+              <div className="p-3 bg-primary/10 rounded-lg">
+                <p className="text-sm text-muted-foreground">Total da Venda</p>
+                <p className="text-2xl font-bold text-primary">{formatCurrency(total)}</p>
+              </div>
+            </div>
+            
+            <Separator className="my-4" />
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">Custo Total</p>
+                <p className="text-lg font-medium">{formatCurrency(valorCustoTotal)}</p>
+              </div>
+              <div className={`p-3 rounded-lg ${isPrejuizo ? 'bg-destructive/20' : 'bg-green-100 dark:bg-green-950/30'}`}>
+                <p className="text-sm text-muted-foreground">{isPrejuizo ? 'Prejuízo' : 'Lucro'} Projetado</p>
+                <p className={`text-lg font-bold ${isPrejuizo ? 'text-destructive' : 'text-green-600'}`}>
                   {formatCurrency(lucroProjetado)}
-                </span>
+                </p>
               </div>
-              <div className={`flex justify-between p-2 rounded-lg ${isPrejuizo ? 'bg-destructive/10' : ''}`}>
-                <span className={isPrejuizo ? 'text-destructive font-medium' : 'text-purple-600'}>
-                  Margem Projetada:
-                </span>
-                <span className={`font-medium ${isPrejuizo ? 'text-destructive' : 'text-purple-600'}`}>
-                  {margemProjetada.toFixed(2)}%
-                </span>
+              <div className={`p-3 rounded-lg ${isPrejuizo ? 'bg-destructive/20' : 'bg-muted'}`}>
+                <p className="text-sm text-muted-foreground">Margem</p>
+                <p className={`text-lg font-medium ${isPrejuizo ? 'text-destructive' : ''}`}>
+                  {margemProjetada.toFixed(1)}%
+                </p>
               </div>
-              {isPrejuizo && (
-                <div className="bg-destructive/10 p-3 rounded-lg flex items-center gap-2 text-destructive">
-                  <AlertTriangle className="h-5 w-5" />
-                  <span className="font-medium">Venda com prejuízo</span>
-                </div>
-              )}
+              <div className="p-3 bg-blue-100 dark:bg-blue-950/30 rounded-lg">
+                <p className="text-sm text-muted-foreground">Total Pagamentos</p>
+                <p className="text-lg font-medium text-blue-600">{formatCurrency(totalPagamentos)}</p>
+              </div>
             </div>
             
             <Button 
@@ -1638,14 +1631,24 @@ export default function VendasNova() {
               <label className="text-sm font-medium">IMEI</label>
               <Input 
                 value={novoTradeIn.imei || ''}
-                onChange={(e) => setNovoTradeIn({ ...novoTradeIn, imei: e.target.value })}
+                onChange={(e) => {
+                  const formatted = e.target.value.replace(/\D/g, '').slice(0, 15);
+                  let masked = '';
+                  for (let i = 0; i < formatted.length; i++) {
+                    if (i === 2 || i === 8 || i === 14) masked += '-';
+                    masked += formatted[i];
+                  }
+                  setNovoTradeIn({ ...novoTradeIn, imei: masked });
+                }}
+                placeholder="00-000000-000000-0"
+                maxLength={18}
               />
             </div>
             <div>
-              <label className="text-sm font-medium">Valor do Abatimento *</label>
+              <label className="text-sm font-medium">Valor de Compra Usado *</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                <Input 
+                <Input
                   type="text"
                   value={novoTradeIn.valorAbatimento ? novoTradeIn.valorAbatimento.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
                   onChange={(e) => {
@@ -1934,11 +1937,11 @@ export default function VendasNova() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Selecionar Acessório */}
+      {/* Modal Selecionar Acessórios */}
       <Dialog open={showAcessorioModal} onOpenChange={setShowAcessorioModal}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Selecionar Acessório</DialogTitle>
+            <DialogTitle>Selecionar Acessórios</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input 

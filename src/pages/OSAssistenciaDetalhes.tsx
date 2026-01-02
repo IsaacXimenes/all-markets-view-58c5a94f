@@ -6,22 +6,36 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   getOrdemServicoById, 
   formatCurrency, 
   calcularSLADias,
-  OrdemServico 
+  OrdemServico,
+  updateOrdemServico
 } from '@/utils/assistenciaApi';
 import { getClientes, getLojas, getColaboradoresByPermissao, getFornecedores } from '@/utils/cadastrosApi';
-import { ArrowLeft, FileText, Clock, AlertTriangle, User, Wrench, MapPin, Calendar, CreditCard } from 'lucide-react';
+import { ArrowLeft, FileText, Clock, AlertTriangle, User, Wrench, MapPin, Calendar, CreditCard, Save, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import QRCode from 'qrcode';
+import { toast } from 'sonner';
 
 export default function OSAssistenciaDetalhes() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [os, setOS] = useState<OrdemServico | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Editable fields
+  const [editClienteId, setEditClienteId] = useState('');
+  const [editLojaId, setEditLojaId] = useState('');
+  const [editTecnicoId, setEditTecnicoId] = useState('');
+  const [editStatus, setEditStatus] = useState('');
+  const [editSetor, setEditSetor] = useState('');
+  const [editDescricao, setEditDescricao] = useState('');
 
   const clientes = getClientes();
   const lojas = getLojas();
@@ -32,6 +46,14 @@ export default function OSAssistenciaDetalhes() {
     if (id) {
       const ordem = getOrdemServicoById(id);
       setOS(ordem || null);
+      if (ordem) {
+        setEditClienteId(ordem.clienteId);
+        setEditLojaId(ordem.lojaId);
+        setEditTecnicoId(ordem.tecnicoId);
+        setEditStatus(ordem.status);
+        setEditSetor(ordem.setor);
+        setEditDescricao(ordem.descricao || '');
+      }
     }
   }, [id]);
 
@@ -42,6 +64,27 @@ export default function OSAssistenciaDetalhes() {
         .catch(console.error);
     }
   }, [os]);
+
+  const canEdit = os && os.status !== 'Serviço concluído';
+
+  const handleSaveChanges = () => {
+    if (!os) return;
+    
+    updateOrdemServico(os.id, {
+      clienteId: editClienteId,
+      lojaId: editLojaId,
+      tecnicoId: editTecnicoId,
+      status: editStatus as 'Em Análise' | 'Aguardando Peça' | 'Em serviço' | 'Peça Recebida' | 'Serviço concluído' | 'Solicitação Enviada',
+      setor: editSetor as 'GARANTIA' | 'ASSISTÊNCIA' | 'TROCA',
+      descricao: editDescricao
+    });
+    
+    // Refresh OS data
+    const updatedOS = getOrdemServicoById(os.id);
+    setOS(updatedOS || null);
+    setIsEditing(false);
+    toast.success('Alterações salvas com sucesso!');
+  };
 
   if (!os) {
     return (
@@ -57,9 +100,9 @@ export default function OSAssistenciaDetalhes() {
     );
   }
 
-  const cliente = clientes.find(c => c.id === os.clienteId);
-  const loja = lojas.find(l => l.id === os.lojaId);
-  const tecnico = tecnicos.find(t => t.id === os.tecnicoId);
+  const cliente = clientes.find(c => c.id === (isEditing ? editClienteId : os.clienteId));
+  const loja = lojas.find(l => l.id === (isEditing ? editLojaId : os.lojaId));
+  const tecnico = tecnicos.find(t => t.id === (isEditing ? editTecnicoId : os.tecnicoId));
   const slaDias = calcularSLADias(os.dataHora);
 
   const getStatusBadge = (status: string) => {
@@ -177,16 +220,40 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {getStatusBadge(os.status)}
-            {getSetorBadge(os.setor)}
+          <div className="flex items-center gap-3 flex-wrap">
+            {getStatusBadge(isEditing ? editStatus : os.status)}
+            {getSetorBadge(isEditing ? editSetor : os.setor)}
             {getSLADisplay()}
+            {canEdit && !isEditing && (
+              <Button variant="outline" onClick={() => setIsEditing(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Editar OS
+              </Button>
+            )}
+            {isEditing && (
+              <>
+                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleSaveChanges}>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar Alterações
+                </Button>
+              </>
+            )}
             <Button onClick={handleGerarRecibo}>
               <FileText className="h-4 w-4 mr-2" />
               Gerar Recibo
             </Button>
           </div>
         </div>
+
+        {canEdit && !isEditing && (
+          <div className="bg-blue-100 dark:bg-blue-950/30 p-3 rounded-lg text-blue-700 dark:text-blue-300 text-sm flex items-center gap-2">
+            <Edit className="h-4 w-4" />
+            Esta OS ainda pode ser editada. Clique em "Editar OS" para fazer alterações.
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Coluna Principal */}
@@ -200,24 +267,58 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Nome</p>
-                    <p className="font-medium">{cliente?.nome || '-'}</p>
+                {isEditing ? (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Cliente</label>
+                      <Select value={editClienteId} onValueChange={setEditClienteId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o cliente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {clientes.map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.nome} - {c.cpf}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {cliente && (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-3 bg-muted rounded-lg">
+                        <div>
+                          <p className="text-xs text-muted-foreground">CPF/CNPJ</p>
+                          <p className="font-medium">{cliente.cpf}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Telefone</p>
+                          <p className="font-medium">{cliente.telefone}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">E-mail</p>
+                          <p className="font-medium">{cliente.email || '-'}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">CPF/CNPJ</p>
-                    <p className="font-medium">{cliente?.cpf || '-'}</p>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Nome</p>
+                      <p className="font-medium">{cliente?.nome || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">CPF/CNPJ</p>
+                      <p className="font-medium">{cliente?.cpf || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Telefone</p>
+                      <p className="font-medium">{cliente?.telefone || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">E-mail</p>
+                      <p className="font-medium">{cliente?.email || '-'}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Telefone</p>
-                    <p className="font-medium">{cliente?.telefone || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">E-mail</p>
-                    <p className="font-medium">{cliente?.email || '-'}</p>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
@@ -300,16 +401,23 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
             </Card>
 
             {/* Descrição */}
-            {os.descricao && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Descrição Detalhada</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm whitespace-pre-wrap">{os.descricao}</p>
-                </CardContent>
-              </Card>
-            )}
+            <Card>
+              <CardHeader>
+                <CardTitle>Descrição Detalhada</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isEditing ? (
+                  <Textarea 
+                    value={editDescricao}
+                    onChange={(e) => setEditDescricao(e.target.value)}
+                    placeholder="Descrição detalhada do serviço..."
+                    rows={4}
+                  />
+                ) : (
+                  <p className="text-sm whitespace-pre-wrap">{os.descricao || 'Nenhuma descrição.'}</p>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Timeline */}
             <Card>
@@ -354,30 +462,97 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Loja</p>
-                  <p className="font-medium">{loja?.nome || '-'}</p>
-                </div>
-                <Separator />
-                <div>
-                  <p className="text-xs text-muted-foreground">Técnico Responsável</p>
-                  <p className="font-medium">{tecnico?.nome || '-'}</p>
-                </div>
-                <Separator />
-                <div>
-                  <p className="text-xs text-muted-foreground">Setor</p>
-                  <div className="mt-1">{getSetorBadge(os.setor)}</div>
-                </div>
-                <Separator />
-                <div>
-                  <p className="text-xs text-muted-foreground">Status</p>
-                  <div className="mt-1">{getStatusBadge(os.status)}</div>
-                </div>
-                <Separator />
-                <div>
-                  <p className="text-xs text-muted-foreground">SLA</p>
-                  <div className="mt-1">{getSLADisplay()}</div>
-                </div>
+                {isEditing ? (
+                  <>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Loja</label>
+                      <Select value={editLojaId} onValueChange={setEditLojaId}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Selecione a loja" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {lojas.map(l => (
+                            <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Separator />
+                    <div>
+                      <label className="text-xs text-muted-foreground">Técnico Responsável</label>
+                      <Select value={editTecnicoId} onValueChange={setEditTecnicoId}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Selecione o técnico" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tecnicos.map(t => (
+                            <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Separator />
+                    <div>
+                      <label className="text-xs text-muted-foreground">Setor</label>
+                      <Select value={editSetor} onValueChange={setEditSetor}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Selecione o setor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="GARANTIA">Garantia</SelectItem>
+                          <SelectItem value="ASSISTÊNCIA">Assistência</SelectItem>
+                          <SelectItem value="TROCA">Troca</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Separator />
+                    <div>
+                      <label className="text-xs text-muted-foreground">Status</label>
+                      <Select value={editStatus} onValueChange={setEditStatus}>
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Selecione o status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Em serviço">Em serviço</SelectItem>
+                          <SelectItem value="Aguardando Peça">Aguardando Peça</SelectItem>
+                          <SelectItem value="Serviço concluído">Serviço concluído</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-xs text-muted-foreground">SLA</p>
+                      <div className="mt-1">{getSLADisplay()}</div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Loja</p>
+                      <p className="font-medium">{loja?.nome || '-'}</p>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Técnico Responsável</p>
+                      <p className="font-medium">{tecnico?.nome || '-'}</p>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Setor</p>
+                      <div className="mt-1">{getSetorBadge(os.setor)}</div>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Status</p>
+                      <div className="mt-1">{getStatusBadge(os.status)}</div>
+                    </div>
+                    <Separator />
+                    <div>
+                      <p className="text-xs text-muted-foreground">SLA</p>
+                      <div className="mt-1">{getSLADisplay()}</div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
