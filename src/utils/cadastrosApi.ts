@@ -490,9 +490,8 @@ export const deleteContaFinanceira = (id: string) => {
 };
 
 // Utility functions
-export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-};
+// formatCurrency removido - usar import { formatCurrency } from '@/utils/formatUtils'
+export { formatCurrency } from '@/utils/formatUtils';
 
 export const formatCPF = (value: string): string => {
   return value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');

@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Trophy, Medal, Award, TrendingUp } from 'lucide-react';
 import { getTopSellers, getStoreById } from '@/utils/rhApi';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/utils/formatUtils';
 
 export function RankingVendedores() {
   const topSellers = getTopSellers(10);
@@ -11,10 +12,6 @@ export function RankingVendedores() {
   const getInitials = (name: string) => {
     const parts = name.split(' ');
     return parts.length >= 2 ? `${parts[0][0]}${parts[1][0]}` : name.substring(0, 2);
-  };
-  
-  const formatCurrency = (value: number) => {
-    return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
   
   const getMedalIcon = (position: number) => {

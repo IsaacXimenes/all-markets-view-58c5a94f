@@ -12,9 +12,7 @@ import { getDespesas, addDespesa, deleteDespesa, exportToCSV } from '@/utils/fin
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-};
+import { formatCurrency } from '@/utils/formatUtils';
 
 export default function FinanceiroDespesasVariaveis() {
   const [despesas, setDespesas] = useState(getDespesas());

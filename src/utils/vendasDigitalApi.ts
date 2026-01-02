@@ -308,12 +308,8 @@ export const finalizarVendaDigital = (
 export const getColaboradoresDigital = () => [...colaboradoresDigital];
 export const getColaboradoresFinalizador = () => [...colaboradoresFinalizador];
 
-export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value);
-};
+// formatCurrency removido - usar import { formatCurrency } from '@/utils/formatUtils'
+export { formatCurrency } from '@/utils/formatUtils';
 
 export const exportVendasDigitaisToCSV = (data: VendaDigital[], filename: string) => {
   if (data.length === 0) return;

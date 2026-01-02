@@ -7,41 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart3, Download, FileSpreadsheet, Store, Wrench, MessageSquareWarning } from 'lucide-react';
 import { getLojas } from '@/utils/cadastrosApi';
-import { getVendas, formatCurrency } from '@/utils/vendasApi';
+import { getVendas } from '@/utils/vendasApi';
+import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 import { getOrdensServico } from '@/utils/assistenciaApi';
 import { getFeedbacks, getTodosColaboradoresParaFeedback } from '@/utils/feedbackApi';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
-const exportToCSV = (data: Record<string, any>[], filename: string) => {
-  if (data.length === 0) {
-    toast.error('Nenhum dado para exportar');
-    return;
-  }
-  
-  const headers = Object.keys(data[0]).join(',');
-  const rows = data.map(item => 
-    Object.values(item).map(value => 
-      typeof value === 'string' && (value.includes(',') || value.includes('"')) 
-        ? `"${value.replace(/"/g, '""')}"` 
-        : value
-    ).join(',')
-  );
-  
-  const csv = [headers, ...rows].join('\n');
-  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  const url = URL.createObjectURL(blob);
-  
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  
-  toast.success(`Relatório ${filename} gerado com sucesso!`);
-};
 
 export default function Relatorios() {
   const lojas = getLojas();

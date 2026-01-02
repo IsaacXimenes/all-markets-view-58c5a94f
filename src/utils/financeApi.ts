@@ -327,6 +327,60 @@ export const conferirPagamento = (id: string): boolean => {
   return true;
 };
 
+// Interface para receber dados de venda para criar pagamento
+export interface VendaParaPagamento {
+  id: string;
+  clienteNome: string;
+  valorTotal: number;
+  lojaVenda: string;
+  pagamentos: Array<{
+    meio: 'Pix' | 'Dinheiro' | 'Cartão Crédito' | 'Cartão Débito' | 'Transferência' | 'Boleto' | 'Outro';
+    valor: number;
+    contaId?: string;
+  }>;
+}
+
+// Função para criar pagamentos automaticamente a partir de uma venda finalizada
+export const criarPagamentosDeVenda = (venda: VendaParaPagamento): Pagamento[] => {
+  const year = new Date().getFullYear();
+  const createdPagamentos: Pagamento[] = [];
+  
+  venda.pagamentos.forEach((pag, index) => {
+    const nextNum = pagamentos.filter(p => p.id.includes(String(year))).length + 1 + index;
+    const newId = `PAG-${year}-${String(nextNum).padStart(4, '0')}`;
+    
+    // Encontrar conta padrão para o meio de pagamento
+    let contaNome = pag.contaId ? contas.find(c => c.id === pag.contaId)?.nome : null;
+    if (!contaNome) {
+      // Mapear meio de pagamento para conta padrão
+      if (pag.meio === 'Pix') {
+        contaNome = contas.find(c => c.tipo === 'Pix' && c.lojaVinculada === venda.lojaVenda)?.nome || 'Conta Digital Administrativo';
+      } else if (pag.meio === 'Dinheiro') {
+        contaNome = contas.find(c => c.tipo === 'Caixa' && c.lojaVinculada === venda.lojaVenda)?.nome || 'Caixa Loja Centro';
+      } else {
+        contaNome = 'Conta Bancária Principal';
+      }
+    }
+    
+    const novoPagamento: Pagamento = {
+      id: newId,
+      data: new Date().toISOString().split('T')[0],
+      descricao: `Venda #${venda.id} - ${venda.clienteNome}`,
+      valor: pag.valor,
+      meioPagamento: pag.meio,
+      conta: contaNome,
+      loja: venda.lojaVenda,
+      status: 'Pendente'
+    };
+    
+    pagamentos.push(novoPagamento);
+    createdPagamentos.push(novoPagamento);
+  });
+  
+  console.log(`[FINANCE] Criados ${createdPagamentos.length} pagamentos para venda ${venda.id}`);
+  return createdPagamentos;
+};
+
 export const getDespesas = (): Despesa[] => {
   return [...despesas];
 };

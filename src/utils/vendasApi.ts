@@ -3,6 +3,7 @@ import { generateProductId, registerProductId } from './idManager';
 import { addProdutoPendente } from './osApi';
 import { getProdutos, updateProduto, addMovimentacao } from './estoqueApi';
 import { subtrairEstoqueAcessorio, VendaAcessorio } from './acessoriosApi';
+import { criarPagamentosDeVenda } from './financeApi';
 export interface ItemVenda {
   id: string;
   produtoId: string; // PROD-XXXX - ID único e persistente do produto
@@ -515,6 +516,26 @@ export const addVenda = (venda: Omit<Venda, 'id' | 'numero'>): Venda => {
     }
   });
   
+  // ========== INTEGRAÇÃO: Criar Pagamentos no Financeiro ==========
+  if (venda.pagamentos && venda.pagamentos.length > 0) {
+    try {
+      criarPagamentosDeVenda({
+        id: newId,
+        clienteNome: venda.clienteNome,
+        valorTotal: venda.total,
+        lojaVenda: venda.lojaVenda,
+        pagamentos: venda.pagamentos.map(p => ({
+          meio: p.meioPagamento as any,
+          valor: p.valor,
+          contaId: p.contaDestino
+        }))
+      });
+      console.log(`[VENDAS] Pagamentos registrados no financeiro para venda ${newId}`);
+    } catch (error) {
+      console.error(`[VENDAS] Erro ao registrar pagamentos no financeiro:`, error);
+    }
+  }
+  
   return newVenda;
 };
 
@@ -568,12 +589,8 @@ export const getNextVendaNumber = (): { id: string; numero: number } => {
   };
 };
 
-export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value);
-};
+// formatCurrency removido - usar import { formatCurrency } from '@/utils/formatUtils'
+export { formatCurrency } from '@/utils/formatUtils';
 
 export const exportVendasToCSV = (data: Venda[], filename: string) => {
   if (data.length === 0) return;

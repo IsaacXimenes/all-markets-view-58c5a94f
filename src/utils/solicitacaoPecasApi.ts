@@ -567,9 +567,5 @@ export const calcularSLASolicitacao = (dataSolicitacao: string): number => {
   return Math.floor(diffTime / (1000 * 60 * 60 * 24));
 };
 
-export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value);
-};
+// formatCurrency removido - usar import { formatCurrency } from '@/utils/formatUtils'
+export { formatCurrency } from '@/utils/formatUtils';

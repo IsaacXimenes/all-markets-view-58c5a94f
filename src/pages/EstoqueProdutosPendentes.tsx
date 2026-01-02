@@ -27,9 +27,7 @@ import { getLojas } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
 import { formatIMEI } from '@/utils/imeiMask';
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-};
+import { formatCurrency } from '@/utils/formatUtils';
 
 export default function EstoqueProdutosPendentes() {
   const navigate = useNavigate();

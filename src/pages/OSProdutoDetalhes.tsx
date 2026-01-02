@@ -49,9 +49,7 @@ import {
 } from '@/utils/osApi';
 import { getColaboradores, getCargos, getFornecedores } from '@/utils/cadastrosApi';
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-};
+import { formatCurrency } from '@/utils/formatUtils';
 
 const formatDateTime = (dateString: string) => {
   const date = new Date(dateString);
