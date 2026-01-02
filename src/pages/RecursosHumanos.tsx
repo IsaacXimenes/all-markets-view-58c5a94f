@@ -1,6 +1,6 @@
 import React from 'react';
 import { RHLayout } from '@/components/layout/RHLayout';
-import { mockStores, mockEmployees, getBirthdaysThisWeek, getStoreById } from '@/utils/rhApi';
+import { getLojas, getColaboradores, getAniversariantesDaSemana, getLojaById, getCargoNome, getContagemColaboradoresPorLoja } from '@/utils/cadastrosApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -11,24 +11,28 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 export default function RecursosHumanos() {
   const navigate = useNavigate();
-  const birthdays = getBirthdaysThisWeek();
+  const lojas = getLojas().filter(l => l.status === 'Ativo');
+  const colaboradores = getColaboradores().filter(c => c.status === 'Ativo');
+  const birthdays = getAniversariantesDaSemana();
+  const contagemPorLoja = getContagemColaboradoresPorLoja();
   
-  const getDaysUntilBirthday = (birthday: Date) => {
+  const getDaysUntilBirthday = (dataNascimento: string) => {
     const today = new Date();
-    const thisYearBirthday = new Date(birthday);
-    thisYearBirthday.setFullYear(today.getFullYear());
+    const birthday = new Date(dataNascimento);
+    birthday.setFullYear(today.getFullYear());
     
-    if (thisYearBirthday < today) {
-      thisYearBirthday.setFullYear(today.getFullYear() + 1);
+    if (birthday < today) {
+      birthday.setFullYear(today.getFullYear() + 1);
     }
     
-    const diffTime = thisYearBirthday.getTime() - today.getTime();
+    const diffTime = birthday.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
   };
   
-  const getAge = (birthday: Date) => {
+  const getAge = (dataNascimento: string) => {
     const today = new Date();
+    const birthday = new Date(dataNascimento);
     let age = today.getFullYear() - birthday.getFullYear();
     const m = today.getMonth() - birthday.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < birthday.getDate())) {
@@ -55,24 +59,24 @@ export default function RecursosHumanos() {
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
-              {mockStores.map((store) => (
-                <AccordionItem key={store.id} value={store.id}>
+              {lojas.map((loja) => (
+                <AccordionItem key={loja.id} value={loja.id}>
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center justify-between w-full pr-4">
                       <div className="flex items-center gap-3">
                         <Building2 className="h-5 w-5 text-primary" />
                         <div className="text-left">
-                          <p className="font-semibold">{store.name}</p>
+                          <p className="font-semibold">{loja.nome}</p>
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
-                            {store.address}, {store.city}
+                            {loja.endereco}, {loja.cidade}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <p className="text-sm text-muted-foreground">Funcionários</p>
-                          <p className="font-semibold">{store.totalEmployees}</p>
+                          <p className="font-semibold">{contagemPorLoja[loja.id] || 0}</p>
                         </div>
                       </div>
                     </div>
@@ -80,7 +84,7 @@ export default function RecursosHumanos() {
                   <AccordionContent>
                     <div className="pt-4 pl-8">
                       <Button 
-                        onClick={() => navigate(`/rh/loja/${store.id}`)}
+                        onClick={() => navigate(`/rh/loja/${loja.id}`)}
                         className="gap-2"
                       >
                         Ver Quadro Completo
@@ -111,22 +115,22 @@ export default function RecursosHumanos() {
                     <TableHead>Nome</TableHead>
                     <TableHead>CPF</TableHead>
                     <TableHead>Cargo</TableHead>
-                    <TableHead>Produto Mais Vendido</TableHead>
-                    <TableHead className="text-right">Comissão do Mês</TableHead>
+                    <TableHead>Admissão</TableHead>
+                    <TableHead className="text-right">Salário</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockEmployees.map((employee) => {
-                    const store = getStoreById(employee.storeId);
+                  {colaboradores.map((colaborador) => {
+                    const loja = getLojaById(colaborador.loja);
                     return (
-                      <TableRow key={employee.id} className="cursor-pointer hover:bg-muted/50">
-                        <TableCell className="font-medium">{store?.name.replace('Thiago Imports - ', '')}</TableCell>
-                        <TableCell>{employee.name}</TableCell>
-                        <TableCell className="text-muted-foreground">{employee.cpf}</TableCell>
-                        <TableCell>{employee.position}</TableCell>
-                        <TableCell>{employee.topProduct}</TableCell>
-                        <TableCell className="text-right font-medium text-success">
-                          R$ {employee.commission.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <TableRow key={colaborador.id} className="cursor-pointer hover:bg-muted/50">
+                        <TableCell className="font-medium">{loja?.nome || '-'}</TableCell>
+                        <TableCell>{colaborador.nome}</TableCell>
+                        <TableCell className="text-muted-foreground">{colaborador.cpf}</TableCell>
+                        <TableCell>{getCargoNome(colaborador.cargo)}</TableCell>
+                        <TableCell>{new Date(colaborador.dataAdmissao).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          {colaborador.salario ? `R$ ${colaborador.salario.toLocaleString('pt-BR')}` : '-'}
                         </TableCell>
                       </TableRow>
                     );
@@ -148,22 +152,22 @@ export default function RecursosHumanos() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {birthdays.map((employee) => {
-                  const store = getStoreById(employee.storeId);
-                  const daysUntil = getDaysUntilBirthday(employee.birthday);
-                  const age = getAge(employee.birthday);
+                {birthdays.map((colaborador) => {
+                  const loja = getLojaById(colaborador.loja);
+                  const daysUntil = getDaysUntilBirthday(colaborador.dataNascimento!);
+                  const age = getAge(colaborador.dataNascimento!);
                   
                   return (
-                    <Card key={employee.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                    <Card key={colaborador.id} className="overflow-hidden hover:shadow-lg transition-shadow">
                       <CardContent className="p-6 text-center">
                         <Avatar className="h-20 w-20 mx-auto mb-4">
                           <AvatarFallback className="text-2xl bg-primary text-primary-foreground">
-                            {getInitials(employee.name)}
+                            {getInitials(colaborador.nome)}
                           </AvatarFallback>
                         </Avatar>
-                        <h3 className="font-bold text-lg mb-1">{employee.name}</h3>
-                        <p className="text-sm text-muted-foreground mb-1">{employee.position}</p>
-                        <p className="text-xs text-muted-foreground mb-3">{store?.name.replace('Thiago Imports - ', '')}</p>
+                        <h3 className="font-bold text-lg mb-1">{colaborador.nome}</h3>
+                        <p className="text-sm text-muted-foreground mb-1">{getCargoNome(colaborador.cargo)}</p>
+                        <p className="text-xs text-muted-foreground mb-3">{loja?.nome || '-'}</p>
                         <div className="bg-primary/10 rounded-lg p-3">
                           <p className="text-2xl font-bold text-primary">{age + 1} anos</p>
                           <p className="text-sm text-muted-foreground mt-1">

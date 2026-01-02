@@ -1,5 +1,7 @@
 // API de Feedback para Recursos Humanos - Mock Data
 
+import { getColaboradores, getCargoNome, getLojaById, Colaborador } from '@/utils/cadastrosApi';
+
 export interface FeedbackRegistro {
   id: string;
   colaboradorId: string;
@@ -73,19 +75,14 @@ let feedbacks: FeedbackRegistro[] = [
 // Contador para IDs
 let feedbackIdCounter = 6;
 
-// Colaboradores mockados para testes (10 colaboradores, alguns com feedback)
-export const colaboradoresParaFeedback: ColaboradorFeedback[] = [
-  { id: 'COL-001', nome: 'Lucas Mendes', cargo: 'Gerente Geral', loja: 'LOJA-001', cpf: '111.222.333-44' },
-  { id: 'COL-002', nome: 'Fernanda Lima', cargo: 'Gerente Financeiro', loja: 'LOJA-002', cpf: '222.333.444-55' },
-  { id: 'COL-003', nome: 'Roberto Alves', cargo: 'Gerente de Estoque', loja: 'LOJA-003', cpf: '333.444.555-66' },
-  { id: 'COL-004', nome: 'Juliana Costa', cargo: 'Vendedor', loja: 'LOJA-004', cpf: '444.555.666-77' },
-  { id: 'COL-005', nome: 'Marcos Silva', cargo: 'Técnico Assistência', loja: 'LOJA-005', cpf: '555.666.777-88' },
-  { id: 'COL-006', nome: 'Patricia Souza', cargo: 'Auxiliar Administrativo', loja: 'LOJA-001', cpf: '666.777.888-99' },
-  { id: 'COL-007', nome: 'Carlos Eduardo', cargo: 'Vendedor', loja: 'LOJA-002', cpf: '777.888.999-00' },
-  { id: 'COL-008', nome: 'Amanda Santos', cargo: 'Vendedor', loja: 'LOJA-003', cpf: '888.999.000-11' },
-  { id: 'COL-009', nome: 'Ricardo Oliveira', cargo: 'Técnico Assistência', loja: 'LOJA-004', cpf: '999.000.111-22' },
-  { id: 'COL-010', nome: 'Bianca Ferreira', cargo: 'Auxiliar Administrativo', loja: 'LOJA-005', cpf: '000.111.222-33' },
-];
+// Converter Colaborador para ColaboradorFeedback
+const toColaboradorFeedback = (col: Colaborador): ColaboradorFeedback => ({
+  id: col.id,
+  nome: col.nome,
+  cargo: getCargoNome(col.cargo),
+  loja: getLojaById(col.loja)?.nome || col.loja,
+  cpf: col.cpf
+});
 
 // API Functions
 export const getFeedbacks = () => [...feedbacks].sort((a, b) => b.dataHora.getTime() - a.dataHora.getTime());
@@ -96,12 +93,16 @@ export const getFeedbacksByColaborador = (colaboradorId: string) =>
   feedbacks.filter(f => f.colaboradorId === colaboradorId)
     .sort((a, b) => b.dataHora.getTime() - a.dataHora.getTime());
 
-export const getColaboradoresComFeedback = () => {
+export const getColaboradoresComFeedback = (): ColaboradorFeedback[] => {
   const idsComFeedback = new Set(feedbacks.map(f => f.colaboradorId));
-  return colaboradoresParaFeedback.filter(c => idsComFeedback.has(c.id));
+  const colaboradores = getColaboradores().filter(c => idsComFeedback.has(c.id));
+  return colaboradores.map(toColaboradorFeedback);
 };
 
-export const getTodosColaboradoresParaFeedback = () => [...colaboradoresParaFeedback];
+export const getTodosColaboradoresParaFeedback = (): ColaboradorFeedback[] => {
+  const colaboradores = getColaboradores().filter(c => c.status === 'Ativo');
+  return colaboradores.map(toColaboradorFeedback);
+};
 
 export const getUltimaNotificacao = (colaboradorId: string): Date | null => {
   const feedbacksColaborador = feedbacks.filter(f => f.colaboradorId === colaboradorId);

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { getColaboradores, addColaborador, updateColaborador, deleteColaborador, getCargos, getModelosPagamento, Colaborador, getCargoById, getModeloPagamentoById } from '@/utils/cadastrosApi';
+import { getColaboradores, addColaborador, updateColaborador, deleteColaborador, getCargos, getModelosPagamento, Colaborador, getCargoById, getModeloPagamentoById, getLojas, getLojaById } from '@/utils/cadastrosApi';
 import { exportToCSV } from '@/utils/formatUtils';
 import { Plus, Pencil, Trash2, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -16,17 +16,22 @@ export default function CadastrosColaboradores() {
   const [colaboradores, setColaboradores] = useState(getColaboradores());
   const [cargos] = useState(getCargos());
   const [modelosPagamento] = useState(getModelosPagamento());
+  const [lojas] = useState(getLojas().filter(l => l.status === 'Ativo'));
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingColaborador, setEditingColaborador] = useState<Colaborador | null>(null);
   const [form, setForm] = useState({
     cpf: '',
     nome: '',
     cargo: '',
+    loja: '',
     dataAdmissao: '',
     dataInativacao: '',
+    dataNascimento: '',
     email: '',
     telefone: '',
-    modeloPagamento: ''
+    modeloPagamento: '',
+    salario: '',
+    status: 'Ativo' as 'Ativo' | 'Inativo'
   });
 
   const resetForm = () => {
@@ -34,11 +39,15 @@ export default function CadastrosColaboradores() {
       cpf: '',
       nome: '',
       cargo: '',
+      loja: '',
       dataAdmissao: '',
       dataInativacao: '',
+      dataNascimento: '',
       email: '',
       telefone: '',
-      modeloPagamento: ''
+      modeloPagamento: '',
+      salario: '',
+      status: 'Ativo'
     });
     setEditingColaborador(null);
   };
@@ -50,11 +59,15 @@ export default function CadastrosColaboradores() {
         cpf: colaborador.cpf,
         nome: colaborador.nome,
         cargo: colaborador.cargo,
+        loja: colaborador.loja,
         dataAdmissao: colaborador.dataAdmissao,
         dataInativacao: colaborador.dataInativacao || '',
+        dataNascimento: colaborador.dataNascimento || '',
         email: colaborador.email,
         telefone: colaborador.telefone,
-        modeloPagamento: colaborador.modeloPagamento
+        modeloPagamento: colaborador.modeloPagamento,
+        salario: colaborador.salario?.toString() || '',
+        status: colaborador.status
       });
     } else {
       resetForm();
@@ -63,16 +76,21 @@ export default function CadastrosColaboradores() {
   };
 
   const handleSave = () => {
-    if (!form.nome || !form.cpf || !form.cargo) {
-      toast({ title: 'Erro', description: 'Nome, CPF e Cargo são obrigatórios', variant: 'destructive' });
+    if (!form.nome || !form.cpf || !form.cargo || !form.loja) {
+      toast({ title: 'Erro', description: 'Nome, CPF, Cargo e Loja são obrigatórios', variant: 'destructive' });
       return;
     }
 
+    const colaboradorData = {
+      ...form,
+      salario: form.salario ? parseFloat(form.salario) : undefined
+    };
+
     if (editingColaborador) {
-      updateColaborador(editingColaborador.id, form);
+      updateColaborador(editingColaborador.id, colaboradorData);
       toast({ title: 'Sucesso', description: 'Colaborador atualizado com sucesso' });
     } else {
-      addColaborador(form);
+      addColaborador(colaboradorData);
       toast({ title: 'Sucesso', description: 'Colaborador cadastrado com sucesso' });
     }
 
@@ -114,10 +132,11 @@ export default function CadastrosColaboradores() {
                 <TableHead>ID</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>CPF</TableHead>
+                <TableHead>Loja</TableHead>
                 <TableHead>Cargo</TableHead>
                 <TableHead>Admissão</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Modelo Pgto</TableHead>
+                <TableHead>Salário</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -127,10 +146,15 @@ export default function CadastrosColaboradores() {
                   <TableCell className="font-mono text-xs">{col.id}</TableCell>
                   <TableCell className="font-medium">{col.nome}</TableCell>
                   <TableCell className="text-xs">{col.cpf}</TableCell>
+                  <TableCell>{getLojaById(col.loja)?.nome || '-'}</TableCell>
                   <TableCell>{getCargoById(col.cargo)?.funcao || '-'}</TableCell>
                   <TableCell>{new Date(col.dataAdmissao).toLocaleDateString('pt-BR')}</TableCell>
-                  <TableCell className="text-xs">{col.email}</TableCell>
-                  <TableCell>{getModeloPagamentoById(col.modeloPagamento)?.modelo || '-'}</TableCell>
+                  <TableCell>{col.salario ? `R$ ${col.salario.toLocaleString('pt-BR')}` : '-'}</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded-full text-xs ${col.status === 'Ativo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {col.status}
+                    </span>
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(col)}>
@@ -163,6 +187,17 @@ export default function CadastrosColaboradores() {
               <Input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} />
             </div>
             <div className="space-y-2">
+              <Label>Loja *</Label>
+              <Select value={form.loja} onValueChange={v => setForm({ ...form, loja: v })}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  {lojas.map(loja => (
+                    <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>Cargo *</Label>
               <Select value={form.cargo} onValueChange={v => setForm({ ...form, cargo: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -178,8 +213,8 @@ export default function CadastrosColaboradores() {
               <Input type="date" value={form.dataAdmissao} onChange={e => setForm({ ...form, dataAdmissao: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Data de Inativação</Label>
-              <Input type="date" value={form.dataInativacao} onChange={e => setForm({ ...form, dataInativacao: e.target.value })} />
+              <Label>Data de Nascimento</Label>
+              <Input type="date" value={form.dataNascimento} onChange={e => setForm({ ...form, dataNascimento: e.target.value })} />
             </div>
             <div className="space-y-2">
               <Label>E-mail</Label>
@@ -190,6 +225,10 @@ export default function CadastrosColaboradores() {
               <Input value={form.telefone} onChange={e => setForm({ ...form, telefone: e.target.value })} />
             </div>
             <div className="space-y-2">
+              <Label>Salário Base (R$)</Label>
+              <Input type="number" value={form.salario} onChange={e => setForm({ ...form, salario: e.target.value })} placeholder="2500.00" />
+            </div>
+            <div className="space-y-2">
               <Label>Modelo de Pagamento</Label>
               <Select value={form.modeloPagamento} onValueChange={v => setForm({ ...form, modeloPagamento: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -197,6 +236,16 @@ export default function CadastrosColaboradores() {
                   {modelosPagamento.map(mp => (
                     <SelectItem key={mp.id} value={mp.id}>{mp.modelo}</SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={v => setForm({ ...form, status: v as 'Ativo' | 'Inativo' })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Ativo">Ativo</SelectItem>
+                  <SelectItem value="Inativo">Inativo</SelectItem>
                 </SelectContent>
               </Select>
             </div>

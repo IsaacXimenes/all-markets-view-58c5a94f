@@ -45,11 +45,16 @@ export interface Colaborador {
   cpf: string;
   nome: string;
   cargo: string;
+  loja: string;
   dataAdmissao: string;
   dataInativacao?: string;
+  dataNascimento?: string;
   email: string;
   telefone: string;
   modeloPagamento: string;
+  salario?: number;
+  foto?: string;
+  status: 'Ativo' | 'Inativo';
 }
 
 export interface Fornecedor {
@@ -142,12 +147,28 @@ let clientes: Cliente[] = [
 ];
 
 let colaboradores: Colaborador[] = [
-  { id: 'COL-001', cpf: '111.222.333-44', nome: 'Lucas Mendes', cargo: 'CARGO-001', dataAdmissao: '2020-01-15', email: 'lucas@thiagoimports.com', telefone: '(11) 98888-1111', modeloPagamento: 'MP-002' },
-  { id: 'COL-002', cpf: '222.333.444-55', nome: 'Fernanda Lima', cargo: 'CARGO-002', dataAdmissao: '2019-06-20', email: 'fernanda@thiagoimports.com', telefone: '(11) 98888-2222', modeloPagamento: 'MP-001' },
-  { id: 'COL-003', cpf: '333.444.555-66', nome: 'Roberto Alves', cargo: 'CARGO-003', dataAdmissao: '2021-03-10', email: 'roberto@thiagoimports.com', telefone: '(11) 98888-3333', modeloPagamento: 'MP-002' },
-  { id: 'COL-004', cpf: '444.555.666-77', nome: 'Juliana Costa', cargo: 'CARGO-004', dataAdmissao: '2022-09-05', email: 'juliana@thiagoimports.com', telefone: '(11) 98888-4444', modeloPagamento: 'MP-003' },
-  { id: 'COL-005', cpf: '555.666.777-88', nome: 'Marcos Silva', cargo: 'CARGO-005', dataAdmissao: '2018-11-25', email: 'marcos@thiagoimports.com', telefone: '(11) 98888-5555', modeloPagamento: 'MP-001' },
-  { id: 'COL-006', cpf: '666.777.888-99', nome: 'Patricia Souza', cargo: 'CARGO-006', dataAdmissao: '2023-02-14', email: 'patricia@thiagoimports.com', telefone: '(11) 98888-6666', modeloPagamento: 'MP-002' },
+  { id: 'COL-001', cpf: '111.222.333-44', nome: 'Lucas Mendes', cargo: 'CARGO-001', loja: 'LOJA-001', dataAdmissao: '2020-01-15', dataNascimento: '1988-01-10', email: 'lucas@thiagoimports.com', telefone: '(11) 98888-1111', modeloPagamento: 'MP-002', salario: 5000, status: 'Ativo' },
+  { id: 'COL-002', cpf: '222.333.444-55', nome: 'Fernanda Lima', cargo: 'CARGO-002', loja: 'LOJA-002', dataAdmissao: '2019-06-20', dataNascimento: '1990-06-15', email: 'fernanda@thiagoimports.com', telefone: '(11) 98888-2222', modeloPagamento: 'MP-001', salario: 4500, status: 'Ativo' },
+  { id: 'COL-003', cpf: '333.444.555-66', nome: 'Roberto Alves', cargo: 'CARGO-003', loja: 'LOJA-003', dataAdmissao: '2021-03-10', dataNascimento: '1985-03-22', email: 'roberto@thiagoimports.com', telefone: '(11) 98888-3333', modeloPagamento: 'MP-002', salario: 4200, status: 'Ativo' },
+  { id: 'COL-004', cpf: '444.555.666-77', nome: 'Juliana Costa', cargo: 'CARGO-004', loja: 'LOJA-004', dataAdmissao: '2022-09-05', dataNascimento: '1995-09-30', email: 'juliana@thiagoimports.com', telefone: '(11) 98888-4444', modeloPagamento: 'MP-003', salario: 2500, status: 'Ativo' },
+  { id: 'COL-005', cpf: '555.666.777-88', nome: 'Marcos Silva', cargo: 'CARGO-005', loja: 'LOJA-005', dataAdmissao: '2018-11-25', dataNascimento: '1992-11-18', email: 'marcos@thiagoimports.com', telefone: '(11) 98888-5555', modeloPagamento: 'MP-001', salario: 3200, status: 'Ativo' },
+  { id: 'COL-006', cpf: '666.777.888-99', nome: 'Patricia Souza', cargo: 'CARGO-006', loja: 'LOJA-001', dataAdmissao: '2023-02-14', dataNascimento: '1998-02-05', email: 'patricia@thiagoimports.com', telefone: '(11) 98888-6666', modeloPagamento: 'MP-002', salario: 2200, status: 'Ativo' },
+  { id: 'COL-007', cpf: '777.888.999-00', nome: 'Carlos Eduardo', cargo: 'CARGO-004', loja: 'LOJA-002', dataAdmissao: '2021-07-10', dataNascimento: '1993-07-12', email: 'carlos@thiagoimports.com', telefone: '(11) 98888-7777', modeloPagamento: 'MP-003', salario: 2500, status: 'Ativo' },
+  { id: 'COL-008', cpf: '888.999.000-11', nome: 'Amanda Santos', cargo: 'CARGO-004', loja: 'LOJA-003', dataAdmissao: '2022-01-20', dataNascimento: '1996-01-25', email: 'amanda@thiagoimports.com', telefone: '(11) 98888-8888', modeloPagamento: 'MP-003', salario: 2500, status: 'Ativo' },
+  { id: 'COL-009', cpf: '999.000.111-22', nome: 'Ricardo Oliveira', cargo: 'CARGO-005', loja: 'LOJA-004', dataAdmissao: '2020-05-15', dataNascimento: '1987-05-08', email: 'ricardo@thiagoimports.com', telefone: '(11) 98888-9999', modeloPagamento: 'MP-002', salario: 3200, status: 'Ativo' },
+  { id: 'COL-010', cpf: '000.111.222-33', nome: 'Bianca Ferreira', cargo: 'CARGO-006', loja: 'LOJA-005', dataAdmissao: '2023-04-01', dataNascimento: '1999-04-20', email: 'bianca@thiagoimports.com', telefone: '(11) 98889-0000', modeloPagamento: 'MP-001', salario: 2200, status: 'Ativo' },
+  { id: 'COL-011', cpf: '111.000.222-33', nome: 'Diego Martins', cargo: 'CARGO-008', loja: 'LOJA-006', dataAdmissao: '2019-09-10', dataNascimento: '1991-12-03', email: 'diego@thiagoimports.com', telefone: '(11) 98889-1111', modeloPagamento: 'MP-002', salario: 3800, status: 'Ativo' },
+  { id: 'COL-012', cpf: '222.111.333-44', nome: 'Camila Rocha', cargo: 'CARGO-004', loja: 'LOJA-006', dataAdmissao: '2022-06-15', dataNascimento: '1994-08-14', email: 'camila@thiagoimports.com', telefone: '(11) 98889-2222', modeloPagamento: 'MP-003', salario: 2500, status: 'Ativo' },
+  { id: 'COL-013', cpf: '333.222.444-55', nome: 'Felipe Nunes', cargo: 'CARGO-004', loja: 'LOJA-007', dataAdmissao: '2021-11-08', dataNascimento: '1997-10-28', email: 'felipe@thiagoimports.com', telefone: '(11) 98889-3333', modeloPagamento: 'MP-003', salario: 2500, status: 'Ativo' },
+  { id: 'COL-014', cpf: '444.333.555-66', nome: 'Larissa Gomes', cargo: 'CARGO-008', loja: 'LOJA-008', dataAdmissao: '2020-03-20', dataNascimento: '1989-04-11', email: 'larissa@thiagoimports.com', telefone: '(11) 98889-4444', modeloPagamento: 'MP-002', salario: 3800, status: 'Ativo' },
+  { id: 'COL-015', cpf: '555.444.666-77', nome: 'Bruno Pereira', cargo: 'CARGO-004', loja: 'LOJA-008', dataAdmissao: '2023-01-10', dataNascimento: '1996-06-22', email: 'bruno@thiagoimports.com', telefone: '(11) 98889-5555', modeloPagamento: 'MP-003', salario: 2500, status: 'Ativo' },
+  { id: 'COL-016', cpf: '666.555.777-88', nome: 'Natália Castro', cargo: 'CARGO-004', loja: 'LOJA-009', dataAdmissao: '2022-04-05', dataNascimento: '1995-03-18', email: 'natalia@thiagoimports.com', telefone: '(11) 98889-6666', modeloPagamento: 'MP-003', salario: 2500, status: 'Ativo' },
+  { id: 'COL-017', cpf: '777.666.888-99', nome: 'Thiago Ribeiro', cargo: 'CARGO-005', loja: 'LOJA-009', dataAdmissao: '2021-08-12', dataNascimento: '1990-09-05', email: 'thiago.r@thiagoimports.com', telefone: '(11) 98889-7777', modeloPagamento: 'MP-002', salario: 3200, status: 'Ativo' },
+  { id: 'COL-018', cpf: '888.777.999-00', nome: 'Gabriela Monteiro', cargo: 'CARGO-008', loja: 'LOJA-010', dataAdmissao: '2019-12-01', dataNascimento: '1988-11-30', email: 'gabriela@thiagoimports.com', telefone: '(11) 98889-8888', modeloPagamento: 'MP-002', salario: 3800, status: 'Ativo' },
+  { id: 'COL-019', cpf: '999.888.000-11', nome: 'Vinícius Barbosa', cargo: 'CARGO-004', loja: 'LOJA-010', dataAdmissao: '2022-10-20', dataNascimento: '1997-02-14', email: 'vinicius@thiagoimports.com', telefone: '(11) 98889-9999', modeloPagamento: 'MP-003', salario: 2500, status: 'Ativo' },
+  { id: 'COL-020', cpf: '000.999.111-22', nome: 'Carla Mendonça', cargo: 'CARGO-004', loja: 'LOJA-011', dataAdmissao: '2021-05-25', dataNascimento: '1994-07-08', email: 'carla@thiagoimports.com', telefone: '(11) 98880-0000', modeloPagamento: 'MP-003', salario: 2500, status: 'Ativo' },
+  { id: 'COL-021', cpf: '111.999.222-33', nome: 'Rafael Cardoso', cargo: 'CARGO-005', loja: 'LOJA-011', dataAdmissao: '2020-08-10', dataNascimento: '1986-12-20', email: 'rafael@thiagoimports.com', telefone: '(11) 98880-1111', modeloPagamento: 'MP-002', salario: 3200, status: 'Ativo' },
+  { id: 'COL-022', cpf: '222.999.333-44', nome: 'Beatriz Almeida', cargo: 'CARGO-007', loja: 'LOJA-001', dataAdmissao: '2022-02-28', dataNascimento: '1993-05-15', email: 'beatriz@thiagoimports.com', telefone: '(11) 98880-2222', modeloPagamento: 'MP-001', salario: 3500, status: 'Ativo' },
 ];
 
 let fornecedores: Fornecedor[] = [
@@ -338,6 +359,43 @@ export const getColaboradoresByPermissao = (permissao: string) => {
     return cargo?.permissoes.includes(permissao);
   });
 };
+export const getColaboradoresByLoja = (lojaId: string) => 
+  colaboradores.filter(c => c.loja === lojaId && c.status === 'Ativo');
+
+export const getAniversariantesDaSemana = () => {
+  const today = new Date();
+  const nextWeek = new Date(today);
+  nextWeek.setDate(today.getDate() + 7);
+  
+  return colaboradores.filter(col => {
+    if (!col.dataNascimento || col.status !== 'Ativo') return false;
+    const birthday = new Date(col.dataNascimento);
+    birthday.setFullYear(today.getFullYear());
+    return birthday >= today && birthday <= nextWeek;
+  }).sort((a, b) => {
+    const dateA = new Date(a.dataNascimento!);
+    const dateB = new Date(b.dataNascimento!);
+    dateA.setFullYear(today.getFullYear());
+    dateB.setFullYear(today.getFullYear());
+    return dateA.getTime() - dateB.getTime();
+  });
+};
+
+export const getContagemColaboradoresPorLoja = () => {
+  const contagem: Record<string, number> = {};
+  colaboradores.forEach(col => {
+    if (col.status === 'Ativo' && col.loja) {
+      contagem[col.loja] = (contagem[col.loja] || 0) + 1;
+    }
+  });
+  return contagem;
+};
+
+export const getCargoNome = (cargoId: string) => {
+  const cargo = cargos.find(c => c.id === cargoId);
+  return cargo?.funcao || cargoId;
+};
+
 export const addColaborador = (colaborador: Omit<Colaborador, 'id'>) => {
   const newId = `COL-${String(colaboradores.length + 1).padStart(3, '0')}`;
   const newColaborador = { ...colaborador, id: newId };
