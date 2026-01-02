@@ -1,6 +1,40 @@
 // Assistência API - Mock Data
 
 import { getClientes, getLojas, getColaboradoresByPermissao, getFornecedores, addCliente, Cliente } from './cadastrosApi';
+import { getPecaById, updatePeca } from './pecasApi';
+
+// Sistema centralizado de IDs para OS
+let globalOSIdCounter = 100;
+const registeredOSIds = new Set<string>();
+
+const initializeOSIds = (existingIds: string[]) => {
+  existingIds.forEach(id => registeredOSIds.add(id));
+  existingIds.forEach(id => {
+    const match = id.match(/OS-\d{4}-(\d+)/);
+    if (match) {
+      const num = parseInt(match[1]);
+      if (num >= globalOSIdCounter) {
+        globalOSIdCounter = num + 1;
+      }
+    }
+  });
+};
+
+const generateOSId = (): string => {
+  const year = new Date().getFullYear();
+  let newId: string;
+  do {
+    newId = `OS-${year}-${String(globalOSIdCounter).padStart(4, '0')}`;
+    globalOSIdCounter++;
+  } while (registeredOSIds.has(newId));
+  
+  registeredOSIds.add(newId);
+  return newId;
+};
+
+export const isOSIdRegistered = (id: string): boolean => {
+  return registeredOSIds.has(id);
+};
 
 export interface PecaServico {
   id: string;
@@ -246,6 +280,9 @@ let ordensServico: OrdemServico[] = [
   }
 ];
 
+// Inicializar IDs existentes
+initializeOSIds(ordensServico.map(os => os.id));
+
 // Histórico de OS por cliente
 export interface HistoricoOSCliente {
   osId: string;
@@ -255,31 +292,56 @@ export interface HistoricoOSCliente {
   setor: string;
 }
 
-let osCounter = 9;
-
 // API Functions
 export const getOrdensServico = () => [...ordensServico];
 
 export const getOrdemServicoById = (id: string) => ordensServico.find(os => os.id === id);
 
-export const getNextOSNumber = () => {
-  const nextNum = osCounter;
-  const id = `OS-2025-${String(nextNum).padStart(4, '0')}`;
-  return { numero: nextNum, id };
+export const getNextOSNumber = (): { numero: number; id: string } => {
+  const year = new Date().getFullYear();
+  const id = generateOSId();
+  const match = id.match(/OS-\d{4}-(\d+)/);
+  const numero = match ? parseInt(match[1]) : globalOSIdCounter;
+  return { numero, id };
 };
 
 export const addOrdemServico = (os: Omit<OrdemServico, 'id'>) => {
-  const { id } = getNextOSNumber();
-  osCounter++;
+  const id = generateOSId();
   const newOS: OrdemServico = { ...os, id };
   ordensServico.push(newOS);
   return newOS;
 };
 
+// Função para reduzir estoque de peças quando OS é concluída
+const reduzirEstoquePecas = (pecas: PecaServico[]): void => {
+  pecas.forEach(peca => {
+    // Apenas reduz se a peça estava no estoque
+    if (peca.pecaNoEstoque && !peca.servicoTerceirizado) {
+      // Buscar peça pelo nome/descrição na pecasApi
+      const pecaEstoque = getPecaById(peca.id);
+      if (pecaEstoque && pecaEstoque.quantidade > 0) {
+        updatePeca(peca.id, { 
+          quantidade: pecaEstoque.quantidade - 1,
+          status: pecaEstoque.quantidade - 1 === 0 ? 'Utilizada' : pecaEstoque.status
+        });
+        console.log(`[ASSISTÊNCIA] Peça ${peca.peca} reduzida do estoque`);
+      }
+    }
+  });
+};
+
 export const updateOrdemServico = (id: string, updates: Partial<OrdemServico>) => {
   const index = ordensServico.findIndex(os => os.id === id);
   if (index !== -1) {
+    const osAnterior = ordensServico[index];
     ordensServico[index] = { ...ordensServico[index], ...updates };
+    
+    // Se status mudou para 'Serviço concluído', reduzir estoque de peças
+    if (updates.status === 'Serviço concluído' && osAnterior.status !== 'Serviço concluído') {
+      reduzirEstoquePecas(ordensServico[index].pecas);
+      console.log(`[ASSISTÊNCIA] OS ${id} concluída - peças reduzidas do estoque`);
+    }
+    
     return ordensServico[index];
   }
   return null;

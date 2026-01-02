@@ -1,5 +1,37 @@
 // API de Acessórios - Gerenciamento de estoque de acessórios
 
+// Sistema centralizado de IDs para acessórios
+let globalAcessorioIdCounter = 100;
+const registeredAcessorioIds = new Set<string>();
+
+const initializeAcessorioIds = (existingIds: string[]) => {
+  existingIds.forEach(id => registeredAcessorioIds.add(id));
+  existingIds.forEach(id => {
+    const match = id.match(/ACESS-(\d+)/);
+    if (match) {
+      const num = parseInt(match[1]);
+      if (num >= globalAcessorioIdCounter) {
+        globalAcessorioIdCounter = num + 1;
+      }
+    }
+  });
+};
+
+const generateAcessorioId = (): string => {
+  let newId: string;
+  do {
+    newId = `ACESS-${String(globalAcessorioIdCounter).padStart(4, '0')}`;
+    globalAcessorioIdCounter++;
+  } while (registeredAcessorioIds.has(newId));
+  
+  registeredAcessorioIds.add(newId);
+  return newId;
+};
+
+export const isAcessorioIdRegistered = (id: string): boolean => {
+  return registeredAcessorioIds.has(id);
+};
+
 export interface Acessorio {
   id: string;
   descricao: string;
@@ -21,7 +53,7 @@ export interface VendaAcessorio {
 // Dados mockados de acessórios
 let acessorios: Acessorio[] = [
   {
-    id: 'ACESS-001',
+    id: 'ACESS-0001',
     descricao: 'Capa iPhone 15',
     categoria: 'Capas',
     quantidade: 25,
@@ -29,7 +61,7 @@ let acessorios: Acessorio[] = [
     loja: 'Loja Centro'
   },
   {
-    id: 'ACESS-002',
+    id: 'ACESS-0002',
     descricao: 'Carregador USB-C 20W',
     categoria: 'Carregadores',
     quantidade: 18,
@@ -37,7 +69,7 @@ let acessorios: Acessorio[] = [
     loja: 'Loja Centro'
   },
   {
-    id: 'ACESS-003',
+    id: 'ACESS-0003',
     descricao: 'Fone de Ouvido Bluetooth',
     categoria: 'Áudio',
     quantidade: 8,
@@ -45,7 +77,7 @@ let acessorios: Acessorio[] = [
     loja: 'Loja Shopping'
   },
   {
-    id: 'ACESS-004',
+    id: 'ACESS-0004',
     descricao: 'Película Vidro iPhone 14',
     categoria: 'Películas',
     quantidade: 32,
@@ -53,7 +85,7 @@ let acessorios: Acessorio[] = [
     loja: 'Loja Norte'
   },
   {
-    id: 'ACESS-005',
+    id: 'ACESS-0005',
     descricao: 'Cabo Lightning 1m',
     categoria: 'Cabos',
     quantidade: 5,
@@ -61,6 +93,9 @@ let acessorios: Acessorio[] = [
     loja: 'Loja Sul'
   }
 ];
+
+// Inicializar IDs existentes
+initializeAcessorioIds(acessorios.map(a => a.id));
 
 // Categorias de acessórios
 const categoriasAcessorios = [
@@ -118,8 +153,7 @@ export const adicionarEstoqueAcessorio = (id: string, quantidade: number, valorC
 };
 
 export const addAcessorio = (acessorio: Omit<Acessorio, 'id'>): Acessorio => {
-  const num = acessorios.length + 1;
-  const newId = `ACESS-${String(num).padStart(3, '0')}`;
+  const newId = generateAcessorioId();
   const novoAcessorio: Acessorio = { ...acessorio, id: newId };
   acessorios.push(novoAcessorio);
   return novoAcessorio;
