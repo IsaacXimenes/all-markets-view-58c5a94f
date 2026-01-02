@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getProdutos, getLojas, getEstoqueStats, updateValorRecomendado, updateProdutoLoja, Produto } from '@/utils/estoqueApi';
-import { getColaboradores, getCargos } from '@/utils/cadastrosApi';
+import { getColaboradores, getCargos, getLojaById } from '@/utils/cadastrosApi';
 import { Download, Eye, CheckCircle, XCircle, Package, DollarSign, AlertTriangle, FileWarning, AlertCircle, Edit, Wrench } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -43,6 +43,12 @@ export default function EstoqueProdutos() {
     const cargo = cargos.find(c => c.id === col.cargo);
     return cargo?.permissoes.includes('Estoque') || cargo?.permissoes.includes('Admin');
   });
+
+  // Helper para obter nome da loja
+  const getLojaNome = (lojaId: string) => {
+    const loja = getLojaById(lojaId);
+    return loja?.nome || lojaId;
+  };
 
   const produtosFiltrados = produtos.filter(p => {
     if (lojaFilter !== 'todas' && p.loja !== lojaFilter) return false;
@@ -315,7 +321,7 @@ export default function EstoqueProdutos() {
                       {produto.saudeBateria}%
                     </span>
                   </TableCell>
-                  <TableCell className="text-sm">{produto.loja}</TableCell>
+                  <TableCell className="text-sm">{getLojaNome(produto.loja)}</TableCell>
                   <TableCell>
                     {produto.estoqueConferido ? (
                       <CheckCircle className="h-4 w-4 text-green-500" />

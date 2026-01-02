@@ -8,9 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+
 import { toast } from 'sonner';
-import { Download, Package, Edit, AlertTriangle, DollarSign, History } from 'lucide-react';
+import { Download, Package, Edit, AlertTriangle, DollarSign } from 'lucide-react';
 import { 
   getAcessorios, 
   getCategoriasAcessorios, 
@@ -22,13 +22,20 @@ import {
   HistoricoValorRecomendadoAcessorio
 } from '@/utils/acessoriosApi';
 import { getLojas } from '@/utils/estoqueApi';
-import { getColaboradores } from '@/utils/cadastrosApi';
+import { getColaboradores, getCargos } from '@/utils/cadastrosApi';
 
 export default function EstoqueAcessorios() {
   const [acessorios, setAcessorios] = useState<Acessorio[]>(getAcessorios());
   const [categorias] = useState<string[]>(getCategoriasAcessorios());
   const [lojas] = useState<string[]>(getLojas());
   const [colaboradores] = useState(getColaboradores());
+  const [cargos] = useState(getCargos());
+
+  // Colaboradores com permissão de estoque
+  const colaboradoresEstoque = colaboradores.filter(col => {
+    const cargo = cargos.find(c => c.id === col.cargo);
+    return cargo?.permissoes.includes('Estoque') || cargo?.permissoes.includes('Admin');
+  });
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [filtroLoja, setFiltroLoja] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
@@ -149,11 +156,6 @@ export default function EstoqueAcessorios() {
     toast.success('CSV exportado com sucesso!');
   };
 
-  const formatarValorInput = (valor: string) => {
-    const numeros = valor.replace(/\D/g, '');
-    const valorNumerico = parseFloat(numeros) / 100;
-    return valorNumerico.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
 
   return (
     <EstoqueLayout title="Gerenciamento de Acessórios">
@@ -335,87 +337,63 @@ export default function EstoqueAcessorios() {
 
         {/* Modal de Valor Recomendado */}
         <Dialog open={showValorRecomendadoModal} onOpenChange={setShowValorRecomendadoModal}>
-          <DialogContent className="max-w-md">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5" />
-                Informar Valor Recomendado
-              </DialogTitle>
+              <DialogTitle>Informar Valor Recomendado</DialogTitle>
             </DialogHeader>
             {acessorioSelecionado && (
               <div className="space-y-4">
                 <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm text-muted-foreground">Acessório</p>
                   <p className="font-medium">{acessorioSelecionado.descricao}</p>
-                  <p className="text-sm text-muted-foreground mt-2">Valor de Custo</p>
-                  <p className="font-medium">{formatCurrency(acessorioSelecionado.valorCusto)}</p>
-                  {acessorioSelecionado.valorRecomendado && (
-                    <>
-                      <p className="text-sm text-muted-foreground mt-2">Valor Recomendado Atual</p>
-                      <p className="font-medium text-primary">{formatCurrency(acessorioSelecionado.valorRecomendado)}</p>
-                    </>
-                  )}
+                  <p className="text-sm text-muted-foreground">{acessorioSelecionado.categoria}</p>
+                  <p className="text-sm">Custo: {formatCurrency(acessorioSelecionado.valorCusto)}</p>
                 </div>
 
-                <div>
-                  <Label htmlFor="valorRecomendado">Novo Valor Recomendado</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                    <Input
-                      id="valorRecomendado"
-                      type="text"
-                      value={novoValorRecomendado}
-                      onChange={(e) => setNovoValorRecomendado(formatarValorInput(e.target.value))}
-                      className="pl-10"
-                      placeholder="0,00"
-                    />
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="valorRecomendado">Valor Recomendado (R$)</Label>
+                  <Input
+                    id="valorRecomendado"
+                    type="text"
+                    value={novoValorRecomendado}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^\d,]/g, '');
+                      setNovoValorRecomendado(value);
+                    }}
+                    placeholder="Ex: 99,00"
+                  />
                 </div>
 
-                <div>
-                  <Label>Colaborador Responsável</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="colaborador">Usuário que Informou *</Label>
                   <Select value={colaboradorSelecionado} onValueChange={setColaboradorSelecionado}>
-                    <SelectTrigger>
+                    <SelectTrigger id="colaborador">
                       <SelectValue placeholder="Selecione o colaborador" />
                     </SelectTrigger>
                     <SelectContent>
-                      {colaboradores.map(col => (
+                      {colaboradoresEstoque.map(col => (
                         <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                {/* Histórico */}
                 {acessorioSelecionado.historicoValorRecomendado && acessorioSelecionado.historicoValorRecomendado.length > 0 && (
-                  <>
-                    <Separator />
-                    <div>
-                      <Label className="flex items-center gap-2 mb-3">
-                        <History className="h-4 w-4" />
-                        Histórico de Alterações
-                      </Label>
-                      <div className="space-y-2 max-h-40 overflow-y-auto">
-                        {acessorioSelecionado.historicoValorRecomendado.map((hist, index) => (
-                          <div key={index} className="text-sm p-2 bg-muted/50 rounded">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">{hist.data}</span>
-                              <span className="font-medium">{hist.usuario}</span>
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-muted-foreground">
-                                {hist.valorAntigo ? formatCurrency(hist.valorAntigo) : '-'}
-                              </span>
-                              <span>→</span>
-                              <span className="font-medium text-primary">
-                                {formatCurrency(hist.valorNovo)}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                  <div className="space-y-2">
+                    <Label>Histórico de Valor Recomendado</Label>
+                    <div className="max-h-32 overflow-y-auto space-y-1">
+                      {acessorioSelecionado.historicoValorRecomendado.map((hist, idx) => (
+                        <div key={idx} className="text-xs p-2 bg-muted/50 rounded">
+                          <span className="font-medium">{new Date(hist.data).toLocaleDateString('pt-BR')}</span>
+                          <span className="mx-2">•</span>
+                          <span>{hist.usuario}</span>
+                          <span className="mx-2">•</span>
+                          <span>
+                            {hist.valorAntigo ? formatCurrency(hist.valorAntigo) : 'N/A'} → {formatCurrency(hist.valorNovo)}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             )}
@@ -423,7 +401,10 @@ export default function EstoqueAcessorios() {
               <Button variant="outline" onClick={() => setShowValorRecomendadoModal(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleSalvarValorRecomendado}>
+              <Button 
+                onClick={handleSalvarValorRecomendado}
+                disabled={!novoValorRecomendado || !colaboradorSelecionado}
+              >
                 Salvar
               </Button>
             </DialogFooter>

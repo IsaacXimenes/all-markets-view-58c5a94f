@@ -20,7 +20,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Download, Filter, X, Clock, CheckCircle2, AlertTriangle, DollarSign } from 'lucide-react';
+import { Eye, Download, Filter, X } from 'lucide-react';
 import { 
   getVendasConferencia, 
   exportConferenciaToCSV, 
@@ -163,48 +163,36 @@ export default function VendasConferenciaGestor() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Conferência - Gestor</p>
-                <p className="text-3xl font-bold text-destructive">{pendentesGestor}</p>
-              </div>
-              <Clock className="h-10 w-10 text-destructive opacity-50" />
+            <div>
+              <p className="text-sm text-muted-foreground">Conferência - Gestor</p>
+              <p className="text-3xl font-bold text-destructive">{pendentesGestor}</p>
             </div>
           </CardContent>
         </Card>
         
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Urgentes (3+ dias)</p>
-                <p className="text-3xl font-bold text-orange-600">{urgentes}</p>
-              </div>
-              <AlertTriangle className="h-10 w-10 text-orange-500 opacity-50" />
+            <div>
+              <p className="text-sm text-muted-foreground">Urgentes (3+ dias)</p>
+              <p className="text-3xl font-bold text-orange-600">{urgentes}</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Conferência - Financeiro</p>
-                <p className="text-3xl font-bold text-yellow-600">{pendentesFinanceiro}</p>
-              </div>
-              <DollarSign className="h-10 w-10 text-yellow-500 opacity-50" />
+            <div>
+              <p className="text-sm text-muted-foreground">Conferência - Financeiro</p>
+              <p className="text-3xl font-bold text-yellow-600">{pendentesFinanceiro}</p>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Concluído</p>
-                <p className="text-3xl font-bold text-green-600">{concluidos}</p>
-              </div>
-              <CheckCircle2 className="h-10 w-10 text-green-500 opacity-50" />
+            <div>
+              <p className="text-sm text-muted-foreground">Concluído</p>
+              <p className="text-3xl font-bold text-green-600">{concluidos}</p>
             </div>
           </CardContent>
         </Card>

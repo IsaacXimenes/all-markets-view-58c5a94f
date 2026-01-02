@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PageLayout } from '@/components/layout/PageLayout';
+import { VendasLayout } from '@/components/layout/VendasLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -534,7 +534,7 @@ export default function VendasNova() {
   };
 
   return (
-    <PageLayout title="Nova Venda">
+    <VendasLayout title="Nova Venda">
       {/* Botão Voltar */}
       <div className="mb-4">
         <Button variant="ghost" onClick={() => navigate('/vendas')} className="gap-2">
@@ -2011,6 +2011,6 @@ export default function VendasNova() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PageLayout>
+    </VendasLayout>
   );
 }
