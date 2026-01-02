@@ -19,7 +19,7 @@ let pecas: Peca[] = [
   {
     id: 'PEC-0001',
     descricao: 'Tela LCD iPhone 14 Pro Max',
-    lojaId: 'loja-1',
+    lojaId: 'LOJA-001',
     modelo: 'iPhone 14 Pro Max',
     valorCusto: 450.00,
     valorRecomendado: 650.00,
@@ -32,7 +32,7 @@ let pecas: Peca[] = [
   {
     id: 'PEC-0002',
     descricao: 'Bateria iPhone 13',
-    lojaId: 'loja-1',
+    lojaId: 'LOJA-001',
     modelo: 'iPhone 13',
     valorCusto: 120.00,
     valorRecomendado: 200.00,
@@ -45,7 +45,7 @@ let pecas: Peca[] = [
   {
     id: 'PEC-0003',
     descricao: 'Câmera Traseira iPhone 15',
-    lojaId: 'loja-2',
+    lojaId: 'LOJA-002',
     modelo: 'iPhone 15',
     valorCusto: 280.00,
     valorRecomendado: 400.00,
@@ -57,7 +57,7 @@ let pecas: Peca[] = [
   {
     id: 'PEC-0004',
     descricao: 'Conector de Carga iPhone 12',
-    lojaId: 'loja-1',
+    lojaId: 'LOJA-001',
     modelo: 'iPhone 12',
     valorCusto: 80.00,
     valorRecomendado: 150.00,
@@ -70,7 +70,7 @@ let pecas: Peca[] = [
   {
     id: 'PEC-0005',
     descricao: 'Alto-falante iPhone 14',
-    lojaId: 'loja-2',
+    lojaId: 'LOJA-002',
     modelo: 'iPhone 14',
     valorCusto: 55.00,
     valorRecomendado: 100.00,
@@ -89,6 +89,12 @@ export const getPecas = (): Peca[] => {
 
 export const getPecaById = (id: string): Peca | undefined => {
   return pecas.find(p => p.id === id);
+};
+
+// Buscar peça por descrição (para integração com assistenciaApi)
+export const getPecaByDescricao = (descricao: string): Peca | undefined => {
+  const descricaoLower = descricao.toLowerCase();
+  return pecas.find(p => p.descricao.toLowerCase().includes(descricaoLower));
 };
 
 export const addPeca = (peca: Omit<Peca, 'id'>): Peca => {

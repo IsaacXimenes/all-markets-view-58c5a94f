@@ -69,7 +69,7 @@ let acessorios: Acessorio[] = [
     quantidade: 25,
     valorCusto: 45.00,
     valorRecomendado: 89.90,
-    loja: 'Loja Centro'
+    loja: 'LOJA-001'
   },
   {
     id: 'ACESS-0002',
@@ -78,7 +78,7 @@ let acessorios: Acessorio[] = [
     quantidade: 18,
     valorCusto: 89.00,
     valorRecomendado: 149.90,
-    loja: 'Loja Centro'
+    loja: 'LOJA-001'
   },
   {
     id: 'ACESS-0003',
@@ -87,7 +87,7 @@ let acessorios: Acessorio[] = [
     quantidade: 8,
     valorCusto: 120.00,
     valorRecomendado: 249.90,
-    loja: 'Loja Shopping'
+    loja: 'LOJA-004'
   },
   {
     id: 'ACESS-0004',
@@ -96,7 +96,7 @@ let acessorios: Acessorio[] = [
     quantidade: 32,
     valorCusto: 25.00,
     valorRecomendado: 49.90,
-    loja: 'Loja Norte'
+    loja: 'LOJA-002'
   },
   {
     id: 'ACESS-0005',
@@ -105,7 +105,7 @@ let acessorios: Acessorio[] = [
     quantidade: 5,
     valorCusto: 35.00,
     valorRecomendado: 69.90,
-    loja: 'Loja Sul'
+    loja: 'LOJA-003'
   }
 ];
 

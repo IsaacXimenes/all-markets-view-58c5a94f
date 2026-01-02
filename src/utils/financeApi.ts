@@ -34,21 +34,21 @@ export interface Despesa {
 }
 
 // Dados mockados
-const lojas = ['Loja Centro', 'Loja Shopping', 'Loja Norte', 'Loja Sul', 'Loja Oeste', 'Loja Leste', 'Administrativo'];
+const lojas = ['LOJA-001', 'LOJA-002', 'LOJA-003', 'LOJA-004', 'LOJA-005', 'LOJA-006', 'Administrativo'];
 
 let contas: Conta[] = [
   {
     id: 'CTA-001',
     nome: 'Caixa Loja Centro',
     tipo: 'Caixa',
-    lojaVinculada: 'Loja Centro',
+    lojaVinculada: 'LOJA-001',
     saldoAtual: 45230.50
   },
   {
     id: 'CTA-002',
     nome: 'Pix Loja Shopping',
     tipo: 'Pix',
-    lojaVinculada: 'Loja Shopping',
+    lojaVinculada: 'LOJA-004',
     banco: 'Nubank',
     cnpj: '12.345.678/0001-90',
     saldoAtual: 89450.80
@@ -68,7 +68,7 @@ let contas: Conta[] = [
     id: 'CTA-004',
     nome: 'Conta Digital Norte',
     tipo: 'Conta Digital',
-    lojaVinculada: 'Loja Norte',
+    lojaVinculada: 'LOJA-002',
     banco: 'Inter',
     agencia: '0001',
     conta: '123456-7',
@@ -79,14 +79,14 @@ let contas: Conta[] = [
     id: 'CTA-005',
     nome: 'Caixa Loja Sul',
     tipo: 'Caixa',
-    lojaVinculada: 'Loja Sul',
+    lojaVinculada: 'LOJA-003',
     saldoAtual: 32100.25
   },
   {
     id: 'CTA-006',
     nome: 'Pix Loja Oeste',
     tipo: 'Pix',
-    lojaVinculada: 'Loja Oeste',
+    lojaVinculada: 'LOJA-005',
     banco: 'PagBank',
     cnpj: '12.345.678/0003-52',
     saldoAtual: 54890.60
@@ -95,7 +95,7 @@ let contas: Conta[] = [
     id: 'CTA-007',
     nome: 'Conta Bancária Loja Leste',
     tipo: 'Conta Bancária',
-    lojaVinculada: 'Loja Leste',
+    lojaVinculada: 'LOJA-006',
     banco: 'Santander',
     agencia: '4567-8',
     conta: '12345-6',
@@ -125,7 +125,7 @@ let pagamentos: Pagamento[] = [
     valor: 12999.00,
     meioPagamento: 'Pix',
     conta: 'Pix Loja Shopping',
-    loja: 'Loja Shopping',
+    loja: 'LOJA-004',
     status: 'Pendente'
   },
   {
@@ -135,7 +135,7 @@ let pagamentos: Pagamento[] = [
     valor: 8499.00,
     meioPagamento: 'Cartão Crédito',
     conta: 'Conta Bancária Principal',
-    loja: 'Loja Centro',
+    loja: 'LOJA-001',
     status: 'Pendente'
   },
   {
@@ -145,7 +145,7 @@ let pagamentos: Pagamento[] = [
     valor: 5999.00,
     meioPagamento: 'Dinheiro',
     conta: 'Caixa Loja Centro',
-    loja: 'Loja Centro',
+    loja: 'LOJA-001',
     status: 'Pendente'
   },
   {
@@ -155,7 +155,7 @@ let pagamentos: Pagamento[] = [
     valor: 2199.00,
     meioPagamento: 'Pix',
     conta: 'Pix Loja Oeste',
-    loja: 'Loja Oeste',
+    loja: 'LOJA-005',
     status: 'Pendente'
   },
   {
@@ -165,7 +165,7 @@ let pagamentos: Pagamento[] = [
     valor: 9899.00,
     meioPagamento: 'Transferência',
     conta: 'Conta Digital Norte',
-    loja: 'Loja Norte',
+    loja: 'LOJA-002',
     status: 'Pendente'
   },
   // Conferidos
@@ -176,7 +176,7 @@ let pagamentos: Pagamento[] = [
     valor: 5499.00,
     meioPagamento: 'Cartão Débito',
     conta: 'Conta Bancária Loja Leste',
-    loja: 'Loja Leste',
+    loja: 'LOJA-006',
     status: 'Conferido'
   },
   {
@@ -186,7 +186,7 @@ let pagamentos: Pagamento[] = [
     valor: 399.00,
     meioPagamento: 'Dinheiro',
     conta: 'Caixa Loja Sul',
-    loja: 'Loja Sul',
+    loja: 'LOJA-003',
     status: 'Conferido'
   },
   {
@@ -196,7 +196,7 @@ let pagamentos: Pagamento[] = [
     valor: 1299.00,
     meioPagamento: 'Pix',
     conta: 'Pix Loja Shopping',
-    loja: 'Loja Shopping',
+    loja: 'LOJA-004',
     status: 'Conferido'
   },
   {
@@ -206,7 +206,7 @@ let pagamentos: Pagamento[] = [
     valor: 1599.00,
     meioPagamento: 'Cartão Crédito',
     conta: 'Conta Bancária Principal',
-    loja: 'Loja Centro',
+    loja: 'LOJA-001',
     status: 'Conferido'
   },
   {
@@ -216,7 +216,7 @@ let pagamentos: Pagamento[] = [
     valor: 4299.00,
     meioPagamento: 'Boleto',
     conta: 'Conta Digital Administrativo',
-    loja: 'Loja Norte',
+    loja: 'LOJA-002',
     status: 'Conferido'
   }
 ];

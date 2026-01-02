@@ -1,7 +1,7 @@
 // Assistência API - Mock Data
 
 import { getClientes, getLojas, getColaboradoresByPermissao, getFornecedores, addCliente, Cliente } from './cadastrosApi';
-import { getPecaById, updatePeca } from './pecasApi';
+import { getPecaById, getPecaByDescricao, updatePeca } from './pecasApi';
 
 // Sistema centralizado de IDs para OS
 let globalOSIdCounter = 100;
@@ -317,14 +317,22 @@ const reduzirEstoquePecas = (pecas: PecaServico[]): void => {
   pecas.forEach(peca => {
     // Apenas reduz se a peça estava no estoque
     if (peca.pecaNoEstoque && !peca.servicoTerceirizado) {
-      // Buscar peça pelo nome/descrição na pecasApi
-      const pecaEstoque = getPecaById(peca.id);
+      // Primeiro tenta buscar pelo ID, depois pelo nome/descrição
+      let pecaEstoque = getPecaById(peca.id);
+      
+      // Se não encontrou pelo ID, busca pela descrição (nome da peça)
+      if (!pecaEstoque) {
+        pecaEstoque = getPecaByDescricao(peca.peca);
+      }
+      
       if (pecaEstoque && pecaEstoque.quantidade > 0) {
-        updatePeca(peca.id, { 
+        updatePeca(pecaEstoque.id, { 
           quantidade: pecaEstoque.quantidade - 1,
           status: pecaEstoque.quantidade - 1 === 0 ? 'Utilizada' : pecaEstoque.status
         });
-        console.log(`[ASSISTÊNCIA] Peça ${peca.peca} reduzida do estoque`);
+        console.log(`[ASSISTÊNCIA] Peça ${peca.peca} (ID: ${pecaEstoque.id}) reduzida do estoque`);
+      } else {
+        console.warn(`[ASSISTÊNCIA] Peça "${peca.peca}" não encontrada no estoque ou sem quantidade disponível`);
       }
     }
   });
