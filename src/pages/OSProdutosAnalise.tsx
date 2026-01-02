@@ -26,9 +26,7 @@ import { getProdutosParaAnaliseOS, ProdutoPendente, calcularSLA, exportToCSV } f
 import { getLojas } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-};
+import { formatCurrency } from '@/utils/formatUtils';
 
 export default function OSProdutosAnalise() {
   const navigate = useNavigate();

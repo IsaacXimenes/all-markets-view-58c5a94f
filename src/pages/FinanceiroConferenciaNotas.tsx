@@ -13,9 +13,7 @@ import { Eye, CheckCircle, Download, Filter, X, Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-};
+import { formatCurrency } from '@/utils/formatUtils';
 
 export default function FinanceiroConferenciaNotas() {
   const [notas, setNotas] = useState(getNotasCompra());

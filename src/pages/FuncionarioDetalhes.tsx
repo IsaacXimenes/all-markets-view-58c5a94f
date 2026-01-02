@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ArrowLeft, Mail, Phone, Calendar, Briefcase, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { formatCurrency } from '@/utils/formatUtils';
 
 export default function FuncionarioDetalhes() {
   const { id } = useParams<{ id: string }>();
@@ -36,9 +37,6 @@ export default function FuncionarioDetalhes() {
     return parts.length >= 2 ? `${parts[0][0]}${parts[1][0]}` : name.substring(0, 2);
   };
 
-  const formatCurrency = (value: number) => {
-    return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
 
   return (
     <PageLayout title={employee.name}>

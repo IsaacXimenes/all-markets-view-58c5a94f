@@ -1,6 +1,7 @@
 // API para Conferência de Vendas - Gestor
 import { addNotification } from './notificationsApi';
 import { getColaboradores, getCargos, getLojas, Colaborador, Cargo, Loja } from './cadastrosApi';
+import { formatCurrency } from './formatUtils';
 
 export type StatusConferencia = 'Conferência - Gestor' | 'Conferência - Financeiro' | 'Concluído';
 
@@ -541,9 +542,8 @@ export const getGestores = (): Colaborador[] => {
   });
 };
 
-export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-};
+// formatCurrency removido - usar import { formatCurrency } from '@/utils/formatUtils'
+export { formatCurrency } from '@/utils/formatUtils';
 
 export const exportConferenciaToCSV = (data: VendaConferencia[], filename: string) => {
   if (data.length === 0) return;

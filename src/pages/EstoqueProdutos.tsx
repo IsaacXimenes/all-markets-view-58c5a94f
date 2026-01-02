@@ -17,9 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { formatIMEI } from '@/utils/imeiMask';
 
-const formatCurrency = (value: number) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-};
+import { formatCurrency } from '@/utils/formatUtils';
 
 export default function EstoqueProdutos() {
   const navigate = useNavigate();

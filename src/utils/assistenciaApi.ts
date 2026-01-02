@@ -2,6 +2,7 @@
 
 import { getClientes, getLojas, getColaboradoresByPermissao, getFornecedores, addCliente, Cliente } from './cadastrosApi';
 import { getPecaById, getPecaByDescricao, updatePeca } from './pecasApi';
+import { formatCurrency } from './formatUtils';
 
 // Sistema centralizado de IDs para OS
 let globalOSIdCounter = 100;
@@ -384,12 +385,8 @@ export const calcularSLADias = (dataHora: string): number => {
   return diffDays;
 };
 
-export const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value);
-};
+// formatCurrency removido - usar import { formatCurrency } from '@/utils/formatUtils'
+export { formatCurrency } from '@/utils/formatUtils';
 
 export const exportOSToCSV = (data: OrdemServico[], filename: string) => {
   const clientes = getClientes();
