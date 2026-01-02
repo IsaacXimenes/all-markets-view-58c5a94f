@@ -29,7 +29,7 @@ interface NotaHistorico {
 // Mock de notas do histórico
 const notasHistoricoMock: NotaHistorico[] = [
   {
-    id: 'NHA-0001',
+    id: 'NOTA-0001',
     numeroNota: '4523',
     data: '2024-12-28T10:00:00',
     fornecedorId: 'forn-1',
@@ -46,7 +46,7 @@ const notasHistoricoMock: NotaHistorico[] = [
     ]
   },
   {
-    id: 'NHA-0002',
+    id: 'NOTA-0002',
     numeroNota: '4524',
     data: '2024-12-25T14:00:00',
     fornecedorId: 'forn-2',
@@ -63,7 +63,7 @@ const notasHistoricoMock: NotaHistorico[] = [
     ]
   },
   {
-    id: 'NHA-0003',
+    id: 'NOTA-0003',
     numeroNota: '4525',
     data: '2024-12-20T09:00:00',
     fornecedorId: 'forn-1',
@@ -81,7 +81,7 @@ const notasHistoricoMock: NotaHistorico[] = [
     ]
   },
   {
-    id: 'NHA-0004',
+    id: 'NOTA-0004',
     numeroNota: '4526',
     data: '2024-12-29T11:00:00',
     fornecedorId: 'forn-3',
@@ -98,7 +98,7 @@ const notasHistoricoMock: NotaHistorico[] = [
     ]
   },
   {
-    id: 'NHA-0005',
+    id: 'NOTA-0005',
     numeroNota: '4527',
     data: '2024-12-15T16:00:00',
     fornecedorId: 'forn-2',
@@ -305,7 +305,7 @@ export default function OSHistoricoNotas() {
                 key={nota.id}
                 className={nota.status === 'Pendente - Financeiro' ? 'bg-yellow-50 dark:bg-yellow-900/10' : ''}
               >
-                <TableCell className="font-mono font-medium">{nota.numeroNota}</TableCell>
+                <TableCell className="font-mono font-medium">{nota.id}</TableCell>
                 <TableCell className="text-xs">
                   {new Date(nota.data).toLocaleDateString('pt-BR')}
                 </TableCell>
