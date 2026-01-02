@@ -897,7 +897,7 @@ export default function VendasFinalizarDigital() {
                     <TableHead>Condição</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>IMEI Validado</TableHead>
-                    <TableHead className="text-right">Valor Abatimento</TableHead>
+                    <TableHead className="text-right">Valor de Compra Usado</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1481,7 +1481,17 @@ export default function VendasFinalizarDigital() {
               <label className="text-sm font-medium">IMEI</label>
               <Input 
                 value={novoTradeIn.imei || ''}
-                onChange={(e) => setNovoTradeIn({ ...novoTradeIn, imei: e.target.value })}
+                onChange={(e) => {
+                  const formatted = e.target.value.replace(/\D/g, '').slice(0, 15);
+                  let masked = '';
+                  for (let i = 0; i < formatted.length; i++) {
+                    if (i === 2 || i === 8 || i === 14) masked += '-';
+                    masked += formatted[i];
+                  }
+                  setNovoTradeIn({ ...novoTradeIn, imei: masked });
+                }}
+                placeholder="00-000000-000000-0"
+                maxLength={18}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -1494,10 +1504,10 @@ export default function VendasFinalizarDigital() {
               <label className="text-sm">IMEI Validado</label>
             </div>
             <div>
-              <label className="text-sm font-medium">Valor de Abatimento *</label>
+              <label className="text-sm font-medium">Valor de Compra Usado *</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
-                <Input 
+                <Input
                   type="text"
                   value={(novoTradeIn.valorAbatimento || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   onChange={(e) => {
@@ -1696,11 +1706,11 @@ export default function VendasFinalizarDigital() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Selecionar Acessório */}
+      {/* Modal Selecionar Acessórios */}
       <Dialog open={showAcessorioModal} onOpenChange={setShowAcessorioModal}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Selecionar Acessório</DialogTitle>
+            <DialogTitle>Selecionar Acessórios</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input 
