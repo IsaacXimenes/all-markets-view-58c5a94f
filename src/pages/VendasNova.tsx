@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { 
   getLojas, getClientes, getColaboradores, getCargos, getOrigensVenda, 
-  getContasFinanceiras, Loja, Cliente, Colaborador, Cargo, OrigemVenda, ContaFinanceira,
+  getContasFinanceiras, getMotoboys, getLojaById, Loja, Cliente, Colaborador, Cargo, OrigemVenda, ContaFinanceira,
   addCliente
 } from '@/utils/cadastrosApi';
 import { getProdutos, Produto, updateProduto } from '@/utils/estoqueApi';
@@ -67,6 +67,8 @@ export default function VendasNova() {
   const [localRetirada, setLocalRetirada] = useState('');
   const [tipoRetirada, setTipoRetirada] = useState<'Retirada Balcão' | 'Entrega' | 'Retirada em Outra Loja'>('Retirada Balcão');
   const [taxaEntrega, setTaxaEntrega] = useState(0);
+  const [motoboyId, setMotoboyId] = useState('');
+  const [motoboys] = useState(getMotoboys());
   const [observacoes, setObservacoes] = useState('');
   
   // Itens da venda
@@ -403,11 +405,28 @@ export default function VendasNova() {
       return;
     }
     
+    // Validar parcelas para cartão crédito
+    if (novoPagamento.meioPagamento === 'Cartão Crédito' && !novoPagamento.parcelas) {
+      toast({ title: "Erro", description: "Selecione o número de parcelas", variant: "destructive" });
+      return;
+    }
+    
+    const parcelas = novoPagamento.meioPagamento === 'Cartão Crédito' 
+      ? novoPagamento.parcelas 
+      : novoPagamento.meioPagamento === 'Cartão Débito' 
+        ? 1 
+        : undefined;
+    
+    const valorParcela = parcelas && parcelas > 0 ? novoPagamento.valor! / parcelas : undefined;
+    
     const pagamento: Pagamento = {
       id: `PAG-${Date.now()}`,
       meioPagamento: novoPagamento.meioPagamento!,
       valor: novoPagamento.valor!,
-      contaDestino: novoPagamento.contaDestino!
+      contaDestino: novoPagamento.contaDestino!,
+      parcelas,
+      valorParcela,
+      descricao: novoPagamento.descricao
     };
     
     setPagamentos([...pagamentos, pagamento]);
@@ -446,6 +465,9 @@ export default function VendasNova() {
 
   // Validar venda
   const canSubmit = useMemo(() => {
+    // Se for entrega, motoboy é obrigatório
+    const motoboyValido = tipoRetirada !== 'Entrega' || !!motoboyId;
+    
     return (
       lojaVenda &&
       vendedor &&
@@ -454,9 +476,10 @@ export default function VendasNova() {
       localRetirada &&
       (itens.length > 0 || acessoriosVenda.length > 0) &&
       valorPendente <= 0 &&
-      !tradeInNaoValidado
+      !tradeInNaoValidado &&
+      motoboyValido
     );
-  }, [lojaVenda, vendedor, clienteId, origemVenda, localRetirada, itens.length, acessoriosVenda.length, valorPendente, tradeInNaoValidado]);
+  }, [lojaVenda, vendedor, clienteId, origemVenda, localRetirada, itens.length, acessoriosVenda.length, valorPendente, tradeInNaoValidado, tipoRetirada, motoboyId]);
 
   // Registrar venda
   const handleRegistrarVenda = () => {
@@ -497,6 +520,7 @@ export default function VendasNova() {
       localRetirada,
       tipoRetirada,
       taxaEntrega,
+      motoboyId: tipoRetirada === 'Entrega' ? motoboyId : undefined,
       itens,
       tradeIns,
       pagamentos,
@@ -1032,7 +1056,9 @@ export default function VendasNova() {
                   <TableRow>
                     <TableHead>Meio de Pagamento</TableHead>
                     <TableHead>Conta de Destino</TableHead>
+                    <TableHead className="text-center">Parcelas</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
+                    <TableHead>Descrição</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1041,7 +1067,21 @@ export default function VendasNova() {
                     <TableRow key={pag.id}>
                       <TableCell className="font-medium">{pag.meioPagamento}</TableCell>
                       <TableCell>{getContaNome(pag.contaDestino)}</TableCell>
+                      <TableCell className="text-center">
+                        {pag.parcelas && pag.parcelas > 1 ? (
+                          <span className="text-sm">
+                            {pag.parcelas}x {formatCurrency(pag.valorParcela || 0)}
+                          </span>
+                        ) : pag.parcelas === 1 ? (
+                          <span className="text-sm text-muted-foreground">1x</span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">{formatCurrency(pag.valor)}</TableCell>
+                      <TableCell className="max-w-[150px] truncate text-sm text-muted-foreground">
+                        {pag.descricao || '-'}
+                      </TableCell>
                       <TableCell>
                         <Button 
                           variant="ghost" 
@@ -1094,22 +1134,42 @@ export default function VendasNova() {
               </div>
               
               {tipoRetirada === 'Entrega' && (
-                <div>
-                  <label className="text-sm font-medium">Taxa de Entrega</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                    <Input 
-                      type="text"
-                      value={taxaEntrega.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        setTaxaEntrega(Number(value) / 100);
-                      }}
-                      className="pl-10"
-                      placeholder="0,00"
-                    />
+                <>
+                  <div>
+                    <label className="text-sm font-medium">Taxa de Entrega</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                      <Input 
+                        type="text"
+                        value={taxaEntrega.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          setTaxaEntrega(Number(value) / 100);
+                        }}
+                        className="pl-10"
+                        placeholder="0,00"
+                      />
+                    </div>
                   </div>
-                </div>
+                  <div>
+                    <label className="text-sm font-medium">Nome do Motoboy *</label>
+                    <Select value={motoboyId} onValueChange={setMotoboyId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o motoboy" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {motoboys.map(motoboy => {
+                          const loja = getLojaById(motoboy.loja);
+                          return (
+                            <SelectItem key={motoboy.id} value={motoboy.id}>
+                              {motoboy.nome} - {loja?.nome || motoboy.loja}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
               )}
               
               {tipoRetirada === 'Retirada em Outra Loja' && (
@@ -1705,7 +1765,16 @@ export default function VendasNova() {
               <label className="text-sm font-medium">Meio de Pagamento *</label>
               <Select 
                 value={novoPagamento.meioPagamento || ''} 
-                onValueChange={(v) => setNovoPagamento({ ...novoPagamento, meioPagamento: v })}
+                onValueChange={(v) => {
+                  // Se for débito, sempre 1 parcela
+                  if (v === 'Cartão Débito') {
+                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: 1 });
+                  } else if (v === 'Cartão Crédito') {
+                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: novoPagamento.parcelas || 1 });
+                  } else {
+                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: undefined });
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
@@ -1728,6 +1797,38 @@ export default function VendasNova() {
                 placeholder="R$ 0,00"
               />
             </div>
+            
+            {/* Parcelas - Cartão Crédito obrigatório, Débito sempre 1x */}
+            {novoPagamento.meioPagamento === 'Cartão Crédito' && (
+              <div>
+                <label className="text-sm font-medium">Número de Parcelas *</label>
+                <Select 
+                  value={String(novoPagamento.parcelas || 1)} 
+                  onValueChange={(v) => setNovoPagamento({ ...novoPagamento, parcelas: Number(v) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 18 }, (_, i) => i + 1).map(num => (
+                      <SelectItem key={num} value={String(num)}>{num}x</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {novoPagamento.valor && novoPagamento.parcelas && novoPagamento.parcelas > 1 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {novoPagamento.parcelas}x de {formatCurrency(novoPagamento.valor / novoPagamento.parcelas)}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {novoPagamento.meioPagamento === 'Cartão Débito' && (
+              <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
+                Cartão de Débito: pagamento à vista (1x)
+              </div>
+            )}
+            
             <div>
               <label className="text-sm font-medium">Conta de Destino *</label>
               <Select 
@@ -1743,6 +1844,16 @@ export default function VendasNova() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Descrição (opcional)</label>
+              <Textarea 
+                value={novoPagamento.descricao || ''}
+                onChange={(e) => setNovoPagamento({ ...novoPagamento, descricao: e.target.value })}
+                placeholder="Observações sobre o pagamento..."
+                rows={2}
+              />
             </div>
           </div>
           <DialogFooter>

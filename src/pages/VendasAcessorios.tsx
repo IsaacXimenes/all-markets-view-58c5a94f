@@ -274,11 +274,28 @@ export default function VendasAcessorios() {
       return;
     }
     
+    // Validar parcelas para cartão crédito
+    if (novoPagamento.meioPagamento === 'Cartão Crédito' && !novoPagamento.parcelas) {
+      toast({ title: "Erro", description: "Selecione o número de parcelas", variant: "destructive" });
+      return;
+    }
+    
+    const parcelas = novoPagamento.meioPagamento === 'Cartão Crédito' 
+      ? novoPagamento.parcelas 
+      : novoPagamento.meioPagamento === 'Cartão Débito' 
+        ? 1 
+        : undefined;
+    
+    const valorParcela = parcelas && parcelas > 0 ? novoPagamento.valor! / parcelas : undefined;
+    
     const pagamento: Pagamento = {
       id: `PAG-${Date.now()}`,
       meioPagamento: novoPagamento.meioPagamento!,
       valor: novoPagamento.valor!,
-      contaDestino: novoPagamento.contaDestino!
+      contaDestino: novoPagamento.contaDestino!,
+      parcelas,
+      valorParcela,
+      descricao: novoPagamento.descricao
     };
     
     setPagamentos([...pagamentos, pagamento]);
@@ -842,7 +859,15 @@ export default function VendasAcessorios() {
               <label className="text-sm font-medium">Meio de Pagamento *</label>
               <Select 
                 value={novoPagamento.meioPagamento || ''}
-                onValueChange={(v) => setNovoPagamento({ ...novoPagamento, meioPagamento: v })}
+                onValueChange={(v) => {
+                  if (v === 'Cartão Débito') {
+                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: 1 });
+                  } else if (v === 'Cartão Crédito') {
+                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: novoPagamento.parcelas || 1 });
+                  } else {
+                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: undefined });
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione" />
@@ -854,22 +879,6 @@ export default function VendasAcessorios() {
                   <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
                   <SelectItem value="Boleto">Boleto</SelectItem>
                   <SelectItem value="Transferência">Transferência</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Conta de Destino *</label>
-              <Select 
-                value={novoPagamento.contaDestino || ''}
-                onValueChange={(v) => setNovoPagamento({ ...novoPagamento, contaDestino: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contasFinanceiras.map(conta => (
-                    <SelectItem key={conta.id} value={conta.id}>{conta.nome}</SelectItem>
-                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -887,6 +896,64 @@ export default function VendasAcessorios() {
                   className="pl-10"
                 />
               </div>
+            </div>
+            
+            {/* Parcelas para Cartão Crédito */}
+            {novoPagamento.meioPagamento === 'Cartão Crédito' && (
+              <div>
+                <label className="text-sm font-medium">Número de Parcelas *</label>
+                <Select 
+                  value={String(novoPagamento.parcelas || 1)} 
+                  onValueChange={(v) => setNovoPagamento({ ...novoPagamento, parcelas: Number(v) })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 18 }, (_, i) => i + 1).map(num => (
+                      <SelectItem key={num} value={String(num)}>{num}x</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {novoPagamento.valor && novoPagamento.parcelas && novoPagamento.parcelas > 1 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {novoPagamento.parcelas}x de {formatCurrency(novoPagamento.valor / novoPagamento.parcelas)}
+                  </p>
+                )}
+              </div>
+            )}
+            
+            {novoPagamento.meioPagamento === 'Cartão Débito' && (
+              <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
+                Cartão de Débito: pagamento à vista (1x)
+              </div>
+            )}
+            
+            <div>
+              <label className="text-sm font-medium">Conta de Destino *</label>
+              <Select 
+                value={novoPagamento.contaDestino || ''}
+                onValueChange={(v) => setNovoPagamento({ ...novoPagamento, contaDestino: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contasFinanceiras.map(conta => (
+                    <SelectItem key={conta.id} value={conta.id}>{conta.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Descrição (opcional)</label>
+              <Textarea 
+                value={novoPagamento.descricao || ''}
+                onChange={(e) => setNovoPagamento({ ...novoPagamento, descricao: e.target.value })}
+                placeholder="Observações sobre o pagamento..."
+                rows={2}
+              />
             </div>
           </div>
           <DialogFooter>

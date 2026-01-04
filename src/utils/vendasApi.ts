@@ -33,6 +33,9 @@ export interface Pagamento {
   meioPagamento: string;
   valor: number;
   contaDestino: string;
+  parcelas?: number;        // Número de parcelas (1-18, obrigatório para cartão crédito)
+  valorParcela?: number;    // Valor por parcela (valor / parcelas)
+  descricao?: string;       // Campo livre opcional
 }
 
 export interface Venda {
@@ -51,6 +54,7 @@ export interface Venda {
   localRetirada: string;
   tipoRetirada: 'Retirada Balcão' | 'Entrega' | 'Retirada em Outra Loja';
   taxaEntrega: number;
+  motoboyId?: string; // ID do motoboy para entregas
   itens: ItemVenda[];
   tradeIns: ItemTradeIn[];
   acessorios?: VendaAcessorio[]; // Acessórios vendidos

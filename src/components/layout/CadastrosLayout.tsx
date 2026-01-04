@@ -20,6 +20,7 @@ export function CadastrosLayout({ children, title }: CadastrosLayoutProps) {
     { name: 'Aparelhos', href: '/cadastros/produtos', icon: Package },
     { name: 'Peças', href: '/cadastros/pecas', icon: Wrench },
     { name: 'Acessórios', href: '/cadastros/acessorios', icon: Headphones },
+    { name: 'Máquinas', href: '/cadastros/maquinas', icon: CreditCard },
     { name: 'Tipos de Desconto', href: '/cadastros/tipos-desconto', icon: Percent },
     { name: 'Cargos', href: '/cadastros/cargos', icon: Briefcase },
     { name: 'Modelos Pagamento', href: '/cadastros/modelos-pagamento', icon: CreditCard },

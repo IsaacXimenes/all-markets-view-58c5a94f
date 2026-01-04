@@ -114,6 +114,14 @@ export interface ContaFinanceira {
   ultimoMovimento?: string;
 }
 
+export interface MaquinaCartao {
+  id: string;
+  nome: string;
+  cnpjVinculado: string; // ID da loja
+  contaOrigem: string;   // ID da conta financeira
+  status: 'Ativo' | 'Inativo';
+}
+
 // Helper para calcular tipo de cliente
 const calcularTipoCliente = (idsCompras: string[]): 'Novo' | 'Normal' | 'VIP' => {
   const numCompras = idsCompras.length;
@@ -169,6 +177,8 @@ let colaboradores: Colaborador[] = [
   { id: 'COL-020', cpf: '000.999.111-22', nome: 'Carla Mendonça', cargo: 'CARGO-004', loja: 'LOJA-011', dataAdmissao: '2021-05-25', dataNascimento: '1994-07-08', email: 'carla@thiagoimports.com', telefone: '(11) 98880-0000', modeloPagamento: 'MP-003', salario: 2500, status: 'Ativo' },
   { id: 'COL-021', cpf: '111.999.222-33', nome: 'Rafael Cardoso', cargo: 'CARGO-005', loja: 'LOJA-011', dataAdmissao: '2020-08-10', dataNascimento: '1986-12-20', email: 'rafael@thiagoimports.com', telefone: '(11) 98880-1111', modeloPagamento: 'MP-002', salario: 3200, status: 'Ativo' },
   { id: 'COL-022', cpf: '222.999.333-44', nome: 'Beatriz Almeida', cargo: 'CARGO-007', loja: 'LOJA-001', dataAdmissao: '2022-02-28', dataNascimento: '1993-05-15', email: 'beatriz@thiagoimports.com', telefone: '(11) 98880-2222', modeloPagamento: 'MP-001', salario: 3500, status: 'Ativo' },
+  { id: 'COL-023', cpf: '333.888.444-55', nome: 'João Silva Motoboy', cargo: 'CARGO-009', loja: 'LOJA-001', dataAdmissao: '2023-06-15', dataNascimento: '1992-03-10', email: 'joao.motoboy@thiagoimports.com', telefone: '(11) 97777-1111', modeloPagamento: 'MP-002', salario: 2000, status: 'Ativo' },
+  { id: 'COL-024', cpf: '444.888.555-66', nome: 'Maria Santos Motoboy', cargo: 'CARGO-009', loja: 'LOJA-002', dataAdmissao: '2023-08-20', dataNascimento: '1995-08-25', email: 'maria.motoboy@thiagoimports.com', telefone: '(11) 97777-2222', modeloPagamento: 'MP-002', salario: 2000, status: 'Ativo' },
 ];
 
 let fornecedores: Fornecedor[] = [
@@ -265,6 +275,7 @@ let cargos: Cargo[] = [
   { id: 'CARGO-006', funcao: 'Auxiliar Administrativo', permissoes: ['Cadastros'] },
   { id: 'CARGO-007', funcao: 'Analista Financeiro', permissoes: ['Financeiro', 'Relatórios'] },
   { id: 'CARGO-008', funcao: 'Supervisor de Loja', permissoes: ['Vendas', 'Estoque', 'Relatórios'] },
+  { id: 'CARGO-009', funcao: 'Motoboy', permissoes: ['Entregas'] },
 ];
 
 let modelosPagamento: ModeloPagamento[] = [
@@ -284,6 +295,14 @@ let contasFinanceiras: ContaFinanceira[] = [
   { id: 'CTA-008', nome: 'Caixa Shopping', tipo: 'Caixa', lojaVinculada: 'LOJA-004', banco: '-', agencia: '-', conta: '-', cnpj: '12.345.678/0004-04', saldoInicial: 8000, saldoAtual: 22000, status: 'Ativo', ultimoMovimento: '2025-01-20' },
   { id: 'CTA-009', nome: 'Santander PJ', tipo: 'Conta Bancária', lojaVinculada: 'Administrativo', banco: 'Santander', agencia: '4321', conta: '56789-0', cnpj: '12.345.678/0001-01', saldoInicial: 30000, saldoAtual: 95000, status: 'Ativo', ultimoMovimento: '2025-01-17' },
   { id: 'CTA-010', nome: 'Inter Digital', tipo: 'Conta Digital', lojaVinculada: 'Administrativo', banco: 'Inter', agencia: '0001', conta: '11223344-5', cnpj: '12.345.678/0001-01', saldoInicial: 5000, saldoAtual: 42000, status: 'Ativo', ultimoMovimento: '2025-01-16' },
+];
+
+let maquinasCartao: MaquinaCartao[] = [
+  { id: 'MAQ-001', nome: 'Máquina Cartão Matriz', cnpjVinculado: 'LOJA-001', contaOrigem: 'CTA-002', status: 'Ativo' },
+  { id: 'MAQ-002', nome: 'Máquina Stone Shopping', cnpjVinculado: 'LOJA-004', contaOrigem: 'CTA-005', status: 'Ativo' },
+  { id: 'MAQ-003', nome: 'Máquina PagSeguro Centro', cnpjVinculado: 'LOJA-003', contaOrigem: 'CTA-003', status: 'Ativo' },
+  { id: 'MAQ-004', nome: 'Máquina Cielo Leste', cnpjVinculado: 'LOJA-006', contaOrigem: 'CTA-004', status: 'Ativo' },
+  { id: 'MAQ-005', nome: 'Máquina GetNet Sul', cnpjVinculado: 'LOJA-007', contaOrigem: 'CTA-002', status: 'Ativo' },
 ];
 
 // API Functions
@@ -546,6 +565,30 @@ export const updateContaFinanceira = (id: string, updates: Partial<ContaFinancei
 export const deleteContaFinanceira = (id: string) => {
   contasFinanceiras = contasFinanceiras.filter(c => c.id !== id);
 };
+
+// Máquinas de Cartão CRUD
+export const getMaquinasCartao = () => [...maquinasCartao];
+export const getMaquinaCartaoById = (id: string) => maquinasCartao.find(m => m.id === id);
+export const addMaquinaCartao = (maquina: Omit<MaquinaCartao, 'id'>) => {
+  const newId = `MAQ-${String(maquinasCartao.length + 1).padStart(3, '0')}`;
+  const newMaquina = { ...maquina, id: newId };
+  maquinasCartao.push(newMaquina);
+  return newMaquina;
+};
+export const updateMaquinaCartao = (id: string, updates: Partial<MaquinaCartao>) => {
+  const index = maquinasCartao.findIndex(m => m.id === id);
+  if (index !== -1) {
+    maquinasCartao[index] = { ...maquinasCartao[index], ...updates };
+    return maquinasCartao[index];
+  }
+  return null;
+};
+export const deleteMaquinaCartao = (id: string) => {
+  maquinasCartao = maquinasCartao.filter(m => m.id !== id);
+};
+
+// Motoboys - colaboradores com cargo Motoboy
+export const getMotoboys = () => colaboradores.filter(c => c.status === 'Ativo' && c.cargo === 'CARGO-009');
 
 // Utility functions
 // formatCurrency removido - usar import { formatCurrency } from '@/utils/formatUtils'
