@@ -61,6 +61,10 @@ import OSHistoricoNotas from "./pages/OSHistoricoNotas";
 import OSPecas from "./pages/OSPecas";
 import FinanceiroNotasAssistencia from "./pages/FinanceiroNotasAssistencia";
 import Relatorios from "./pages/Relatorios";
+import GarantiasNova from "./pages/GarantiasNova";
+import GarantiasEmAndamento from "./pages/GarantiasEmAndamento";
+import GarantiasHistorico from "./pages/GarantiasHistorico";
+import GarantiaDetalhes from "./pages/GarantiaDetalhes";
 
 const queryClient = new QueryClient();
 
@@ -128,7 +132,13 @@ const App = () => (
           <Route path="/vendas/conferencia-gestor/:id" element={<VendasConferenciaGestorDetalhes />} />
           <Route path="/vendas/:id" element={<VendaDetalhes />} />
           <Route path="/relatorios" element={<Relatorios />} />
+          <Route path="/garantias" element={<GarantiasNova />} />
+          <Route path="/garantias/nova" element={<GarantiasNova />} />
+          <Route path="/garantias/em-andamento" element={<GarantiasEmAndamento />} />
+          <Route path="/garantias/historico" element={<GarantiasHistorico />} />
+          <Route path="/garantias/:id" element={<GarantiaDetalhes />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

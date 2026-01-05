@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  Package, Settings, ChevronRight, ChevronLeft, Home, Banknote, Users, Database, ShoppingCart, Wrench, BarChart3
+  Package, Settings, ChevronRight, ChevronLeft, Home, Banknote, Users, Database, ShoppingCart, Wrench, BarChart3, Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
     { title: 'Financeiro', icon: Banknote, href: '/financeiro/conferencia' },
     { title: 'Estoque', icon: Package, href: '/estoque' },
     { title: 'Vendas', icon: ShoppingCart, href: '/vendas' },
+    { title: 'Garantias', icon: Shield, href: '/garantias/nova' },
     { title: 'Assistência', icon: Wrench, href: '/os/produtos-analise' },
     { title: 'Relatórios', icon: BarChart3, href: '/relatorios' },
     { title: 'Cadastros', icon: Database, href: '/cadastros' },
@@ -44,6 +45,9 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
     }
     if (href === '/os/produtos-analise') {
       return location.pathname.startsWith('/os');
+    }
+    if (href === '/garantias/nova') {
+      return location.pathname.startsWith('/garantias');
     }
     return location.pathname.startsWith(href);
   };

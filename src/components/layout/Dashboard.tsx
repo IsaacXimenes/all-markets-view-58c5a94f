@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { StatsCard } from '@/components/ui/StatsCard';
 import { RankingVendedores } from '@/components/dashboard/RankingVendedores';
-import { Wallet2, Package, ShoppingCart, Users, Wrench, TrendingUp } from 'lucide-react';
+import { Wallet2, Package, ShoppingCart, Users, Wrench, TrendingUp, Shield, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getVendas } from '@/utils/vendasApi';
@@ -11,8 +12,10 @@ import { getProdutos } from '@/utils/estoqueApi';
 import { getOrdensServico } from '@/utils/assistenciaApi';
 import { getColaboradores } from '@/utils/cadastrosApi';
 import { formatCurrency } from '@/utils/formatUtils';
+import { getGarantiasExpirandoEm7Dias, getGarantiasExpirandoEm30Dias } from '@/utils/garantiasApi';
 
 export function Dashboard() {
+  const navigate = useNavigate();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // Dados reais do sistema
@@ -35,6 +38,9 @@ export function Dashboard() {
   
   const osAbertas = ordensServico.filter(os => os.status !== 'Serviço concluído').length;
   const osUrgentes = ordensServico.filter(os => os.status === 'Aguardando Peça').length;
+  
+  const garantiasUrgentes = getGarantiasExpirandoEm7Dias();
+  const garantiasAtencao = getGarantiasExpirandoEm30Dias();
   
   const colaboradoresAtivos = colaboradores.length;
   
@@ -87,6 +93,50 @@ export function Dashboard() {
                 icon={<Wrench />}
                 className={osUrgentes > 0 ? "bg-warning/5" : "bg-success/5"}
               />
+            </div>
+            
+            {/* Cards de Garantias */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4 animate-slide-up" style={{ '--delay': '150ms' } as React.CSSProperties}>
+              <Card 
+                className={cn(
+                  "cursor-pointer transition-all hover:shadow-md",
+                  garantiasUrgentes.length > 0 ? "border-red-500 bg-red-50 dark:bg-red-950/20" : "bg-muted/30"
+                )}
+                onClick={() => navigate('/garantias/em-andamento')}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-red-500/10">
+                      <ShieldAlert className="h-5 w-5 text-red-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Garantias Urgentes</p>
+                      <p className="text-2xl font-bold">{garantiasUrgentes.length}</p>
+                      <p className="text-xs text-red-500">Expiram em 7 dias</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card 
+                className={cn(
+                  "cursor-pointer transition-all hover:shadow-md",
+                  garantiasAtencao.length > 0 ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20" : "bg-muted/30"
+                )}
+                onClick={() => navigate('/garantias/em-andamento')}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-yellow-500/10">
+                      <Shield className="h-5 w-5 text-yellow-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Garantias Atenção</p>
+                      <p className="text-2xl font-bold">{garantiasAtencao.length}</p>
+                      <p className="text-xs text-yellow-600">Expiram em 30 dias</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
             
             {/* Main Content Layout */}

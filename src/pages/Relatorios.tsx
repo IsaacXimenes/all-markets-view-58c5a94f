@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart3, Download, FileSpreadsheet, Store, Wrench, MessageSquareWarning } from 'lucide-react';
+import { BarChart3, Download, FileSpreadsheet, Store, Wrench, MessageSquareWarning, Shield } from 'lucide-react';
 import { getLojas } from '@/utils/cadastrosApi';
 import { getVendas } from '@/utils/vendasApi';
 import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 import { getOrdensServico } from '@/utils/assistenciaApi';
 import { getFeedbacks, getTodosColaboradoresParaFeedback } from '@/utils/feedbackApi';
+import { getGarantias, getTratativasByGarantiaId, exportGarantiasToCSV } from '@/utils/garantiasApi';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -22,6 +23,7 @@ export default function Relatorios() {
   const ordensServico = getOrdensServico();
   const feedbacks = getFeedbacks();
   const colaboradores = getTodosColaboradoresParaFeedback();
+  const garantias = getGarantias();
 
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
@@ -146,6 +148,26 @@ export default function Relatorios() {
     });
 
     exportToCSV(dataExport, `feedbacks-colaboradores-${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  // Relatório de Garantias
+  const handleExportGarantias = () => {
+    let garantiasFiltradas = garantias.filter(g => {
+      if (dataInicio) {
+        const data = new Date(g.dataInicioGarantia);
+        if (data < new Date(dataInicio)) return false;
+      }
+      if (dataFim) {
+        const data = new Date(g.dataInicioGarantia);
+        const fim = new Date(dataFim);
+        fim.setHours(23, 59, 59);
+        if (data > fim) return false;
+      }
+      if (lojaFiltro !== 'todas' && g.lojaVenda !== lojaFiltro) return false;
+      return true;
+    });
+
+    exportGarantiasToCSV(garantiasFiltradas, `garantias-${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   // Estatísticas para cards
@@ -323,6 +345,25 @@ export default function Relatorios() {
                     </p>
                   </div>
                   <Button onClick={handleExportFeedbacks} className="w-full gap-2 mt-4">
+                    <Download className="h-4 w-4" />
+                    Exportar CSV
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Garantias */}
+              <Card className="border-2 hover:border-primary/50 transition-colors h-full flex flex-col">
+                <CardContent className="p-6 flex flex-col flex-1">
+                  <div className="flex-1 flex flex-col items-center text-center">
+                    <div className="p-4 rounded-full bg-blue-500/10 mb-4">
+                      <Shield className="h-8 w-8 text-blue-500" />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">Garantias</h3>
+                    <p className="text-sm text-muted-foreground flex-1">
+                      Exportar garantias acionadas, tipos de tratativa e tempo de resolução.
+                    </p>
+                  </div>
+                  <Button onClick={handleExportGarantias} className="w-full gap-2 mt-4">
                     <Download className="h-4 w-4" />
                     Exportar CSV
                   </Button>
