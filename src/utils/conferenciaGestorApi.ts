@@ -36,6 +36,7 @@ export interface VendaConferencia {
   financeiroResponsavel?: string;
   financeiroNome?: string;
   dataFinalizacao?: string;
+  contaDestino?: string;
   dadosVenda: {
     clienteCpf?: string;
     clienteTelefone?: string;
@@ -426,7 +427,8 @@ export const validarVendaGestor = (
 export const finalizarVendaFinanceiro = (
   id: string,
   responsavelId: string,
-  responsavelNome: string
+  responsavelNome: string,
+  contaDestino: string
 ): VendaConferencia | null => {
   const index = vendasConferencia.findIndex(v => v.id === id);
   if (index === -1) return null;
@@ -437,7 +439,7 @@ export const finalizarVendaFinanceiro = (
     id: `TL-${id}-FINAL`,
     tipo: 'finalizado',
     titulo: 'Concluído',
-    descricao: 'Venda finalizada pelo financeiro',
+    descricao: `Venda finalizada pelo financeiro. Conta: ${contaDestino}`,
     dataHora: agora,
     responsavel: responsavelNome
   };
@@ -447,6 +449,7 @@ export const finalizarVendaFinanceiro = (
     status: 'Concluído',
     financeiroResponsavel: responsavelId,
     financeiroNome: responsavelNome,
+    contaDestino: contaDestino,
     dataFinalizacao: agora,
     timeline: [...vendasConferencia[index].timeline, timelineFinalizado]
   };
