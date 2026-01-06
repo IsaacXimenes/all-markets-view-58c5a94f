@@ -500,22 +500,36 @@ export default function VendasAcessorios() {
                   <TableRow>
                     <TableHead>Acessório</TableHead>
                     <TableHead className="text-center">Qtd</TableHead>
+                    <TableHead className="text-right">Custo Unit.</TableHead>
                     <TableHead className="text-right">Valor Recomendado</TableHead>
                     <TableHead className="text-right">Valor Unit.</TableHead>
                     <TableHead className="text-right">Valor Total</TableHead>
+                    <TableHead className="text-right">Lucro</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {acessorios.map(item => (
+                  {acessorios.map(item => {
+                    const acessorioOriginal = acessoriosEstoque.find(a => a.id === item.acessorioId);
+                    const custoUnit = acessorioOriginal?.valorCusto || 0;
+                    const lucroItem = item.valorTotal - (custoUnit * item.quantidade);
+                    return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.descricao}</TableCell>
                       <TableCell className="text-center">{item.quantidade}</TableCell>
+                      <TableCell className="text-right text-muted-foreground text-sm">
+                        {formatCurrency(custoUnit)}
+                      </TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {formatCurrency(item.valorRecomendado)}
                       </TableCell>
                       <TableCell className="text-right">{formatCurrency(item.valorUnitario)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(item.valorTotal)}</TableCell>
+                      <TableCell className="text-right">
+                        <span className={`font-bold ${lucroItem >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                          {formatCurrency(lucroItem)}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <Button 
                           variant="ghost" 
@@ -526,7 +540,7 @@ export default function VendasAcessorios() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  );})}
                 </TableBody>
               </Table>
             )}

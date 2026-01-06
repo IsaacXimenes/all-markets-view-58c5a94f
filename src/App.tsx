@@ -60,11 +60,13 @@ import OSSolicitacoesPecas from "./pages/OSSolicitacoesPecas";
 import OSHistoricoNotas from "./pages/OSHistoricoNotas";
 import OSPecas from "./pages/OSPecas";
 import FinanceiroNotasAssistencia from "./pages/FinanceiroNotasAssistencia";
+import FinanceiroExtrato from "./pages/FinanceiroExtrato";
 import Relatorios from "./pages/Relatorios";
 import GarantiasNova from "./pages/GarantiasNova";
 import GarantiasEmAndamento from "./pages/GarantiasEmAndamento";
 import GarantiasHistorico from "./pages/GarantiasHistorico";
 import GarantiaDetalhes from "./pages/GarantiaDetalhes";
+import CadastrosPlanosGarantia from "./pages/CadastrosPlanosGarantia";
 
 const queryClient = new QueryClient();
 
@@ -108,7 +110,9 @@ const App = () => (
           <Route path="/os/historico-notas" element={<OSHistoricoNotas />} />
           <Route path="/os/pecas" element={<OSPecas />} />
           <Route path="/financeiro/notas-assistencia" element={<FinanceiroNotasAssistencia />} />
+          <Route path="/financeiro/extrato" element={<FinanceiroExtrato />} />
           <Route path="/cadastros" element={<Cadastros />} />
+          <Route path="/cadastros/planos-garantia" element={<CadastrosPlanosGarantia />} />
           <Route path="/cadastros/lojas" element={<CadastrosLojas />} />
           <Route path="/cadastros/clientes" element={<CadastrosClientes />} />
           <Route path="/cadastros/colaboradores" element={<CadastrosColaboradores />} />
