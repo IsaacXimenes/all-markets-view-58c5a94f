@@ -1,20 +1,35 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
+} from '@/components/ui/select';
+import { 
+  Dialog, DialogContent, DialogHeader, DialogTitle 
+} from '@/components/ui/dialog';
+import { 
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
+} from '@/components/ui/table';
 import { 
   ArrowLeft, Shield, User, Package, Phone, Mail, Clock, 
-  FileText, CheckCircle, AlertCircle, Smartphone, Wrench, ArrowRightLeft
+  FileText, CheckCircle, AlertCircle, Smartphone, Wrench, ArrowRightLeft,
+  Plus, Search
 } from 'lucide-react';
 import { 
   getGarantiaById, getTratativasByGarantiaId, getTimelineByGarantiaId,
-  calcularStatusExpiracao
+  calcularStatusExpiracao, addTratativa, addTimelineEntry, updateGarantia
 } from '@/utils/garantiasApi';
+import { getProdutos, updateProduto, addMovimentacao, Produto } from '@/utils/estoqueApi';
 import { getLojas } from '@/utils/cadastrosApi';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 export default function GarantiaDetalhes() {
   const { id } = useParams<{ id: string }>();
@@ -25,12 +40,140 @@ export default function GarantiaDetalhes() {
   const tratativas = id ? getTratativasByGarantiaId(id) : [];
   const timeline = id ? getTimelineByGarantiaId(id) : [];
   
+  // Estados do formulário de tratativa
+  const [tipoTratativa, setTipoTratativa] = useState<string>('');
+  const [descricaoTratativa, setDescricaoTratativa] = useState('');
+  const [showModalAparelho, setShowModalAparelho] = useState(false);
+  const [aparelhoSelecionado, setAparelhoSelecionado] = useState<Produto | null>(null);
+  const [buscaAparelho, setBuscaAparelho] = useState('');
+  
   const statusExpiracao = useMemo(() => {
     if (!garantia) return null;
     return calcularStatusExpiracao(garantia.dataFimGarantia);
   }, [garantia]);
   
+  // Lista de aparelhos disponíveis para empréstimo/troca
+  const aparelhosDisponiveis = useMemo(() => {
+    const produtos = getProdutos();
+    return produtos.filter(p => 
+      p.quantidade > 0 && 
+      (buscaAparelho === '' || 
+        p.imei?.toLowerCase().includes(buscaAparelho.toLowerCase()) ||
+        p.modelo.toLowerCase().includes(buscaAparelho.toLowerCase()))
+    );
+  }, [buscaAparelho]);
+  
   const getLojaName = (lojaId: string) => lojas.find(l => l.id === lojaId)?.nome || lojaId;
+  
+  const getTipoTimeline = (tipo: string) => {
+    switch (tipo) {
+      case 'Direcionado Apple': return 'tratativa';
+      case 'Encaminhado Assistência': return 'os_criada';
+      case 'Assistência + Empréstimo': return 'emprestimo';
+      case 'Troca Direta': return 'troca';
+      default: return 'tratativa';
+    }
+  };
+
+  const getTituloTimeline = (tipo: string) => {
+    switch (tipo) {
+      case 'Direcionado Apple': return 'Cliente Direcionado para Apple';
+      case 'Encaminhado Assistência': return 'Aparelho Encaminhado para Assistência';
+      case 'Assistência + Empréstimo': return 'Assistência + Aparelho Emprestado';
+      case 'Troca Direta': return 'Troca Direta Realizada';
+      default: return 'Tratativa Registrada';
+    }
+  };
+  
+  const handleRegistrarTratativa = () => {
+    if (!garantia) return;
+    
+    // Validações
+    if (!tipoTratativa || !descricaoTratativa) {
+      toast.error('Preencha tipo e descrição da tratativa');
+      return;
+    }
+    
+    if ((tipoTratativa === 'Assistência + Empréstimo' || tipoTratativa === 'Troca Direta') && !aparelhoSelecionado) {
+      toast.error('Selecione um aparelho para esta tratativa');
+      return;
+    }
+
+    // Criar tratativa
+    addTratativa({
+      garantiaId: garantia.id,
+      tipo: tipoTratativa as 'Direcionado Apple' | 'Encaminhado Assistência' | 'Assistência + Empréstimo' | 'Troca Direta',
+      dataHora: new Date().toISOString(),
+      usuarioId: 'COL-001',
+      usuarioNome: 'Usuário Sistema',
+      descricao: descricaoTratativa,
+      aparelhoEmprestadoId: tipoTratativa === 'Assistência + Empréstimo' ? aparelhoSelecionado?.id : undefined,
+      aparelhoEmprestadoModelo: tipoTratativa === 'Assistência + Empréstimo' ? aparelhoSelecionado?.modelo : undefined,
+      aparelhoEmprestadoImei: tipoTratativa === 'Assistência + Empréstimo' ? aparelhoSelecionado?.imei : undefined,
+      aparelhoTrocaId: tipoTratativa === 'Troca Direta' ? aparelhoSelecionado?.id : undefined,
+      aparelhoTrocaModelo: tipoTratativa === 'Troca Direta' ? aparelhoSelecionado?.modelo : undefined,
+      aparelhoTrocaImei: tipoTratativa === 'Troca Direta' ? aparelhoSelecionado?.imei : undefined,
+      osId: tipoTratativa.includes('Assistência') ? 'OS-AUTO' : undefined,
+      status: 'Em Andamento'
+    });
+
+    // Adicionar entrada na timeline
+    addTimelineEntry({
+      garantiaId: garantia.id,
+      dataHora: new Date().toISOString(),
+      tipo: getTipoTimeline(tipoTratativa),
+      titulo: getTituloTimeline(tipoTratativa),
+      descricao: descricaoTratativa,
+      usuarioId: 'COL-001',
+      usuarioNome: 'Usuário Sistema'
+    });
+
+    // Atualizar status da garantia
+    updateGarantia(garantia.id, { status: 'Em Tratativa' });
+
+    // Ações específicas por tipo
+    if (tipoTratativa === 'Assistência + Empréstimo' && aparelhoSelecionado) {
+      updateProduto(aparelhoSelecionado.id, { quantidade: 0 });
+      addMovimentacao({
+        data: new Date().toISOString(),
+        produto: aparelhoSelecionado.modelo,
+        imei: aparelhoSelecionado.imei || '',
+        quantidade: 1,
+        origem: aparelhoSelecionado.loja,
+        destino: 'Empréstimo - Garantia',
+        responsavel: 'Usuário Sistema',
+        motivo: `Empréstimo garantia ${garantia.id}`
+      });
+    }
+
+    if (tipoTratativa === 'Troca Direta' && aparelhoSelecionado) {
+      updateProduto(aparelhoSelecionado.id, { quantidade: 0 });
+      addMovimentacao({
+        data: new Date().toISOString(),
+        produto: aparelhoSelecionado.modelo,
+        imei: aparelhoSelecionado.imei || '',
+        quantidade: 1,
+        origem: aparelhoSelecionado.loja,
+        destino: 'Saída - Troca Garantia',
+        responsavel: 'Usuário Sistema',
+        motivo: `Troca direta garantia ${garantia.id}`
+      });
+    }
+
+    toast.success('Tratativa registrada com sucesso!');
+    setTipoTratativa('');
+    setDescricaoTratativa('');
+    setAparelhoSelecionado(null);
+    
+    // Recarregar página
+    window.location.reload();
+  };
+  
+  const handleSelecionarAparelho = (produto: Produto) => {
+    setAparelhoSelecionado(produto);
+    setShowModalAparelho(false);
+    setBuscaAparelho('');
+  };
   
   const getTimelineIcon = (tipo: string) => {
     switch (tipo) {
@@ -59,6 +202,8 @@ export default function GarantiaDetalhes() {
       default: return 'bg-gray-500';
     }
   };
+
+  const precisaAparelho = tipoTratativa === 'Assistência + Empréstimo' || tipoTratativa === 'Troca Direta';
 
   if (!garantia) {
     return (
@@ -262,6 +407,84 @@ export default function GarantiaDetalhes() {
         
         {/* Coluna Lateral */}
         <div className="space-y-6">
+          {/* Card Registrar Nova Tratativa */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                Registrar Nova Tratativa
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Tipo de Tratativa *</Label>
+                <Select value={tipoTratativa} onValueChange={setTipoTratativa}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Direcionado Apple">Direcionado Apple</SelectItem>
+                    <SelectItem value="Encaminhado Assistência">Encaminhado Assistência</SelectItem>
+                    <SelectItem value="Assistência + Empréstimo">Assistência + Empréstimo</SelectItem>
+                    <SelectItem value="Troca Direta">Troca Direta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Descrição *</Label>
+                <Textarea 
+                  placeholder="Descreva a tratativa..."
+                  value={descricaoTratativa}
+                  onChange={(e) => setDescricaoTratativa(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              
+              {precisaAparelho && (
+                <div className="space-y-2">
+                  <Label>
+                    {tipoTratativa === 'Assistência + Empréstimo' ? 'Aparelho Empréstimo' : 'Aparelho Troca'} *
+                  </Label>
+                  {aparelhoSelecionado ? (
+                    <div className="p-3 bg-muted/50 rounded-lg flex justify-between items-center">
+                      <div>
+                        <p className="font-medium text-sm">{aparelhoSelecionado.modelo}</p>
+                        <p className="text-xs text-muted-foreground">{aparelhoSelecionado.imei}</p>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setShowModalAparelho(true)}
+                      >
+                        Trocar
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => setShowModalAparelho(true)}
+                    >
+                      <Search className="h-4 w-4 mr-2" />
+                      Selecionar Aparelho
+                    </Button>
+                  )}
+                </div>
+              )}
+              
+              <Separator />
+              
+              <Button 
+                className="w-full" 
+                onClick={handleRegistrarTratativa}
+                disabled={!tipoTratativa || !descricaoTratativa || (precisaAparelho && !aparelhoSelecionado)}
+              >
+                Registrar Tratativa
+              </Button>
+            </CardContent>
+          </Card>
+          
           {/* Tratativas Registradas */}
           <Card>
             <CardHeader>
@@ -323,6 +546,75 @@ export default function GarantiaDetalhes() {
           </Card>
         </div>
       </div>
+      
+      {/* Modal Seleção de Aparelho */}
+      <Dialog open={showModalAparelho} onOpenChange={setShowModalAparelho}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              {tipoTratativa === 'Assistência + Empréstimo' ? 'Selecionar Aparelho para Empréstimo' : 'Selecionar Aparelho para Troca'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por IMEI ou modelo..."
+                value={buscaAparelho}
+                onChange={(e) => setBuscaAparelho(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <div className="flex-1 overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>IMEI</TableHead>
+                    <TableHead>Modelo</TableHead>
+                    <TableHead>Cor</TableHead>
+                    <TableHead>Bateria</TableHead>
+                    <TableHead>Loja</TableHead>
+                    <TableHead className="text-right">Ação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {aparelhosDisponiveis.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Nenhum aparelho disponível encontrado
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    aparelhosDisponiveis.slice(0, 20).map(produto => (
+                      <TableRow 
+                        key={produto.id}
+                        className={aparelhoSelecionado?.id === produto.id ? 'bg-primary/10' : ''}
+                      >
+                        <TableCell className="font-mono text-xs">{produto.imei}</TableCell>
+                        <TableCell>{produto.modelo}</TableCell>
+                        <TableCell>{produto.cor}</TableCell>
+                        <TableCell>{produto.saudeBateria}%</TableCell>
+                        <TableCell>{getLojaName(produto.loja)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            size="sm" 
+                            variant={aparelhoSelecionado?.id === produto.id ? 'default' : 'outline'}
+                            onClick={() => handleSelecionarAparelho(produto)}
+                          >
+                            {aparelhoSelecionado?.id === produto.id ? 'Selecionado' : 'Selecionar'}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageLayout>
   );
 }
