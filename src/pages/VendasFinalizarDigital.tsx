@@ -898,95 +898,110 @@ export default function VendasFinalizarDigital() {
                   <TableRow>
                     <TableHead>Acessório</TableHead>
                     <TableHead className="text-center">Qtd</TableHead>
+                    <TableHead className="text-right">Custo Unit.</TableHead>
                     <TableHead className="text-right">Valor Recomendado</TableHead>
                     <TableHead className="text-right">Valor Unit.</TableHead>
                     <TableHead className="text-right">Valor Total</TableHead>
+                    <TableHead className="text-right">Lucro</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {acessoriosVenda.map(acessorio => (
-                    <TableRow key={acessorio.id}>
-                      <TableCell className="font-medium">{acessorio.descricao}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-6 w-6"
-                            onClick={() => {
-                              if (acessorio.quantidade > 1) {
-                                const updated = acessoriosVenda.map(a => 
-                                  a.id === acessorio.id 
-                                    ? { ...a, quantidade: a.quantidade - 1, valorTotal: (a.quantidade - 1) * a.valorUnitario }
-                                    : a
-                                );
-                                setAcessoriosVenda(updated);
-                              }
-                            }}
-                          >
-                            -
-                          </Button>
-                          <span className="w-8 text-center">{acessorio.quantidade}</span>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
-                            className="h-6 w-6"
-                            onClick={() => {
-                              const acessorioEstoque = acessoriosEstoque.find(a => a.id === acessorio.acessorioId);
-                              if (acessorioEstoque && acessorio.quantidade < acessorioEstoque.quantidade) {
-                                const updated = acessoriosVenda.map(a => 
-                                  a.id === acessorio.id 
-                                    ? { ...a, quantidade: a.quantidade + 1, valorTotal: (a.quantidade + 1) * a.valorUnitario }
-                                    : a
-                                );
-                                setAcessoriosVenda(updated);
-                              } else {
-                                toast.error('Quantidade máxima atingida.');
-                              }
-                            }}
-                          >
-                            +
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {formatCurrency(acessorio.valorRecomendado)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end">
-                          <div className="relative">
-                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                            <Input 
-                              type="text"
-                              value={acessorio.valorUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(/\D/g, '');
-                                const numValue = Number(value) / 100;
-                                const updated = acessoriosVenda.map(a => 
-                                  a.id === acessorio.id ? { ...a, valorUnitario: numValue, valorTotal: numValue * a.quantidade } : a
-                                );
-                                setAcessoriosVenda(updated);
+                  {acessoriosVenda.map(acessorio => {
+                    const acessorioOriginal = acessoriosEstoque.find(a => a.id === acessorio.acessorioId);
+                    const custoUnit = acessorioOriginal?.valorCusto || 0;
+                    const lucroItem = acessorio.valorTotal - (custoUnit * acessorio.quantidade);
+                    return (
+                      <TableRow key={acessorio.id}>
+                        <TableCell className="font-medium">{acessorio.descricao}</TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-6 w-6"
+                              onClick={() => {
+                                if (acessorio.quantidade > 1) {
+                                  const updated = acessoriosVenda.map(a => 
+                                    a.id === acessorio.id 
+                                      ? { ...a, quantidade: a.quantidade - 1, valorTotal: (a.quantidade - 1) * a.valorUnitario }
+                                      : a
+                                  );
+                                  setAcessoriosVenda(updated);
+                                }
                               }}
-                              className="w-28 text-right pl-8"
-                            />
+                            >
+                              -
+                            </Button>
+                            <span className="w-8 text-center">{acessorio.quantidade}</span>
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-6 w-6"
+                              onClick={() => {
+                                const acessorioEstoque = acessoriosEstoque.find(a => a.id === acessorio.acessorioId);
+                                if (acessorioEstoque && acessorio.quantidade < acessorioEstoque.quantidade) {
+                                  const updated = acessoriosVenda.map(a => 
+                                    a.id === acessorio.id 
+                                      ? { ...a, quantidade: a.quantidade + 1, valorTotal: (a.quantidade + 1) * a.valorUnitario }
+                                      : a
+                                  );
+                                  setAcessoriosVenda(updated);
+                                } else {
+                                  toast.error('Quantidade máxima atingida.');
+                                }
+                              }}
+                            >
+                              +
+                            </Button>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(acessorio.valorTotal)}
-                      </TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleRemoveAcessorio(acessorio.id)}
-                        >
-                          <X className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground text-sm">
+                          {formatCurrency(custoUnit)}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {formatCurrency(acessorio.valorRecomendado)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end">
+                            <div className="relative">
+                              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                              <Input 
+                                type="text"
+                                value={acessorio.valorUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/\D/g, '');
+                                  const numValue = Number(value) / 100;
+                                  const updated = acessoriosVenda.map(a => 
+                                    a.id === acessorio.id ? { ...a, valorUnitario: numValue, valorTotal: numValue * a.quantidade } : a
+                                  );
+                                  setAcessoriosVenda(updated);
+                                }}
+                                className="w-28 text-right pl-8"
+                              />
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(acessorio.valorTotal)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className={`font-bold ${lucroItem >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                            {formatCurrency(lucroItem)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleRemoveAcessorio(acessorio.id)}
+                          >
+                            <X className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
@@ -1073,15 +1088,19 @@ export default function VendasFinalizarDigital() {
         </Card>
 
         {/* Garantia dos Produtos */}
-        {itens.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Garantia dos Produtos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Garantia dos Produtos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {itens.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhum produto adicionado. Adicione produtos para configurar a garantia.
+              </div>
+            ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1202,9 +1221,9 @@ export default function VendasFinalizarDigital() {
                   })}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
         {/* Pagamentos */}
         <Card>

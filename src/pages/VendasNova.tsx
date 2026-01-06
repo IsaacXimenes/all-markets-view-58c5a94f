@@ -1151,15 +1151,19 @@ export default function VendasNova() {
         </Card>
 
         {/* Garantia dos Produtos */}
-        {itens.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Garantia dos Produtos
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              Garantia dos Produtos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {itens.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhum produto adicionado. Adicione produtos para configurar a garantia.
+              </div>
+            ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -1280,9 +1284,9 @@ export default function VendasNova() {
                   })}
                 </TableBody>
               </Table>
-            </CardContent>
-          </Card>
-        )}
+            )}
+          </CardContent>
+        </Card>
 
         {/* Pagamentos */}
         <Card>
