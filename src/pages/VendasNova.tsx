@@ -1078,6 +1078,78 @@ export default function VendasNova() {
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Base de Troca (Aparelhos de Troca)
+              </span>
+              <Button variant="outline" onClick={() => setShowTradeInModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Item de Troca
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {tradeIns.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                Nenhum item de troca adicionado.
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Modelo</TableHead>
+                    <TableHead>Condição</TableHead>
+                    <TableHead>IMEI</TableHead>
+                    <TableHead>IMEI Validado</TableHead>
+                    <TableHead className="text-right">Valor de Compra Usado</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tradeIns.map(trade => (
+                    <TableRow key={trade.id} className={!trade.imeiValidado ? 'bg-destructive/10' : ''}>
+                      <TableCell className="font-medium">{trade.modelo}</TableCell>
+                      <TableCell>
+                        <Badge variant={trade.condicao === 'Novo' ? 'default' : 'secondary'}>{trade.condicao}</Badge>
+                      </TableCell>
+                      <TableCell>{trade.imei || '-'}</TableCell>
+                      <TableCell>
+                        {trade.imeiValidado ? (
+                          <Badge variant="default" className="bg-green-500">Sim</Badge>
+                        ) : (
+                          <Badge variant="destructive">Não</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right text-green-600">
+                        -{formatCurrency(trade.valorCompraUsado)}
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => setTradeIns(tradeIns.filter(t => t.id !== trade.id))}
+                        >
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            
+            {tradeInNaoValidado && (
+              <div className="mt-4 p-3 bg-destructive/10 rounded-lg flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                <span className="font-medium">Há item de troca com IMEI NÃO validado! Registrar venda desabilitado.</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Garantia dos Produtos */}
         {itens.length > 0 && (
           <Card>
@@ -1211,79 +1283,6 @@ export default function VendasNova() {
             </CardContent>
           </Card>
         )}
-
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Base de Troca (Aparelhos de Troca)
-              </span>
-              <Button variant="outline" onClick={() => setShowTradeInModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Item de Troca
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {tradeIns.length === 0 ? (
-              <div className="text-center py-4 text-muted-foreground">
-                Nenhum item de troca adicionado.
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Modelo</TableHead>
-                    <TableHead>Condição</TableHead>
-                    <TableHead>IMEI</TableHead>
-                    <TableHead>IMEI Validado</TableHead>
-                    <TableHead className="text-right">Valor de Compra Usado</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tradeIns.map(trade => (
-                    <TableRow key={trade.id} className={!trade.imeiValidado ? 'bg-destructive/10' : ''}>
-                      <TableCell className="font-medium">{trade.modelo}</TableCell>
-                      <TableCell>
-                        <Badge variant={trade.condicao === 'Novo' ? 'default' : 'secondary'}>{trade.condicao}</Badge>
-                      </TableCell>
-                      <TableCell>{trade.imei || '-'}</TableCell>
-                      <TableCell>
-                        {trade.imeiValidado ? (
-                          <Badge variant="default" className="bg-green-500">Sim</Badge>
-                        ) : (
-                          <Badge variant="destructive">Não</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right text-green-600">
-                        -{formatCurrency(trade.valorCompraUsado)}
-                      </TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => setTradeIns(tradeIns.filter(t => t.id !== trade.id))}
-                        >
-                          <X className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-            
-            {tradeInNaoValidado && (
-              <div className="mt-4 p-3 bg-destructive/10 rounded-lg flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                <span className="font-medium">Há item de troca com IMEI NÃO validado! Registrar venda desabilitado.</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
         {/* Pagamentos */}
         <Card>
