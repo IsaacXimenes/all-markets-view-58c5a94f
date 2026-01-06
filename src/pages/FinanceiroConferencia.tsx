@@ -84,7 +84,8 @@ export default function FinanceiroConferencia() {
       const resultado = finalizarVendaFinanceiro(
         vendaSelecionada.id,
         responsavelSelecionado,
-        responsavel?.nome || 'Responsável'
+        responsavel?.nome || 'Responsável',
+        contaSelecionada
       );
 
       if (resultado) {
@@ -131,7 +132,9 @@ export default function FinanceiroConferencia() {
       'Valor': formatCurrency(v.valorTotal),
       'Status': v.status,
       'Gestor': v.gestorNome || '-',
-      'Data Conferência Gestor': v.dataConferencia ? new Date(v.dataConferencia).toLocaleDateString('pt-BR') : '-'
+      'Data Conferência Gestor': v.dataConferencia ? new Date(v.dataConferencia).toLocaleDateString('pt-BR') : '-',
+      'Conta Destino': v.contaDestino || '-',
+      'Responsável Financeiro': v.financeiroNome || '-'
     }));
 
     const headers = Object.keys(dataToExport[0]).join(',');
@@ -314,13 +317,14 @@ export default function FinanceiroConferencia() {
                     <TableHead className="text-right">Valor</TableHead>
                     <TableHead>Gestor</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Conta Destino</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredVendas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         Nenhuma venda encontrada
                       </TableCell>
                     </TableRow>
@@ -339,6 +343,13 @@ export default function FinanceiroConferencia() {
                         <TableCell className="text-xs">{venda.gestorNome || '-'}</TableCell>
                         <TableCell>
                           {getStatusBadge(venda.status)}
+                        </TableCell>
+                        <TableCell>
+                          {venda.contaDestino ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                              {venda.contaDestino}
+                            </Badge>
+                          ) : '-'}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">

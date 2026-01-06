@@ -181,6 +181,17 @@ export default function VendasConferenciaGestorDetalhes() {
               <div className="flex justify-between text-base"><span>Total:</span><strong className="text-primary">{formatCurrency(venda.dadosVenda.total)}</strong></div>
               <div className="flex justify-between"><span>Lucro:</span><strong className={venda.dadosVenda.lucro >= 0 ? 'text-green-600' : 'text-red-600'}>{formatCurrency(venda.dadosVenda.lucro)}</strong></div>
               <div className="flex justify-between"><span>Margem:</span><strong>{venda.dadosVenda.margem.toFixed(2)}%</strong></div>
+              {venda.status === 'Concluído' && venda.contaDestino && (
+                <>
+                  <Separator />
+                  <div className="flex justify-between items-center">
+                    <span>Conta Destino:</span>
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                      {venda.contaDestino}
+                    </Badge>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
