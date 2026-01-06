@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Shield, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Shield, Search, Info } from 'lucide-react';
 import { 
   getPlanosGarantia, 
   addPlanoGarantia, 
@@ -32,6 +32,7 @@ export default function CadastrosPlanosGarantia() {
   // Formulário
   const [nome, setNome] = useState('');
   const [tipo, setTipo] = useState<'Apple' | 'Thiago Imports'>('Thiago Imports');
+  const [condicao, setCondicao] = useState<'Novo' | 'Seminovo' | 'Ambos'>('Ambos');
   const [meses, setMeses] = useState(12);
   const [valor, setValor] = useState('');
   const [modelos, setModelos] = useState<string[]>([]);
@@ -51,13 +52,15 @@ export default function CadastrosPlanosGarantia() {
     const buscaLower = busca.toLowerCase();
     return planos.filter(p => 
       p.nome.toLowerCase().includes(buscaLower) ||
-      p.tipo.toLowerCase().includes(buscaLower)
+      p.tipo.toLowerCase().includes(buscaLower) ||
+      p.condicao.toLowerCase().includes(buscaLower)
     );
   }, [planos, busca]);
 
   const limparFormulario = () => {
     setNome('');
     setTipo('Thiago Imports');
+    setCondicao('Ambos');
     setMeses(12);
     setValor('');
     setModelos([]);
@@ -71,6 +74,7 @@ export default function CadastrosPlanosGarantia() {
       setEditando(plano);
       setNome(plano.nome);
       setTipo(plano.tipo);
+      setCondicao(plano.condicao);
       setMeses(plano.meses);
       setValor(plano.valor.toString());
       setModelos(plano.modelos);
@@ -94,6 +98,7 @@ export default function CadastrosPlanosGarantia() {
       const atualizado = updatePlanoGarantia(editando.id, {
         nome,
         tipo,
+        condicao,
         meses,
         valor: valorNum,
         modelos,
@@ -108,6 +113,7 @@ export default function CadastrosPlanosGarantia() {
       addPlanoGarantia({
         nome,
         tipo,
+        condicao,
         meses,
         valor: valorNum,
         modelos,
@@ -137,6 +143,14 @@ export default function CadastrosPlanosGarantia() {
     }
   };
 
+  const getCondicaoBadgeVariant = (condicao: string) => {
+    switch (condicao) {
+      case 'Novo': return 'default';
+      case 'Seminovo': return 'secondary';
+      default: return 'outline';
+    }
+  };
+
   return (
     <CadastrosLayout title="Planos de Garantia">
       <div className="space-y-6">
@@ -157,6 +171,12 @@ export default function CadastrosPlanosGarantia() {
           </Button>
         </div>
 
+        {/* Info */}
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+          <Info className="h-4 w-4" />
+          <span>Os valores exibidos são apenas para referência interna e controle administrativo.</span>
+        </div>
+
         {/* Tabela */}
         <Card>
           <CardHeader>
@@ -173,8 +193,9 @@ export default function CadastrosPlanosGarantia() {
                     <TableHead>ID</TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Condição</TableHead>
                     <TableHead className="text-center">Meses</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">Valor (Ref.)</TableHead>
                     <TableHead>Modelos</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-center">Ações</TableHead>
@@ -188,6 +209,11 @@ export default function CadastrosPlanosGarantia() {
                       <TableCell>
                         <Badge variant={plano.tipo === 'Apple' ? 'default' : 'secondary'}>
                           {plano.tipo}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getCondicaoBadgeVariant(plano.condicao)}>
+                          {plano.condicao}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">{plano.meses}</TableCell>
@@ -235,7 +261,7 @@ export default function CadastrosPlanosGarantia() {
                   ))}
                   {planosFiltrados.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         Nenhum plano encontrado.
                       </TableCell>
                     </TableRow>
@@ -262,7 +288,7 @@ export default function CadastrosPlanosGarantia() {
                 <Input
                   value={nome}
                   onChange={(e) => setNome(e.target.value)}
-                  placeholder="Ex: Proteção Thiago Gold"
+                  placeholder="Ex: Silver, Gold"
                 />
               </div>
               <div>
@@ -274,6 +300,19 @@ export default function CadastrosPlanosGarantia() {
                   <SelectContent>
                     <SelectItem value="Apple">Apple</SelectItem>
                     <SelectItem value="Thiago Imports">Thiago Imports</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Condição do Aparelho *</Label>
+                <Select value={condicao} onValueChange={(v) => setCondicao(v as any)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Novo">Novo</SelectItem>
+                    <SelectItem value="Seminovo">Seminovo</SelectItem>
+                    <SelectItem value="Ambos">Ambos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -300,12 +339,13 @@ export default function CadastrosPlanosGarantia() {
                 />
               </div>
               <div>
-                <Label>Valor (R$)</Label>
+                <Label>Valor de Referência (R$)</Label>
                 <Input
                   value={valor}
                   onChange={(e) => setValor(e.target.value.replace(/[^\d,]/g, ''))}
                   placeholder="0,00"
                 />
+                <p className="text-xs text-muted-foreground mt-1">Valor interno, não cobrado na venda</p>
               </div>
               <div className="col-span-2">
                 <Label>Descrição</Label>

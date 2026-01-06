@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import QRCode from 'qrcode';
 import { 
   Lock, User, Calendar, DollarSign, Search, Plus, Clock, CheckCircle,
-  ShoppingCart, Package, CreditCard, Truck, FileText, AlertTriangle, Check, X, Eye, Trash2, Shield
+  ShoppingCart, Package, CreditCard, Truck, FileText, AlertTriangle, Check, X, Eye, Trash2, Shield, Save
 } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
 
@@ -34,6 +34,7 @@ import { addVenda, getHistoricoComprasCliente, ItemVenda, ItemTradeIn, Pagamento
 import { getProdutosCadastro, ProdutoCadastro } from '@/utils/cadastrosApi';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
 import { getAcessorios, Acessorio, VendaAcessorio } from '@/utils/acessoriosApi';
+import { useDraftVenda } from '@/hooks/useDraftVenda';
 
 const TIMER_DURATION = 1800; // 30 minutos em segundos
 
@@ -126,6 +127,13 @@ export default function VendasFinalizarDigital() {
   }
   const [garantiaItens, setGarantiaItens] = useState<GarantiaItemVenda[]>([]);
 
+  // Draft (rascunho automático)
+  const draftKey = `draft_venda_digital_${id}`;
+  const { saveDraft, loadDraft, clearDraft, hasDraft, getDraftAge, formatDraftAge } = useDraftVenda(draftKey);
+  const [showDraftModal, setShowDraftModal] = useState(false);
+  const [draftAge, setDraftAge] = useState<number | null>(null);
+  const isLoadingDraft = useRef(false);
+  const lastSaveTime = useRef<number>(0);
 
   // Carregar dados do pré-cadastro
   useEffect(() => {
@@ -135,12 +143,91 @@ export default function VendasFinalizarDigital() {
         setVenda(vendaData);
         // Pré-preencher cliente nome do pré-cadastro
         setClienteNome(vendaData.clienteNome);
+        
+        // Verificar se existe rascunho após carregar a venda
+        setTimeout(() => {
+          if (hasDraft()) {
+            setDraftAge(getDraftAge());
+            setShowDraftModal(true);
+          }
+        }, 100);
       } else {
         toast.error('Venda não encontrada');
         navigate('/vendas/pendentes-digitais');
       }
     }
   }, [id, navigate]);
+
+  // Carregar rascunho
+  const handleLoadDraft = () => {
+    isLoadingDraft.current = true;
+    const draft = loadDraft();
+    if (draft) {
+      setLojaVenda(draft.lojaVenda || '');
+      setClienteId(draft.clienteId || '');
+      setClienteNome(draft.clienteNome || '');
+      setClienteCpf(draft.clienteCpf || '');
+      setClienteTelefone(draft.clienteTelefone || '');
+      setClienteEmail(draft.clienteEmail || '');
+      setClienteCidade(draft.clienteCidade || '');
+      setOrigemVenda(draft.origemVenda || 'Digital');
+      setLocalRetirada(draft.localRetirada || '');
+      setTipoRetirada(draft.tipoRetirada || 'Retirada Balcão');
+      setTaxaEntrega(draft.taxaEntrega || 0);
+      setObservacoes(draft.observacoes || '');
+      setItens(draft.itens || []);
+      setAcessoriosVenda(draft.acessoriosVenda || []);
+      setTradeIns(draft.tradeIns || []);
+      setPagamentos(draft.pagamentos || []);
+      setGarantiaItens(draft.garantiaItens || []);
+      toast.success('Rascunho carregado');
+    }
+    setShowDraftModal(false);
+    setTimeout(() => { isLoadingDraft.current = false; }, 500);
+  };
+
+  // Descartar rascunho
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftModal(false);
+    toast.success('Rascunho descartado');
+  };
+
+  // Auto-save com debounce
+  useEffect(() => {
+    if (isLoadingDraft.current || !id) return;
+    
+    const now = Date.now();
+    if (now - lastSaveTime.current < 2000) return;
+    
+    const hasData = lojaVenda || clienteId || itens.length > 0 || acessoriosVenda.length > 0 || pagamentos.length > 0;
+    if (!hasData) return;
+
+    const timeout = setTimeout(() => {
+      saveDraft({
+        lojaVenda,
+        clienteId,
+        clienteNome,
+        clienteCpf,
+        clienteTelefone,
+        clienteEmail,
+        clienteCidade,
+        origemVenda,
+        localRetirada,
+        tipoRetirada,
+        taxaEntrega,
+        observacoes,
+        itens,
+        acessoriosVenda,
+        tradeIns,
+        pagamentos,
+        garantiaItens
+      });
+      lastSaveTime.current = Date.now();
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, [lojaVenda, clienteId, clienteNome, origemVenda, localRetirada, tipoRetirada, taxaEntrega, observacoes, itens, acessoriosVenda, tradeIns, pagamentos, garantiaItens, id]);
 
   // Timer effect
   useEffect(() => {
@@ -520,6 +607,9 @@ export default function VendasFinalizarDigital() {
         localRetirada
       }
     );
+
+    // Limpar rascunho
+    clearDraft();
 
     toast.success(`Venda ${venda.id} finalizada com sucesso!`, {
       description: 'Estoque atualizado e enviada para Conferência de Contas'
@@ -1989,6 +2079,24 @@ export default function VendasFinalizarDigital() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAcessorioModal(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal Rascunho */}
+      <Dialog open={showDraftModal} onOpenChange={setShowDraftModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Save className="h-5 w-5" />
+              Rascunho Encontrado
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground">
+            Foi encontrado um rascunho de venda salvo {formatDraftAge(draftAge)}. Deseja continuar de onde parou?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleDiscardDraft}>Descartar</Button>
+            <Button onClick={handleLoadDraft}>Carregar Rascunho</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

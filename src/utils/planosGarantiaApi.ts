@@ -4,6 +4,7 @@ export interface PlanoGarantia {
   id: string;
   nome: string;
   tipo: 'Apple' | 'Thiago Imports';
+  condicao: 'Novo' | 'Seminovo' | 'Ambos';
   meses: number;
   valor: number;
   modelos: string[];
@@ -11,52 +12,136 @@ export interface PlanoGarantia {
   status: 'Ativo' | 'Inativo';
 }
 
+// Modelos para cada categoria
+const MODELOS_SEMINOVO_GERAL = [
+  'iPhone 11', 'iPhone 11 Pro', 'iPhone 11 Pro Max',
+  'iPhone 12', 'iPhone 12 Mini', 'iPhone 12 Pro', 'iPhone 12 Pro Max',
+  'iPhone 13', 'iPhone 13 Mini', 'iPhone 13 Pro', 'iPhone 13 Pro Max',
+  'iPhone 14', 'iPhone 14 Plus', 'iPhone 14 Pro', 'iPhone 14 Pro Max',
+  'iPhone 15', 'iPhone 15 Plus', 'iPhone 15 Pro', 'iPhone 15 Pro Max',
+  'iPhone 16', 'iPhone 16 Plus', 'iPhone 16 Pro', 'iPhone 16 Pro Max',
+  'iPhone XR'
+];
+
+const MODELOS_SEMINOVO_17 = [
+  'iPhone 17', 'iPhone 17 Pro', 'iPhone 17 Pro Max'
+];
+
+const MODELOS_NOVO_GERAL = [
+  'iPhone 13', 'iPhone 13 Mini', 'iPhone 13 Pro', 'iPhone 13 Pro Max',
+  'iPhone 14', 'iPhone 14 Plus', 'iPhone 14 Pro', 'iPhone 14 Pro Max',
+  'iPhone 15', 'iPhone 15 Plus', 'iPhone 15 Pro', 'iPhone 15 Pro Max',
+  'iPhone 16', 'iPhone 16 Plus', 'iPhone 16 Pro', 'iPhone 16 Pro Max'
+];
+
+const MODELOS_NOVO_17 = [
+  'iPhone 17', 'iPhone 17 Pro', 'iPhone 17 Pro Max'
+];
+
 // Dados mock de planos de garantia
 let planos: PlanoGarantia[] = [
+  // Silver Seminovo Geral - R$ 219,90
   {
     id: 'PLAN-001',
-    nome: 'Apple Care+ Standard',
-    tipo: 'Apple',
-    meses: 12,
-    valor: 0,
-    modelos: ['iPhone 15', 'iPhone 15 Plus', 'iPhone 15 Pro', 'iPhone 15 Pro Max', 'iPhone 14', 'iPhone 14 Plus', 'iPhone 14 Pro', 'iPhone 14 Pro Max'],
-    descricao: 'Garantia Apple padrão de fábrica',
+    nome: 'Silver',
+    tipo: 'Thiago Imports',
+    condicao: 'Seminovo',
+    meses: 6,
+    valor: 219.90,
+    modelos: MODELOS_SEMINOVO_GERAL,
+    descricao: 'Plano Silver 6 meses para seminovos',
     status: 'Ativo'
   },
+  // Silver Seminovo iPhone 17 - R$ 249,90
   {
     id: 'PLAN-002',
-    nome: 'Proteção Thiago Basic',
+    nome: 'Silver',
     tipo: 'Thiago Imports',
-    meses: 3,
-    valor: 99,
-    modelos: ['iPhone 12', 'iPhone 12 Mini', 'iPhone 11', 'iPhone XS', 'iPhone XR', 'iPhone X'],
-    descricao: 'Proteção básica de 3 meses para seminovos',
+    condicao: 'Seminovo',
+    meses: 6,
+    valor: 249.90,
+    modelos: MODELOS_SEMINOVO_17,
+    descricao: 'Plano Silver 6 meses para iPhone 17 seminovos',
     status: 'Ativo'
   },
+  // Silver Novo Geral - R$ 279,90
   {
     id: 'PLAN-003',
-    nome: 'Proteção Thiago Standard',
+    nome: 'Silver',
     tipo: 'Thiago Imports',
+    condicao: 'Novo',
     meses: 6,
-    valor: 179,
-    modelos: ['iPhone 12', 'iPhone 12 Mini', 'iPhone 12 Pro', 'iPhone 12 Pro Max', 'iPhone 13', 'iPhone 13 Mini', 'iPhone 13 Pro', 'iPhone 13 Pro Max'],
-    descricao: 'Proteção intermediária de 6 meses',
+    valor: 279.90,
+    modelos: MODELOS_NOVO_GERAL,
+    descricao: 'Plano Silver 6 meses para novos',
     status: 'Ativo'
   },
+  // Silver Novo iPhone 17 - R$ 379,90
   {
     id: 'PLAN-004',
-    nome: 'Proteção Thiago Gold',
+    nome: 'Silver',
     tipo: 'Thiago Imports',
-    meses: 12,
-    valor: 299,
-    modelos: ['iPhone 13', 'iPhone 13 Mini', 'iPhone 13 Pro', 'iPhone 13 Pro Max', 'iPhone 14', 'iPhone 14 Plus', 'iPhone 14 Pro', 'iPhone 14 Pro Max'],
-    descricao: 'Proteção premium de 12 meses com cobertura estendida',
+    condicao: 'Novo',
+    meses: 6,
+    valor: 379.90,
+    modelos: MODELOS_NOVO_17,
+    descricao: 'Plano Silver 6 meses para iPhone 17 novos',
     status: 'Ativo'
   },
+  // Gold Seminovo Geral - R$ 349,90
   {
     id: 'PLAN-005',
+    nome: 'Gold',
+    tipo: 'Thiago Imports',
+    condicao: 'Seminovo',
+    meses: 12,
+    valor: 349.90,
+    modelos: MODELOS_SEMINOVO_GERAL,
+    descricao: 'Plano Gold 12 meses para seminovos',
+    status: 'Ativo'
+  },
+  // Gold Seminovo iPhone 17 - R$ 379,90
+  {
+    id: 'PLAN-006',
+    nome: 'Gold',
+    tipo: 'Thiago Imports',
+    condicao: 'Seminovo',
+    meses: 12,
+    valor: 379.90,
+    modelos: MODELOS_SEMINOVO_17,
+    descricao: 'Plano Gold 12 meses para iPhone 17 seminovos',
+    status: 'Ativo'
+  },
+  // Gold Novo Geral - R$ 399,90
+  {
+    id: 'PLAN-007',
+    nome: 'Gold',
+    tipo: 'Thiago Imports',
+    condicao: 'Novo',
+    meses: 12,
+    valor: 399.90,
+    modelos: MODELOS_NOVO_GERAL,
+    descricao: 'Plano Gold 12 meses para novos',
+    status: 'Ativo'
+  },
+  // Gold Novo iPhone 17 - R$ 449,90
+  {
+    id: 'PLAN-008',
+    nome: 'Gold',
+    tipo: 'Thiago Imports',
+    condicao: 'Novo',
+    meses: 12,
+    valor: 449.90,
+    modelos: MODELOS_NOVO_17,
+    descricao: 'Plano Gold 12 meses para iPhone 17 novos',
+    status: 'Ativo'
+  },
+  // Sem Garantia Adicional
+  {
+    id: 'PLAN-009',
     nome: 'Sem Garantia Adicional',
     tipo: 'Thiago Imports',
+    condicao: 'Ambos',
     meses: 0,
     valor: 0,
     modelos: [],
@@ -65,7 +150,7 @@ let planos: PlanoGarantia[] = [
   }
 ];
 
-let planoCounter = 6;
+let planoCounter = 10;
 
 // Funções da API
 export const getPlanosGarantia = (): PlanoGarantia[] => {
@@ -80,9 +165,10 @@ export const getPlanosAtivos = (): PlanoGarantia[] => {
   return planos.filter(p => p.status === 'Ativo');
 };
 
-export const getPlanosPorModelo = (modelo: string): PlanoGarantia[] => {
+export const getPlanosPorModelo = (modelo: string, condicao: 'Novo' | 'Seminovo'): PlanoGarantia[] => {
   return planos.filter(p => 
     p.status === 'Ativo' && 
+    (p.condicao === condicao || p.condicao === 'Ambos') &&
     (p.modelos.length === 0 || p.modelos.some(m => modelo.toLowerCase().includes(m.toLowerCase())))
   );
 };
