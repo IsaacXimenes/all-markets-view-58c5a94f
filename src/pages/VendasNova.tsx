@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { VendasLayout } from '@/components/layout/VendasLayout';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import { toast } from '@/hooks/use-toast';
 import QRCode from 'qrcode';
 import { 
   ShoppingCart, Search, Plus, X, Eye, Clock, Trash2, 
-  User, Package, CreditCard, Truck, FileText, AlertTriangle, Check, Shield
+  User, Package, CreditCard, Truck, FileText, AlertTriangle, Check, Shield, Save
 } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
 
@@ -28,8 +28,10 @@ import { addVenda, getNextVendaNumber, getHistoricoComprasCliente, formatCurrenc
 import { getAcessorios, Acessorio, subtrairEstoqueAcessorio, VendaAcessorio, formatCurrency as formatCurrencyAcessorio } from '@/utils/acessoriosApi';
 import { getProdutosCadastro, ProdutoCadastro, calcularTipoPessoa } from '@/utils/cadastrosApi';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
+import { useDraftVenda } from '@/hooks/useDraftVenda';
 
 const TIMER_DURATION = 1800; // 30 minutos em segundos
+const DRAFT_KEY = 'draft_venda_nova';
 
 export default function VendasNova() {
   const navigate = useNavigate();
@@ -122,12 +124,101 @@ export default function VendasNova() {
   }
   const [garantiaItens, setGarantiaItens] = useState<GarantiaItemVenda[]>([]);
 
+  // Draft (rascunho automático)
+  const { saveDraft, loadDraft, clearDraft, hasDraft, getDraftAge, formatDraftAge } = useDraftVenda(DRAFT_KEY);
+  const [showDraftModal, setShowDraftModal] = useState(false);
+  const [draftAge, setDraftAge] = useState<number | null>(null);
+  const isLoadingDraft = useRef(false);
+  const lastSaveTime = useRef<number>(0);
 
   // Vendedores com permissão de vendas
   const vendedoresDisponiveis = useMemo(() => {
     const cargosVendas = cargos.filter(c => c.permissoes.includes('Vendas')).map(c => c.id);
     return colaboradores.filter(col => cargosVendas.includes(col.cargo));
   }, [colaboradores, cargos]);
+
+  // Verificar se existe rascunho ao montar
+  useEffect(() => {
+    if (hasDraft()) {
+      setDraftAge(getDraftAge());
+      setShowDraftModal(true);
+    }
+  }, []);
+
+  // Carregar rascunho
+  const handleLoadDraft = () => {
+    isLoadingDraft.current = true;
+    const draft = loadDraft();
+    if (draft) {
+      setLojaVenda(draft.lojaVenda || '');
+      setVendedor(draft.vendedor || '');
+      setClienteId(draft.clienteId || '');
+      setClienteNome(draft.clienteNome || '');
+      setClienteCpf(draft.clienteCpf || '');
+      setClienteTelefone(draft.clienteTelefone || '');
+      setClienteEmail(draft.clienteEmail || '');
+      setClienteCidade(draft.clienteCidade || '');
+      setOrigemVenda(draft.origemVenda || '');
+      setLocalRetirada(draft.localRetirada || '');
+      setTipoRetirada(draft.tipoRetirada || 'Retirada Balcão');
+      setTaxaEntrega(draft.taxaEntrega || 0);
+      setMotoboyId(draft.motoboyId || '');
+      setObservacoes(draft.observacoes || '');
+      setItens(draft.itens || []);
+      setAcessoriosVenda(draft.acessoriosVenda || []);
+      setTradeIns(draft.tradeIns || []);
+      setPagamentos(draft.pagamentos || []);
+      setGarantiaItens(draft.garantiaItens || []);
+      toast({ title: "Rascunho carregado", description: "Dados da venda anterior foram restaurados" });
+    }
+    setShowDraftModal(false);
+    setTimeout(() => { isLoadingDraft.current = false; }, 500);
+  };
+
+  // Descartar rascunho
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftModal(false);
+    toast({ title: "Rascunho descartado", description: "Iniciando nova venda" });
+  };
+
+  // Auto-save com debounce
+  useEffect(() => {
+    if (isLoadingDraft.current) return;
+    
+    const now = Date.now();
+    if (now - lastSaveTime.current < 2000) return;
+    
+    const hasData = lojaVenda || vendedor || clienteId || itens.length > 0 || acessoriosVenda.length > 0 || pagamentos.length > 0;
+    if (!hasData) return;
+
+    const timeout = setTimeout(() => {
+      saveDraft({
+        lojaVenda,
+        vendedor,
+        clienteId,
+        clienteNome,
+        clienteCpf,
+        clienteTelefone,
+        clienteEmail,
+        clienteCidade,
+        origemVenda,
+        localRetirada,
+        tipoRetirada,
+        taxaEntrega,
+        motoboyId,
+        observacoes,
+        itens,
+        acessoriosVenda,
+        tradeIns,
+        pagamentos,
+        garantiaItens
+      });
+      lastSaveTime.current = Date.now();
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, [lojaVenda, vendedor, clienteId, clienteNome, origemVenda, localRetirada, tipoRetirada, taxaEntrega, motoboyId, observacoes, itens, acessoriosVenda, tradeIns, pagamentos, garantiaItens]);
 
   // Timer effect
   useEffect(() => {
@@ -544,6 +635,9 @@ export default function VendasNova() {
       observacoes,
       status: 'Concluída'
     });
+
+    // Limpar rascunho
+    clearDraft();
 
     toast({
       title: "Venda registrada com sucesso!",
@@ -2279,6 +2373,24 @@ export default function VendasNova() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAcessorioModal(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal Rascunho */}
+      <Dialog open={showDraftModal} onOpenChange={setShowDraftModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Save className="h-5 w-5" />
+              Rascunho Encontrado
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground">
+            Foi encontrado um rascunho de venda salvo {formatDraftAge(draftAge)}. Deseja continuar de onde parou?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleDiscardDraft}>Descartar</Button>
+            <Button onClick={handleLoadDraft}>Carregar Rascunho</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

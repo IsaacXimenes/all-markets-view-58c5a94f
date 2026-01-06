@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { VendasLayout } from '@/components/layout/VendasLayout';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import { 
   ShoppingCart, Search, Plus, X, Clock, Trash2, 
-  User, Package, CreditCard, Truck, FileText, AlertTriangle, Check 
+  User, Package, CreditCard, Truck, FileText, AlertTriangle, Check, Save 
 } from 'lucide-react';
 import { 
   getLojas, getClientes, getColaboradores, getCargos, getOrigensVenda, 
@@ -27,8 +27,10 @@ import {
   Acessorio,
   VendaAcessorio 
 } from '@/utils/acessoriosApi';
+import { useDraftVenda } from '@/hooks/useDraftVenda';
 
 const TIMER_DURATION = 1800; // 30 minutos em segundos
+const DRAFT_KEY = 'draft_venda_acessorios';
 
 export default function VendasAcessorios() {
   const navigate = useNavigate();
@@ -88,11 +90,91 @@ export default function VendasAcessorios() {
   const [confirmVendedor, setConfirmVendedor] = useState('');
   const [confirmLoja, setConfirmLoja] = useState('');
 
+  // Draft (rascunho automático)
+  const { saveDraft, loadDraft, clearDraft, hasDraft, getDraftAge, formatDraftAge } = useDraftVenda(DRAFT_KEY);
+  const [showDraftModal, setShowDraftModal] = useState(false);
+  const [draftAge, setDraftAge] = useState<number | null>(null);
+  const isLoadingDraft = useRef(false);
+  const lastSaveTime = useRef<number>(0);
+
   // Vendedores com permissão de vendas
   const vendedoresDisponiveis = useMemo(() => {
     const cargosVendas = cargos.filter(c => c.permissoes.includes('Vendas')).map(c => c.id);
     return colaboradores.filter(col => cargosVendas.includes(col.cargo));
   }, [colaboradores, cargos]);
+
+  // Verificar se existe rascunho ao montar
+  useEffect(() => {
+    if (hasDraft()) {
+      setDraftAge(getDraftAge());
+      setShowDraftModal(true);
+    }
+  }, []);
+
+  // Carregar rascunho
+  const handleLoadDraft = () => {
+    isLoadingDraft.current = true;
+    const draft = loadDraft();
+    if (draft) {
+      setLojaVenda(draft.lojaVenda || '');
+      setVendedor(draft.vendedor || '');
+      setClienteId(draft.clienteId || '');
+      setClienteNome(draft.clienteNome || '');
+      setClienteCpf(draft.clienteCpf || '');
+      setClienteTelefone(draft.clienteTelefone || '');
+      setClienteEmail(draft.clienteEmail || '');
+      setClienteCidade(draft.clienteCidade || '');
+      setOrigemVenda(draft.origemVenda || '');
+      setTipoRetirada(draft.tipoRetirada || 'Retirada Balcão');
+      setTaxaEntrega(draft.taxaEntrega || 0);
+      setObservacoes(draft.observacoes || '');
+      setAcessorios(draft.acessorios || []);
+      setPagamentos(draft.pagamentos || []);
+      toast({ title: "Rascunho carregado", description: "Dados da venda anterior foram restaurados" });
+    }
+    setShowDraftModal(false);
+    setTimeout(() => { isLoadingDraft.current = false; }, 500);
+  };
+
+  // Descartar rascunho
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftModal(false);
+    toast({ title: "Rascunho descartado", description: "Iniciando nova venda" });
+  };
+
+  // Auto-save com debounce
+  useEffect(() => {
+    if (isLoadingDraft.current) return;
+    
+    const now = Date.now();
+    if (now - lastSaveTime.current < 2000) return;
+    
+    const hasData = lojaVenda || vendedor || clienteId || acessorios.length > 0 || pagamentos.length > 0;
+    if (!hasData) return;
+
+    const timeout = setTimeout(() => {
+      saveDraft({
+        lojaVenda,
+        vendedor,
+        clienteId,
+        clienteNome,
+        clienteCpf,
+        clienteTelefone,
+        clienteEmail,
+        clienteCidade,
+        origemVenda,
+        tipoRetirada,
+        taxaEntrega,
+        observacoes,
+        acessorios,
+        pagamentos
+      });
+      lastSaveTime.current = Date.now();
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, [lojaVenda, vendedor, clienteId, clienteNome, origemVenda, tipoRetirada, taxaEntrega, observacoes, acessorios, pagamentos]);
 
   // Timer effect
   useEffect(() => {
@@ -327,6 +409,9 @@ export default function VendasAcessorios() {
     acessorios.forEach(item => {
       subtrairEstoqueAcessorio(item.acessorioId, item.quantidade);
     });
+
+    // Limpar rascunho
+    clearDraft();
 
     toast({
       title: "Venda registrada com sucesso!",
@@ -1015,6 +1100,24 @@ export default function VendasAcessorios() {
             <Button onClick={handleConfirmarVenda}>
               Confirmar Venda
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modal Rascunho */}
+      <Dialog open={showDraftModal} onOpenChange={setShowDraftModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Save className="h-5 w-5" />
+              Rascunho Encontrado
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground">
+            Foi encontrado um rascunho de venda salvo {formatDraftAge(draftAge)}. Deseja continuar de onde parou?
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleDiscardDraft}>Descartar</Button>
+            <Button onClick={handleLoadDraft}>Carregar Rascunho</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
