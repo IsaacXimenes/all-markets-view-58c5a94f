@@ -1654,6 +1654,7 @@ export default function VendasFinalizarDigital() {
                 <TableRow>
                   <TableHead>ID</TableHead>
                   <TableHead>Produto</TableHead>
+                  <TableHead>Condição</TableHead>
                   <TableHead>IMEI</TableHead>
                   <TableHead>Qtd</TableHead>
                   <TableHead className="text-right">Valor Recomendado</TableHead>
@@ -1666,6 +1667,11 @@ export default function VendasFinalizarDigital() {
                   <TableRow key={produto.id} className={produto.quantidade === 0 ? 'opacity-50' : ''}>
                     <TableCell className="font-mono text-xs">{produto.id}</TableCell>
                     <TableCell className="font-medium">{produto.modelo}</TableCell>
+                    <TableCell>
+                      <Badge variant={produto.tipo === 'Novo' ? 'default' : 'secondary'}>
+                        {produto.tipo || 'Semi-novo'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>{produto.imei}</TableCell>
                     <TableCell>
                       {produto.quantidade === 0 ? (
