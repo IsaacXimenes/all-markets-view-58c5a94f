@@ -4,7 +4,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Plus, Clock, History } from 'lucide-react';
+import { Shield, Plus, Clock, History, Star } from 'lucide-react';
 
 interface GarantiasLayoutProps {
   children: ReactNode;
@@ -23,6 +23,7 @@ export function GarantiasLayout({ children, title }: GarantiasLayoutProps) {
   const getCurrentTab = () => {
     if (location.pathname.includes('/em-andamento')) return 'em-andamento';
     if (location.pathname.includes('/historico')) return 'historico';
+    if (location.pathname.includes('/extendida')) return 'extendida';
     return 'nova';
   };
 
@@ -36,6 +37,9 @@ export function GarantiasLayout({ children, title }: GarantiasLayoutProps) {
         break;
       case 'historico':
         navigate('/garantias/historico');
+        break;
+      case 'extendida':
+        navigate('/garantias/extendida');
         break;
     }
   };
@@ -65,18 +69,26 @@ export function GarantiasLayout({ children, title }: GarantiasLayoutProps) {
               </div>
               
               <Tabs value={getCurrentTab()} onValueChange={handleTabChange}>
-                <TabsList className="grid w-full max-w-md grid-cols-3">
+                <TabsList className="grid w-full max-w-2xl grid-cols-4">
                   <TabsTrigger value="nova" className="flex items-center gap-2">
                     <Plus className="h-4 w-4" />
-                    Nova Garantia
+                    <span className="hidden sm:inline">Nova Garantia</span>
+                    <span className="sm:hidden">Nova</span>
                   </TabsTrigger>
                   <TabsTrigger value="em-andamento" className="flex items-center gap-2">
                     <Clock className="h-4 w-4" />
-                    Em Andamento
+                    <span className="hidden sm:inline">Em Andamento</span>
+                    <span className="sm:hidden">Andamento</span>
                   </TabsTrigger>
                   <TabsTrigger value="historico" className="flex items-center gap-2">
                     <History className="h-4 w-4" />
-                    Histórico
+                    <span className="hidden sm:inline">Histórico</span>
+                    <span className="sm:hidden">Histórico</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="extendida" className="flex items-center gap-2">
+                    <Star className="h-4 w-4" />
+                    <span className="hidden sm:inline">Extendida</span>
+                    <span className="sm:hidden">Extendida</span>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
