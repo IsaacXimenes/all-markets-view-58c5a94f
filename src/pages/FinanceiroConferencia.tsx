@@ -315,6 +315,7 @@ export default function FinanceiroConferencia() {
                     <TableHead>Cliente</TableHead>
                     <TableHead>Responsável Venda</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
+                    <TableHead>Origem</TableHead>
                     <TableHead>Gestor</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Conta Destino</TableHead>
@@ -324,7 +325,7 @@ export default function FinanceiroConferencia() {
                 <TableBody>
                   {filteredVendas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                         Nenhuma venda encontrada
                       </TableCell>
                     </TableRow>
@@ -340,6 +341,13 @@ export default function FinanceiroConferencia() {
                         <TableCell>{venda.clienteNome}</TableCell>
                         <TableCell>{venda.vendedorNome}</TableCell>
                         <TableCell className="text-right font-semibold">{formatCurrency(venda.valorTotal)}</TableCell>
+                        <TableCell>
+                          <Badge variant={venda.dadosVenda.origemVenda?.includes('Garantia Extendida') ? 'secondary' : 'outline'}>
+                            {venda.dadosVenda.origemVenda?.includes('Garantia Extendida') 
+                              ? venda.dadosVenda.origemVenda 
+                              : 'Venda Normal'}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-xs">{venda.gestorNome || '-'}</TableCell>
                         <TableCell>
                           {getStatusBadge(venda.status)}

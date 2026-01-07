@@ -17,7 +17,7 @@ import {
 import { format, addMonths } from 'date-fns';
 import { toast } from 'sonner';
 import { getGarantiaById, getTimelineByGarantiaId, addTimelineEntry } from '@/utils/garantiasApi';
-import { getLojas, getColaboradores, getContasFinanceiras, getMaquinas, getModelosPagamento } from '@/utils/cadastrosApi';
+import { getLojas, getColaboradores, getContasFinanceiras, getMaquinasCartao, getModelosPagamento } from '@/utils/cadastrosApi';
 import { getPlanosGarantia, PlanoGarantia } from '@/utils/planosGarantiaApi';
 import { 
   calcularTempoRestante, podeRenovar, addTratativaComercial, 
@@ -35,7 +35,7 @@ export default function GarantiaExtendidaDetalhes() {
   const lojas = getLojas();
   const colaboradores = getColaboradores();
   const contasFinanceiras = getContasFinanceiras();
-  const maquinas = getMaquinas();
+  const maquinas = getMaquinasCartao();
   const meiosPagamento = getModelosPagamento();
   const planosGarantia = getPlanosGarantia();
   
@@ -98,21 +98,21 @@ export default function GarantiaExtendidaDetalhes() {
     
     // Tratativas comerciais
     tratativasComerciais.forEach(t => {
-      let titulo = t.tipo;
-      let descricao = t.descricao || '';
+      let tituloTimeline: string = t.tipo;
+      let descricaoTimeline: string = t.descricao || '';
       
       if (t.tipo === 'Contato Realizado') {
-        titulo = `Contato Comercial: ${t.resultadoContato}`;
+        tituloTimeline = `Contato Comercial: ${t.resultadoContato}`;
       } else if (t.tipo === 'Adesão Silver' || t.tipo === 'Adesão Gold') {
-        titulo = `${t.tipo} - ${t.statusAdesao}`;
-        descricao = `${t.planoNome} (${t.mesesPlano} meses) - ${formatCurrency(t.valorPlano || 0)}`;
+        tituloTimeline = `${t.tipo} - ${t.statusAdesao}`;
+        descricaoTimeline = `${t.planoNome} (${t.mesesPlano} meses) - ${formatCurrency(t.valorPlano || 0)}`;
       }
       
       items.push({
         data: t.dataHora,
         tipo: 'comercial',
-        titulo,
-        descricao,
+        titulo: tituloTimeline,
+        descricao: descricaoTimeline,
         usuario: t.usuarioNome
       });
     });
@@ -185,7 +185,7 @@ export default function GarantiaExtendidaDetalhes() {
     setDadosAdesaoTemp({
       plano: planoSelecionado,
       pagamento: {
-        meioPagamento: meio?.nome || meioPagamento,
+        meioPagamento: meio?.modelo || meioPagamento,
         maquinaId: maquinaSelecionada,
         maquinaNome: maquina?.nome || '',
         contaDestinoId: contaDestino,
@@ -252,21 +252,19 @@ export default function GarantiaExtendidaDetalhes() {
     });
     
     // Criar venda para conferência financeira
-    adicionarVendaParaConferencia({
-      vendaId: `VEN-EXT-${Date.now()}`,
-      dataRegistro: new Date().toISOString(),
-      lojaId: garantia.lojaVenda,
-      lojaNome: getLojaName(garantia.lojaVenda),
-      vendedorId: responsavelConfirmacao,
-      vendedorNome: responsavel?.nome || 'Responsável',
-      clienteNome: garantia.clienteNome,
-      valorTotal: dadosAdesaoTemp.plano.valor,
-      tipoVenda: 'Normal',
-      origem: `Garantia Extendida - ${dadosAdesaoTemp.plano.nome}`,
-      dadosVenda: {
+    adicionarVendaParaConferencia(
+      `VEN-EXT-${Date.now()}`,
+      garantia.lojaVenda,
+      getLojaName(garantia.lojaVenda),
+      responsavelConfirmacao,
+      responsavel?.nome || 'Responsável',
+      garantia.clienteNome,
+      dadosAdesaoTemp.plano.valor,
+      'Normal',
+      {
         clienteTelefone: garantia.clienteTelefone,
         clienteEmail: garantia.clienteEmail,
-        origemVenda: 'Garantia Extendida',
+        origemVenda: `Garantia Extendida - ${dadosAdesaoTemp.plano.nome}`,
         itens: [{
           produto: `Plano ${dadosAdesaoTemp.plano.nome} - ${garantia.modelo}`,
           valorVenda: dadosAdesaoTemp.plano.valor,
@@ -280,7 +278,7 @@ export default function GarantiaExtendidaDetalhes() {
         margem: 100,
         observacoes: `Adesão de garantia extendida para ${garantia.imei}`
       }
-    });
+    );
     
     // Timeline
     addTimelineEntry({
@@ -653,13 +651,13 @@ export default function GarantiaExtendidaDetalhes() {
                   </SelectTrigger>
                   <SelectContent>
                     {meiosPagamento.map(m => (
-                      <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
+                      <SelectItem key={m.id} value={m.id}>{m.modelo}</SelectItem>
                     ))}
                   </SelectContent>
-                </Select>
+              </Select>
               </div>
               
-              {meioPagamento && meiosPagamento.find(m => m.id === meioPagamento)?.nome.toLowerCase().includes('cartão') && (
+              {meioPagamento && meiosPagamento.find(m => m.id === meioPagamento)?.modelo.toLowerCase().includes('cartão') && (
                 <>
                   <div>
                     <Label>Máquina</Label>
