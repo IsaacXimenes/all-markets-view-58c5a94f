@@ -245,10 +245,10 @@ export const getAdesoesConcluidas = (): TratativaComercial[] => {
 // Notificar financeiro sobre nova adesão
 export const notificarFinanceiroAdesao = (tratativa: TratativaComercial): void => {
   addNotification({
-    titulo: `Nova adesão ${tratativa.planoNome}`,
-    mensagem: `Adesão ao plano ${tratativa.planoNome} - R$ ${tratativa.valorPlano?.toFixed(2)} aguardando conferência`,
-    tipo: 'info',
-    link: '/financeiro/conferencia'
+    type: 'garantia_extendida',
+    title: `Nova adesão ${tratativa.planoNome}`,
+    description: `Adesão ao plano ${tratativa.planoNome} - R$ ${tratativa.valorPlano?.toFixed(2)} aguardando conferência`,
+    targetUsers: ['COL-006'] // Financeiro
   });
 };
 
