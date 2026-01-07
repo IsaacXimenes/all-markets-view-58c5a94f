@@ -66,6 +66,8 @@ import GarantiasNova from "./pages/GarantiasNova";
 import GarantiasEmAndamento from "./pages/GarantiasEmAndamento";
 import GarantiasHistorico from "./pages/GarantiasHistorico";
 import GarantiaDetalhes from "./pages/GarantiaDetalhes";
+import GarantiasExtendida from "./pages/GarantiasExtendida";
+import GarantiaExtendidaDetalhes from "./pages/GarantiaExtendidaDetalhes";
 import CadastrosPlanosGarantia from "./pages/CadastrosPlanosGarantia";
 
 const queryClient = new QueryClient();
@@ -140,6 +142,8 @@ const App = () => (
           <Route path="/garantias/nova" element={<GarantiasNova />} />
           <Route path="/garantias/em-andamento" element={<GarantiasEmAndamento />} />
           <Route path="/garantias/historico" element={<GarantiasHistorico />} />
+          <Route path="/garantias/extendida" element={<GarantiasExtendida />} />
+          <Route path="/garantias/extendida/:id" element={<GarantiaExtendidaDetalhes />} />
           <Route path="/garantias/:id" element={<GarantiaDetalhes />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
