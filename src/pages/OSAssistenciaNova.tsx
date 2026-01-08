@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -28,12 +28,18 @@ import {
   getFornecedores,
   addCliente,
   Cliente,
-  calcularTipoPessoa
+  calcularTipoPessoa,
+  getProdutosCadastro,
+  ProdutoCadastro
 } from '@/utils/cadastrosApi';
-import { Plus, Trash2, Search, AlertTriangle, Clock, User, History, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, Search, AlertTriangle, Clock, User, History, ArrowLeft, Smartphone, Save } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { formatIMEI, applyIMEIMask } from '@/utils/imeiMask';
+import { useDraftVenda } from '@/hooks/useDraftVenda';
+
+const TIMER_DURATION = 1800; // 30 minutos em segundos
+const DRAFT_KEY = 'draft_os_assistencia';
 
 interface PecaForm {
   peca: string;
@@ -66,6 +72,12 @@ export default function OSAssistenciaNova() {
   const lojas = getLojas();
   const tecnicos = getColaboradoresByPermissao('Assistência');
   const fornecedores = getFornecedores().filter(f => f.status === 'Ativo');
+  const produtosCadastro = getProdutosCadastro();
+
+  // Aparelho state
+  const [origemAparelho, setOrigemAparelho] = useState<'Thiago Imports' | 'Externo' | ''>('');
+  const [modeloAparelho, setModeloAparelho] = useState('');
+  const [imeiAparelho, setImeiAparelho] = useState('');
 
   // Form state
   const [lojaId, setLojaId] = useState('');
@@ -91,6 +103,17 @@ export default function OSAssistenciaNova() {
   const [confirmarOpen, setConfirmarOpen] = useState(false);
   const [buscarClienteTermo, setBuscarClienteTermo] = useState('');
   const [historicoCliente, setHistoricoCliente] = useState<any[]>([]);
+  
+  // Timer
+  const [timer, setTimer] = useState<number | null>(null);
+  const [timerStart, setTimerStart] = useState<number | null>(null);
+
+  // Draft (rascunho automático)
+  const { saveDraft, loadDraft, clearDraft, hasDraft, getDraftAge, formatDraftAge } = useDraftVenda(DRAFT_KEY);
+  const [showDraftModal, setShowDraftModal] = useState(false);
+  const [draftAge, setDraftAge] = useState<number | null>(null);
+  const isLoadingDraft = useRef(false);
+  const lastSaveTime = useRef<number>(0);
 
   // Novo cliente form
   const [novoClienteForm, setNovoClienteForm] = useState({
@@ -123,6 +146,104 @@ export default function OSAssistenciaNova() {
     const termo = buscarClienteTermo.toLowerCase();
     return c.nome.toLowerCase().includes(termo) || c.cpf.includes(termo);
   });
+
+  // Verificar se existe rascunho ao montar
+  useEffect(() => {
+    if (hasDraft()) {
+      setDraftAge(getDraftAge());
+      setShowDraftModal(true);
+    }
+  }, []);
+
+  // Carregar rascunho
+  const handleLoadDraft = () => {
+    isLoadingDraft.current = true;
+    const draft = loadDraft();
+    if (draft) {
+      setOrigemAparelho(draft.origemAparelho || '');
+      setModeloAparelho(draft.modeloAparelho || '');
+      setImeiAparelho(draft.imeiAparelho || '');
+      setLojaId(draft.lojaId || '');
+      setTecnicoId(draft.tecnicoId || '');
+      setSetor(draft.setor || '');
+      setClienteId(draft.clienteId || '');
+      setDescricao(draft.descricao || '');
+      setStatus(draft.status || 'Em serviço');
+      setPecas(draft.pecas || [{ peca: '', imei: '', valor: '', percentual: '', servicoTerceirizado: false, descricaoTerceirizado: '', fornecedorId: '', unidadeServico: '', pecaNoEstoque: false, pecaDeFornecedor: false, nomeRespFornecedor: '' }]);
+      setPagamentos(draft.pagamentos || [{ meio: '', valor: '', parcelas: '' }]);
+      toast({ title: "Rascunho carregado", description: "Dados da OS anterior foram restaurados" });
+    }
+    setShowDraftModal(false);
+    setTimeout(() => { isLoadingDraft.current = false; }, 500);
+  };
+
+  // Descartar rascunho
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftModal(false);
+    toast({ title: "Rascunho descartado", description: "Iniciando nova OS" });
+  };
+
+  // Auto-save com debounce
+  useEffect(() => {
+    if (isLoadingDraft.current) return;
+    
+    const now = Date.now();
+    if (now - lastSaveTime.current < 2000) return;
+    
+    const hasData = lojaId || tecnicoId || clienteId || origemAparelho || modeloAparelho || imeiAparelho || pecas.some(p => p.peca || p.valor) || pagamentos.some(p => p.meio || p.valor);
+    if (!hasData) return;
+
+    const timeout = setTimeout(() => {
+      saveDraft({
+        origemAparelho,
+        modeloAparelho,
+        imeiAparelho,
+        lojaId,
+        tecnicoId,
+        setor,
+        clienteId,
+        descricao,
+        status,
+        pecas,
+        pagamentos
+      });
+      lastSaveTime.current = Date.now();
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, [origemAparelho, modeloAparelho, imeiAparelho, lojaId, tecnicoId, setor, clienteId, descricao, status, pecas, pagamentos]);
+
+  // Timer effect
+  useEffect(() => {
+    if (timerStart && (origemAparelho || modeloAparelho)) {
+      const interval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - timerStart) / 1000);
+        const remaining = TIMER_DURATION - elapsed;
+        
+        if (remaining <= 0) {
+          setTimer(null);
+          setTimerStart(null);
+          toast({
+            title: "Tempo esgotado",
+            description: "O tempo de reserva expirou",
+            variant: "destructive"
+          });
+        } else {
+          setTimer(remaining);
+        }
+      }, 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [timerStart, origemAparelho, modeloAparelho]);
+
+  // Formatar timer
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
 
   // Carregar histórico do cliente quando selecionado
   useEffect(() => {
@@ -345,6 +466,9 @@ export default function OSAssistenciaNova() {
       custoTotal: 0
     });
 
+    // Limpar rascunho
+    clearDraft();
+
     toast({
       title: 'Sucesso!',
       description: `OS ${novaOS.id} registrada com sucesso!`
@@ -372,7 +496,17 @@ export default function OSAssistenciaNova() {
   };
 
   return (
-    <PageLayout title="Nova Assistência">
+    <PageLayout title="Novo Registro de Garantia">
+      {/* Timer */}
+      {timer !== null && (
+        <div className={`fixed top-20 right-6 z-50 p-4 rounded-lg shadow-lg flex items-center gap-3 ${
+          timer <= 30 ? 'bg-destructive text-destructive-foreground animate-pulse' : 'bg-primary text-primary-foreground'
+        }`}>
+          <Clock className="h-5 w-5" />
+          <span className="text-2xl font-mono font-bold">{formatTimer(timer)}</span>
+        </div>
+      )}
+
       <div className="mb-4">
         <Button variant="outline" onClick={() => navigate('/os/assistencia')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -381,6 +515,66 @@ export default function OSAssistenciaNova() {
       </div>
 
       <div className="space-y-6">
+        {/* Quadro Aparelho */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5" />
+              Aparelho
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Origem da Compra *</Label>
+                <Select value={origemAparelho} onValueChange={(v) => {
+                  setOrigemAparelho(v as any);
+                  if (!timerStart) {
+                    setTimerStart(Date.now());
+                    setTimer(TIMER_DURATION);
+                  }
+                }}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Thiago Imports">Compra realizada na Thiago Imports</SelectItem>
+                    <SelectItem value="Externo">Aparelho adquirido fora</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Modelo do Aparelho *</Label>
+                <Select value={modeloAparelho} onValueChange={setModeloAparelho}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o modelo..." /></SelectTrigger>
+                  <SelectContent>
+                    {produtosCadastro.map(p => (
+                      <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>IMEI do Aparelho</Label>
+                <Input
+                  value={imeiAparelho}
+                  onChange={(e) => setImeiAparelho(applyIMEIMask(e.target.value))}
+                  placeholder="WW-XXXXXX-YYYYYY-Z"
+                  maxLength={18}
+                />
+              </div>
+            </div>
+            {origemAparelho && (
+              <div className={cn(
+                "mt-4 p-3 rounded-lg text-sm",
+                origemAparelho === 'Thiago Imports' ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
+              )}>
+                {origemAparelho === 'Thiago Imports' 
+                  ? "✓ O aparelho foi adquirido na Thiago Imports e possui garantia da loja."
+                  : "⚠ O aparelho foi adquirido externamente. Verificar documentação."}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Informações da OS */}
         <Card>
           <CardHeader>
@@ -1075,6 +1269,34 @@ export default function OSAssistenciaNova() {
               disabled={confirmTecnico !== tecnicoId || confirmLoja !== lojaId}
             >
               Confirmar Registro
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Rascunho */}
+      <Dialog open={showDraftModal} onOpenChange={setShowDraftModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Save className="h-5 w-5" />
+              Rascunho Encontrado
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm">
+              Encontramos um rascunho salvo automaticamente {formatDraftAge(draftAge)}.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Deseja continuar de onde parou ou iniciar uma nova OS?
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleDiscardDraft}>
+              Descartar
+            </Button>
+            <Button onClick={handleLoadDraft}>
+              Continuar Rascunho
             </Button>
           </DialogFooter>
         </DialogContent>

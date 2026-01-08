@@ -50,6 +50,12 @@ export interface PecaServico {
   unidadeServico: string;
   pecaNoEstoque: boolean;
   pecaDeFornecedor: boolean;
+  // Novos campos para fluxo de aprovação
+  statusAprovacao?: 'Pendente' | 'Aguardando Aprovação' | 'Aprovado' | 'Rejeitado' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Aguardando Chegada' | 'Em Estoque' | 'Utilizado' | 'Não Utilizado';
+  motivoRejeicao?: string;
+  contaOrigemPagamento?: string;
+  dataPagamento?: string;
+  dataRecebimento?: string;
 }
 
 export interface Pagamento {
@@ -61,9 +67,10 @@ export interface Pagamento {
 
 export interface TimelineOS {
   data: string;
-  tipo: 'registro' | 'status' | 'peca' | 'pagamento';
+  tipo: 'registro' | 'status' | 'peca' | 'pagamento' | 'aprovacao' | 'rejeicao' | 'financeiro';
   descricao: string;
   responsavel: string;
+  motivo?: string;
 }
 
 export interface OrdemServico {
@@ -73,7 +80,7 @@ export interface OrdemServico {
   setor: 'GARANTIA' | 'ASSISTÊNCIA' | 'TROCA';
   tecnicoId: string;
   lojaId: string;
-  status: 'Serviço concluído' | 'Em serviço' | 'Aguardando Peça' | 'Solicitação Enviada' | 'Em Análise' | 'Peça Recebida';
+  status: 'Serviço concluído' | 'Em serviço' | 'Aguardando Peça' | 'Solicitação Enviada' | 'Em Análise' | 'Peça Recebida' | 'Aguardando Aprovação do Gestor' | 'Rejeitado pelo Gestor' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Aguardando Chegada da Peça' | 'Peça em Estoque / Aguardando Reparo';
   pecas: PecaServico[];
   pagamentos: Pagamento[];
   descricao: string;

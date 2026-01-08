@@ -300,7 +300,7 @@ export default function OSSolicitacoesPecas() {
   const lotesPendentes = lotes.filter(l => l.status === 'Pendente');
 
   return (
-    <OSLayout title="Solicitações de Peças">
+    <OSLayout title="Aprovações - Gestor">
       {/* Dashboard Cards */}
       <div className="sticky top-0 z-10 bg-background pb-4">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">

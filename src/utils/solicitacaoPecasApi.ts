@@ -9,13 +9,16 @@ export interface SolicitacaoPeca {
   modeloImei: string;
   lojaSolicitante: string;
   dataSolicitacao: string;
-  status: 'Pendente' | 'Aprovada' | 'Rejeitada' | 'Enviada' | 'Recebida';
+  status: 'Pendente' | 'Aprovada' | 'Rejeitada' | 'Enviada' | 'Recebida' | 'Aguardando Aprovação' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Aguardando Chegada' | 'Em Estoque';
   fornecedorId?: string;
   valorPeca?: number;
   responsavelCompra?: string;
   dataRecebimento?: string;
   dataEnvio?: string;
   loteId?: string;
+  motivoRejeicao?: string;
+  contaOrigemPagamento?: string;
+  dataPagamento?: string;
 }
 
 export interface LoteTimeline {

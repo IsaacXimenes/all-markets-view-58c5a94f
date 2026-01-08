@@ -1969,6 +1969,7 @@ export default function VendasNova() {
                     <TableHead>Condição</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>Qtd</TableHead>
+                    <TableHead className="text-right">Custo do Produto</TableHead>
                     <TableHead className="text-right">Valor Recomendado</TableHead>
                     <TableHead>Loja</TableHead>
                     <TableHead>Ações</TableHead>
@@ -1992,6 +1993,7 @@ export default function VendasNova() {
                           produto.quantidade
                         )}
                       </TableCell>
+                      <TableCell className="text-right text-muted-foreground">{formatCurrency(produto.valorCusto)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(produto.valorVendaSugerido)}</TableCell>
                       <TableCell>{produto.loja}</TableCell>
                       <TableCell>

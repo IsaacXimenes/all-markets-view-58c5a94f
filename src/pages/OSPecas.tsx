@@ -125,7 +125,7 @@ export default function OSPecas() {
   const pecasDisponiveis = pecasFiltradas.filter(p => p.status === 'Disponível').length;
 
   return (
-    <OSLayout title="Peças">
+    <OSLayout title="Estoque - Assistência">
       {/* Dashboard Cards */}
       <div className="sticky top-0 z-10 bg-background pb-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
