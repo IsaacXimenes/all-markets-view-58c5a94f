@@ -468,16 +468,21 @@ export default function VendasNova() {
       loja: produto.loja
     };
     
+    const isFirstItem = itens.length === 0;
+    
     setItens([...itens, novoItem]);
     setShowProdutoModal(false);
     setBuscaProduto('');
     setFiltroLojaProduto('');
     
     // Iniciar timer se for o primeiro item
-    if (itens.length === 0) {
+    if (isFirstItem) {
+      console.log('Iniciando timer - primeiro item adicionado');
       setTimerStart(Date.now());
       setTimer(TIMER_DURATION);
     }
+    
+    console.log('Timer state:', { isFirstItem, timerStart, timer });
     
     toast({ title: "Produto adicionado", description: `${produto.modelo} adicionado à venda` });
   };
