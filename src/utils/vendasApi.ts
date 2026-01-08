@@ -36,6 +36,10 @@ export interface Pagamento {
   parcelas?: number;        // Número de parcelas (1-18, obrigatório para cartão crédito)
   valorParcela?: number;    // Valor por parcela (valor / parcelas)
   descricao?: string;       // Campo livre opcional
+  // Campos específicos para Fiado
+  isFiado?: boolean;
+  fiadoDataBase?: number;   // Dia do mês para vencimento (1-31)
+  fiadoNumeroParcelas?: number; // Número de parcelas do fiado (1-10)
 }
 
 export interface Venda {
