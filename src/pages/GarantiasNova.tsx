@@ -158,7 +158,7 @@ export default function GarantiasNova() {
   };
 
   return (
-    <GarantiasLayout title="Nova Garantia">
+    <GarantiasLayout title="Novo Registro de Garantia">
       <div className="space-y-6">
         {/* Quadro Histórico de Vendas - Tabela Direta */}
         <Card>
@@ -169,7 +169,7 @@ export default function GarantiasNova() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Filtros inline */}
+            {/* Filtros inline - Loja antes das datas */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <Label>IMEI</Label>
@@ -188,6 +188,20 @@ export default function GarantiasNova() {
                 />
               </div>
               <div>
+                <Label>Loja</Label>
+                <Select value={buscaLoja || 'all'} onValueChange={(v) => setBuscaLoja(v === 'all' ? '' : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as Lojas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as Lojas</SelectItem>
+                    {lojas.map(l => (
+                      <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label>Data Início</Label>
                 <Input 
                   type="date"
@@ -202,20 +216,6 @@ export default function GarantiasNova() {
                   value={dataFim}
                   onChange={(e) => setDataFim(e.target.value)}
                 />
-              </div>
-              <div>
-                <Label>Loja</Label>
-                <Select value={buscaLoja || 'all'} onValueChange={(v) => setBuscaLoja(v === 'all' ? '' : v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todas as Lojas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas as Lojas</SelectItem>
-                    {lojas.map(l => (
-                      <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
             

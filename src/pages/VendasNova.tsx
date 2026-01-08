@@ -14,7 +14,8 @@ import { toast } from '@/hooks/use-toast';
 import QRCode from 'qrcode';
 import { 
   ShoppingCart, Search, Plus, X, Eye, Clock, Trash2, 
-  User, Package, CreditCard, Truck, FileText, AlertTriangle, Check, Shield, Save
+  User, Package, CreditCard, Truck, FileText, AlertTriangle, Check, Shield, Save,
+  Headphones, ArrowLeftRight, Star
 } from 'lucide-react';
 import { format, addMonths } from 'date-fns';
 
@@ -29,6 +30,7 @@ import { getAcessorios, Acessorio, subtrairEstoqueAcessorio, VendaAcessorio, for
 import { getProdutosCadastro, ProdutoCadastro, calcularTipoPessoa } from '@/utils/cadastrosApi';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
 import { useDraftVenda } from '@/hooks/useDraftVenda';
+import { getPlanosPorModelo, PlanoGarantia } from '@/utils/planosGarantiaApi';
 
 const TIMER_DURATION = 1800; // 30 minutos em segundos
 const DRAFT_KEY = 'draft_venda_nova';
@@ -121,8 +123,25 @@ export default function VendasNova() {
     tipoGarantia: 'Garantia - Apple' | 'Garantia - Thiago Imports';
     mesesGarantia: number;
     dataFimGarantia: string;
+    // Garantia complementar para completar 12 meses
+    garantiaComplementar?: {
+      meses: number;
+      dataInicio: string;
+      dataFim: string;
+    };
   }
   const [garantiaItens, setGarantiaItens] = useState<GarantiaItemVenda[]>([]);
+  
+  // Garantia Extendida
+  const [garantiaExtendida, setGarantiaExtendida] = useState<{
+    planoId: string;
+    planoNome: string;
+    valor: number;
+    meses: number;
+    dataInicio: string;
+    dataFim: string;
+  } | null>(null);
+  const [showGarantiaExtendidaModal, setShowGarantiaExtendidaModal] = useState(false);
 
   // Draft (rascunho automático)
   const { saveDraft, loadDraft, clearDraft, hasDraft, getDraftAge, formatDraftAge } = useDraftVenda(DRAFT_KEY);
@@ -258,8 +277,56 @@ export default function VendasNova() {
   const totalAcessorios = useMemo(() => acessoriosVenda.reduce((acc, a) => acc + a.valorTotal, 0), [acessoriosVenda]);
   const totalTradeIn = useMemo(() => tradeIns.reduce((acc, t) => acc + t.valorCompraUsado, 0), [tradeIns]);
   const totalPagamentos = useMemo(() => pagamentos.reduce((acc, p) => acc + p.valor, 0), [pagamentos]);
-  const total = useMemo(() => subtotal + totalAcessorios - totalTradeIn + taxaEntrega, [subtotal, totalAcessorios, totalTradeIn, taxaEntrega]);
+  const valorGarantiaExtendida = garantiaExtendida?.valor || 0;
+  const valorProdutos = subtotal + totalAcessorios;
+  const total = useMemo(() => subtotal + totalAcessorios - totalTradeIn + taxaEntrega + valorGarantiaExtendida, [subtotal, totalAcessorios, totalTradeIn, taxaEntrega, valorGarantiaExtendida]);
   const valorPendente = useMemo(() => total - totalPagamentos, [total, totalPagamentos]);
+  
+  // Planos de garantia extendida disponíveis
+  const planosExtendidaDisponiveis = useMemo(() => {
+    if (itens.length === 0) return [];
+    const item = itens[0];
+    const produto = produtosEstoque.find(p => p.id === item.produtoId);
+    const condicao = produto?.tipo === 'Novo' ? 'Novo' : 'Seminovo';
+    return getPlanosPorModelo(item.produto, condicao).filter(p => p.nome === 'Silver' || p.nome === 'Gold');
+  }, [itens, produtosEstoque]);
+  
+  // Calcular garantia complementar para completar 12 meses
+  const calcularGarantiaComplementar = (mesesApple: number) => {
+    if (mesesApple >= 12) return null;
+    const mesesComplementar = 12 - mesesApple;
+    const dataInicioComplementar = addMonths(new Date(), mesesApple);
+    const dataFimComplementar = addMonths(dataInicioComplementar, mesesComplementar);
+    return { 
+      meses: mesesComplementar, 
+      dataInicio: format(dataInicioComplementar, 'yyyy-MM-dd'), 
+      dataFim: format(dataFimComplementar, 'yyyy-MM-dd') 
+    };
+  };
+  
+  // Calcular vigência da garantia extendida (sempre após 12 meses)
+  const calcularVigenciaExtendida = (plano: PlanoGarantia) => {
+    const dataInicio = addMonths(new Date(), 12);
+    const dataFim = addMonths(dataInicio, plano.meses);
+    return { 
+      dataInicio: format(dataInicio, 'yyyy-MM-dd'), 
+      dataFim: format(dataFim, 'yyyy-MM-dd') 
+    };
+  };
+  
+  // Adicionar garantia extendida
+  const handleAddGarantiaExtendida = (plano: PlanoGarantia) => {
+    const vigencia = calcularVigenciaExtendida(plano);
+    setGarantiaExtendida({
+      planoId: plano.id,
+      planoNome: plano.nome,
+      valor: plano.valor,
+      meses: plano.meses,
+      dataInicio: vigencia.dataInicio,
+      dataFim: vigencia.dataFim
+    });
+    setShowGarantiaExtendidaModal(false);
+  };
   
   // Cálculos corretos
   const valorCustoAcessorios = useMemo(() => acessoriosVenda.reduce((acc, a) => {
@@ -274,6 +341,12 @@ export default function VendasNova() {
     return ((lucroProjetado / valorCustoTotal) * 100);
   }, [lucroProjetado, valorCustoTotal]);
   const isPrejuizo = lucroProjetado < 0;
+  
+  // Cálculo de prejuízo em acessórios
+  const prejuizoAcessorios = useMemo(() => {
+    const vendaAcessorios = acessoriosVenda.reduce((acc, a) => acc + a.valorTotal, 0);
+    return valorCustoAcessorios > vendaAcessorios ? valorCustoAcessorios - vendaAcessorios : 0;
+  }, [acessoriosVenda, valorCustoAcessorios]);
 
   // Buscar cliente
   const clientesFiltrados = useMemo(() => {
@@ -943,7 +1016,7 @@ export default function VendasNova() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
+                <Headphones className="h-5 w-5" />
                 Acessórios
               </span>
               <Button onClick={() => setShowAcessorioModal(true)}>
@@ -963,9 +1036,9 @@ export default function VendasNova() {
                   <TableRow>
                     <TableHead>Acessório</TableHead>
                     <TableHead className="text-center">Qtd</TableHead>
-                    <TableHead className="text-right">Custo Unit.</TableHead>
+                    <TableHead className="text-right">Custo Produto</TableHead>
                     <TableHead className="text-right">Valor Recomendado</TableHead>
-                    <TableHead className="text-right">Valor Unit.</TableHead>
+                    <TableHead className="text-right">Valor de Venda</TableHead>
                     <TableHead className="text-right">Valor Total</TableHead>
                     <TableHead className="text-right">Lucro</TableHead>
                     <TableHead></TableHead>
@@ -1082,7 +1155,7 @@ export default function VendasNova() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
+                <ArrowLeftRight className="h-5 w-5" />
                 Base de Troca (Aparelhos de Troca)
               </span>
               <Button variant="outline" onClick={() => setShowTradeInModal(true)}>
@@ -1203,7 +1276,7 @@ export default function VendasNova() {
                             <Badge variant="outline">Garantia - Apple</Badge>
                           ) : (
                             <Select 
-                              value={garantiaItem?.tipoGarantia || 'Garantia - Apple'} 
+                              value={garantiaItem?.tipoGarantia || 'Garantia - Thiago Imports'} 
                               onValueChange={(val: 'Garantia - Apple' | 'Garantia - Thiago Imports') => {
                                 setGarantiaItens(prev => {
                                   const existing = prev.find(g => g.itemId === item.id);
@@ -1238,7 +1311,7 @@ export default function VendasNova() {
                         <TableCell>
                           {isNovo ? (
                             <span className="text-muted-foreground">12</span>
-                          ) : (garantiaItem?.tipoGarantia || 'Garantia - Apple') === 'Garantia - Apple' ? (
+                          ) : (garantiaItem?.tipoGarantia || 'Garantia - Thiago Imports') === 'Garantia - Apple' ? (
                             <Input 
                               type="number" 
                               min={1} 
@@ -1284,6 +1357,51 @@ export default function VendasNova() {
                   })}
                 </TableBody>
               </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Adesão da Garantia Extendida */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Star className="h-5 w-5" />
+                Adesão da Garantia Extendida
+              </span>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowGarantiaExtendidaModal(true)} 
+                disabled={itens.length === 0}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Incluir Garantia Extendida
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {garantiaExtendida ? (
+              <div className="p-4 bg-purple-100 dark:bg-purple-950/30 rounded-lg flex justify-between items-center">
+                <div>
+                  <p className="font-medium text-purple-900 dark:text-purple-100">Plano {garantiaExtendida.planoNome}</p>
+                  <p className="text-sm text-purple-700 dark:text-purple-300">
+                    {garantiaExtendida.meses} meses - Vigência: {format(new Date(garantiaExtendida.dataInicio), 'dd/MM/yyyy')} a {format(new Date(garantiaExtendida.dataFim), 'dd/MM/yyyy')}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    * Inicia após o término da garantia padrão de 12 meses
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-xl font-bold text-purple-600">{formatCurrency(garantiaExtendida.valor)}</span>
+                  <Button variant="ghost" size="icon" onClick={() => setGarantiaExtendida(null)}>
+                    <X className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                Nenhuma garantia extendida adicionada. Clique em "Incluir Garantia Extendida" para adicionar.
+              </div>
             )}
           </CardContent>
         </Card>
@@ -1477,13 +1595,15 @@ export default function VendasNova() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
               <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Subtotal Aparelhos</p>
-                <p className="text-xl font-bold">{formatCurrency(subtotal)}</p>
+                <p className="text-sm text-muted-foreground">Valor dos Produtos</p>
+                <p className="text-xl font-bold">{formatCurrency(valorProdutos)}</p>
               </div>
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Subtotal Acessórios</p>
-                <p className="text-xl font-bold">{formatCurrency(totalAcessorios)}</p>
-              </div>
+              {valorGarantiaExtendida > 0 && (
+                <div className="p-3 bg-purple-100 dark:bg-purple-950/30 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Valor Garantia Extendida</p>
+                  <p className="text-xl font-bold text-purple-600">{formatCurrency(valorGarantiaExtendida)}</p>
+                </div>
+              )}
               <div className="p-3 bg-green-100 dark:bg-green-950/30 rounded-lg">
                 <p className="text-sm text-muted-foreground">Base de Troca</p>
                 <p className="text-xl font-bold text-green-600">-{formatCurrency(totalTradeIn)}</p>
@@ -1522,6 +1642,14 @@ export default function VendasNova() {
                 <p className="text-lg font-medium text-blue-600">{formatCurrency(totalPagamentos)}</p>
               </div>
             </div>
+            
+            {/* Card de Prejuízo em Acessórios - exibido apenas se houver prejuízo */}
+            {prejuizoAcessorios > 0 && (
+              <div className="mt-4 p-3 bg-destructive/20 rounded-lg">
+                <p className="text-sm text-muted-foreground">Prejuízo em Acessórios</p>
+                <p className="text-lg font-bold text-destructive">-{formatCurrency(prejuizoAcessorios)}</p>
+              </div>
+            )}
             
             <Button 
               className="w-full mt-4" 
@@ -1790,6 +1918,7 @@ export default function VendasNova() {
                     <TableHead>Condição</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>Qtd</TableHead>
+                    <TableHead className="text-right">Custo do Produto</TableHead>
                     <TableHead className="text-right">Valor Recomendado</TableHead>
                     <TableHead>Loja</TableHead>
                     <TableHead>Ações</TableHead>
@@ -1813,6 +1942,7 @@ export default function VendasNova() {
                           produto.quantidade
                         )}
                       </TableCell>
+                      <TableCell className="text-right text-muted-foreground">{formatCurrency(produto.valorCusto)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(produto.valorVendaSugerido)}</TableCell>
                       <TableCell>{produto.loja}</TableCell>
                       <TableCell>
@@ -2053,12 +2183,19 @@ export default function VendasNova() {
             </div>
             <div>
               <label className="text-sm font-medium">Valor *</label>
-              <Input 
-                type="number"
-                value={novoPagamento.valor || ''}
-                onChange={(e) => setNovoPagamento({ ...novoPagamento, valor: Number(e.target.value) })}
-                placeholder="R$ 0,00"
-              />
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                <Input 
+                  type="text"
+                  value={novoPagamento.valor ? novoPagamento.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, '');
+                    setNovoPagamento({ ...novoPagamento, valor: Number(value) / 100 });
+                  }}
+                  className="pl-10"
+                  placeholder="0,00"
+                />
+              </div>
             </div>
             
             {/* Parcelas - Cartão Crédito obrigatório, Débito sempre 1x */}
@@ -2400,6 +2537,52 @@ export default function VendasNova() {
           <DialogFooter>
             <Button variant="outline" onClick={handleDiscardDraft}>Descartar</Button>
             <Button onClick={handleLoadDraft}>Carregar Rascunho</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Garantia Extendida */}
+      <Dialog open={showGarantiaExtendidaModal} onOpenChange={setShowGarantiaExtendidaModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Selecionar Garantia Extendida</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {planosExtendidaDisponiveis.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                Nenhum plano de garantia extendida disponível para este modelo.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {planosExtendidaDisponiveis.map(plano => {
+                  const vigencia = calcularVigenciaExtendida(plano);
+                  return (
+                    <div 
+                      key={plano.id} 
+                      className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => handleAddGarantiaExtendida(plano)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-bold text-lg">{plano.nome}</p>
+                          <p className="text-sm text-muted-foreground">+{plano.meses} meses de garantia</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Vigência: {format(new Date(vigencia.dataInicio), 'dd/MM/yyyy')} a {format(new Date(vigencia.dataFim), 'dd/MM/yyyy')}
+                          </p>
+                        </div>
+                        <span className="text-xl font-bold text-primary">{formatCurrency(plano.valor)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground text-center">
+              * A garantia extendida sempre inicia após o término da garantia padrão de 12 meses.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowGarantiaExtendidaModal(false)}>Cancelar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

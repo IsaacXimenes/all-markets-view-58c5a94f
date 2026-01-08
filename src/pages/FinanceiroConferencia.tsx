@@ -37,7 +37,8 @@ export default function FinanceiroConferencia() {
     dataInicio: '',
     dataFim: '',
     loja: 'todas',
-    status: 'todos'
+    status: 'todos',
+    contaDestino: 'todas'
   });
 
   useEffect(() => {
@@ -108,6 +109,7 @@ export default function FinanceiroConferencia() {
       }
       if (filters.loja !== 'todas' && v.lojaId !== filters.loja) return false;
       if (filters.status !== 'todos' && v.status !== filters.status) return false;
+      if (filters.contaDestino !== 'todas' && v.contaDestino !== filters.contaDestino) return false;
       return true;
     }).sort((a, b) => {
       // Pendentes primeiro
@@ -163,7 +165,8 @@ export default function FinanceiroConferencia() {
       dataInicio: '',
       dataFim: '',
       loja: 'todas',
-      status: 'todos'
+      status: 'todos',
+      contaDestino: 'todas'
     });
   };
 
@@ -238,7 +241,7 @@ export default function FinanceiroConferencia() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               <div>
                 <Label htmlFor="dataInicio">Data Início</Label>
                 <Input
@@ -281,6 +284,20 @@ export default function FinanceiroConferencia() {
                     <SelectItem value="todos">Todos</SelectItem>
                     <SelectItem value="Conferência - Financeiro">Conferência - Financeiro</SelectItem>
                     <SelectItem value="Concluído">Concluído</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="contaDestino">Conta de Destino</Label>
+                <Select value={filters.contaDestino} onValueChange={(value) => setFilters({ ...filters, contaDestino: value })}>
+                  <SelectTrigger id="contaDestino">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas</SelectItem>
+                    {contasFinanceiras.map(c => (
+                      <SelectItem key={c.id} value={c.nome}>{c.nome}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
