@@ -592,6 +592,12 @@ export default function VendasNova() {
       toast({ title: "Erro", description: "Selecione o número de parcelas", variant: "destructive" });
       return;
     }
+
+    // Validar campos para Fiado
+    if (novoPagamento.meioPagamento === 'Fiado' && (!novoPagamento.fiadoDataBase || !novoPagamento.fiadoNumeroParcelas)) {
+      toast({ title: "Erro", description: "Preencha os campos de data base e número de parcelas", variant: "destructive" });
+      return;
+    }
     
     const parcelas = novoPagamento.meioPagamento === 'Cartão Crédito' 
       ? novoPagamento.parcelas 
@@ -608,7 +614,10 @@ export default function VendasNova() {
       contaDestino: novoPagamento.contaDestino!,
       parcelas,
       valorParcela,
-      descricao: novoPagamento.descricao
+      descricao: novoPagamento.descricao,
+      isFiado: novoPagamento.meioPagamento === 'Fiado',
+      fiadoDataBase: novoPagamento.fiadoDataBase,
+      fiadoNumeroParcelas: novoPagamento.fiadoNumeroParcelas
     };
     
     setPagamentos([...pagamentos, pagamento]);
@@ -2212,11 +2221,13 @@ export default function VendasNova() {
                 onValueChange={(v) => {
                   // Se for débito, sempre 1 parcela
                   if (v === 'Cartão Débito') {
-                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: 1 });
+                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: 1, isFiado: false, fiadoDataBase: undefined, fiadoNumeroParcelas: undefined });
                   } else if (v === 'Cartão Crédito') {
-                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: novoPagamento.parcelas || 1 });
+                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: novoPagamento.parcelas || 1, isFiado: false, fiadoDataBase: undefined, fiadoNumeroParcelas: undefined });
+                  } else if (v === 'Fiado') {
+                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: undefined, isFiado: true, fiadoDataBase: 5, fiadoNumeroParcelas: 1 });
                   } else {
-                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: undefined });
+                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: undefined, isFiado: false, fiadoDataBase: undefined, fiadoNumeroParcelas: undefined });
                   }
                 }}
               >
@@ -2229,6 +2240,7 @@ export default function VendasNova() {
                   <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
                   <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
                   <SelectItem value="Transferência">Transferência</SelectItem>
+                  <SelectItem value="Fiado">Fiado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -2278,6 +2290,56 @@ export default function VendasNova() {
               <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
                 Cartão de Débito: pagamento à vista (1x)
               </div>
+            )}
+
+            {/* Campos específicos para Fiado */}
+            {novoPagamento.meioPagamento === 'Fiado' && (
+              <>
+                <div>
+                  <label className="text-sm font-medium">Data Base para Pagamento *</label>
+                  <Select 
+                    value={String(novoPagamento.fiadoDataBase || 5)} 
+                    onValueChange={(v) => setNovoPagamento({ ...novoPagamento, fiadoDataBase: Number(v) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o dia" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 5, 10, 15, 20, 25, 28].map(dia => (
+                        <SelectItem key={dia} value={String(dia)}>Dia {dia}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Dia do mês em que as parcelas vencerão
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Número de Parcelas *</label>
+                  <Select 
+                    value={String(novoPagamento.fiadoNumeroParcelas || 1)} 
+                    onValueChange={(v) => setNovoPagamento({ ...novoPagamento, fiadoNumeroParcelas: Number(v) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 10 }, (_, i) => i + 1).map(num => (
+                        <SelectItem key={num} value={String(num)}>{num}x</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {novoPagamento.valor && novoPagamento.fiadoNumeroParcelas && novoPagamento.fiadoNumeroParcelas > 1 && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {novoPagamento.fiadoNumeroParcelas}x de {formatCurrency(novoPagamento.valor / novoPagamento.fiadoNumeroParcelas)}
+                    </p>
+                  )}
+                </div>
+                <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg text-sm text-yellow-700 dark:text-yellow-300 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  As parcelas serão geradas automaticamente na tela "Conferências - Fiado" no módulo Financeiro.
+                </div>
+              </>
             )}
             
             <div>

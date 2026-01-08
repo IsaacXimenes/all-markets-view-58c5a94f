@@ -61,6 +61,7 @@ import OSHistoricoNotas from "./pages/OSHistoricoNotas";
 import OSPecas from "./pages/OSPecas";
 import FinanceiroNotasAssistencia from "./pages/FinanceiroNotasAssistencia";
 import FinanceiroExtrato from "./pages/FinanceiroExtrato";
+import FinanceiroFiado from "./pages/FinanceiroFiado";
 import Relatorios from "./pages/Relatorios";
 import GarantiasNova from "./pages/GarantiasNova";
 import GarantiasEmAndamento from "./pages/GarantiasEmAndamento";
@@ -88,6 +89,7 @@ const App = () => (
           <Route path="/rh/funcionario/:id" element={<FuncionarioDetalhes />} />
           <Route path="/rh/feedback" element={<RHFeedback />} />
           <Route path="/financeiro/conferencia" element={<FinanceiroConferencia />} />
+          <Route path="/financeiro/fiado" element={<FinanceiroFiado />} />
           <Route path="/financeiro/contas" element={<FinanceiroContas />} />
           <Route path="/financeiro/despesas-fixas" element={<FinanceiroDespesasFixas />} />
           <Route path="/financeiro/despesas-variaveis" element={<FinanceiroDespesasVariaveis />} />
