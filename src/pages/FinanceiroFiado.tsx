@@ -91,7 +91,7 @@ export default function FinanceiroFiado() {
   };
 
   const filteredParcelas = useMemo(() => {
-    return parcelas.filter(p => {
+    const filtered = parcelas.filter(p => {
       if (filters.dataInicio && new Date(p.dataVencimento) < new Date(filters.dataInicio)) return false;
       if (filters.dataFim) {
         const dataFim = new Date(filters.dataFim);
@@ -102,15 +102,39 @@ export default function FinanceiroFiado() {
       if (filters.status !== 'todos' && p.status !== filters.status) return false;
       if (filters.cliente && !p.clienteNome.toLowerCase().includes(filters.cliente.toLowerCase())) return false;
       return true;
-    }).sort((a, b) => {
-      // Vencidas primeiro, depois pendentes por data, depois pagas
-      if (a.status === 'Vencido' && b.status !== 'Vencido') return -1;
-      if (a.status !== 'Vencido' && b.status === 'Vencido') return 1;
-      if (a.status === 'Pendente' && b.status === 'Pago') return -1;
-      if (a.status === 'Pago' && b.status === 'Pendente') return 1;
-      return new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime();
+    });
+
+    // Ordenar por vendaId primeiro, depois por numeroParcela
+    return filtered.sort((a, b) => {
+      // Primeiro ordena por vendaId
+      const vendaCompare = a.vendaId.localeCompare(b.vendaId);
+      if (vendaCompare !== 0) return vendaCompare;
+      // Dentro da mesma venda, ordena por número da parcela
+      return a.numeroParcela - b.numeroParcela;
     });
   }, [parcelas, filters]);
+
+  // Agrupar parcelas por vendaId para visualização
+  const parcelasAgrupadas = useMemo(() => {
+    const grupos: { vendaId: string; parcelas: ParcelaFiado[]; isFirst: boolean }[] = [];
+    let currentVendaId = '';
+    
+    filteredParcelas.forEach((parcela, index) => {
+      const isFirst = parcela.vendaId !== currentVendaId;
+      if (isFirst) {
+        currentVendaId = parcela.vendaId;
+      }
+      grupos.push({ vendaId: parcela.vendaId, parcelas: [parcela], isFirst });
+    });
+    
+    return grupos;
+  }, [filteredParcelas]);
+
+  // Verificar se é a primeira parcela de um grupo para estilização
+  const getGroupIndex = (vendaId: string): number => {
+    const uniqueVendas = [...new Set(filteredParcelas.map(p => p.vendaId))];
+    return uniqueVendas.indexOf(vendaId);
+  };
 
   const stats = getEstatisticasFiado();
 
@@ -384,48 +408,71 @@ export default function FinanceiroFiado() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredParcelas.map((parcela) => (
-                      <TableRow 
-                        key={parcela.id}
-                        className={getRowClassName(parcela.status)}
-                      >
-                        <TableCell className="font-medium">{parcela.vendaId}</TableCell>
-                        <TableCell>{parcela.clienteNome}</TableCell>
-                        <TableCell>{parcela.lojaNome}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline">
-                            {parcela.numeroParcela}/{parcela.totalParcelas}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {formatCurrency(parcela.valorParcela)}
-                        </TableCell>
-                        <TableCell>
-                          {new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}
-                        </TableCell>
-                        <TableCell>
-                          {getDiasDisplay(parcela)}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(parcela.status)}
-                        </TableCell>
-                        <TableCell>
-                          {parcela.status !== 'Pago' && (
-                            <Button size="sm" onClick={() => handleAbrirPagamento(parcela)}>
-                              <Check className="h-4 w-4 mr-1" />
-                              Pagar
-                            </Button>
-                          )}
-                          {parcela.status === 'Pago' && (
-                            <span className="text-sm text-muted-foreground">
-                              {parcela.dataPagamento 
-                                ? new Date(parcela.dataPagamento).toLocaleDateString('pt-BR')
-                                : '-'}
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    filteredParcelas.map((parcela, index) => {
+                      const isFirstOfGroup = index === 0 || filteredParcelas[index - 1].vendaId !== parcela.vendaId;
+                      const groupIndex = getGroupIndex(parcela.vendaId);
+                      const isEvenGroup = groupIndex % 2 === 0;
+                      
+                      return (
+                        <TableRow 
+                          key={parcela.id}
+                          className={`
+                            ${getRowClassName(parcela.status)}
+                            ${isFirstOfGroup ? 'border-t-2 border-t-primary/30' : ''}
+                            ${isEvenGroup ? 'bg-opacity-100' : 'bg-muted/20'}
+                          `}
+                        >
+                          <TableCell className={`font-medium ${isFirstOfGroup ? '' : 'text-muted-foreground/60'}`}>
+                            {isFirstOfGroup ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-1 h-6 rounded-full bg-primary"></div>
+                                {parcela.vendaId}
+                              </div>
+                            ) : (
+                              <span className="pl-3 text-xs">↳</span>
+                            )}
+                          </TableCell>
+                          <TableCell className={isFirstOfGroup ? '' : 'text-muted-foreground/70'}>
+                            {isFirstOfGroup ? parcela.clienteNome : ''}
+                          </TableCell>
+                          <TableCell className={isFirstOfGroup ? '' : 'text-muted-foreground/70'}>
+                            {isFirstOfGroup ? parcela.lojaNome : ''}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className={parcela.numeroParcela === 1 ? 'border-primary' : ''}>
+                              {parcela.numeroParcela}/{parcela.totalParcelas}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {formatCurrency(parcela.valorParcela)}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(parcela.dataVencimento).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell>
+                            {getDiasDisplay(parcela)}
+                          </TableCell>
+                          <TableCell>
+                            {getStatusBadge(parcela.status)}
+                          </TableCell>
+                          <TableCell>
+                            {parcela.status !== 'Pago' && (
+                              <Button size="sm" onClick={() => handleAbrirPagamento(parcela)}>
+                                <Check className="h-4 w-4 mr-1" />
+                                Pagar
+                              </Button>
+                            )}
+                            {parcela.status === 'Pago' && (
+                              <span className="text-sm text-muted-foreground">
+                                {parcela.dataPagamento 
+                                  ? new Date(parcela.dataPagamento).toLocaleDateString('pt-BR')
+                                  : '-'}
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
