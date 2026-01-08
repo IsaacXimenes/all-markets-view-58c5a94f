@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { VendasLayout } from '@/components/layout/VendasLayout';
 import { Button } from '@/components/ui/button';
@@ -1272,97 +1272,138 @@ export default function VendasNova() {
                     const meses = garantiaItem?.mesesGarantia || 12;
                     const dataFim = format(addMonths(new Date(), meses), 'dd/MM/yyyy');
                     
+                    // Determinar tipo de garantia atual
+                    const tipoGarantiaAtual = isNovo 
+                      ? 'Garantia - Apple' 
+                      : (garantiaItem?.tipoGarantia || 'Garantia - Thiago Imports');
+                    
+                    // Calcular garantia complementar se Apple < 12 meses
+                    const complementar = tipoGarantiaAtual === 'Garantia - Apple' && meses < 12 
+                      ? calcularGarantiaComplementar(meses) 
+                      : null;
+                    
                     return (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.produto}</TableCell>
-                        <TableCell className="font-mono text-sm">{displayIMEI(item.imei)}</TableCell>
-                        <TableCell>
-                          <Badge variant={isNovo ? 'default' : 'secondary'}>
-                            {condicao}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {isNovo ? (
-                            <Badge variant="outline">Garantia - Apple</Badge>
-                          ) : (
-                            <Select 
-                              value={garantiaItem?.tipoGarantia || 'Garantia - Thiago Imports'} 
-                              onValueChange={(val: 'Garantia - Apple' | 'Garantia - Thiago Imports') => {
-                                setGarantiaItens(prev => {
-                                  const existing = prev.find(g => g.itemId === item.id);
-                                  const mesesDefault = val === 'Garantia - Thiago Imports' ? 12 : (existing?.mesesGarantia || 12);
-                                  if (existing) {
-                                    return prev.map(g => 
-                                      g.itemId === item.id 
-                                        ? { ...g, tipoGarantia: val, mesesGarantia: mesesDefault, dataFimGarantia: format(addMonths(new Date(), mesesDefault), 'yyyy-MM-dd') }
-                                        : g
-                                    );
-                                  } else {
-                                    return [...prev, { 
-                                      itemId: item.id, 
-                                      tipoGarantia: val,
-                                      mesesGarantia: mesesDefault,
-                                      dataFimGarantia: format(addMonths(new Date(), mesesDefault), 'yyyy-MM-dd')
-                                    }];
-                                  }
-                                });
-                              }}
-                            >
-                              <SelectTrigger className="w-[180px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Garantia - Apple">Garantia - Apple</SelectItem>
-                                <SelectItem value="Garantia - Thiago Imports">Garantia - Thiago Imports</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {isNovo ? (
-                            <span className="text-muted-foreground">12</span>
-                          ) : (garantiaItem?.tipoGarantia || 'Garantia - Thiago Imports') === 'Garantia - Apple' ? (
-                            <Input 
-                              type="number" 
-                              min={1} 
-                              max={12}
-                              className="w-20"
-                              value={garantiaItem?.mesesGarantia || 12}
-                              onChange={(e) => {
-                                const meses = parseInt(e.target.value) || 12;
-                                setGarantiaItens(prev => {
-                                  const existing = prev.find(g => g.itemId === item.id);
-                                  if (existing) {
-                                    return prev.map(g => 
-                                      g.itemId === item.id 
-                                        ? { ...g, mesesGarantia: meses, dataFimGarantia: format(addMonths(new Date(), meses), 'yyyy-MM-dd') }
-                                        : g
-                                    );
-                                  } else {
-                                    return [...prev, { 
-                                      itemId: item.id, 
-                                      tipoGarantia: 'Garantia - Apple',
-                                      mesesGarantia: meses,
-                                      dataFimGarantia: format(addMonths(new Date(), meses), 'yyyy-MM-dd')
-                                    }];
-                                  }
-                                });
-                              }}
-                              placeholder="1-12"
-                            />
-                          ) : (
-                            <span className="text-muted-foreground">12</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">
-                            {garantiaItem?.dataFimGarantia 
-                              ? format(new Date(garantiaItem.dataFimGarantia), 'dd/MM/yyyy')
-                              : dataFim
-                            }
-                          </span>
-                        </TableCell>
-                      </TableRow>
+                      <React.Fragment key={item.id}>
+                        <TableRow>
+                          <TableCell className="font-medium">{item.produto}</TableCell>
+                          <TableCell className="font-mono text-sm">{displayIMEI(item.imei)}</TableCell>
+                          <TableCell>
+                            <Badge variant={isNovo ? 'default' : 'secondary'}>
+                              {condicao}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {isNovo ? (
+                              <Badge variant="outline">Garantia - Apple</Badge>
+                            ) : (
+                              <Select 
+                                value={garantiaItem?.tipoGarantia || 'Garantia - Thiago Imports'} 
+                                onValueChange={(val: 'Garantia - Apple' | 'Garantia - Thiago Imports') => {
+                                  setGarantiaItens(prev => {
+                                    const existing = prev.find(g => g.itemId === item.id);
+                                    const mesesDefault = val === 'Garantia - Thiago Imports' ? 12 : (existing?.mesesGarantia || 12);
+                                    if (existing) {
+                                      return prev.map(g => 
+                                        g.itemId === item.id 
+                                          ? { ...g, tipoGarantia: val, mesesGarantia: mesesDefault, dataFimGarantia: format(addMonths(new Date(), mesesDefault), 'yyyy-MM-dd') }
+                                          : g
+                                      );
+                                    } else {
+                                      return [...prev, { 
+                                        itemId: item.id, 
+                                        tipoGarantia: val,
+                                        mesesGarantia: mesesDefault,
+                                        dataFimGarantia: format(addMonths(new Date(), mesesDefault), 'yyyy-MM-dd')
+                                      }];
+                                    }
+                                  });
+                                }}
+                              >
+                                <SelectTrigger className="w-[180px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Garantia - Apple">Garantia - Apple</SelectItem>
+                                  <SelectItem value="Garantia - Thiago Imports">Garantia - Thiago Imports</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isNovo ? (
+                              <span className="text-muted-foreground">12</span>
+                            ) : tipoGarantiaAtual === 'Garantia - Apple' ? (
+                              <Input 
+                                type="number" 
+                                min={1} 
+                                max={12}
+                                className="w-20"
+                                value={garantiaItem?.mesesGarantia || 12}
+                                onChange={(e) => {
+                                  const meses = parseInt(e.target.value) || 12;
+                                  setGarantiaItens(prev => {
+                                    const existing = prev.find(g => g.itemId === item.id);
+                                    if (existing) {
+                                      return prev.map(g => 
+                                        g.itemId === item.id 
+                                          ? { ...g, mesesGarantia: meses, dataFimGarantia: format(addMonths(new Date(), meses), 'yyyy-MM-dd') }
+                                          : g
+                                      );
+                                    } else {
+                                      return [...prev, { 
+                                        itemId: item.id, 
+                                        tipoGarantia: 'Garantia - Apple',
+                                        mesesGarantia: meses,
+                                        dataFimGarantia: format(addMonths(new Date(), meses), 'yyyy-MM-dd')
+                                      }];
+                                    }
+                                  });
+                                }}
+                                placeholder="1-12"
+                              />
+                            ) : (
+                              <span className="text-muted-foreground">12</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">
+                              {garantiaItem?.dataFimGarantia 
+                                ? format(new Date(garantiaItem.dataFimGarantia), 'dd/MM/yyyy')
+                                : dataFim
+                              }
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                        {/* Linha complementar automática */}
+                        {complementar && (
+                          <TableRow className="bg-blue-50 dark:bg-blue-950/30">
+                            <TableCell className="pl-8 text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                └ {item.produto}
+                              </span>
+                            </TableCell>
+                            <TableCell className="font-mono text-sm text-muted-foreground">{displayIMEI(item.imei)}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-300">
+                                Complementar
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                                Garantia - Thiago Imports
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-blue-700 dark:text-blue-300 font-medium">{complementar.meses}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-blue-700 dark:text-blue-300">
+                                {format(new Date(complementar.dataInicio), 'dd/MM/yyyy')} a {format(new Date(complementar.dataFim), 'dd/MM/yyyy')}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </TableBody>
