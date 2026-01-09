@@ -63,6 +63,7 @@ export interface ContatoAtivoGarantia {
   aparelho: {
     modelo: string;
     imei: string;
+    condicao?: 'Novo' | 'Seminovo';
   };
   logistica: {
     motoboyId: string;
@@ -74,6 +75,11 @@ export interface ContatoAtivoGarantia {
   garantiaEstendida?: {
     aderida: boolean;
     plano?: 'Um Ano' | 'Dois Anos' | 'Três Anos';
+    // Novos campos para planos detalhados
+    planoId?: string;
+    planoNome?: string;
+    planoMeses?: number;
+    valor?: number;
   };
   status: 'Pendente' | 'Garantia Criada' | 'Entregue';
   timeline: TimelineContatoAtivo[];

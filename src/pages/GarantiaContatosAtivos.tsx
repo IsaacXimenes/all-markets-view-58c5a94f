@@ -3,33 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { GarantiasLayout } from '@/components/layout/GarantiasLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { toast } from 'sonner';
-import { Save, Edit, Eye, Plus, Truck, Phone, User } from 'lucide-react';
+import { Plus, Edit, Eye } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/utils/planosGarantiaApi';
 
-import { getClientes, getColaboradoresByPermissao, getMotoboys, Cliente, Colaborador } from '@/utils/cadastrosApi';
-import { 
-  getContatosAtivos, addContatoAtivo, updateContatoAtivo, 
-  ContatoAtivoGarantia, getGarantias, addGarantia, addTimelineEntry 
-} from '@/utils/garantiasApi';
-import { getPlanosPorModelo, PlanoGarantia } from '@/utils/planosGarantiaApi';
+import { getContatosAtivos, ContatoAtivoGarantia } from '@/utils/garantiasApi';
 
 export default function GarantiaContatosAtivos() {
   const navigate = useNavigate();
-  const clientes = getClientes();
-  const motoboys = getMotoboys();
   
   // Estados
   const [contatos, setContatos] = useState<ContatoAtivoGarantia[]>(getContatosAtivos());
-  const [showNovoModal, setShowNovoModal] = useState(false);
-  const [editando, setEditando] = useState<ContatoAtivoGarantia | null>(null);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
   const [contatoSelecionado, setContatoSelecionado] = useState<ContatoAtivoGarantia | null>(null);
   
@@ -37,22 +27,6 @@ export default function GarantiaContatosAtivos() {
   const [filtroCliente, setFiltroCliente] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
   
-  // Form state
-  const [form, setForm] = useState({
-    clienteId: '',
-    clienteNome: '',
-    clienteTelefone: '',
-    clienteEmail: '',
-    aparelhoModelo: '',
-    aparelhoImei: '',
-    motoboyId: '',
-    dataEntregaPrevista: '',
-    enderecoEntrega: '',
-    observacoes: '',
-    garantiaExtendidaAderida: false,
-    garantiaExtendidaPlano: '' as '' | 'Um Ano' | 'Dois Anos' | 'Três Anos'
-  });
-
   const contatosFiltrados = useMemo(() => {
     return contatos.filter(c => {
       if (filtroCliente && !c.cliente.nome.toLowerCase().includes(filtroCliente.toLowerCase())) return false;
@@ -60,8 +34,6 @@ export default function GarantiaContatosAtivos() {
       return true;
     }).sort((a, b) => new Date(b.dataLancamento).getTime() - new Date(a.dataLancamento).getTime());
   }, [contatos, filtroCliente, filtroStatus]);
-
-  const getMotoboyNome = (id: string) => motoboys.find(m => m.id === id)?.nome || id;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -76,106 +48,13 @@ export default function GarantiaContatosAtivos() {
     }
   };
 
-  const resetForm = () => {
-    setForm({
-      clienteId: '',
-      clienteNome: '',
-      clienteTelefone: '',
-      clienteEmail: '',
-      aparelhoModelo: '',
-      aparelhoImei: '',
-      motoboyId: '',
-      dataEntregaPrevista: '',
-      enderecoEntrega: '',
-      observacoes: '',
-      garantiaExtendidaAderida: false,
-      garantiaExtendidaPlano: ''
-    });
-    setEditando(null);
-  };
-
-  const handleSelecionarCliente = (clienteId: string) => {
-    const cliente = clientes.find(c => c.id === clienteId);
-    if (cliente) {
-      setForm(prev => ({
-        ...prev,
-        clienteId: cliente.id,
-        clienteNome: cliente.nome,
-        clienteTelefone: cliente.telefone,
-        clienteEmail: cliente.email,
-        enderecoEntrega: `${cliente.endereco}, ${cliente.numero} - ${cliente.bairro}, ${cliente.cidade}-${cliente.estado}`
-      }));
-    }
-  };
-
-  const handleEditar = (contato: ContatoAtivoGarantia) => {
-    setEditando(contato);
-    setForm({
-      clienteId: contato.cliente.id,
-      clienteNome: contato.cliente.nome,
-      clienteTelefone: contato.cliente.telefone,
-      clienteEmail: contato.cliente.email,
-      aparelhoModelo: contato.aparelho.modelo,
-      aparelhoImei: contato.aparelho.imei,
-      motoboyId: contato.logistica.motoboyId,
-      dataEntregaPrevista: contato.logistica.dataEntregaPrevista,
-      enderecoEntrega: contato.logistica.enderecoEntrega,
-      observacoes: contato.logistica.observacoes,
-      garantiaExtendidaAderida: contato.garantiaEstendida?.aderida || false,
-      garantiaExtendidaPlano: contato.garantiaEstendida?.plano || ''
-    });
-    setShowNovoModal(true);
-  };
-
   const handleVerDetalhes = (contato: ContatoAtivoGarantia) => {
     setContatoSelecionado(contato);
     setShowDetalhesModal(true);
   };
 
-  const handleSalvar = () => {
-    if (!form.clienteNome || !form.aparelhoModelo || !form.aparelhoImei || !form.motoboyId || !form.dataEntregaPrevista) {
-      toast.error('Preencha todos os campos obrigatórios');
-      return;
-    }
-
-    const novoContato: Omit<ContatoAtivoGarantia, 'id' | 'timeline'> = {
-      garantiaId: undefined,
-      dataLancamento: new Date().toISOString(),
-      cliente: {
-        id: form.clienteId || `CLI-TEMP-${Date.now()}`,
-        nome: form.clienteNome,
-        telefone: form.clienteTelefone,
-        email: form.clienteEmail
-      },
-      aparelho: {
-        modelo: form.aparelhoModelo,
-        imei: form.aparelhoImei
-      },
-      logistica: {
-        motoboyId: form.motoboyId,
-        motoboyNome: getMotoboyNome(form.motoboyId),
-        dataEntregaPrevista: form.dataEntregaPrevista,
-        enderecoEntrega: form.enderecoEntrega,
-        observacoes: form.observacoes
-      },
-      garantiaEstendida: form.garantiaExtendidaAderida ? {
-        aderida: true,
-        plano: form.garantiaExtendidaPlano as 'Um Ano' | 'Dois Anos' | 'Três Anos'
-      } : undefined,
-      status: 'Pendente'
-    };
-
-    if (editando) {
-      updateContatoAtivo(editando.id, novoContato);
-      toast.success('Contato atualizado com sucesso!');
-    } else {
-      addContatoAtivo(novoContato);
-      toast.success('Contato registrado com sucesso!');
-    }
-
-    setContatos(getContatosAtivos());
-    setShowNovoModal(false);
-    resetForm();
+  const handleEditar = (contato: ContatoAtivoGarantia) => {
+    navigate(`/garantias/contatos-ativos/editar/${contato.id}`);
   };
 
   // Stats
@@ -239,7 +118,7 @@ export default function GarantiaContatosAtivos() {
               </Select>
             </div>
             <div className="flex items-end gap-2 md:col-span-2">
-              <Button onClick={() => { resetForm(); setShowNovoModal(true); }} className="flex-1">
+              <Button onClick={() => navigate('/garantias/contatos-ativos/novo')} className="flex-1">
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Lançamento
               </Button>
@@ -271,13 +150,29 @@ export default function GarantiaContatosAtivos() {
                 <TableCell className="font-mono text-xs">{contato.id}</TableCell>
                 <TableCell>{format(new Date(contato.dataLancamento), 'dd/MM/yyyy')}</TableCell>
                 <TableCell className="font-medium">{contato.cliente.nome}</TableCell>
-                <TableCell>{contato.aparelho.modelo}</TableCell>
+                <TableCell>
+                  <div>
+                    {contato.aparelho.modelo}
+                    {contato.aparelho.condicao && (
+                      <Badge variant="outline" className="ml-2 text-xs">{contato.aparelho.condicao}</Badge>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="font-mono text-xs">{contato.aparelho.imei}</TableCell>
                 <TableCell>{contato.logistica.motoboyNome}</TableCell>
                 <TableCell>{format(new Date(contato.logistica.dataEntregaPrevista), 'dd/MM/yyyy')}</TableCell>
                 <TableCell>
                   {contato.garantiaEstendida?.aderida ? (
-                    <Badge className="bg-green-500">{contato.garantiaEstendida.plano}</Badge>
+                    <div className="space-y-1">
+                      <Badge className="bg-green-500">
+                        {contato.garantiaEstendida.planoNome || contato.garantiaEstendida.plano}
+                      </Badge>
+                      {contato.garantiaEstendida.valor && (
+                        <div className="text-xs text-muted-foreground">
+                          {formatCurrency(contato.garantiaEstendida.valor)}
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <Badge variant="outline">Não</Badge>
                   )}
@@ -306,170 +201,6 @@ export default function GarantiaContatosAtivos() {
         </Table>
       </div>
 
-      {/* Modal Novo/Editar */}
-      <Dialog open={showNovoModal} onOpenChange={setShowNovoModal}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editando ? 'Editar Contato' : 'Novo Lançamento de Garantia'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            {/* Cliente */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <User className="h-4 w-4" />
-                  Cliente
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Selecionar Cliente</Label>
-                  <Select value={form.clienteId} onValueChange={handleSelecionarCliente}>
-                    <SelectTrigger><SelectValue placeholder="Buscar cliente..." /></SelectTrigger>
-                    <SelectContent>
-                      {clientes.map(c => (
-                        <SelectItem key={c.id} value={c.id}>{c.nome} - {c.cpf}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Nome *</Label>
-                  <Input value={form.clienteNome} onChange={e => setForm({...form, clienteNome: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Telefone</Label>
-                  <Input value={form.clienteTelefone} onChange={e => setForm({...form, clienteTelefone: e.target.value})} />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Email</Label>
-                  <Input value={form.clienteEmail} onChange={e => setForm({...form, clienteEmail: e.target.value})} />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Aparelho */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Phone className="h-4 w-4" />
-                  Aparelho
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Modelo *</Label>
-                  <Input 
-                    value={form.aparelhoModelo} 
-                    onChange={e => setForm({...form, aparelhoModelo: e.target.value})}
-                    placeholder="iPhone 15 Pro Max"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>IMEI *</Label>
-                  <Input 
-                    value={form.aparelhoImei} 
-                    onChange={e => setForm({...form, aparelhoImei: e.target.value})}
-                    placeholder="352123456789012"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Logística */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Truck className="h-4 w-4" />
-                  Logística
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Motoboy *</Label>
-                  <Select value={form.motoboyId} onValueChange={v => setForm({...form, motoboyId: v})}>
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      {motoboys.map(m => (
-                        <SelectItem key={m.id} value={m.id}>{m.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Data de Entrega Prevista *</Label>
-                  <Input 
-                    type="date" 
-                    value={form.dataEntregaPrevista} 
-                    onChange={e => setForm({...form, dataEntregaPrevista: e.target.value})} 
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Endereço de Entrega</Label>
-                  <Input 
-                    value={form.enderecoEntrega} 
-                    onChange={e => setForm({...form, enderecoEntrega: e.target.value})} 
-                  />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Observações</Label>
-                  <Textarea 
-                    value={form.observacoes} 
-                    onChange={e => setForm({...form, observacoes: e.target.value})}
-                    rows={3}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Garantia Estendida */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Garantia Estendida</CardTitle>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Aderida?</Label>
-                  <Select 
-                    value={form.garantiaExtendidaAderida ? 'sim' : 'nao'} 
-                    onValueChange={v => setForm({...form, garantiaExtendidaAderida: v === 'sim'})}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="nao">Não</SelectItem>
-                      <SelectItem value="sim">Sim</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {form.garantiaExtendidaAderida && (
-                  <div className="space-y-2">
-                    <Label>Plano</Label>
-                    <Select 
-                      value={form.garantiaExtendidaPlano} 
-                      onValueChange={v => setForm({...form, garantiaExtendidaPlano: v as 'Um Ano' | 'Dois Anos' | 'Três Anos'})}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Um Ano">Um Ano</SelectItem>
-                        <SelectItem value="Dois Anos">Dois Anos</SelectItem>
-                        <SelectItem value="Três Anos">Três Anos</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNovoModal(false)}>Cancelar</Button>
-            <Button onClick={handleSalvar}>
-              <Save className="h-4 w-4 mr-2" />
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Modal Detalhes */}
       <Dialog open={showDetalhesModal} onOpenChange={setShowDetalhesModal}>
         <DialogContent>
@@ -495,6 +226,9 @@ export default function GarantiaContatosAtivos() {
                 <div>
                   <Label className="text-xs text-muted-foreground">Aparelho</Label>
                   <p>{contatoSelecionado.aparelho.modelo}</p>
+                  {contatoSelecionado.aparelho.condicao && (
+                    <Badge variant="outline" className="mt-1">{contatoSelecionado.aparelho.condicao}</Badge>
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">IMEI</Label>
@@ -516,6 +250,22 @@ export default function GarantiaContatosAtivos() {
                   <div className="col-span-2">
                     <Label className="text-xs text-muted-foreground">Observações</Label>
                     <p className="text-sm">{contatoSelecionado.logistica.observacoes}</p>
+                  </div>
+                )}
+                {contatoSelecionado.garantiaEstendida?.aderida && (
+                  <div className="col-span-2 p-3 bg-green-50 rounded-lg">
+                    <Label className="text-xs text-green-700">Garantia Estendida</Label>
+                    <p className="font-medium text-green-800">
+                      {contatoSelecionado.garantiaEstendida.planoNome || contatoSelecionado.garantiaEstendida.plano}
+                      {contatoSelecionado.garantiaEstendida.planoMeses && (
+                        <span className="font-normal text-sm"> ({contatoSelecionado.garantiaEstendida.planoMeses} meses)</span>
+                      )}
+                    </p>
+                    {contatoSelecionado.garantiaEstendida.valor && (
+                      <p className="text-lg font-bold text-green-700">
+                        {formatCurrency(contatoSelecionado.garantiaEstendida.valor)}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
