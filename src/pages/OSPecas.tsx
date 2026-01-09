@@ -191,7 +191,7 @@ export default function OSPecas() {
             <div className="flex items-end gap-2 md:col-span-2">
               <Button onClick={() => setShowNovaModal(true)} className="flex-1">
                 <Plus className="h-4 w-4 mr-2" />
-                Nova Peça
+                Entrada Nova Peça
               </Button>
               <Button variant="outline" onClick={handleExport}>
                 <Download className="h-4 w-4" />

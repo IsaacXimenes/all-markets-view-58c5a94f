@@ -49,6 +49,113 @@ export interface TimelineGarantia {
   usuarioNome: string;
 }
 
+// Interface para Contatos Ativos (Garantias vencendo)
+export interface ContatoAtivoGarantia {
+  id: string;
+  garantiaId?: string;
+  dataLancamento: string;
+  cliente: {
+    id: string;
+    nome: string;
+    telefone: string;
+    email: string;
+  };
+  aparelho: {
+    modelo: string;
+    imei: string;
+  };
+  logistica: {
+    motoboyId: string;
+    motoboyNome: string;
+    dataEntregaPrevista: string;
+    enderecoEntrega: string;
+    observacoes: string;
+  };
+  garantiaEstendida?: {
+    aderida: boolean;
+    plano?: 'Um Ano' | 'Dois Anos' | 'Três Anos';
+  };
+  status: 'Pendente' | 'Garantia Criada' | 'Entregue';
+  timeline: TimelineContatoAtivo[];
+}
+
+export interface TimelineContatoAtivo {
+  id: string;
+  dataHora: string;
+  tipo: 'criacao' | 'edicao' | 'garantia_criada' | 'entregue';
+  descricao: string;
+}
+
+// Interface para Análise Garantia (OS)
+export interface RegistroAnaliseGarantia {
+  id: string;
+  origem: 'Garantia' | 'Estoque';
+  origemId: string;
+  clienteDescricao: string;
+  dataChegada: string;
+  status: 'Pendente' | 'Solicitação Aprovada';
+  tecnicoId?: string;
+  tecnicoNome?: string;
+  dataAprovacao?: string;
+  usuarioAprovacao?: string;
+}
+
+// Dados mockados para Contatos Ativos
+let contatosAtivos: ContatoAtivoGarantia[] = [
+  {
+    id: 'CTA-0001',
+    dataLancamento: '2025-01-05T10:00:00',
+    cliente: {
+      id: 'CLI-001',
+      nome: 'João Silva',
+      telefone: '(11) 99999-1111',
+      email: 'joao@email.com'
+    },
+    aparelho: {
+      modelo: 'iPhone 15 Pro Max',
+      imei: '352123456789012'
+    },
+    logistica: {
+      motoboyId: 'COL-023',
+      motoboyNome: 'João Silva Motoboy',
+      dataEntregaPrevista: '2025-01-10',
+      enderecoEntrega: 'Rua das Flores, 123 - Centro, São Paulo-SP',
+      observacoes: 'Cliente solicita entrega no período da tarde'
+    },
+    garantiaEstendida: {
+      aderida: true,
+      plano: 'Um Ano'
+    },
+    status: 'Pendente',
+    timeline: [
+      { id: 'TLC-001', dataHora: '2025-01-05T10:00:00', tipo: 'criacao', descricao: 'Contato registrado' }
+    ]
+  }
+];
+
+// Dados mockados para Análise Garantia
+let registrosAnaliseGarantia: RegistroAnaliseGarantia[] = [
+  {
+    id: 'RAG-0001',
+    origem: 'Garantia',
+    origemId: 'GAR-0003',
+    clienteDescricao: 'Pedro Oliveira - iPhone 14 Pro',
+    dataChegada: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    status: 'Pendente'
+  },
+  {
+    id: 'RAG-0002',
+    origem: 'Estoque',
+    origemId: 'PEC-0001',
+    clienteDescricao: 'Tela LCD iPhone 14 Pro Max',
+    dataChegada: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    status: 'Pendente'
+  }
+];
+
+let contatoAtivoCounter = 1;
+let registroAnaliseCounter = 2;
+
 // Dados mockados
 const hoje = new Date();
 const dataHoje = format(hoje, 'yyyy-MM-dd');
@@ -703,4 +810,63 @@ export const exportGarantiasToCSV = (garantiasFiltradas: GarantiaItem[], filenam
   link.href = URL.createObjectURL(blob);
   link.download = filename;
   link.click();
+};
+
+// ==================== CONTATOS ATIVOS ====================
+
+export const getContatosAtivos = (): ContatoAtivoGarantia[] => {
+  return [...contatosAtivos];
+};
+
+export const addContatoAtivo = (contato: Omit<ContatoAtivoGarantia, 'id' | 'timeline'>): ContatoAtivoGarantia => {
+  contatoAtivoCounter++;
+  const newContato: ContatoAtivoGarantia = {
+    ...contato,
+    id: `CTA-${String(contatoAtivoCounter).padStart(4, '0')}`,
+    timeline: [{ id: `TLC-${Date.now()}`, dataHora: new Date().toISOString(), tipo: 'criacao', descricao: 'Contato registrado' }]
+  };
+  contatosAtivos.push(newContato);
+  return newContato;
+};
+
+export const updateContatoAtivo = (id: string, updates: Partial<ContatoAtivoGarantia>): void => {
+  const index = contatosAtivos.findIndex(c => c.id === id);
+  if (index !== -1) {
+    contatosAtivos[index] = { ...contatosAtivos[index], ...updates };
+    contatosAtivos[index].timeline.push({
+      id: `TLC-${Date.now()}`,
+      dataHora: new Date().toISOString(),
+      tipo: 'edicao',
+      descricao: 'Contato atualizado'
+    });
+  }
+};
+
+// ==================== ANÁLISE GARANTIA ====================
+
+export const getRegistrosAnaliseGarantia = (): RegistroAnaliseGarantia[] => {
+  return [...registrosAnaliseGarantia];
+};
+
+export const aprovarAnaliseGarantia = (id: string, dados: { tecnicoId: string; tecnicoNome: string; dataAprovacao: string; usuarioAprovacao: string }): void => {
+  const index = registrosAnaliseGarantia.findIndex(r => r.id === id);
+  if (index !== -1) {
+    registrosAnaliseGarantia[index] = {
+      ...registrosAnaliseGarantia[index],
+      status: 'Solicitação Aprovada',
+      ...dados
+    };
+  }
+};
+
+export const encaminharParaAnaliseGarantia = (origemId: string, origem: 'Garantia' | 'Estoque', descricao: string): void => {
+  registroAnaliseCounter++;
+  registrosAnaliseGarantia.push({
+    id: `RAG-${String(registroAnaliseCounter).padStart(4, '0')}`,
+    origem,
+    origemId,
+    clienteDescricao: descricao,
+    dataChegada: new Date().toISOString(),
+    status: 'Pendente'
+  });
 };

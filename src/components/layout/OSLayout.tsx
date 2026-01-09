@@ -16,6 +16,7 @@ export function OSLayout({ children, title }: OSLayoutProps) {
     { name: 'Assistência', href: '/os/assistencia', icon: Wrench },
     { name: 'Estoque - Assistência', href: '/os/pecas', icon: Package },
     { name: 'Aprovações - Gestor', href: '/os/solicitacoes-pecas', icon: Package },
+    { name: 'Análise Garantia', href: '/os/analise-garantia', icon: ClipboardList },
     { name: 'Histórico de Notas', href: '/os/historico-notas', icon: ClipboardList },
   ];
 

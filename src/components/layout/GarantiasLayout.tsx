@@ -13,6 +13,7 @@ export function GarantiasLayout({ children, title }: GarantiasLayoutProps) {
   
   const tabs = [
     { name: 'Novo Registro de Garantia', href: '/garantias/nova', icon: Plus },
+    { name: 'Contatos - Ativos', href: '/garantias/contatos-ativos', icon: Clock },
     { name: 'Em Andamento', href: '/garantias/em-andamento', icon: Clock },
     { name: 'Histórico', href: '/garantias/historico', icon: History },
     { name: 'Garantia Extendida', href: '/garantias/extendida', icon: Star },

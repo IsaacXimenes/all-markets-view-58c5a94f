@@ -72,6 +72,8 @@ import GarantiasHistorico from "./pages/GarantiasHistorico";
 import GarantiaDetalhes from "./pages/GarantiaDetalhes";
 import GarantiasExtendida from "./pages/GarantiasExtendida";
 import GarantiaExtendidaDetalhes from "./pages/GarantiaExtendidaDetalhes";
+import GarantiaContatosAtivos from "./pages/GarantiaContatosAtivos";
+import OSAnaliseGarantia from "./pages/OSAnaliseGarantia";
 import CadastrosPlanosGarantia from "./pages/CadastrosPlanosGarantia";
 
 const queryClient = new QueryClient();
@@ -116,6 +118,7 @@ const App = () => (
           <Route path="/os/assistencia/:id" element={<OSAssistenciaDetalhes />} />
           <Route path="/os/solicitacoes-pecas" element={<OSSolicitacoesPecas />} />
           <Route path="/os/historico-notas" element={<OSHistoricoNotas />} />
+          <Route path="/os/analise-garantia" element={<OSAnaliseGarantia />} />
           <Route path="/os/pecas" element={<OSPecas />} />
           <Route path="/financeiro/notas-assistencia" element={<FinanceiroNotasAssistencia />} />
           <Route path="/financeiro/extrato" element={<FinanceiroExtrato />} />
@@ -149,6 +152,7 @@ const App = () => (
           <Route path="/garantias" element={<GarantiasNova />} />
           <Route path="/garantias/nova" element={<GarantiasNova />} />
           <Route path="/garantias/em-andamento" element={<GarantiasEmAndamento />} />
+          <Route path="/garantias/contatos-ativos" element={<GarantiaContatosAtivos />} />
           <Route path="/garantias/historico" element={<GarantiasHistorico />} />
           <Route path="/garantias/extendida" element={<GarantiasExtendida />} />
           <Route path="/garantias/extendida/:id" element={<GarantiaExtendidaDetalhes />} />
