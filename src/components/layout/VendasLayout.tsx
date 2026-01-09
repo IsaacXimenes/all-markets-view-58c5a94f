@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { History, Plus, Smartphone, ClipboardList, Headphones, ShieldCheck } from 'lucide-react';
+import { History, Plus, Smartphone, ClipboardList, Headphones, ShieldCheck, FileCheck } from 'lucide-react';
 
 interface VendasLayoutProps {
   children: React.ReactNode;
@@ -12,7 +12,8 @@ interface VendasLayoutProps {
 const usuarioLogadoId = 'COL-007';
 const temPermissaoDigital = true;
 const temPermissaoFinalizador = true;
-const temPermissaoGestor = true; // Nova permissão para gestor
+const temPermissaoGestor = true;
+const temPermissaoLancamento = true; // Nova permissão para lançamento
 
 export function VendasLayout({ children, title }: VendasLayoutProps) {
   const location = useLocation();
@@ -31,11 +32,16 @@ export function VendasLayout({ children, title }: VendasLayoutProps) {
     { name: 'Pendentes Digitais', href: '/vendas/pendentes-digitais', icon: ClipboardList },
   ] : [];
 
-  const gestorTabs = temPermissaoGestor ? [
-    { name: 'Conferências - Gestor', href: '/vendas/conferencia-gestor', icon: ShieldCheck },
+  // Nova aba de Conferência - Lançamento
+  const lancamentoTabs = temPermissaoLancamento ? [
+    { name: 'Conferência - Lançamento', href: '/vendas/conferencia-lancamento', icon: FileCheck },
   ] : [];
 
-  const tabs = [...baseTabs, ...digitalTabs, ...finalizadorTabs, ...gestorTabs];
+  const gestorTabs = temPermissaoGestor ? [
+    { name: 'Conferência - Gestor', href: '/vendas/conferencia-gestor', icon: ShieldCheck },
+  ] : [];
+
+  const tabs = [...baseTabs, ...digitalTabs, ...finalizadorTabs, ...lancamentoTabs, ...gestorTabs];
 
   return (
     <PageLayout title={title}>
