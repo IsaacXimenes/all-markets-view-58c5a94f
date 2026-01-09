@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Printer, ShoppingCart, User, Package, CreditCard, Truck, Clock, DollarSign, TrendingUp, AlertTriangle, Shield } from 'lucide-react';
+import { ArrowLeft, Printer, ShoppingCart, User, Package, CreditCard, Truck, Clock, DollarSign, TrendingUp, AlertTriangle, Shield, History, Pencil } from 'lucide-react';
 import { getVendaById, formatCurrency, Venda } from '@/utils/vendasApi';
 import { getColaboradores, getLojas, getContasFinanceiras } from '@/utils/cadastrosApi';
 import { getGarantiasByVendaId, calcularStatusExpiracao } from '@/utils/garantiasApi';
@@ -416,6 +416,66 @@ export default function VendaDetalhes() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Timeline de Edições */}
+          {venda.timelineEdicoes && venda.timelineEdicoes.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="h-5 w-5" />
+                  Timeline de Edições
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {venda.timelineEdicoes.map((edicao) => (
+                    <div key={edicao.id} className="border-l-2 border-primary pl-4 pb-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Pencil className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">
+                            {format(new Date(edicao.dataHora), 'dd/MM/yyyy HH:mm')}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Gestor: {edicao.usuarioNome}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-2 ml-10">
+                        {edicao.alteracoes.map((alt, idx) => (
+                          <div key={idx} className="bg-muted/50 rounded-lg p-3">
+                            <p className="text-sm font-medium text-primary mb-1">
+                              {alt.campo}
+                            </p>
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="text-red-500 line-through">
+                                {typeof alt.valorAnterior === 'number' 
+                                  ? formatCurrency(alt.valorAnterior) 
+                                  : String(alt.valorAnterior)}
+                              </span>
+                              <span className="text-muted-foreground">→</span>
+                              <span className="text-green-600 font-medium">
+                                {typeof alt.valorNovo === 'number' 
+                                  ? formatCurrency(alt.valorNovo) 
+                                  : String(alt.valorNovo)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                        {edicao.descricao && (
+                          <p className="text-xs text-muted-foreground italic mt-2">
+                            {edicao.descricao}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Coluna Lateral - Resumo Financeiro */}
