@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { Users, MessageSquareWarning } from 'lucide-react';
+import { Users, MessageSquareWarning, DollarSign } from 'lucide-react';
 
 interface RHLayoutProps {
   children: React.ReactNode;
@@ -12,6 +12,7 @@ interface RHLayoutProps {
 const tabs = [
   { name: 'Geral', href: '/rh', icon: Users },
   { name: 'FeedBack', href: '/rh/feedback', icon: MessageSquareWarning },
+  { name: 'Salários - Comissões', href: '/rh/comissoes', icon: DollarSign },
 ];
 
 export const RHLayout: React.FC<RHLayoutProps> = ({ children, title }) => {

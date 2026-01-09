@@ -10,6 +10,7 @@ import { ArrowLeft, Printer, ShoppingCart, User, Package, CreditCard, Truck, Clo
 import { getVendaById, formatCurrency, Venda } from '@/utils/vendasApi';
 import { getColaboradores, getLojas, getContasFinanceiras } from '@/utils/cadastrosApi';
 import { getGarantiasByVendaId, calcularStatusExpiracao } from '@/utils/garantiasApi';
+import { calcularComissaoVenda, getComissaoColaborador } from '@/utils/comissoesApi';
 import { format, addMonths } from 'date-fns';
 import QRCode from 'qrcode';
 
@@ -480,6 +481,23 @@ export default function VendaDetalhes() {
                   <div className="bg-destructive/10 p-3 rounded-lg flex items-center gap-2 text-destructive mt-2">
                     <AlertTriangle className="h-5 w-5" />
                     <span className="font-medium text-sm">Venda com prejuízo</span>
+                  </div>
+                )}
+                
+                {/* Comissão do Vendedor */}
+                {totais.lucro > 0 && (
+                  <div className="bg-orange-100 dark:bg-orange-950/30 p-3 rounded-lg mt-2">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-orange-600 font-medium">Comissão do Vendedor</span>
+                        <p className="text-xs text-muted-foreground">
+                          ({getComissaoColaborador(venda.vendedor).comissao}% do lucro)
+                        </p>
+                      </div>
+                      <span className="font-bold text-orange-600">
+                        {formatCurrency(venda.comissaoVendedor || calcularComissaoVenda(venda.vendedor, totais.lucro))}
+                      </span>
+                    </div>
                   </div>
                 )}
               </div>

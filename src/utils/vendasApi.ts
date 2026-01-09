@@ -42,6 +42,20 @@ export interface Pagamento {
   fiadoNumeroParcelas?: number; // Número de parcelas do fiado (1-10)
 }
 
+export interface TimelineEdicaoVenda {
+  id: string;
+  dataHora: string;
+  usuarioId: string;
+  usuarioNome: string;
+  tipo: 'edicao_gestor';
+  alteracoes: {
+    campo: string;
+    valorAnterior: any;
+    valorNovo: any;
+  }[];
+  descricao: string;
+}
+
 export interface Venda {
   id: string;
   numero: number;
@@ -71,6 +85,8 @@ export interface Venda {
   observacoes: string;
   status: 'Concluída' | 'Cancelada' | 'Pendente';
   motivoCancelamento?: string;
+  comissaoVendedor?: number; // Comissão calculada no momento da venda
+  timelineEdicoes?: TimelineEdicaoVenda[]; // Histórico de edições pelo gestor
 }
 
 export interface HistoricoCompraCliente {
@@ -796,6 +812,52 @@ export const getNextVendaNumber = (): { id: string; numero: number } => {
     id: `VEN-${year}-${String(nextNum).padStart(4, '0')}`,
     numero: nextNum
   };
+};
+
+// Registrar edição de venda pelo gestor
+export const registrarEdicaoVenda = (
+  vendaId: string,
+  usuarioId: string,
+  usuarioNome: string,
+  alteracoes: { campo: string; valorAnterior: any; valorNovo: any }[]
+): void => {
+  const venda = vendas.find(v => v.id === vendaId);
+  if (!venda) return;
+
+  // Gerar descrição legível
+  const descricao = alteracoes.map(a => {
+    const valorAnt = typeof a.valorAnterior === 'number' 
+      ? `R$ ${a.valorAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` 
+      : a.valorAnterior;
+    const valorNov = typeof a.valorNovo === 'number' 
+      ? `R$ ${a.valorNovo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` 
+      : a.valorNovo;
+    return `${a.campo}: ${valorAnt} → ${valorNov}`;
+  }).join('; ');
+
+  const novaEdicao: TimelineEdicaoVenda = {
+    id: `EDIT-${Date.now()}`,
+    dataHora: new Date().toISOString(),
+    usuarioId,
+    usuarioNome,
+    tipo: 'edicao_gestor',
+    alteracoes,
+    descricao
+  };
+
+  if (!venda.timelineEdicoes) {
+    venda.timelineEdicoes = [];
+  }
+  venda.timelineEdicoes.push(novaEdicao);
+};
+
+// Atualizar venda (para edição pelo gestor)
+export const updateVenda = (vendaId: string, updates: Partial<Venda>): Venda | null => {
+  const index = vendas.findIndex(v => v.id === vendaId);
+  if (index === -1) return null;
+  
+  vendas[index] = { ...vendas[index], ...updates };
+  return vendas[index];
 };
 
 // formatCurrency removido - usar import { formatCurrency } from '@/utils/formatUtils'

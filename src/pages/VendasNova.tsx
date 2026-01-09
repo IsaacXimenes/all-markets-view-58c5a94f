@@ -27,6 +27,7 @@ import {
 import { getProdutos, Produto, updateProduto } from '@/utils/estoqueApi';
 import { addVenda, getNextVendaNumber, getHistoricoComprasCliente, formatCurrency, ItemVenda, ItemTradeIn, Pagamento } from '@/utils/vendasApi';
 import { getAcessorios, Acessorio, subtrairEstoqueAcessorio, VendaAcessorio, formatCurrency as formatCurrencyAcessorio } from '@/utils/acessoriosApi';
+import { calcularComissaoVenda, getComissaoColaborador } from '@/utils/comissoesApi';
 import { getProdutosCadastro, ProdutoCadastro, calcularTipoPessoa } from '@/utils/cadastrosApi';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
 import { useDraftVenda } from '@/hooks/useDraftVenda';
@@ -1706,6 +1707,21 @@ export default function VendasNova() {
                 <p className="text-lg font-medium text-blue-600">{formatCurrency(totalPagamentos)}</p>
               </div>
             </div>
+            
+            {/* Card de Comissão do Vendedor */}
+            {vendedor && lucroProjetado > 0 && (
+              <div className="mt-4 p-3 bg-orange-100 dark:bg-orange-950/30 rounded-lg flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-muted-foreground">Comissão do Vendedor</p>
+                  <p className="text-xs text-muted-foreground">
+                    ({getComissaoColaborador(vendedor).comissao}% sobre o lucro)
+                  </p>
+                </div>
+                <p className="text-lg font-bold text-orange-600">
+                  {formatCurrency(calcularComissaoVenda(vendedor, lucroProjetado))}
+                </p>
+              </div>
+            )}
             
             {/* Card de Prejuízo em Acessórios - exibido apenas se houver prejuízo */}
             {prejuizoAcessorios > 0 && (

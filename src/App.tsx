@@ -12,6 +12,7 @@ import RecursosHumanos from "./pages/RecursosHumanos";
 import LojaRH from "./pages/LojaRH";
 import FuncionarioDetalhes from "./pages/FuncionarioDetalhes";
 import RHFeedback from "./pages/RHFeedback";
+import RHComissoes from "./pages/RHComissoes";
 import FinanceiroConferencia from "./pages/FinanceiroConferencia";
 import FinanceiroContas from "./pages/FinanceiroContas";
 import FinanceiroDespesasFixas from "./pages/FinanceiroDespesasFixas";
@@ -50,6 +51,7 @@ import VendasFinalizarDigital from "./pages/VendasFinalizarDigital";
 import VendasAcessorios from "./pages/VendasAcessorios";
 import VendasConferenciaGestor from "./pages/VendasConferenciaGestor";
 import VendasConferenciaGestorDetalhes from "./pages/VendasConferenciaGestorDetalhes";
+import VendasEditarGestor from "./pages/VendasEditarGestor";
 import EstoqueAcessorios from "./pages/EstoqueAcessorios";
 import OSProdutosAnalise from "./pages/OSProdutosAnalise";
 import OSProdutoDetalhes from "./pages/OSProdutoDetalhes";
@@ -88,6 +90,7 @@ const App = () => (
           <Route path="/rh/loja/:id" element={<LojaRH />} />
           <Route path="/rh/funcionario/:id" element={<FuncionarioDetalhes />} />
           <Route path="/rh/feedback" element={<RHFeedback />} />
+          <Route path="/rh/comissoes" element={<RHComissoes />} />
           <Route path="/financeiro/conferencia" element={<FinanceiroConferencia />} />
           <Route path="/financeiro/fiado" element={<FinanceiroFiado />} />
           <Route path="/financeiro/contas" element={<FinanceiroContas />} />
@@ -138,6 +141,7 @@ const App = () => (
           <Route path="/vendas/balcao" element={<VendasAcessorios />} />
           <Route path="/vendas/conferencia-gestor" element={<VendasConferenciaGestor />} />
           <Route path="/vendas/conferencia-gestor/:id" element={<VendasConferenciaGestorDetalhes />} />
+          <Route path="/vendas/editar-gestor/:id" element={<VendasEditarGestor />} />
           <Route path="/vendas/:id" element={<VendaDetalhes />} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/garantias" element={<GarantiasNova />} />

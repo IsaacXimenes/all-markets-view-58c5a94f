@@ -20,7 +20,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Download, Filter, X } from 'lucide-react';
+import { Eye, Download, Filter, X, Pencil } from 'lucide-react';
 import { 
   getVendasConferencia, 
   exportConferenciaToCSV, 
@@ -335,13 +335,26 @@ export default function VendasConferenciaGestor() {
                       </TableCell>
                       <TableCell>{getStatusBadge(venda.status)}</TableCell>
                       <TableCell className="text-center">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => navigate(`/vendas/conferencia-gestor/${venda.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center justify-center gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => navigate(`/vendas/conferencia-gestor/${venda.id}`)}
+                            title="Ver detalhes"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {venda.status === 'Conferência - Gestor' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => navigate(`/vendas/editar-gestor/${venda.vendaId}`)}
+                              title="Editar venda"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
