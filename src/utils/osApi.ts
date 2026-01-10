@@ -500,6 +500,33 @@ export const liberarProdutoPendente = (id: string): boolean => {
   return true;
 };
 
+// Atualizar produto pendente (ex: parecer técnico)
+export const updateProdutoPendente = (id: string, dados: Partial<ProdutoPendente>): ProdutoPendente | null => {
+  const index = produtosPendentes.findIndex(p => p.id === id);
+  if (index === -1) return null;
+  
+  produtosPendentes[index] = {
+    ...produtosPendentes[index],
+    ...dados
+  };
+  
+  // Se tem parecer assistência, adiciona na timeline
+  if (dados.parecerAssistencia) {
+    const timelineEntry = {
+      id: `TL-${Date.now()}`,
+      data: dados.parecerAssistencia.data || new Date().toISOString(),
+      tipo: 'parecer_assistencia' as const,
+      titulo: `Parecer Assistência - ${dados.parecerAssistencia.status}`,
+      descricao: dados.parecerAssistencia.observacoes || '',
+      responsavel: dados.parecerAssistencia.responsavel
+    };
+    
+    produtosPendentes[index].timeline.push(timelineEntry);
+  }
+  
+  return produtosPendentes[index];
+};
+
 export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeline' | 'custoAssistencia' | 'statusGeral' | 'valorCustoOriginal' | 'contadorEncaminhamentos'>): ProdutoPendente => {
   // Gerar ID único usando o sistema centralizado
   const newId = generateProductId();

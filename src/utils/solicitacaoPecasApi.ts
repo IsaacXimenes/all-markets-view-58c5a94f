@@ -19,6 +19,9 @@ export interface SolicitacaoPeca {
   motivoRejeicao?: string;
   contaOrigemPagamento?: string;
   dataPagamento?: string;
+  formaPagamento?: 'Pix' | 'Dinheiro';
+  origemPeca?: 'Fornecedor' | 'Estoque Assistência Thiago';
+  observacao?: string;
 }
 
 export interface LoteTimeline {
@@ -337,6 +340,9 @@ export const aprovarSolicitacao = (id: string, dados: {
   responsavelCompra: string;
   dataRecebimento: string;
   dataEnvio: string;
+  formaPagamento?: string;
+  origemPeca?: string;
+  observacao?: string;
 }): SolicitacaoPeca | null => {
   const index = solicitacoes.findIndex(s => s.id === id);
   if (index === -1) return null;
@@ -344,6 +350,8 @@ export const aprovarSolicitacao = (id: string, dados: {
   solicitacoes[index] = {
     ...solicitacoes[index],
     ...dados,
+    formaPagamento: dados.formaPagamento as 'Pix' | 'Dinheiro' | undefined,
+    origemPeca: dados.origemPeca as 'Fornecedor' | 'Estoque Assistência Thiago' | undefined,
     status: 'Aprovada'
   };
 

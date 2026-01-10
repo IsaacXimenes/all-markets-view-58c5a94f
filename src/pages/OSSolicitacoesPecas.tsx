@@ -50,7 +50,7 @@ export default function OSSolicitacoesPecas() {
   // Modal aprovar com campos por peça
   const [aprovarOpen, setAprovarOpen] = useState(false);
   const [solicitacoesSelecionadasAprovar, setSolicitacoesSelecionadasAprovar] = useState<SolicitacaoPeca[]>([]);
-  const [fornecedoresPorPeca, setFornecedoresPorPeca] = useState<{[key: string]: { fornecedorId: string; valorPeca: string }}>({});
+  const [fornecedoresPorPeca, setFornecedoresPorPeca] = useState<{[key: string]: { fornecedorId: string; valorPeca: string; formaPagamento: string; origemPeca: string; observacao: string }}>({});
   const [responsavelCompraGlobal, setResponsavelCompraGlobal] = useState('');
   const [dataRecebimentoGlobal, setDataRecebimentoGlobal] = useState('');
   const [dataEnvioGlobal, setDataEnvioGlobal] = useState('');
@@ -126,7 +126,7 @@ export default function OSSolicitacoesPecas() {
   const handleAbrirAprovar = (solicitacao: SolicitacaoPeca) => {
     setSolicitacoesSelecionadasAprovar([solicitacao]);
     setFornecedoresPorPeca({
-      [solicitacao.id]: { fornecedorId: '', valorPeca: '' }
+      [solicitacao.id]: { fornecedorId: '', valorPeca: '', formaPagamento: '', origemPeca: '', observacao: '' }
     });
     setResponsavelCompraGlobal('');
     setDataRecebimentoGlobal('');
@@ -139,9 +139,9 @@ export default function OSSolicitacoesPecas() {
     if (selecionadas.length === 0) return;
     
     setSolicitacoesSelecionadasAprovar(selecionadas);
-    const fornecedoresInit: {[key: string]: { fornecedorId: string; valorPeca: string }} = {};
+    const fornecedoresInit: {[key: string]: { fornecedorId: string; valorPeca: string; formaPagamento: string; origemPeca: string; observacao: string }} = {};
     selecionadas.forEach(s => {
-      fornecedoresInit[s.id] = { fornecedorId: '', valorPeca: '' };
+      fornecedoresInit[s.id] = { fornecedorId: '', valorPeca: '', formaPagamento: '', origemPeca: '', observacao: '' };
     });
     setFornecedoresPorPeca(fornecedoresInit);
     setResponsavelCompraGlobal('');
@@ -163,6 +163,18 @@ export default function OSSolicitacoesPecas() {
         toast({ title: 'Erro', description: `Preencha fornecedor e valor para: ${sol.peca}`, variant: 'destructive' });
         return;
       }
+      if (!dados?.formaPagamento) {
+        toast({ title: 'Erro', description: `Selecione a forma de pagamento para: ${sol.peca}`, variant: 'destructive' });
+        return;
+      }
+      if (!dados?.origemPeca) {
+        toast({ title: 'Erro', description: `Selecione a origem da peça para: ${sol.peca}`, variant: 'destructive' });
+        return;
+      }
+      if (!dados?.observacao.trim()) {
+        toast({ title: 'Erro', description: `Preencha a observação para: ${sol.peca}`, variant: 'destructive' });
+        return;
+      }
     }
 
     // Aprovar cada solicitação
@@ -173,7 +185,10 @@ export default function OSSolicitacoesPecas() {
         valorPeca: parseFloat(dados.valorPeca.replace(/\D/g, '')) / 100,
         responsavelCompra: responsavelCompraGlobal,
         dataRecebimento: dataRecebimentoGlobal,
-        dataEnvio: dataEnvioGlobal
+        dataEnvio: dataEnvioGlobal,
+        formaPagamento: dados.formaPagamento,
+        origemPeca: dados.origemPeca,
+        observacao: dados.observacao
       });
 
       // Atualizar OS
@@ -183,7 +198,7 @@ export default function OSSolicitacoesPecas() {
           timeline: [...os.timeline, {
             data: new Date().toISOString(),
             tipo: 'peca',
-            descricao: `Solicitação de peça aprovada – ${sol.peca} x ${sol.quantidade}`,
+            descricao: `Solicitação de peça aprovada – ${sol.peca} x ${sol.quantidade} | Origem: ${dados.origemPeca} | Pagamento: ${dados.formaPagamento}`,
             responsavel: 'Gestora Matriz'
           }]
         });
@@ -617,6 +632,54 @@ export default function OSSolicitacoesPecas() {
                       placeholder="R$ 0,00"
                     />
                   </div>
+                </div>
+
+                {/* Novos campos obrigatórios */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Forma de Pagamento *</Label>
+                    <Select 
+                      value={fornecedoresPorPeca[sol.id]?.formaPagamento || ''} 
+                      onValueChange={v => setFornecedoresPorPeca({
+                        ...fornecedoresPorPeca, 
+                        [sol.id]: { ...fornecedoresPorPeca[sol.id], formaPagamento: v }
+                      })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pix">Pix</SelectItem>
+                        <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Origem da Peça *</Label>
+                    <Select 
+                      value={fornecedoresPorPeca[sol.id]?.origemPeca || ''} 
+                      onValueChange={v => setFornecedoresPorPeca({
+                        ...fornecedoresPorPeca, 
+                        [sol.id]: { ...fornecedoresPorPeca[sol.id], origemPeca: v }
+                      })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Fornecedor">Fornecedor</SelectItem>
+                        <SelectItem value="Estoque Assistência Thiago">Estoque Assistência Thiago</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Observação *</Label>
+                  <Input
+                    value={fornecedoresPorPeca[sol.id]?.observacao || ''}
+                    onChange={e => setFornecedoresPorPeca({
+                      ...fornecedoresPorPeca,
+                      [sol.id]: { ...fornecedoresPorPeca[sol.id], observacao: e.target.value }
+                    })}
+                    placeholder="Observações sobre a aprovação da peça..."
+                  />
                 </div>
               </div>
             ))}

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -21,10 +22,18 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Eye, Wrench, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle } from 'lucide-react';
-import { getProdutosParaAnaliseOS, ProdutoPendente, calcularSLA } from '@/utils/osApi';
-import { getLojas, getLojaById } from '@/utils/cadastrosApi';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Eye, Wrench, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, FileText } from 'lucide-react';
+import { getProdutosParaAnaliseOS, ProdutoPendente, calcularSLA, updateProdutoPendente } from '@/utils/osApi';
+import { getLojas, getLojaById, getColaboradoresByPermissao } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 
@@ -32,6 +41,18 @@ export default function OSProdutosAnalise() {
   const navigate = useNavigate();
   const [produtos, setProdutos] = useState<ProdutoPendente[]>([]);
   const lojas = getLojas();
+  const tecnicos = getColaboradoresByPermissao('Assistência');
+
+  // Modal de detalhamento/parecer
+  const [showModalParecer, setShowModalParecer] = useState(false);
+  const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoPendente | null>(null);
+  const [parecerForm, setParecerForm] = useState({
+    responsavel: '',
+    dataHora: '',
+    status: '' as '' | 'Validado pela assistência' | 'Aguardando peça' | 'Ajustes realizados',
+    observacoes: '',
+    custoAssistencia: ''
+  });
 
   const getLojaNome = (lojaId: string) => {
     const loja = getLojaById(lojaId);
@@ -147,6 +168,52 @@ export default function OSProdutosAnalise() {
 
   const handleLimpar = () => {
     setFilters({ imei: '', modelo: '', loja: 'todas' });
+  };
+
+  const handleAbrirParecer = (produto: ProdutoPendente) => {
+    setProdutoSelecionado(produto);
+    // Auto-preencher campos bloqueados
+    const tecnicoLogado = tecnicos[0]?.nome || 'Técnico Assistência';
+    setParecerForm({
+      responsavel: tecnicoLogado,
+      dataHora: new Date().toISOString(),
+      status: produto.parecerAssistencia?.status || '',
+      observacoes: produto.parecerAssistencia?.observacoes || '',
+      custoAssistencia: produto.custoAssistencia > 0 ? String(produto.custoAssistencia) : ''
+    });
+    setShowModalParecer(true);
+  };
+
+  const handleSalvarParecer = () => {
+    if (!produtoSelecionado) return;
+    
+    if (!parecerForm.status) {
+      toast.error('Selecione o status do parecer');
+      return;
+    }
+
+    const custo = parecerForm.custoAssistencia ? parseFloat(parecerForm.custoAssistencia.replace(/\D/g, '')) / 100 : 0;
+
+    updateProdutoPendente(produtoSelecionado.id, {
+      parecerAssistencia: {
+        id: `PA-${Date.now()}`,
+        status: parecerForm.status,
+        observacoes: parecerForm.observacoes,
+        responsavel: parecerForm.responsavel,
+        data: parecerForm.dataHora
+      },
+      custoAssistencia: custo
+    });
+
+    setProdutos(getProdutosParaAnaliseOS());
+    setShowModalParecer(false);
+    toast.success('Parecer registrado com sucesso!');
+  };
+
+  const formatCurrencyInput = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    const amount = parseInt(numbers || '0') / 100;
+    return amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
   return (
@@ -317,13 +384,23 @@ export default function OSProdutosAnalise() {
                         {produto.custoAssistencia > 0 ? formatCurrency(produto.custoAssistencia) : '—'}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => navigate(`/os/produto/${produto.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAbrirParecer(produto)}
+                            title="Registrar Parecer"
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/os/produto/${produto.id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -333,6 +410,93 @@ export default function OSProdutosAnalise() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Parecer Técnico */}
+      <Dialog open={showModalParecer} onOpenChange={setShowModalParecer}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Parecer Técnico
+            </DialogTitle>
+          </DialogHeader>
+          
+          {produtoSelecionado && (
+            <div className="space-y-4">
+              {/* Info do produto */}
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-medium">{produtoSelecionado.marca} {produtoSelecionado.modelo}</p>
+                <p className="text-xs text-muted-foreground">IMEI: {produtoSelecionado.imei}</p>
+              </div>
+
+              {/* Campos automáticos bloqueados */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Responsável</Label>
+                  <Input 
+                    value={parecerForm.responsavel} 
+                    disabled 
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data/Hora</Label>
+                  <Input 
+                    value={format(new Date(parecerForm.dataHora), 'dd/MM/yyyy HH:mm')} 
+                    disabled 
+                    className="bg-muted"
+                  />
+                </div>
+              </div>
+
+              {/* Campos editáveis */}
+              <div className="space-y-2">
+                <Label>Status do Parecer *</Label>
+                <Select 
+                  value={parecerForm.status} 
+                  onValueChange={v => setParecerForm({...parecerForm, status: v as typeof parecerForm.status})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o status..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Validado pela assistência">Validado pela assistência</SelectItem>
+                    <SelectItem value="Aguardando peça">Aguardando peça</SelectItem>
+                    <SelectItem value="Ajustes realizados">Ajustes realizados</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Custo de Assistência</Label>
+                <Input 
+                  value={parecerForm.custoAssistencia ? formatCurrencyInput(parecerForm.custoAssistencia) : ''}
+                  onChange={e => setParecerForm({...parecerForm, custoAssistencia: e.target.value.replace(/\D/g, '')})}
+                  placeholder="R$ 0,00"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea 
+                  value={parecerForm.observacoes}
+                  onChange={e => setParecerForm({...parecerForm, observacoes: e.target.value})}
+                  placeholder="Descreva o parecer técnico..."
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowModalParecer(false)}>Cancelar</Button>
+            <Button onClick={handleSalvarParecer}>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Salvar Parecer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </OSLayout>
   );
 }

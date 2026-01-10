@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getPecas, Peca, exportPecasToCSV, addPeca } from '@/utils/pecasApi';
 import { formatCurrency } from '@/utils/formatUtils';
-import { getLojas } from '@/utils/cadastrosApi';
+import { getLojas, getProdutosCadastro } from '@/utils/cadastrosApi';
+import { getPecasCadastro } from '@/pages/CadastrosPecas';
 import { Download, Eye, Plus, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -18,6 +19,8 @@ export default function OSPecas() {
   const { toast } = useToast();
   const [pecas, setPecas] = useState<Peca[]>(getPecas());
   const lojas = getLojas();
+  const pecasCadastradas = getPecasCadastro();
+  const produtosCadastrados = getProdutosCadastro();
 
   // Filtros
   const [filtroData, setFiltroData] = useState('');
@@ -313,24 +316,50 @@ export default function OSPecas() {
       <Dialog open={showNovaModal} onOpenChange={setShowNovaModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nova Peça</DialogTitle>
+            <DialogTitle>Entrada Nova Peça</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Descrição *</Label>
-              <Input
-                value={novaPeca.descricao}
-                onChange={e => setNovaPeca({...novaPeca, descricao: e.target.value})}
-                placeholder="Ex: Tela LCD iPhone 14"
-              />
+              <Label>Peça (Cadastrada) *</Label>
+              <Select 
+                value={novaPeca.descricao} 
+                onValueChange={v => setNovaPeca({...novaPeca, descricao: v})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma peça cadastrada..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {pecasCadastradas.map(p => (
+                    <SelectItem key={p.id} value={p.produto}>
+                      {p.produto} ({p.marca} - {p.categoria})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Apenas peças cadastradas no sistema podem ser adicionadas
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Modelo Compatível *</Label>
-              <Input
-                value={novaPeca.modelo}
-                onChange={e => setNovaPeca({...novaPeca, modelo: e.target.value})}
-                placeholder="Ex: iPhone 14 Pro Max"
-              />
+              <Select 
+                value={novaPeca.modelo} 
+                onValueChange={v => setNovaPeca({...novaPeca, modelo: v})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um modelo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {produtosCadastrados.map(p => (
+                    <SelectItem key={p.id} value={p.produto}>
+                      {p.produto} ({p.marca})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Apenas modelos cadastrados no sistema podem ser selecionados
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Loja *</Label>
