@@ -29,6 +29,7 @@ import {
   getContasFinanceiras, Loja, Cliente, Colaborador, Cargo, OrigemVenda, ContaFinanceira,
   addCliente
 } from '@/utils/cadastrosApi';
+import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
 import { getProdutos, Produto, updateProduto } from '@/utils/estoqueApi';
 import { addVenda, getHistoricoComprasCliente, ItemVenda, ItemTradeIn, Pagamento, formatCurrency as formatCurrencyVendas } from '@/utils/vendasApi';
 import { getProdutosCadastro, ProdutoCadastro } from '@/utils/cadastrosApi';
@@ -104,8 +105,6 @@ export default function VendasFinalizarDigital() {
   
   // Pagamentos
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
-  const [showPagamentoModal, setShowPagamentoModal] = useState(false);
-  const [novoPagamento, setNovoPagamento] = useState<Partial<Pagamento>>({});
   
   // Confirmação
   const [showConfirmacaoModal, setShowConfirmacaoModal] = useState(false);
@@ -480,40 +479,6 @@ export default function VendasFinalizarDigital() {
     setNovoTradeIn({});
   };
 
-  const handleAddPagamento = () => {
-    if (!novoPagamento.meioPagamento || !novoPagamento.valor || !novoPagamento.contaDestino) {
-      toast.error('Todos os campos são obrigatórios');
-      return;
-    }
-    
-    // Validar parcelas para cartão crédito
-    if (novoPagamento.meioPagamento === 'Cartão Crédito' && !novoPagamento.parcelas) {
-      toast.error('Selecione o número de parcelas');
-      return;
-    }
-    
-    const parcelas = novoPagamento.meioPagamento === 'Cartão Crédito' 
-      ? novoPagamento.parcelas 
-      : novoPagamento.meioPagamento === 'Cartão Débito' 
-        ? 1 
-        : undefined;
-    
-    const valorParcela = parcelas && parcelas > 0 ? novoPagamento.valor! / parcelas : undefined;
-    
-    const pagamento: Pagamento = {
-      id: `PAG-${Date.now()}`,
-      meioPagamento: novoPagamento.meioPagamento!,
-      valor: novoPagamento.valor!,
-      contaDestino: novoPagamento.contaDestino!,
-      parcelas,
-      valorParcela,
-      descricao: novoPagamento.descricao
-    };
-    
-    setPagamentos([...pagamentos, pagamento]);
-    setShowPagamentoModal(false);
-    setNovoPagamento({});
-  };
 
   const handleVerDetalhes = (produto: Produto) => {
     setProdutoDetalhe(produto);
@@ -621,7 +586,6 @@ export default function VendasFinalizarDigital() {
 
   const getColaboradorNome = (id: string) => colaboradores.find(c => c.id === id)?.nome || id;
   const getLojaNome = (id: string) => lojas.find(l => l.id === id)?.nome || id;
-  const getContaNome = (id: string) => contasFinanceiras.find(c => c.id === id)?.nome || id;
 
   if (!venda) {
     return (
@@ -1225,64 +1189,12 @@ export default function VendasFinalizarDigital() {
           </CardContent>
         </Card>
 
-        {/* Pagamentos */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Pagamentos
-              </span>
-              <Button variant="outline" onClick={() => setShowPagamentoModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Pagamento
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {pagamentos.length === 0 ? (
-              <div className="text-center py-4 text-muted-foreground">
-                Nenhum pagamento adicionado.
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Meio de Pagamento</TableHead>
-                    <TableHead>Conta de Destino</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pagamentos.map(pag => (
-                    <TableRow key={pag.id}>
-                      <TableCell className="font-medium">{pag.meioPagamento}</TableCell>
-                      <TableCell>{getContaNome(pag.contaDestino)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(pag.valor)}</TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => setPagamentos(pagamentos.filter(p => p.id !== pag.id))}
-                        >
-                          <X className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-            
-            {valorPendente > 0 && (
-              <div className="mt-4 p-3 bg-destructive/10 rounded-lg flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                <span className="font-medium">Valor Pendente: {formatCurrency(valorPendente)}</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Pagamentos - Usando PagamentoQuadro */}
+        <PagamentoQuadro
+          valorTotalProdutos={total}
+          onPagamentosChange={setPagamentos}
+          pagamentosIniciais={pagamentos}
+        />
 
         {/* Retirada e Logística */}
         <Card>
@@ -1814,130 +1726,6 @@ export default function VendasFinalizarDigital() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Pagamento */}
-      <Dialog open={showPagamentoModal} onOpenChange={setShowPagamentoModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Adicionar Pagamento</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium">Meio de Pagamento *</label>
-              <Select 
-                value={novoPagamento.meioPagamento || ''} 
-                onValueChange={(v) => {
-                  if (v === 'Cartão Débito') {
-                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: 1 });
-                  } else if (v === 'Cartão Crédito') {
-                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: novoPagamento.parcelas || 1 });
-                  } else {
-                    setNovoPagamento({ ...novoPagamento, meioPagamento: v, parcelas: undefined });
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                  <SelectItem value="PIX">PIX</SelectItem>
-                  <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
-                  <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
-                  <SelectItem value="Transferência">Transferência</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Valor *</label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
-                <Input 
-                  type="text"
-                  value={(novoPagamento.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, '');
-                    setNovoPagamento({ ...novoPagamento, valor: Number(value) / 100 });
-                  }}
-                  className="pl-10"
-                />
-              </div>
-              {valorPendente > 0 && (
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  className="mt-1 h-auto p-0"
-                  onClick={() => setNovoPagamento({ ...novoPagamento, valor: valorPendente })}
-                >
-                  Preencher valor pendente ({formatCurrency(valorPendente)})
-                </Button>
-              )}
-            </div>
-            
-            {novoPagamento.meioPagamento === 'Cartão Crédito' && (
-              <div>
-                <label className="text-sm font-medium">Número de Parcelas *</label>
-                <Select 
-                  value={String(novoPagamento.parcelas || 1)} 
-                  onValueChange={(v) => setNovoPagamento({ ...novoPagamento, parcelas: Number(v) })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 18 }, (_, i) => i + 1).map(num => (
-                      <SelectItem key={num} value={String(num)}>{num}x</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {novoPagamento.valor && novoPagamento.parcelas && novoPagamento.parcelas > 1 && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {novoPagamento.parcelas}x de {formatCurrency(novoPagamento.valor / novoPagamento.parcelas)}
-                  </p>
-                )}
-              </div>
-            )}
-            
-            {novoPagamento.meioPagamento === 'Cartão Débito' && (
-              <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
-                Cartão de Débito: pagamento à vista (1x)
-              </div>
-            )}
-            
-            <div>
-              <label className="text-sm font-medium">Conta de Destino *</label>
-              <Select 
-                value={novoPagamento.contaDestino || ''} 
-                onValueChange={(v) => setNovoPagamento({ ...novoPagamento, contaDestino: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a conta" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contasFinanceiras.filter(c => c.status === 'Ativo').map(conta => (
-                    <SelectItem key={conta.id} value={conta.id}>{conta.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium">Descrição (opcional)</label>
-              <Textarea 
-                value={novoPagamento.descricao || ''}
-                onChange={(e) => setNovoPagamento({ ...novoPagamento, descricao: e.target.value })}
-                placeholder="Observações..."
-                rows={2}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPagamentoModal(false)}>Cancelar</Button>
-            <Button onClick={handleAddPagamento}>Adicionar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Confirmação */}
       <Dialog open={showConfirmacaoModal} onOpenChange={setShowConfirmacaoModal}>
         <DialogContent>
           <DialogHeader>
