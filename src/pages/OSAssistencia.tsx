@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getOrdensServico, calcularSLADias, formatCurrency, exportOSToCSV, OrdemServico } from '@/utils/assistenciaApi';
 import { getClientes, getLojas, getColaboradoresByPermissao } from '@/utils/cadastrosApi';
-import { Plus, Eye, FileText, Download, AlertTriangle, Clock } from 'lucide-react';
+import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
+import { Plus, Eye, FileText, Download, AlertTriangle, Clock, Edit, RefreshCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatIMEI } from '@/utils/imeiMask';
 
@@ -154,11 +155,17 @@ export default function OSAssistencia() {
   ).length;
   const valorTotal = ordensFiltradas.reduce((acc, os) => acc + os.valorTotal, 0);
 
+  // Produtos de Troca (Trade-In) Stats
+  const produtosPendentes = getProdutosPendentes();
+  const produtosTroca = produtosPendentes.filter(p => p.origemEntrada === 'Base de Troca');
+  const totalProdutosTroca = produtosTroca.length;
+  const valorTotalTroca = produtosTroca.reduce((acc, p) => acc + (p.valorOrigem || 0), 0);
+
   return (
     <OSLayout title="Assistência">
       {/* Dashboard Cards - Sticky */}
       <div className="sticky top-0 z-10 bg-background pb-4">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold">{totalOS}</div>
@@ -190,6 +197,40 @@ export default function OSAssistencia() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Card de Produtos de Troca */}
+        {totalProdutosTroca > 0 && (
+          <Card className="border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 mb-4">
+            <CardHeader className="pb-2 pt-3 px-4">
+              <CardTitle className="text-sm font-medium flex items-center gap-2 text-purple-700 dark:text-purple-300">
+                <RefreshCcw className="h-4 w-4" />
+                Produtos de Troca (Trade-In)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex gap-6">
+                  <div>
+                    <span className="text-2xl font-bold text-purple-700 dark:text-purple-300">{totalProdutosTroca}</span>
+                    <span className="text-xs text-muted-foreground ml-2">produtos pendentes</span>
+                  </div>
+                  <div>
+                    <span className="text-2xl font-bold text-purple-700 dark:text-purple-300">{formatCurrency(valorTotalTroca)}</span>
+                    <span className="text-xs text-muted-foreground ml-2">valor total</span>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="border-purple-300 text-purple-700 hover:bg-purple-100 dark:border-purple-700 dark:text-purple-300 dark:hover:bg-purple-900/40"
+                  onClick={() => navigate('/os/produtos-pendentes')}
+                >
+                  Ver Produtos
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Filtros */}
@@ -287,7 +328,7 @@ export default function OSAssistencia() {
               <TableHead>Status</TableHead>
               <TableHead>SLA</TableHead>
               <TableHead>Valor Total</TableHead>
-              <TableHead>Ações</TableHead>
+              <TableHead className="text-center">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -306,10 +347,19 @@ export default function OSAssistencia() {
                 <TableCell>{getSLADisplay(os.dataHora)}</TableCell>
                 <TableCell className="font-medium">{formatCurrency(os.valorTotal)}</TableCell>
                 <TableCell>
-                  <div className="flex gap-1">
+                  <div className="flex gap-1 justify-center">
                     <Button 
                       variant="ghost" 
                       size="sm"
+                      title="Editar"
+                      onClick={() => navigate(`/os/assistencia/${os.id}/editar`)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      title="Detalhes"
                       onClick={() => navigate(`/os/assistencia/${os.id}`)}
                     >
                       <Eye className="h-4 w-4" />
@@ -317,8 +367,8 @@ export default function OSAssistencia() {
                     <Button 
                       variant="ghost" 
                       size="sm"
+                      title="Gerar Recibo"
                       onClick={() => {
-                        // Gerar recibo PDF simulado
                         alert(`Recibo da OS ${os.id} gerado com sucesso!`);
                       }}
                     >
