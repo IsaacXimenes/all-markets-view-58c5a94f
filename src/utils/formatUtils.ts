@@ -12,6 +12,45 @@ export const formatCurrency = (value: number): string => {
 };
 
 /**
+ * Alias para formatCurrency - uso global para exibição de valores monetários
+ */
+export const formatarMoeda = formatCurrency;
+
+/**
+ * Máscara para inputs de moeda - retorna string formatada para exibição em inputs
+ * Recebe o valor em centavos ou string e retorna formatado como "1.234,56"
+ */
+export const moedaMask = (value: string | number): string => {
+  // Se for número, converte para string formatada
+  if (typeof value === 'number') {
+    return value.toLocaleString('pt-BR', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    });
+  }
+  
+  // Remove tudo que não for dígito
+  const digits = value.replace(/\D/g, '');
+  
+  // Converte para número (em centavos) e depois para real
+  const numValue = Number(digits) / 100;
+  
+  // Formata com separadores brasileiros
+  return numValue.toLocaleString('pt-BR', { 
+    minimumFractionDigits: 2, 
+    maximumFractionDigits: 2 
+  });
+};
+
+/**
+ * Converte string de moeda formatada para número
+ */
+export const parseMoeda = (value: string): number => {
+  const digits = value.replace(/\D/g, '');
+  return Number(digits) / 100;
+};
+
+/**
  * Formata uma data para o formato brasileiro (DD/MM/YYYY)
  */
 export const formatDate = (date: string | Date): string => {

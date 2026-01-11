@@ -40,6 +40,10 @@ export interface Pagamento {
   isFiado?: boolean;
   fiadoDataBase?: number;   // Dia do mês para vencimento (1-31)
   fiadoNumeroParcelas?: number; // Número de parcelas do fiado (1-10)
+  // Campos para taxas de cartão
+  taxaCartao?: number;      // Valor da taxa calculada
+  valorComTaxa?: number;    // Valor total com taxa incluída
+  maquinaId?: string;       // ID da máquina de cartão utilizada
 }
 
 export interface TimelineEdicaoVenda {

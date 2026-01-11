@@ -25,14 +25,18 @@ import {
   addCliente
 } from '@/utils/cadastrosApi';
 import { getProdutos, Produto, updateProduto } from '@/utils/estoqueApi';
-import { addVenda, getNextVendaNumber, getHistoricoComprasCliente, formatCurrency, ItemVenda, ItemTradeIn, Pagamento } from '@/utils/vendasApi';
-import { getAcessorios, Acessorio, subtrairEstoqueAcessorio, VendaAcessorio, formatCurrency as formatCurrencyAcessorio } from '@/utils/acessoriosApi';
+import { addVenda, getNextVendaNumber, getHistoricoComprasCliente, ItemVenda, ItemTradeIn, Pagamento } from '@/utils/vendasApi';
+import { getAcessorios, Acessorio, subtrairEstoqueAcessorio, VendaAcessorio } from '@/utils/acessoriosApi';
 import { calcularComissaoVenda, getComissaoColaborador } from '@/utils/comissoesApi';
 import { getProdutosCadastro, ProdutoCadastro, calcularTipoPessoa } from '@/utils/cadastrosApi';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
 import { useDraftVenda } from '@/hooks/useDraftVenda';
 import { getPlanosPorModelo, PlanoGarantia } from '@/utils/planosGarantiaApi';
-import { displayIMEI } from '@/utils/imeiMask';
+import { displayIMEI, formatIMEI } from '@/utils/imeiMask';
+import { formatarMoeda, moedaMask, parseMoeda } from '@/utils/formatUtils';
+
+// Alias para compatibilidade
+const formatCurrency = formatarMoeda;
 
 const TIMER_DURATION = 1800; // 30 minutos em segundos
 const DRAFT_KEY = 'draft_venda_nova';
