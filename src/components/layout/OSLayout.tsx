@@ -12,10 +12,9 @@ export function OSLayout({ children, title }: OSLayoutProps) {
   const location = useLocation();
   
   const tabs = [
-    { name: 'Produtos para Análise', href: '/os/produtos-analise', icon: ClipboardList },
+    { name: 'Histórico de Assistência', href: '/os/historico-assistencia', icon: ClipboardList },
     { name: 'Assistência', href: '/os/assistencia', icon: Wrench },
     { name: 'Estoque - Assistência', href: '/os/pecas', icon: Package },
-    { name: 'Aprovações - Gestor', href: '/os/solicitacoes-pecas', icon: Package },
     { name: 'Análise Garantia', href: '/os/analise-garantia', icon: ClipboardList },
     { name: 'Histórico de Notas', href: '/os/historico-notas', icon: ClipboardList },
   ];
