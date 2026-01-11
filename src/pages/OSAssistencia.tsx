@@ -139,8 +139,38 @@ export default function OSAssistencia() {
   };
 
   const getIMEI = (os: OrdemServico) => {
+    // Primeiro verificar se tem IMEI direto na OS
+    if (os.imeiAparelho) return formatIMEI(os.imeiAparelho);
+    // Senão, buscar nas peças
     const pecaComIMEI = os.pecas.find(p => p.imei);
     return pecaComIMEI?.imei ? formatIMEI(pecaComIMEI.imei) : '-';
+  };
+
+  const getOrigemBadge = (os: OrdemServico) => {
+    if (!os.origemOS || os.origemOS === 'Avulso') {
+      return <Badge variant="outline" className="text-muted-foreground">Avulso</Badge>;
+    }
+    switch (os.origemOS) {
+      case 'Venda':
+        return <Badge variant="outline" className="border-green-500 text-green-600">Venda</Badge>;
+      case 'Garantia':
+        return <Badge variant="outline" className="border-blue-500 text-blue-600">Garantia</Badge>;
+      case 'Estoque':
+        return <Badge variant="outline" className="border-purple-500 text-purple-600">Estoque</Badge>;
+      default:
+        return <Badge variant="outline">{os.origemOS}</Badge>;
+    }
+  };
+
+  const getValorProduto = (os: OrdemServico) => {
+    if (os.origemOS === 'Venda' && os.valorProdutoOrigem) {
+      return (
+        <span className="font-medium text-green-600">
+          {formatCurrency(os.valorProdutoOrigem)}
+        </span>
+      );
+    }
+    return <span className="text-muted-foreground">-</span>;
   };
 
   // Stats
@@ -322,6 +352,8 @@ export default function OSAssistencia() {
               <TableHead>Data/Hora</TableHead>
               <TableHead>Cliente</TableHead>
               <TableHead>IMEI</TableHead>
+              <TableHead>Origem</TableHead>
+              <TableHead>Valor Produto</TableHead>
               <TableHead>Setor</TableHead>
               <TableHead>Técnico</TableHead>
               <TableHead>Loja</TableHead>
@@ -340,6 +372,8 @@ export default function OSAssistencia() {
                 </TableCell>
                 <TableCell>{getClienteNome(os.clienteId)}</TableCell>
                 <TableCell className="font-mono text-xs">{getIMEI(os)}</TableCell>
+                <TableCell>{getOrigemBadge(os)}</TableCell>
+                <TableCell>{getValorProduto(os)}</TableCell>
                 <TableCell>{getSetorBadge(os.setor)}</TableCell>
                 <TableCell>{getTecnicoNome(os.tecnicoId)}</TableCell>
                 <TableCell className="text-xs">{getLojaNome(os.lojaId)}</TableCell>
@@ -380,7 +414,7 @@ export default function OSAssistencia() {
             ))}
             {ordensFiltradas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                   Nenhuma ordem de serviço encontrada
                 </TableCell>
               </TableRow>

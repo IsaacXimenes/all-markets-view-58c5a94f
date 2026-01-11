@@ -87,6 +87,14 @@ export interface OrdemServico {
   timeline: TimelineOS[];
   valorTotal: number;
   custoTotal: number;
+  // Novos campos para origem e valor do produto
+  origemOS?: 'Venda' | 'Garantia' | 'Estoque' | 'Avulso';
+  vendaId?: string;
+  garantiaId?: string;
+  produtoId?: string;
+  valorProdutoOrigem?: number; // Valor do produto da origem (Base de Troca)
+  modeloAparelho?: string;
+  imeiAparelho?: string;
 }
 
 // Mock data
