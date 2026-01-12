@@ -167,7 +167,6 @@ export default function GarantiasNova() {
             Nova Garantia
           </Button>
         </div>
-        </div>
 
         {/* Quadro Histórico de Vendas - Tabela Direta */}
         <Card>
