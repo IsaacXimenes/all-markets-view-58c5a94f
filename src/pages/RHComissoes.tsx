@@ -173,8 +173,8 @@ export default function RHComissoes() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Cargo</TableHead>
                   <TableHead>Loja</TableHead>
-                  <TableHead className="text-right">Salário Fixo</TableHead>
-                  <TableHead className="text-right">Comissão</TableHead>
+                  <TableHead className="text-center">Salário Fixo</TableHead>
+                  <TableHead className="text-center">Comissão</TableHead>
                   <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -194,32 +194,36 @@ export default function RHComissoes() {
                         <Badge variant="outline">{getCargoNome(colaborador.cargo)}</Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{loja?.nome || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <span className="text-muted-foreground text-sm">R$</span>
-                          <Input
-                            type="text"
-                            value={colaborador.novoFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, '');
-                              handleEditChange(colaborador.id, 'novoFixo', Number(value) / 100);
-                            }}
-                            className="w-32 text-right"
-                          />
+                      <TableCell>
+                        <div className="flex justify-center">
+                          <div className="relative w-36">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                            <Input
+                              type="text"
+                              value={colaborador.novoFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/\D/g, '');
+                                handleEditChange(colaborador.id, 'novoFixo', Number(value) / 100);
+                              }}
+                              className="pl-9 text-right"
+                            />
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Input
-                            type="text"
-                            value={colaborador.novaComissao.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/[^\d.,]/g, '').replace(',', '.');
-                              handleEditChange(colaborador.id, 'novaComissao', parseFloat(value) || 0);
-                            }}
-                            className="w-20 text-right"
-                          />
-                          <span className="text-muted-foreground text-sm">%</span>
+                      <TableCell>
+                        <div className="flex justify-center">
+                          <div className="relative w-24">
+                            <Input
+                              type="text"
+                              value={colaborador.novaComissao.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                              onChange={(e) => {
+                                const value = e.target.value.replace(/[^\d.,]/g, '').replace(',', '.');
+                                handleEditChange(colaborador.id, 'novaComissao', parseFloat(value) || 0);
+                              }}
+                              className="pr-7 text-right"
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-center">

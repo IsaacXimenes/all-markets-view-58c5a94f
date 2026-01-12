@@ -8,19 +8,23 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { Eye, FileText } from 'lucide-react';
+import { Eye, FileText, Plus } from 'lucide-react';
 import { getVendas, Venda } from '@/utils/vendasApi';
-import { getLojas } from '@/utils/cadastrosApi';
+import { getLojas, getProdutosCadastro } from '@/utils/cadastrosApi';
 import { 
   getGarantiasByVendaId, addGarantia, addTimelineEntry, calcularStatusExpiracao
 } from '@/utils/garantiasApi';
 import { format, addMonths } from 'date-fns';
+import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 
 export default function GarantiasNova() {
   const navigate = useNavigate();
   const lojas = getLojas();
   const vendas = getVendas();
+  const produtos = getProdutosCadastro();
   
   // Estados
   const [buscaImei, setBuscaImei] = useState('');
@@ -28,6 +32,32 @@ export default function GarantiasNova() {
   const [buscaLoja, setBuscaLoja] = useState('');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
+  
+  // Modal Nova Garantia Manual
+  const [showNovaGarantiaModal, setShowNovaGarantiaModal] = useState(false);
+  const [novaGarantiaForm, setNovaGarantiaForm] = useState<{
+    imei: string;
+    modelo: string;
+    tipoGarantia: 'Garantia - Apple' | 'Garantia - Thiago Imports';
+    mesesGarantia: number;
+    dataInicioGarantia: string;
+    lojaVenda: string;
+    clienteNome: string;
+    clienteTelefone: string;
+    clienteEmail: string;
+    observacoes: string;
+  }>({
+    imei: '',
+    modelo: '',
+    tipoGarantia: 'Garantia - Apple',
+    mesesGarantia: 12,
+    dataInicioGarantia: format(new Date(), 'yyyy-MM-dd'),
+    lojaVenda: '',
+    clienteNome: '',
+    clienteTelefone: '',
+    clienteEmail: '',
+    observacoes: ''
+  });
   
   // Helpers
   const getLojaName = (id: string) => lojas.find(l => l.id === id)?.nome || id;
@@ -142,6 +172,50 @@ export default function GarantiasNova() {
     }
   };
 
+  // Salvar garantia manual
+  const handleSalvarGarantiaManual = () => {
+    if (!novaGarantiaForm.imei || !novaGarantiaForm.modelo || !novaGarantiaForm.lojaVenda || !novaGarantiaForm.clienteNome) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+
+    const dataInicio = new Date(novaGarantiaForm.dataInicioGarantia);
+    const dataFimCalc = format(addMonths(dataInicio, novaGarantiaForm.mesesGarantia), 'yyyy-MM-dd');
+
+    const novaGarantia = addGarantia({
+      vendaId: '',
+      itemVendaId: '',
+      produtoId: '',
+      imei: unformatIMEI(novaGarantiaForm.imei),
+      modelo: novaGarantiaForm.modelo,
+      tipoGarantia: novaGarantiaForm.tipoGarantia,
+      mesesGarantia: novaGarantiaForm.mesesGarantia,
+      dataInicioGarantia: novaGarantiaForm.dataInicioGarantia,
+      dataFimGarantia: dataFimCalc,
+      status: 'Ativa',
+      lojaVenda: novaGarantiaForm.lojaVenda,
+      clienteId: '',
+      clienteNome: novaGarantiaForm.clienteNome,
+      clienteTelefone: novaGarantiaForm.clienteTelefone,
+      clienteEmail: novaGarantiaForm.clienteEmail
+    });
+
+    // Adicionar timeline de registro manual
+    addTimelineEntry({
+      garantiaId: novaGarantia.id,
+      dataHora: new Date().toISOString(),
+      tipo: 'registro_venda',
+      titulo: 'Garantia Registrada Manualmente',
+      descricao: novaGarantiaForm.observacoes || 'Garantia registrada manualmente sem vínculo com venda',
+      usuarioId: 'COL-001',
+      usuarioNome: 'Usuário Sistema'
+    });
+
+    toast.success('Garantia registrada com sucesso!');
+    setShowNovaGarantiaModal(false);
+    navigate(`/garantias/${novaGarantia.id}`);
+  };
+
   // Função para cor do badge de garantia
   const getGarantiaBadgeClass = (dataFim: string) => {
     const status = calcularStatusExpiracao(dataFim);
@@ -160,6 +234,14 @@ export default function GarantiasNova() {
   return (
     <GarantiasLayout title="Novo Registro de Garantia">
       <div className="space-y-6">
+        {/* Botão Nova Garantia Manual */}
+        <div className="flex justify-end">
+          <Button onClick={() => setShowNovaGarantiaModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Garantia
+          </Button>
+        </div>
+
         {/* Quadro Histórico de Vendas - Tabela Direta */}
         <Card>
           <CardHeader>
@@ -284,6 +366,166 @@ export default function GarantiasNova() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal Nova Garantia Manual */}
+      <Dialog open={showNovaGarantiaModal} onOpenChange={setShowNovaGarantiaModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Nova Garantia Manual
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {/* Dados do Produto */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>IMEI *</Label>
+                <Input
+                  placeholder="00-000000-000000-0"
+                  value={novaGarantiaForm.imei}
+                  onChange={(e) => setNovaGarantiaForm(prev => ({ 
+                    ...prev, 
+                    imei: formatIMEI(e.target.value) 
+                  }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Modelo *</Label>
+                <Select 
+                  value={novaGarantiaForm.modelo} 
+                  onValueChange={(v) => setNovaGarantiaForm(prev => ({ ...prev, modelo: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o modelo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {produtos.map(p => (
+                      <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Tipo e Duração */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Resp. Garantia *</Label>
+                <Select 
+                  value={novaGarantiaForm.tipoGarantia} 
+                  onValueChange={(v) => setNovaGarantiaForm(prev => ({ 
+                    ...prev, 
+                    tipoGarantia: v as 'Garantia - Apple' | 'Garantia - Thiago Imports' 
+                  }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Garantia - Apple">Garantia - Apple</SelectItem>
+                    <SelectItem value="Garantia - Thiago Imports">Garantia - Thiago Imports</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Meses de Garantia *</Label>
+                <Select 
+                  value={String(novaGarantiaForm.mesesGarantia)} 
+                  onValueChange={(v) => setNovaGarantiaForm(prev => ({ ...prev, mesesGarantia: Number(v) }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">3 meses</SelectItem>
+                    <SelectItem value="6">6 meses</SelectItem>
+                    <SelectItem value="12">12 meses</SelectItem>
+                    <SelectItem value="24">24 meses</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Data Início *</Label>
+                <Input
+                  type="date"
+                  value={novaGarantiaForm.dataInicioGarantia}
+                  onChange={(e) => setNovaGarantiaForm(prev => ({ ...prev, dataInicioGarantia: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Loja */}
+            <div className="space-y-2">
+              <Label>Loja *</Label>
+              <Select 
+                value={novaGarantiaForm.lojaVenda} 
+                onValueChange={(v) => setNovaGarantiaForm(prev => ({ ...prev, lojaVenda: v }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a loja" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lojas.map(l => (
+                    <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Dados do Cliente */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label>Nome do Cliente *</Label>
+                <Input
+                  placeholder="Nome completo"
+                  value={novaGarantiaForm.clienteNome}
+                  onChange={(e) => setNovaGarantiaForm(prev => ({ ...prev, clienteNome: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefone</Label>
+                <Input
+                  placeholder="(00) 00000-0000"
+                  value={novaGarantiaForm.clienteTelefone}
+                  onChange={(e) => setNovaGarantiaForm(prev => ({ ...prev, clienteTelefone: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>E-mail</Label>
+                <Input
+                  type="email"
+                  placeholder="email@exemplo.com"
+                  value={novaGarantiaForm.clienteEmail}
+                  onChange={(e) => setNovaGarantiaForm(prev => ({ ...prev, clienteEmail: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Observações */}
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea
+                placeholder="Observações sobre a garantia..."
+                value={novaGarantiaForm.observacoes}
+                onChange={(e) => setNovaGarantiaForm(prev => ({ ...prev, observacoes: e.target.value }))}
+                rows={3}
+              />
+            </div>
+
+            {/* Botões */}
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setShowNovaGarantiaModal(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSalvarGarantiaManual}>
+                Registrar Garantia
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </GarantiasLayout>
   );
 }
