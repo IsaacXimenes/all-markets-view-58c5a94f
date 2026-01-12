@@ -173,8 +173,8 @@ export default function RHComissoes() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Cargo</TableHead>
                   <TableHead>Loja</TableHead>
-                  <TableHead className="text-right">Fixo (R$)</TableHead>
-                  <TableHead className="text-right">Comissão (%)</TableHead>
+                  <TableHead className="text-right">Salário Fixo</TableHead>
+                  <TableHead className="text-right">Comissão</TableHead>
                   <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -195,25 +195,32 @@ export default function RHComissoes() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{loja?.nome || '-'}</TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          type="number"
-                          min={0}
-                          step={100}
-                          value={colaborador.novoFixo}
-                          onChange={(e) => handleEditChange(colaborador.id, 'novoFixo', parseFloat(e.target.value) || 0)}
-                          className="w-28 text-right"
-                        />
+                        <div className="flex items-center justify-end gap-1">
+                          <span className="text-muted-foreground text-sm">R$</span>
+                          <Input
+                            type="text"
+                            value={colaborador.novoFixo.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '');
+                              handleEditChange(colaborador.id, 'novoFixo', Number(value) / 100);
+                            }}
+                            className="w-32 text-right"
+                          />
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step={0.5}
-                          value={colaborador.novaComissao}
-                          onChange={(e) => handleEditChange(colaborador.id, 'novaComissao', parseFloat(e.target.value) || 0)}
-                          className="w-20 text-right"
-                        />
+                        <div className="flex items-center justify-end gap-1">
+                          <Input
+                            type="text"
+                            value={colaborador.novaComissao.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/[^\d.,]/g, '').replace(',', '.');
+                              handleEditChange(colaborador.id, 'novaComissao', parseFloat(value) || 0);
+                            }}
+                            className="w-20 text-right"
+                          />
+                          <span className="text-muted-foreground text-sm">%</span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-2">

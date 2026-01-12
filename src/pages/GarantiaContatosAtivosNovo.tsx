@@ -11,21 +11,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Save, ArrowLeft, Truck, Phone, User, Shield, CheckCircle, Search, Plus } from 'lucide-react';
-import { format } from 'date-fns';
+import { Save, ArrowLeft, Truck, Phone, User, Shield, CheckCircle, Search, Plus, CreditCard, Star } from 'lucide-react';
+import { format, addMonths, addDays } from 'date-fns';
 
-import { getClientes, getMotoboys, Cliente, addCliente, calcularTipoPessoa } from '@/utils/cadastrosApi';
+import { getClientes, getMotoboys, Cliente, addCliente, calcularTipoPessoa, getProdutosCadastro, ProdutoCadastro } from '@/utils/cadastrosApi';
 import { 
   addContatoAtivo, 
   ContatoAtivoGarantia 
 } from '@/utils/garantiasApi';
 import { getPlanosPorModelo, getPlanosAtivos, PlanoGarantia, formatCurrency } from '@/utils/planosGarantiaApi';
+import { formatIMEI } from '@/utils/imeiMask';
+import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
+import { Pagamento } from '@/utils/vendasApi';
 
 export default function GarantiaContatosAtivosNovo() {
   const navigate = useNavigate();
   const [clientes, setClientes] = useState<Cliente[]>(getClientes());
   const motoboys = getMotoboys();
   const todosPlanos = getPlanosAtivos();
+  const produtosCadastro = getProdutosCadastro();
+  
+  // Pagamentos state
+  const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   
   // Client modal states
   const [showClienteModal, setShowClienteModal] = useState(false);
@@ -297,11 +304,14 @@ export default function GarantiaContatosAtivosNovo() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label>Modelo *</Label>
-                <Input 
-                  value={form.aparelhoModelo} 
-                  onChange={e => setForm({...form, aparelhoModelo: e.target.value})}
-                  placeholder="iPhone 15 Pro Max"
-                />
+                <Select value={form.aparelhoModelo} onValueChange={v => setForm({...form, aparelhoModelo: v})}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o modelo..." /></SelectTrigger>
+                  <SelectContent>
+                    {produtosCadastro.map(p => (
+                      <SelectItem key={p.id} value={p.produto}>{p.marca} - {p.produto}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Condição *</Label>
@@ -317,8 +327,9 @@ export default function GarantiaContatosAtivosNovo() {
                 <Label>IMEI *</Label>
                 <Input 
                   value={form.aparelhoImei} 
-                  onChange={e => setForm({...form, aparelhoImei: e.target.value})}
-                  placeholder="352123456789012"
+                  onChange={e => setForm({...form, aparelhoImei: formatIMEI(e.target.value)})}
+                  placeholder="00-000000-000000-0"
+                  maxLength={18}
                 />
               </div>
             </div>
@@ -489,6 +500,13 @@ export default function GarantiaContatosAtivosNovo() {
             )}
           </CardContent>
         </Card>
+
+        {/* Quadro de Pagamentos */}
+        <PagamentoQuadro
+          valorTotalProdutos={planoSelecionado?.valor || 0}
+          onPagamentosChange={setPagamentos}
+          pagamentosIniciais={pagamentos}
+        />
 
         {/* Botões de ação */}
         <div className="flex justify-end gap-4 pb-6">

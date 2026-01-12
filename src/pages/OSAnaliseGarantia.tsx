@@ -131,7 +131,7 @@ export default function OSAnaliseGarantia() {
   const slaCritico = registros.filter(r => calcularSLA(r.dataChegada) > 3).length;
 
   return (
-    <OSLayout title="Análise Garantia">
+    <OSLayout title="Análise de Tratativas">
       {/* Dashboard Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card>
