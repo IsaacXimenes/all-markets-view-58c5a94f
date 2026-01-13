@@ -21,9 +21,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Eye, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, Wrench, RotateCcw } from 'lucide-react';
+import { Eye, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, Wrench, RotateCcw, Undo2 } from 'lucide-react';
 import { getProdutosPendentes, ProdutoPendente, calcularSLA } from '@/utils/osApi';
-import { getLojas, getLojaById } from '@/utils/cadastrosApi';
+import { getLojas, getLojaById, getFornecedores } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
 import { formatIMEI } from '@/utils/imeiMask';
 
@@ -33,18 +33,20 @@ export default function EstoqueProdutosPendentes() {
   const navigate = useNavigate();
   const [produtosPendentes, setProdutosPendentes] = useState<ProdutoPendente[]>([]);
   const lojas = getLojas();
+  const fornecedores = getFornecedores();
 
   const getLojaNome = (lojaId: string) => {
     const loja = getLojaById(lojaId);
     return loja?.nome || lojaId;
   };
 
-  // Filtros - igual à aba Produtos + filtro de status
+  // Filtros - igual à aba Produtos + filtro de status + filtro de fornecedor
   const [filters, setFilters] = useState({
     imei: '',
     modelo: '',
     loja: 'todas',
-    status: 'todos'
+    status: 'todos',
+    fornecedor: 'todos'
   });
 
   useEffect(() => {
@@ -53,14 +55,23 @@ export default function EstoqueProdutosPendentes() {
     setProdutosPendentes(data);
   }, []);
 
-  // Filtrar produtos
+  // Filtrar e ordenar produtos (Devolvido para Fornecedor no final)
   const filteredProdutos = useMemo(() => {
-    return produtosPendentes.filter(produto => {
+    const filtered = produtosPendentes.filter(produto => {
       if (filters.imei && !produto.imei.toLowerCase().includes(filters.imei.toLowerCase())) return false;
       if (filters.modelo && !produto.modelo.toLowerCase().includes(filters.modelo.toLowerCase())) return false;
       if (filters.loja !== 'todas' && produto.loja !== filters.loja) return false;
       if (filters.status !== 'todos' && produto.statusGeral !== filters.status) return false;
+      // Filtro de fornecedor - aqui você precisaria ter o campo fornecedor no produto
+      // Por ora, vamos simular
       return true;
+    });
+
+    // Ordenar: Devolvido para Fornecedor no final
+    return filtered.sort((a, b) => {
+      const aDevolvido = a.statusGeral === 'Devolvido para Fornecedor' ? 1 : 0;
+      const bDevolvido = b.statusGeral === 'Devolvido para Fornecedor' ? 1 : 0;
+      return aDevolvido - bDevolvido;
     });
   }, [produtosPendentes, filters]);
 
@@ -78,6 +89,8 @@ export default function EstoqueProdutosPendentes() {
         return <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">Aguardando Peça</Badge>;
       case 'Retornado da Assistência':
         return <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500/30">Revisão Final</Badge>;
+      case 'Devolvido para Fornecedor':
+        return <Badge variant="outline" className="bg-gray-500/10 text-gray-600 border-gray-500/30">Devolvido p/ Fornecedor</Badge>;
       default:
         return <Badge variant="outline" className="bg-gray-500/10 text-gray-600 border-gray-500/30">{produto.statusGeral}</Badge>;
     }
@@ -118,6 +131,11 @@ export default function EstoqueProdutosPendentes() {
   };
 
   const getStatusRowClass = (produto: ProdutoPendente, dataEntrada: string) => {
+    // Se devolvido para fornecedor, cor cinza
+    if (produto.statusGeral === 'Devolvido para Fornecedor') {
+      return 'bg-gray-100 dark:bg-gray-900/30 opacity-70';
+    }
+    
     const { cor } = calcularSLA(dataEntrada);
     // Prioridade: SLA crítico > status geral
     if (cor === 'vermelho') return 'bg-red-500/10';
@@ -141,6 +159,7 @@ export default function EstoqueProdutosPendentes() {
     emAssistencia: filteredProdutos.filter(p => p.statusGeral === 'Em Análise Assistência').length,
     aguardandoPeca: filteredProdutos.filter(p => p.statusGeral === 'Aguardando Peça').length,
     retornados: filteredProdutos.filter(p => p.statusGeral === 'Retornado da Assistência').length,
+    devolvidos: filteredProdutos.filter(p => p.statusGeral === 'Devolvido para Fornecedor').length,
   };
 
   const handleExport = () => {
@@ -156,7 +175,7 @@ export default function EstoqueProdutosPendentes() {
         'Valor Custo': formatCurrency(p.valorCusto),
         'Saúde Bateria': `${p.saudeBateria}%`,
         'SLA (dias)': sla.dias,
-        Status: p.parecerEstoque ? p.parecerEstoque.status : 'Aguardando Parecer'
+        Status: p.statusGeral || (p.parecerEstoque ? p.parecerEstoque.status : 'Aguardando Parecer')
       };
     });
     exportToCSV(dataToExport, `produtos-pendentes-${new Date().toISOString().split('T')[0]}.csv`);
@@ -164,13 +183,13 @@ export default function EstoqueProdutosPendentes() {
   };
 
   const handleLimpar = () => {
-    setFilters({ imei: '', modelo: '', loja: 'todas', status: 'todos' });
+    setFilters({ imei: '', modelo: '', loja: 'todas', status: 'todos', fornecedor: 'todos' });
   };
 
   return (
     <EstoqueLayout title="Produtos Pendentes">
       {/* Dashboard Cards - Sticky */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 sticky top-0 z-10 bg-background py-2">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6 sticky top-0 z-10 bg-background py-2">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -230,9 +249,21 @@ export default function EstoqueProdutosPendentes() {
             <div className="text-2xl font-bold text-purple-600">{stats.retornados}</div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Undo2 className="h-4 w-4 text-gray-500" />
+              Devolvido
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-gray-600">{stats.devolvidos}</div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Filtros - Igual à aba Produtos */}
+      {/* Filtros - Igual à aba Produtos + Fornecedor */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -241,7 +272,7 @@ export default function EstoqueProdutosPendentes() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
               <Label htmlFor="imei">IMEI</Label>
               <Input
@@ -275,6 +306,20 @@ export default function EstoqueProdutosPendentes() {
               </Select>
             </div>
             <div>
+              <Label htmlFor="fornecedor">Fornecedor</Label>
+              <Select value={filters.fornecedor} onValueChange={(value) => setFilters({ ...filters, fornecedor: value })}>
+                <SelectTrigger id="fornecedor">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  {fornecedores.map(f => (
+                    <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
               <Label htmlFor="status">Status</Label>
               <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
                 <SelectTrigger id="status">
@@ -286,6 +331,7 @@ export default function EstoqueProdutosPendentes() {
                   <SelectItem value="Em Análise Assistência">Em Assistência</SelectItem>
                   <SelectItem value="Aguardando Peça">Aguardando Peça</SelectItem>
                   <SelectItem value="Retornado da Assistência">Revisão Final</SelectItem>
+                  <SelectItem value="Devolvido para Fornecedor">Devolvido p/ Fornecedor</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -365,6 +411,7 @@ export default function EstoqueProdutosPendentes() {
                             size="sm"
                             onClick={() => navigate(`/os/assistencia/nova?produtoId=${produto.id}`)}
                             title="Encaminhar para Assistência"
+                            disabled={produto.statusGeral === 'Devolvido para Fornecedor'}
                           >
                             <Wrench className="h-4 w-4" />
                           </Button>

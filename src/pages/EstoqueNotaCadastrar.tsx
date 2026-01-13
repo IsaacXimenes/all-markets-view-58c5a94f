@@ -1,15 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
-import { getFornecedores, addNotaCompra } from '@/utils/estoqueApi';
+import { addNotaCompra, getNotasCompra } from '@/utils/estoqueApi';
+import { getProdutosCadastro, getFornecedores } from '@/utils/cadastrosApi';
+import { getCores } from '@/utils/coresApi';
 import { toast } from 'sonner';
+import { InputComMascara } from '@/components/ui/InputComMascara';
+import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 
 interface ProdutoLinha {
   marca: string;
@@ -23,13 +29,31 @@ interface ProdutoLinha {
   custoTotal: number;
 }
 
+// Marcas disponíveis
+const marcasDisponiveis = ['Apple', 'Samsung', 'Xiaomi', 'Motorola', 'LG', 'Huawei', 'OnePlus', 'Realme', 'ASUS', 'Nokia', 'Oppo', 'Vivo'];
+
+// Gerar número de nota automático
+const gerarNumeroNota = (notasExistentes: number): string => {
+  const ano = new Date().getFullYear();
+  const sequencial = String(notasExistentes + 1).padStart(5, '0');
+  return `NE-${ano}-${sequencial}`;
+};
+
 export default function EstoqueNotaCadastrar() {
   const navigate = useNavigate();
   const fornecedores = getFornecedores();
+  const produtosCadastro = getProdutosCadastro();
+  const coresCadastradas = getCores();
+  const notasExistentes = getNotasCompra();
   
   const [fornecedor, setFornecedor] = useState('');
   const [dataEntrada, setDataEntrada] = useState('');
   const [numeroNota, setNumeroNota] = useState('');
+  
+  // Pagamento
+  const [formaPagamento, setFormaPagamento] = useState<'Dinheiro' | 'Pix' | ''>('');
+  const [observacaoPagamento, setObservacaoPagamento] = useState('');
+  
   const [produtos, setProdutos] = useState<ProdutoLinha[]>([
     {
       marca: 'Apple',
@@ -43,6 +67,16 @@ export default function EstoqueNotaCadastrar() {
       custoTotal: 0
     }
   ]);
+
+  // Gerar número da nota automaticamente
+  useEffect(() => {
+    setNumeroNota(gerarNumeroNota(notasExistentes.length));
+  }, [notasExistentes.length]);
+
+  // Modelos filtrados por marca
+  const getModelosFiltrados = (marca: string) => {
+    return produtosCadastro.filter(p => p.marca.toLowerCase() === marca.toLowerCase());
+  };
 
   const adicionarProduto = () => {
     setProdutos([
@@ -71,6 +105,11 @@ export default function EstoqueNotaCadastrar() {
     const novosProdutos = [...produtos];
     novosProdutos[index] = { ...novosProdutos[index], [campo]: valor };
     
+    // Se mudar tipo para Aparelho, bloquear quantidade em 1
+    if (campo === 'tipo' && valor === 'Aparelho') {
+      novosProdutos[index].quantidade = 1;
+    }
+    
     // Calcular custo total automaticamente
     if (campo === 'quantidade' || campo === 'custoUnitario') {
       novosProdutos[index].custoTotal = novosProdutos[index].quantidade * novosProdutos[index].custoUnitario;
@@ -79,18 +118,44 @@ export default function EstoqueNotaCadastrar() {
     setProdutos(novosProdutos);
   };
 
+  const handleIMEIChange = (index: number, formatted: string, raw: string | number) => {
+    atualizarProduto(index, 'imei', String(raw));
+  };
+
+  const handleCustoChange = (index: number, formatted: string, raw: string | number) => {
+    const valor = typeof raw === 'number' ? raw : parseFloat(String(raw)) || 0;
+    atualizarProduto(index, 'custoUnitario', valor);
+  };
+
   const calcularValorTotal = () => {
     return produtos.reduce((acc, prod) => acc + prod.custoTotal, 0);
   };
 
-  const handleSalvar = () => {
-    if (!fornecedor || !dataEntrada || !numeroNota) {
-      toast.error('Preencha todos os campos obrigatórios');
-      return;
-    }
+  const validarCampos = (): string[] => {
+    const camposFaltando: string[] = [];
+    
+    if (!fornecedor) camposFaltando.push('Fornecedor');
+    if (!dataEntrada) camposFaltando.push('Data de Entrada');
+    if (!numeroNota) camposFaltando.push('Número da Nota');
+    if (!formaPagamento) camposFaltando.push('Forma de Pagamento');
+    
+    produtos.forEach((p, i) => {
+      if (!p.modelo) camposFaltando.push(`Modelo do Produto ${i + 1}`);
+      if (!p.cor) camposFaltando.push(`Cor do Produto ${i + 1}`);
+      if (p.custoUnitario <= 0) camposFaltando.push(`Custo Unitário do Produto ${i + 1}`);
+      if (p.tipo === 'Aparelho' && !p.imei) camposFaltando.push(`IMEI do Produto ${i + 1} (obrigatório para Aparelhos)`);
+    });
+    
+    return camposFaltando;
+  };
 
-    if (produtos.some(p => !p.modelo || !p.cor || p.custoUnitario <= 0)) {
-      toast.error('Preencha todos os dados dos produtos');
+  const handleSalvar = () => {
+    const camposFaltando = validarCampos();
+    
+    if (camposFaltando.length > 0) {
+      toast.error('Campos obrigatórios não preenchidos', {
+        description: camposFaltando.join(', ')
+      });
       return;
     }
 
@@ -105,12 +170,18 @@ export default function EstoqueNotaCadastrar() {
         cor: p.cor,
         imei: p.imei || 'N/A',
         tipo: p.categoria,
-        tipoProduto: p.tipo, // Aparelho | Acessórios | Peças
+        tipoProduto: p.tipo,
         quantidade: p.quantidade,
         valorUnitario: p.custoUnitario,
         valorTotal: p.custoTotal,
         saudeBateria: p.categoria === 'Novo' ? 100 : 85
-      }))
+      })),
+      pagamento: formaPagamento ? {
+        formaPagamento,
+        parcelas: 1,
+        valorParcela: calcularValorTotal(),
+        dataVencimento: dataEntrada
+      } : undefined
     });
 
     toast.success(`Nota ${novaNota.id} cadastrada com sucesso. Status: Pendente (aguardando Financeiro)`);
@@ -137,8 +208,9 @@ export default function EstoqueNotaCadastrar() {
                   id="numeroNota" 
                   value={numeroNota}
                   onChange={(e) => setNumeroNota(e.target.value)}
-                  placeholder="Ex: 12345"
+                  placeholder="Ex: NE-2026-00001"
                 />
+                <p className="text-xs text-muted-foreground mt-1">Gerado automaticamente, editável</p>
               </div>
               <div>
                 <Label htmlFor="dataEntrada">Data de Entrada *</Label>
@@ -156,8 +228,8 @@ export default function EstoqueNotaCadastrar() {
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {fornecedores.map(f => (
-                      <SelectItem key={f} value={f}>{f}</SelectItem>
+                    {fornecedores.filter(f => f.status === 'Ativo').map(f => (
+                      <SelectItem key={f.id} value={f.nome}>{f.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -182,7 +254,7 @@ export default function EstoqueNotaCadastrar() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Tipo *</TableHead>
-                    <TableHead>Marca</TableHead>
+                    <TableHead>Marca *</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>Modelo *</TableHead>
                     <TableHead>Cor *</TableHead>
@@ -212,35 +284,66 @@ export default function EstoqueNotaCadastrar() {
                         </Select>
                       </TableCell>
                       <TableCell>
-                        <Input 
+                        <Select 
                           value={produto.marca}
-                          onChange={(e) => atualizarProduto(index, 'marca', e.target.value)}
-                          className="w-24"
-                        />
+                          onValueChange={(value) => atualizarProduto(index, 'marca', value)}
+                        >
+                          <SelectTrigger className="w-28">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {marcasDisponiveis.map(marca => (
+                              <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
-                        <Input 
+                        <InputComMascara 
+                          mascara="imei"
                           value={produto.imei}
-                          onChange={(e) => atualizarProduto(index, 'imei', e.target.value)}
-                          placeholder="Opcional"
-                          className="w-32"
+                          onChange={(formatted, raw) => handleIMEIChange(index, formatted, raw)}
+                          className="w-36"
+                          disabled={produto.tipo !== 'Aparelho'}
                         />
                       </TableCell>
                       <TableCell>
-                        <Input 
+                        <Select 
                           value={produto.modelo}
-                          onChange={(e) => atualizarProduto(index, 'modelo', e.target.value)}
-                          placeholder={produto.tipo === 'Peças' ? 'Ex: Bateria iPhone 14' : 'Ex: iPhone 15 Pro'}
-                          className="w-40"
-                        />
+                          onValueChange={(value) => atualizarProduto(index, 'modelo', value)}
+                        >
+                          <SelectTrigger className="w-44">
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getModelosFiltrados(produto.marca).map(p => (
+                              <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
-                        <Input 
+                        <Select 
                           value={produto.cor}
-                          onChange={(e) => atualizarProduto(index, 'cor', e.target.value)}
-                          placeholder={produto.tipo === 'Peças' ? 'N/A' : 'Ex: Preto'}
-                          className="w-28"
-                        />
+                          onValueChange={(value) => atualizarProduto(index, 'cor', value)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {coresCadastradas.map(c => (
+                              <SelectItem key={c.id} value={c.nome}>
+                                <div className="flex items-center gap-2">
+                                  <div 
+                                    className="w-3 h-3 rounded-full border" 
+                                    style={{ backgroundColor: c.hexadecimal }}
+                                  />
+                                  {c.nome}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell>
                         <Select 
@@ -263,16 +366,15 @@ export default function EstoqueNotaCadastrar() {
                           value={produto.quantidade}
                           onChange={(e) => atualizarProduto(index, 'quantidade', parseInt(e.target.value) || 1)}
                           className="w-16"
+                          disabled={produto.tipo === 'Aparelho'}
                         />
                       </TableCell>
                       <TableCell>
-                        <Input 
-                          type="number"
-                          step="0.01"
-                          min="0"
+                        <InputComMascara
+                          mascara="moeda"
                           value={produto.custoUnitario}
-                          onChange={(e) => atualizarProduto(index, 'custoUnitario', parseFloat(e.target.value) || 0)}
-                          className="w-28"
+                          onChange={(formatted, raw) => handleCustoChange(index, formatted, raw)}
+                          className="w-32"
                         />
                       </TableCell>
                       <TableCell className="font-semibold">
@@ -305,16 +407,39 @@ export default function EstoqueNotaCadastrar() {
           </CardContent>
         </Card>
 
-        <Card className="bg-muted/30">
+        {/* Seção Pagamento - Agora habilitada */}
+        <Card>
           <CardHeader>
-            <CardTitle className="text-muted-foreground">Seção "Pagamento"</CardTitle>
+            <CardTitle>Pagamento *</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-3">Preenchido pelo Financeiro</p>
-            <div className="space-y-3 opacity-50">
-              <Input placeholder="Forma de Pagamento" disabled />
-              <Input placeholder="Parcelas" disabled />
-              <Input placeholder="Responsável Financeiro" disabled />
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="mb-3 block">Forma de Pagamento *</Label>
+              <RadioGroup 
+                value={formaPagamento} 
+                onValueChange={(v) => setFormaPagamento(v as 'Dinheiro' | 'Pix')}
+                className="flex gap-6"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Dinheiro" id="dinheiro" />
+                  <Label htmlFor="dinheiro" className="font-normal cursor-pointer">Dinheiro</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="Pix" id="pix" />
+                  <Label htmlFor="pix" className="font-normal cursor-pointer">Pix</Label>
+                </div>
+              </RadioGroup>
+            </div>
+            
+            <div>
+              <Label htmlFor="observacao">Observação</Label>
+              <Textarea 
+                id="observacao"
+                value={observacaoPagamento}
+                onChange={(e) => setObservacaoPagamento(e.target.value)}
+                placeholder="Ex: Pagamento parcial, Aguardando confirmação, etc."
+                rows={3}
+              />
             </div>
           </CardContent>
         </Card>

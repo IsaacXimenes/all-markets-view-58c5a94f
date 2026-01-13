@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { 
-  Eye, Clock, Package, Smartphone, Wrench, AlertTriangle, CheckCircle
+  Eye, Clock, Package, Smartphone, Wrench, AlertTriangle, CheckCircle, Download
 } from 'lucide-react';
-import { 
+import { exportToCSV, formatCurrency } from '@/utils/formatUtils';
+import {
   getGarantiasEmAndamento, getTratativas, updateTratativa, updateGarantia,
   addTimelineEntry, getContadoresGarantia, GarantiaItem, TratativaGarantia
 } from '@/utils/garantiasApi';
@@ -146,6 +147,25 @@ export default function GarantiasEmAndamento() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Botão Exportar */}
+        <div className="flex justify-end">
+          <Button variant="outline" onClick={() => {
+            const data = dadosTabela.map(({ garantia, tratativa, diasAberto }) => ({
+              ID: garantia.id,
+              'Data Abertura': tratativa ? format(new Date(tratativa.dataHora), 'dd/MM/yyyy') : '-',
+              Cliente: garantia.clienteNome,
+              Modelo: garantia.modelo,
+              IMEI: garantia.imei,
+              'Tipo Tratativa': tratativa?.tipo || '-',
+              Dias: diasAberto
+            }));
+            exportToCSV(data, `garantias_em_andamento_${format(new Date(), 'dd_MM_yyyy')}.csv`);
+          }}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
         </div>
         
         {/* Tabela */}

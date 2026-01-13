@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Edit, Eye } from 'lucide-react';
+import { Plus, Edit, Eye, Download } from 'lucide-react';
+import { exportToCSV } from '@/utils/formatUtils';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/planosGarantiaApi';
 
@@ -118,6 +119,24 @@ export default function GarantiaContatosAtivos() {
               </Select>
             </div>
             <div className="flex items-end gap-2 md:col-span-2">
+              <Button variant="outline" onClick={() => {
+                const data = contatosFiltrados.map(c => ({
+                  ID: c.id,
+                  Data: format(new Date(c.dataLancamento), 'dd/MM/yyyy'),
+                  Cliente: c.cliente.nome,
+                  Telefone: c.cliente.telefone,
+                  Aparelho: c.aparelho.modelo,
+                  IMEI: c.aparelho.imei,
+                  Motoboy: c.logistica.motoboyNome,
+                  'Entrega Prevista': format(new Date(c.logistica.dataEntregaPrevista), 'dd/MM/yyyy'),
+                  'Garantia Estendida': c.garantiaEstendida?.aderida ? 'Sim' : 'Não',
+                  Status: c.status
+                }));
+                exportToCSV(data, `contatos_ativos_${format(new Date(), 'dd_MM_yyyy')}.csv`);
+              }}>
+                <Download className="h-4 w-4 mr-2" />
+                Exportar CSV
+              </Button>
               <Button onClick={() => navigate('/garantias/contatos-ativos/novo')} className="flex-1">
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Lançamento
