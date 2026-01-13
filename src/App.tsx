@@ -42,6 +42,7 @@ import CadastrosCargos from "./pages/CadastrosCargos";
 import CadastrosModelosPagamento from "./pages/CadastrosModelosPagamento";
 import CadastrosContasFinanceiras from "./pages/CadastrosContasFinanceiras";
 import CadastrosMaquinas from "./pages/CadastrosMaquinas";
+import CadastrosCores from "./pages/CadastrosCores";
 import Vendas from "./pages/Vendas";
 import VendasNova from "./pages/VendasNova";
 import VendaDetalhes from "./pages/VendaDetalhes";
@@ -147,6 +148,7 @@ const App = () => (
           <Route path="/cadastros/modelos-pagamento" element={<CadastrosModelosPagamento />} />
           <Route path="/cadastros/contas-financeiras" element={<CadastrosContasFinanceiras />} />
           <Route path="/cadastros/maquinas" element={<CadastrosMaquinas />} />
+          <Route path="/cadastros/cores" element={<CadastrosCores />} />
           <Route path="/vendas" element={<Vendas />} />
           <Route path="/vendas/nova" element={<VendasNova />} />
           <Route path="/vendas/nova-digital" element={<VendasNovaDigital />} />

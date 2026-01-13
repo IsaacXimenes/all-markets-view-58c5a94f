@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { Plus, Clock, History, Star } from 'lucide-react';
+import { Plus, Clock, History, Star, Phone } from 'lucide-react';
 
 interface GarantiasLayoutProps {
   children: React.ReactNode;
@@ -13,8 +13,8 @@ export function GarantiasLayout({ children, title }: GarantiasLayoutProps) {
   
   const tabs = [
     { name: 'Novo Registro de Garantia', href: '/garantias/nova', icon: Plus },
-    { name: 'Contatos - Ativos', href: '/garantias/contatos-ativos', icon: Clock },
     { name: 'Em Andamento', href: '/garantias/em-andamento', icon: Clock },
+    { name: 'Contatos - Ativos', href: '/garantias/contatos-ativos', icon: Phone },
     { name: 'Histórico', href: '/garantias/historico', icon: History },
     { name: 'Garantia Extendida', href: '/garantias/extendida', icon: Star },
   ];

@@ -9,28 +9,39 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Eye, FileText, Plus } from 'lucide-react';
+import { Eye, FileText, Plus, Download } from 'lucide-react';
 import { getVendas, Venda } from '@/utils/vendasApi';
-import { getLojas } from '@/utils/cadastrosApi';
+import { getLojas, getColaboradores, getColaboradorById } from '@/utils/cadastrosApi';
 import { 
   getGarantiasByVendaId, addGarantia, addTimelineEntry, calcularStatusExpiracao
 } from '@/utils/garantiasApi';
 import { format, addMonths } from 'date-fns';
+import { formatIMEI, displayIMEI } from '@/utils/imeiMask';
+import { exportToCSV } from '@/utils/formatUtils';
 
 export default function GarantiasNova() {
   const navigate = useNavigate();
   const lojas = getLojas();
   const vendas = getVendas();
+  const colaboradores = getColaboradores().filter(c => c.status === 'Ativo');
+  
+  // Filtra apenas vendedores (cargo de vendedor)
+  const vendedores = colaboradores.filter(c => c.cargo === 'CARGO-004');
   
   // Estados
   const [buscaImei, setBuscaImei] = useState('');
   const [buscaCliente, setBuscaCliente] = useState('');
   const [buscaLoja, setBuscaLoja] = useState('');
+  const [buscaVendedor, setBuscaVendedor] = useState('');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   
   // Helpers
   const getLojaName = (id: string) => lojas.find(l => l.id === id)?.nome || id;
+  const getVendedorNome = (id: string) => {
+    const colaborador = getColaboradorById(id);
+    return colaborador?.nome || id;
+  };
   
   // Flatten vendas para exibir uma linha por item (IMEI)
   const vendasComItens = useMemo(() => {
@@ -68,14 +79,18 @@ export default function GarantiasNova() {
   // Filtrar vendas
   const vendasFiltradas = useMemo(() => {
     return vendasComItens.filter(({ venda, item }) => {
-      // Filtrar por IMEI
-      if (buscaImei && !item.imei.includes(buscaImei)) return false;
+      // Filtrar por IMEI (sem máscara para comparação)
+      const imeiLimpo = buscaImei.replace(/\D/g, '');
+      if (imeiLimpo && !item.imei.includes(imeiLimpo)) return false;
       
       // Filtrar por cliente
       if (buscaCliente && !venda.clienteNome.toLowerCase().includes(buscaCliente.toLowerCase())) return false;
       
       // Filtrar por loja
       if (buscaLoja && venda.lojaVenda !== buscaLoja) return false;
+      
+      // Filtrar por vendedor
+      if (buscaVendedor && venda.vendedor !== buscaVendedor) return false;
       
       // Filtrar por data
       if (dataInicio) {
@@ -91,7 +106,7 @@ export default function GarantiasNova() {
       
       return true;
     });
-  }, [vendasComItens, buscaImei, buscaCliente, buscaLoja, dataInicio, dataFim]);
+  }, [vendasComItens, buscaImei, buscaCliente, buscaLoja, buscaVendedor, dataInicio, dataFim]);
   
   // Ver detalhes - navegar para página de garantia
   const handleVerDetalhes = (venda: Venda, item: any) => {
@@ -157,11 +172,34 @@ export default function GarantiasNova() {
     }
   };
 
+  // Exportar para CSV
+  const handleExportCSV = () => {
+    const dataExport = vendasFiltradas.map(({ venda, item }) => ({
+      'ID Venda': venda.id,
+      'Data': format(new Date(venda.dataHora), 'dd/MM/yyyy'),
+      'Loja': getLojaName(venda.lojaVenda),
+      'Vendedor': getVendedorNome(venda.vendedor),
+      'Cliente': venda.clienteNome,
+      'Modelo': item.produto,
+      'IMEI': displayIMEI(item.imei),
+      'Resp. Garantia': item.tipoGarantia,
+      'Data Fim Garantia': format(new Date(item.dataFimGarantia), 'dd/MM/yyyy')
+    }));
+    
+    const hoje = format(new Date(), 'dd_MM_yyyy');
+    exportToCSV(dataExport, `historico_vendas_garantia_${hoje}.csv`);
+    toast.success('CSV exportado com sucesso!');
+  };
+
   return (
     <GarantiasLayout title="Novo Registro de Garantia">
       <div className="space-y-6">
         {/* Botão Nova Garantia Manual */}
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
           <Button onClick={() => navigate('/garantias/nova/manual')}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Garantia
@@ -177,14 +215,14 @@ export default function GarantiasNova() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Filtros inline - Loja antes das datas */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {/* Filtros inline - Com Vendedor */}
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
               <div>
                 <Label>IMEI</Label>
                 <Input 
                   placeholder="Buscar IMEI..."
                   value={buscaImei}
-                  onChange={(e) => setBuscaImei(e.target.value)}
+                  onChange={(e) => setBuscaImei(formatIMEI(e.target.value))}
                 />
               </div>
               <div>
@@ -205,6 +243,20 @@ export default function GarantiasNova() {
                     <SelectItem value="all">Todas as Lojas</SelectItem>
                     {lojas.map(l => (
                       <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Vendedor</Label>
+                <Select value={buscaVendedor || 'all'} onValueChange={(v) => setBuscaVendedor(v === 'all' ? '' : v)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os Vendedores" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Vendedores</SelectItem>
+                    {vendedores.map(v => (
+                      <SelectItem key={v.id} value={v.id}>{v.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -236,6 +288,7 @@ export default function GarantiasNova() {
                       <TableHead>ID Venda</TableHead>
                       <TableHead>Data</TableHead>
                       <TableHead>Loja</TableHead>
+                      <TableHead>Vendedor</TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Modelo</TableHead>
                       <TableHead>IMEI</TableHead>
@@ -250,9 +303,10 @@ export default function GarantiasNova() {
                         <TableCell className="font-medium">{venda.id}</TableCell>
                         <TableCell>{format(new Date(venda.dataHora), 'dd/MM/yyyy')}</TableCell>
                         <TableCell>{getLojaName(venda.lojaVenda)}</TableCell>
+                        <TableCell>{getVendedorNome(venda.vendedor)}</TableCell>
                         <TableCell>{venda.clienteNome}</TableCell>
                         <TableCell>{item.produto}</TableCell>
-                        <TableCell className="font-mono text-xs">{item.imei}</TableCell>
+                        <TableCell className="font-mono text-xs">{displayIMEI(item.imei)}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{item.tipoGarantia}</Badge>
                         </TableCell>
@@ -275,7 +329,7 @@ export default function GarantiasNova() {
                     ))}
                     {vendasFiltradas.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                           Nenhuma venda encontrada com os filtros aplicados
                         </TableCell>
                       </TableRow>

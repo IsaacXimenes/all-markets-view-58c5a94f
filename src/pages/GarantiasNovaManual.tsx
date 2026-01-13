@@ -230,7 +230,7 @@ export default function GarantiasNovaManual() {
         </Button>
         <Button onClick={handleSalvar}>
           <Save className="h-4 w-4 mr-2" />
-          Registrar Garantia
+          Salvar Registro
         </Button>
       </div>
 

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Download, Edit, Plus, Trash2, CreditCard } from 'lucide-react';
+import { Download, Edit, Plus, Trash2, CreditCard, Percent } from 'lucide-react';
 import { 
   getMaquinasCartao, 
   addMaquinaCartao, 
@@ -29,12 +29,17 @@ export default function CadastrosMaquinas() {
   const contasFinanceiras = getContasFinanceiras().filter(c => c.status === 'Ativo');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMaquina, setEditingMaquina] = useState<MaquinaCartao | null>(null);
+  
+  // Edição inline de percentual
+  const [editingPercentual, setEditingPercentual] = useState<string | null>(null);
+  const [tempPercentual, setTempPercentual] = useState<string>('');
 
   const [form, setForm] = useState({
     nome: '',
     cnpjVinculado: '',
     contaOrigem: '',
-    status: 'Ativo' as MaquinaCartao['status']
+    status: 'Ativo' as MaquinaCartao['status'],
+    percentualMaquina: 2
   });
 
   const resetForm = () => {
@@ -42,7 +47,8 @@ export default function CadastrosMaquinas() {
       nome: '',
       cnpjVinculado: '',
       contaOrigem: '',
-      status: 'Ativo'
+      status: 'Ativo',
+      percentualMaquina: 2
     });
     setEditingMaquina(null);
   };
@@ -54,7 +60,8 @@ export default function CadastrosMaquinas() {
         nome: maquina.nome,
         cnpjVinculado: maquina.cnpjVinculado,
         contaOrigem: maquina.contaOrigem,
-        status: maquina.status
+        status: maquina.status,
+        percentualMaquina: maquina.percentualMaquina || maquina.taxas?.debito || 2
       });
     } else {
       resetForm();
@@ -71,7 +78,7 @@ export default function CadastrosMaquinas() {
     // Taxas padrão para novas máquinas
     const defaultTaxas = {
       credito: { 1: 2, 2: 4, 3: 6, 4: 8, 5: 10, 6: 12, 7: 14, 8: 16, 9: 18, 10: 20, 11: 22, 12: 24 },
-      debito: 2
+      debito: form.percentualMaquina
     };
 
     const maquinaData = {
@@ -79,6 +86,7 @@ export default function CadastrosMaquinas() {
       cnpjVinculado: form.cnpjVinculado,
       contaOrigem: form.contaOrigem,
       status: form.status,
+      percentualMaquina: form.percentualMaquina,
       taxas: editingMaquina?.taxas || defaultTaxas
     };
 
@@ -113,11 +121,37 @@ export default function CadastrosMaquinas() {
         'Loja Vinculada': loja?.nome || m.cnpjVinculado,
         'CNPJ': loja?.cnpj || '-',
         'Conta de Origem': conta?.nome || m.contaOrigem,
+        '% da Máquina': `${m.percentualMaquina || m.taxas?.debito || 2}%`,
         Status: m.status
       };
     });
     exportToCSV(data, `maquinas-cartao-${new Date().toISOString().split('T')[0]}.csv`);
     toast.success('Máquinas exportadas com sucesso!');
+  };
+
+  // Handlers para edição inline de percentual
+  const handleStartEditPercentual = (maquina: MaquinaCartao) => {
+    setEditingPercentual(maquina.id);
+    setTempPercentual(String(maquina.percentualMaquina || maquina.taxas?.debito || 2));
+  };
+
+  const handleSavePercentual = (maquinaId: string) => {
+    const valor = parseFloat(tempPercentual);
+    if (isNaN(valor) || valor < 0 || valor > 100) {
+      toast.error('O percentual deve ser um número entre 0 e 100');
+      return;
+    }
+    
+    updateMaquinaCartao(maquinaId, { percentualMaquina: valor });
+    setMaquinas(getMaquinasCartao());
+    setEditingPercentual(null);
+    setTempPercentual('');
+    toast.success('Percentual atualizado com sucesso!');
+  };
+
+  const handleCancelEditPercentual = () => {
+    setEditingPercentual(null);
+    setTempPercentual('');
   };
 
   return (
@@ -187,6 +221,25 @@ export default function CadastrosMaquinas() {
                       </Select>
                     </div>
                     <div>
+                      <Label>% da Máquina *</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={form.percentualMaquina}
+                          onChange={(e) => setForm({ ...form, percentualMaquina: parseFloat(e.target.value) || 0 })}
+                          placeholder="2"
+                          className="w-24"
+                        />
+                        <span className="text-muted-foreground">%</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Taxa percentual padrão da máquina (0-100)
+                      </p>
+                    </div>
+                    <div>
                       <Label>Status *</Label>
                       <Select value={form.status} onValueChange={(value: MaquinaCartao['status']) => setForm({ ...form, status: value })}>
                         <SelectTrigger>
@@ -222,6 +275,7 @@ export default function CadastrosMaquinas() {
                   <TableHead>Loja Vinculada</TableHead>
                   <TableHead>CNPJ</TableHead>
                   <TableHead>Conta de Origem</TableHead>
+                  <TableHead>% da Máquina</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
@@ -230,6 +284,8 @@ export default function CadastrosMaquinas() {
                 {maquinas.map((maquina) => {
                   const loja = getLojaById(maquina.cnpjVinculado);
                   const conta = getContaFinanceiraById(maquina.contaOrigem);
+                  const percentual = maquina.percentualMaquina ?? maquina.taxas?.debito ?? 2;
+                  
                   return (
                     <TableRow key={maquina.id}>
                       <TableCell className="font-mono text-xs">{maquina.id}</TableCell>
@@ -237,6 +293,43 @@ export default function CadastrosMaquinas() {
                       <TableCell>{loja?.nome || maquina.cnpjVinculado}</TableCell>
                       <TableCell className="font-mono text-xs">{loja?.cnpj || '-'}</TableCell>
                       <TableCell>{conta?.nome || maquina.contaOrigem}</TableCell>
+                      <TableCell>
+                        {editingPercentual === maquina.id ? (
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              value={tempPercentual}
+                              onChange={(e) => setTempPercentual(e.target.value)}
+                              className="w-16 h-8 text-xs"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSavePercentual(maquina.id);
+                                if (e.key === 'Escape') handleCancelEditPercentual();
+                              }}
+                            />
+                            <span className="text-xs">%</span>
+                            <Button size="sm" variant="ghost" className="h-6 px-2" onClick={() => handleSavePercentual(maquina.id)}>
+                              ✓
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-6 px-2" onClick={handleCancelEditPercentual}>
+                              ✕
+                            </Button>
+                          </div>
+                        ) : (
+                          <div 
+                            className="flex items-center gap-1 cursor-pointer hover:bg-muted/50 px-2 py-1 rounded transition-colors"
+                            onClick={() => handleStartEditPercentual(maquina)}
+                            title="Clique para editar"
+                          >
+                            <Percent className="h-3 w-3 text-muted-foreground" />
+                            <span className="font-medium">{percentual}%</span>
+                            <Edit className="h-3 w-3 text-muted-foreground ml-1 opacity-0 group-hover:opacity-100" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge variant={maquina.status === 'Ativo' ? 'default' : 'secondary'}>
                           {maquina.status}

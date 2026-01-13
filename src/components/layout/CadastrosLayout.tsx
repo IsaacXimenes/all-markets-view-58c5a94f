@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { Store, Users, UserCog, Truck, ShoppingCart, Package, Percent, Briefcase, CreditCard, Building2, Wrench, Headphones, Shield } from 'lucide-react';
+import { Store, Users, UserCog, Truck, ShoppingCart, Package, Percent, Briefcase, CreditCard, Building2, Wrench, Headphones, Shield, Palette } from 'lucide-react';
 
 interface CadastrosLayoutProps {
   children: React.ReactNode;
@@ -20,6 +20,7 @@ export function CadastrosLayout({ children, title }: CadastrosLayoutProps) {
     { name: 'Aparelhos', href: '/cadastros/produtos', icon: Package },
     { name: 'Peças', href: '/cadastros/pecas', icon: Wrench },
     { name: 'Acessórios', href: '/cadastros/acessorios', icon: Headphones },
+    { name: 'Cores', href: '/cadastros/cores', icon: Palette },
     { name: 'Máquinas', href: '/cadastros/maquinas', icon: CreditCard },
     { name: 'Tipos de Desconto', href: '/cadastros/tipos-desconto', icon: Percent },
     { name: 'Cargos', href: '/cadastros/cargos', icon: Briefcase },
