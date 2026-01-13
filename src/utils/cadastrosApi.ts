@@ -120,6 +120,7 @@ export interface MaquinaCartao {
   cnpjVinculado: string; // ID da loja
   contaOrigem: string;   // ID da conta financeira
   status: 'Ativo' | 'Inativo';
+  percentualMaquina?: number; // % da Máquina (0-100)
   taxas: {
     credito: { [parcela: number]: number }; // Ex: { 1: 2, 2: 4, 3: 6, ... }
     debito: number; // Taxa fixa
@@ -309,6 +310,7 @@ let maquinasCartao: MaquinaCartao[] = [
     cnpjVinculado: 'LOJA-004', 
     contaOrigem: 'CTA-005', 
     status: 'Ativo',
+    percentualMaquina: 2.5,
     taxas: {
       credito: { 1: 3, 2: 5, 3: 7, 4: 9, 5: 11, 6: 13, 7: 15, 8: 17, 9: 19, 10: 21, 11: 23, 12: 25 },
       debito: 2
@@ -320,6 +322,7 @@ let maquinasCartao: MaquinaCartao[] = [
     cnpjVinculado: 'LOJA-003', 
     contaOrigem: 'CTA-003', 
     status: 'Ativo',
+    percentualMaquina: 1.99,
     taxas: {
       credito: { 1: 2, 2: 4, 3: 6, 4: 8, 5: 10, 6: 12, 7: 14, 8: 16, 9: 18, 10: 20, 11: 22, 12: 24 },
       debito: 2
@@ -331,6 +334,7 @@ let maquinasCartao: MaquinaCartao[] = [
     cnpjVinculado: 'LOJA-006', 
     contaOrigem: 'CTA-004', 
     status: 'Ativo',
+    percentualMaquina: 3,
     taxas: {
       credito: { 1: 3, 2: 5, 3: 7, 4: 9, 5: 11, 6: 13, 7: 15, 8: 17, 9: 19, 10: 21, 11: 23, 12: 25 },
       debito: 2
@@ -342,6 +346,7 @@ let maquinasCartao: MaquinaCartao[] = [
     cnpjVinculado: 'LOJA-007', 
     contaOrigem: 'CTA-002', 
     status: 'Ativo',
+    percentualMaquina: 2.2,
     taxas: {
       credito: { 1: 2, 2: 4, 3: 6, 4: 8, 5: 10, 6: 12, 7: 14, 8: 16, 9: 18, 10: 20, 11: 22, 12: 24 },
       debito: 2
