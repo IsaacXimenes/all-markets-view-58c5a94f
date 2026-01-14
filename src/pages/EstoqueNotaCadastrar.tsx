@@ -13,24 +13,25 @@ import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { addNotaCompra, getNotasCompra } from '@/utils/estoqueApi';
 import { getProdutosCadastro, getFornecedores } from '@/utils/cadastrosApi';
 import { getCores } from '@/utils/coresApi';
+import { getAcessorios } from '@/utils/acessoriosApi';
 import { toast } from 'sonner';
 import { InputComMascara } from '@/components/ui/InputComMascara';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 
 interface ProdutoLinha {
+  tipoProduto: 'Aparelho' | 'Acessório';
   marca: string;
   imei: string;
   modelo: string;
   cor: string;
   categoria: 'Novo' | 'Seminovo';
-  tipo: 'Aparelho' | 'Acessórios' | 'Peças';
   quantidade: number;
   custoUnitario: number;
   custoTotal: number;
 }
 
-// Marcas disponíveis
-const marcasDisponiveis = ['Apple', 'Samsung', 'Xiaomi', 'Motorola', 'LG', 'Huawei', 'OnePlus', 'Realme', 'ASUS', 'Nokia', 'Oppo', 'Vivo'];
+// Marcas de aparelhos
+const marcasAparelhos = ['Apple', 'Samsung', 'Xiaomi', 'Motorola', 'LG', 'Huawei', 'OnePlus', 'Realme', 'ASUS', 'Nokia', 'Oppo', 'Vivo'];
 
 // Gerar número de nota automático
 const gerarNumeroNota = (notasExistentes: number): string => {
@@ -44,6 +45,7 @@ export default function EstoqueNotaCadastrar() {
   const fornecedores = getFornecedores();
   const produtosCadastro = getProdutosCadastro();
   const coresCadastradas = getCores();
+  const acessoriosCadastrados = getAcessorios();
   const notasExistentes = getNotasCompra();
   
   const [fornecedor, setFornecedor] = useState('');
@@ -56,12 +58,12 @@ export default function EstoqueNotaCadastrar() {
   
   const [produtos, setProdutos] = useState<ProdutoLinha[]>([
     {
+      tipoProduto: 'Aparelho',
       marca: 'Apple',
       imei: '',
       modelo: '',
       cor: '',
-      categoria: 'Novo',
-      tipo: 'Aparelho',
+      categoria: 'Novo', // Categoria "NOVO" pré-selecionada
       quantidade: 1,
       custoUnitario: 0,
       custoTotal: 0
@@ -73,21 +75,32 @@ export default function EstoqueNotaCadastrar() {
     setNumeroNota(gerarNumeroNota(notasExistentes.length));
   }, [notasExistentes.length]);
 
-  // Modelos filtrados por marca
-  const getModelosFiltrados = (marca: string) => {
+  // Extrair categorias únicas de acessórios cadastrados (usadas como "marca")
+  const marcasAcessorios = useMemo(() => {
+    const categorias = new Set(acessoriosCadastrados.map(a => a.categoria));
+    return Array.from(categorias);
+  }, [acessoriosCadastrados]);
+
+  // Modelos de aparelhos filtrados por marca
+  const getModelosAparelhos = (marca: string) => {
     return produtosCadastro.filter(p => p.marca.toLowerCase() === marca.toLowerCase());
+  };
+
+  // Acessórios filtrados por categoria
+  const getModelosAcessorios = (categoria: string) => {
+    return acessoriosCadastrados.filter(a => a.categoria.toLowerCase() === categoria.toLowerCase());
   };
 
   const adicionarProduto = () => {
     setProdutos([
       ...produtos,
       {
+        tipoProduto: 'Aparelho',
         marca: 'Apple',
         imei: '',
         modelo: '',
         cor: '',
-        categoria: 'Novo',
-        tipo: 'Aparelho',
+        categoria: 'Novo', // Categoria "NOVO" pré-selecionada
         quantidade: 1,
         custoUnitario: 0,
         custoTotal: 0
@@ -105,8 +118,24 @@ export default function EstoqueNotaCadastrar() {
     const novosProdutos = [...produtos];
     novosProdutos[index] = { ...novosProdutos[index], [campo]: valor };
     
+    // Ao mudar tipo de produto, resetar marca e modelo
+    if (campo === 'tipoProduto') {
+      novosProdutos[index].marca = valor === 'Aparelho' ? 'Apple' : (marcasAcessorios[0] || '');
+      novosProdutos[index].modelo = '';
+      novosProdutos[index].imei = '';
+      // Se for Aparelho, quantidade fixa em 1
+      if (valor === 'Aparelho') {
+        novosProdutos[index].quantidade = 1;
+      }
+    }
+    
+    // Ao mudar marca, resetar modelo
+    if (campo === 'marca') {
+      novosProdutos[index].modelo = '';
+    }
+    
     // Se mudar tipo para Aparelho, bloquear quantidade em 1
-    if (campo === 'tipo' && valor === 'Aparelho') {
+    if (campo === 'tipoProduto' && valor === 'Aparelho') {
       novosProdutos[index].quantidade = 1;
     }
     
@@ -143,10 +172,17 @@ export default function EstoqueNotaCadastrar() {
       if (!p.modelo) camposFaltando.push(`Modelo do Produto ${i + 1}`);
       if (!p.cor) camposFaltando.push(`Cor do Produto ${i + 1}`);
       if (p.custoUnitario <= 0) camposFaltando.push(`Custo Unitário do Produto ${i + 1}`);
-      if (p.tipo === 'Aparelho' && !p.imei) camposFaltando.push(`IMEI do Produto ${i + 1} (obrigatório para Aparelhos)`);
+      if (p.tipoProduto === 'Aparelho' && !p.imei) camposFaltando.push(`IMEI do Produto ${i + 1} (obrigatório para Aparelhos)`);
     });
     
     return camposFaltando;
+  };
+
+  // Correção: usar a data exata informada sem ajuste de timezone
+  const formatarDataParaSalvar = (dataStr: string): string => {
+    // A data vem no formato YYYY-MM-DD do input date
+    // Retornar no mesmo formato para evitar problemas de timezone
+    return dataStr;
   };
 
   const handleSalvar = () => {
@@ -159,8 +195,20 @@ export default function EstoqueNotaCadastrar() {
       return;
     }
 
+    // Validar que a data não seja no futuro
+    const dataInformada = new Date(dataEntrada + 'T12:00:00'); // Usar meio-dia para evitar problemas de timezone
+    const hoje = new Date();
+    hoje.setHours(23, 59, 59, 999);
+    
+    if (dataInformada > hoje) {
+      toast.error('Data inválida', {
+        description: 'A data de entrada não pode ser no futuro'
+      });
+      return;
+    }
+
     const novaNota = addNotaCompra({
-      data: dataEntrada,
+      data: formatarDataParaSalvar(dataEntrada),
       numeroNota,
       fornecedor,
       valorTotal: calcularValorTotal(),
@@ -170,7 +218,7 @@ export default function EstoqueNotaCadastrar() {
         cor: p.cor,
         imei: p.imei || 'N/A',
         tipo: p.categoria,
-        tipoProduto: p.tipo,
+        tipoProduto: p.tipoProduto,
         quantidade: p.quantidade,
         valorUnitario: p.custoUnitario,
         valorTotal: p.custoTotal,
@@ -180,7 +228,7 @@ export default function EstoqueNotaCadastrar() {
         formaPagamento,
         parcelas: 1,
         valorParcela: calcularValorTotal(),
-        dataVencimento: dataEntrada
+        dataVencimento: formatarDataParaSalvar(dataEntrada)
       } : undefined
     });
 
@@ -253,7 +301,7 @@ export default function EstoqueNotaCadastrar() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Tipo *</TableHead>
+                    <TableHead>Tipo Produto *</TableHead>
                     <TableHead>Marca *</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>Modelo *</TableHead>
@@ -268,45 +316,53 @@ export default function EstoqueNotaCadastrar() {
                 <TableBody>
                   {produtos.map((produto, index) => (
                     <TableRow key={index}>
+                      {/* Tipo de Produto */}
                       <TableCell>
                         <Select 
-                          value={produto.tipo}
-                          onValueChange={(value) => atualizarProduto(index, 'tipo', value)}
+                          value={produto.tipoProduto}
+                          onValueChange={(value) => atualizarProduto(index, 'tipoProduto', value)}
                         >
                           <SelectTrigger className="w-28">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Aparelho">Aparelho</SelectItem>
-                            <SelectItem value="Acessórios">Acessórios</SelectItem>
-                            <SelectItem value="Peças">Peças</SelectItem>
+                            <SelectItem value="Acessório">Acessório</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      {/* Marca - filtrada por tipo de produto */}
                       <TableCell>
                         <Select 
                           value={produto.marca}
                           onValueChange={(value) => atualizarProduto(index, 'marca', value)}
                         >
                           <SelectTrigger className="w-28">
-                            <SelectValue />
+                            <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                           <SelectContent>
-                            {marcasDisponiveis.map(marca => (
-                              <SelectItem key={marca} value={marca}>{marca}</SelectItem>
-                            ))}
+                            {produto.tipoProduto === 'Aparelho' 
+                              ? marcasAparelhos.map(marca => (
+                                  <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                                ))
+                              : marcasAcessorios.map(marca => (
+                                  <SelectItem key={marca} value={marca}>{marca}</SelectItem>
+                                ))
+                            }
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      {/* IMEI - apenas para aparelhos */}
                       <TableCell>
                         <InputComMascara 
                           mascara="imei"
                           value={produto.imei}
                           onChange={(formatted, raw) => handleIMEIChange(index, formatted, raw)}
                           className="w-36"
-                          disabled={produto.tipo !== 'Aparelho'}
+                          disabled={produto.tipoProduto !== 'Aparelho'}
                         />
                       </TableCell>
+                      {/* Modelo - filtrado por tipo e marca */}
                       <TableCell>
                         <Select 
                           value={produto.modelo}
@@ -316,12 +372,18 @@ export default function EstoqueNotaCadastrar() {
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                           <SelectContent>
-                            {getModelosFiltrados(produto.marca).map(p => (
-                              <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
-                            ))}
+                            {produto.tipoProduto === 'Aparelho'
+                              ? getModelosAparelhos(produto.marca).map(p => (
+                                  <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
+                                ))
+                              : getModelosAcessorios(produto.marca).map(a => (
+                                  <SelectItem key={a.id} value={a.descricao}>{a.descricao}</SelectItem>
+                                ))
+                            }
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      {/* Cor */}
                       <TableCell>
                         <Select 
                           value={produto.cor}
@@ -345,6 +407,7 @@ export default function EstoqueNotaCadastrar() {
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      {/* Categoria - NOVO pré-selecionado */}
                       <TableCell>
                         <Select 
                           value={produto.categoria}
@@ -359,6 +422,7 @@ export default function EstoqueNotaCadastrar() {
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      {/* Quantidade */}
                       <TableCell>
                         <Input 
                           type="number"
@@ -366,9 +430,10 @@ export default function EstoqueNotaCadastrar() {
                           value={produto.quantidade}
                           onChange={(e) => atualizarProduto(index, 'quantidade', parseInt(e.target.value) || 1)}
                           className="w-16"
-                          disabled={produto.tipo === 'Aparelho'}
+                          disabled={produto.tipoProduto === 'Aparelho'}
                         />
                       </TableCell>
+                      {/* Custo Unitário */}
                       <TableCell>
                         <InputComMascara
                           mascara="moeda"
@@ -377,9 +442,11 @@ export default function EstoqueNotaCadastrar() {
                           className="w-32"
                         />
                       </TableCell>
+                      {/* Custo Total */}
                       <TableCell className="font-semibold">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(produto.custoTotal)}
                       </TableCell>
+                      {/* Remover */}
                       <TableCell>
                         <Button 
                           variant="ghost" 

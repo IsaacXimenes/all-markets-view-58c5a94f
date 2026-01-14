@@ -1,18 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { getMovimentacoes, addMovimentacao } from '@/utils/estoqueApi';
+import { getMovimentacoes, addMovimentacao, getProdutos, Produto } from '@/utils/estoqueApi';
 import { getLojas, getLojaById, getColaboradores } from '@/utils/cadastrosApi';
 import { exportToCSV } from '@/utils/formatUtils';
-import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
+import { formatIMEI, unformatIMEI, isValidIMEI } from '@/utils/imeiMask';
 import { InputComMascara } from '@/components/ui/InputComMascara';
-import { Download, Plus } from 'lucide-react';
+import { Download, Plus, AlertCircle } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+
+// Função para buscar modelo por IMEI no estoque
+const obterModeloPorIMEI = (imei: string): { modelo: string; produto: Produto } | null => {
+  const produtos = getProdutos();
+  const imeiLimpo = unformatIMEI(imei);
+  const produtoEncontrado = produtos.find(p => unformatIMEI(p.imei) === imeiLimpo);
+  if (produtoEncontrado) {
+    return { modelo: `${produtoEncontrado.marca} ${produtoEncontrado.modelo}`, produto: produtoEncontrado };
+  }
+  return null;
+};
 
 export default function EstoqueMovimentacoes() {
   const [movimentacoes, setMovimentacoes] = useState(getMovimentacoes());
@@ -24,17 +36,20 @@ export default function EstoqueMovimentacoes() {
   const lojas = getLojas().filter(l => l.status === 'Ativo');
   const colaboradores = getColaboradores().filter(c => c.status === 'Ativo');
 
-  // Form state
+  // Form state - nova ordem: IMEI, Modelo, Responsável, Data, Observações
   const [formData, setFormData] = useState({
-    data: '',
-    produto: '',
     imei: '',
-    quantidade: '1',
+    produto: '',
+    responsavel: '',
+    data: '',
+    motivo: '',
     origem: '',
     destino: '',
-    responsavel: '',
-    motivo: ''
+    quantidade: '1'
   });
+  
+  const [imeiEncontrado, setImeiEncontrado] = useState<boolean | null>(null);
+  const [modeloBloqueado, setModeloBloqueado] = useState(false);
 
   const getLojaNome = (lojaIdOuNome: string) => {
     // Primeiro tenta buscar por ID
@@ -62,7 +77,27 @@ export default function EstoqueMovimentacoes() {
   };
 
   const handleIMEIChange = (formatted: string, raw: string | number) => {
-    setFormData(prev => ({ ...prev, imei: String(raw) }));
+    const imeiStr = String(raw);
+    setFormData(prev => ({ ...prev, imei: imeiStr }));
+    
+    // Se IMEI completo (15 dígitos), buscar automaticamente
+    if (imeiStr.length === 15) {
+      const resultado = obterModeloPorIMEI(imeiStr);
+      if (resultado) {
+        setFormData(prev => ({ ...prev, produto: resultado.modelo }));
+        setImeiEncontrado(true);
+        setModeloBloqueado(true);
+      } else {
+        setImeiEncontrado(false);
+        setModeloBloqueado(false);
+      }
+    } else {
+      setImeiEncontrado(null);
+      if (imeiStr.length === 0) {
+        setFormData(prev => ({ ...prev, produto: '' }));
+      }
+      setModeloBloqueado(false);
+    }
   };
 
   const handleRegistrarMovimentacao = (e: React.FormEvent<HTMLFormElement>) => {
@@ -72,6 +107,15 @@ export default function EstoqueMovimentacoes() {
       toast({
         title: 'Campo obrigatório',
         description: 'Selecione um responsável',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    if (!formData.imei || formData.imei.length !== 15) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'IMEI deve ter 15 dígitos',
         variant: 'destructive'
       });
       return;
@@ -91,15 +135,17 @@ export default function EstoqueMovimentacoes() {
     setMovimentacoes([...movimentacoes, novaMovimentacao]);
     setDialogOpen(false);
     setFormData({
-      data: '',
-      produto: '',
       imei: '',
-      quantidade: '1',
+      produto: '',
+      responsavel: '',
+      data: '',
+      motivo: '',
       origem: '',
       destino: '',
-      responsavel: '',
-      motivo: ''
+      quantidade: '1'
     });
+    setImeiEncontrado(null);
+    setModeloBloqueado(false);
     toast({
       title: 'Movimentação registrada',
       description: `Movimentação ${novaMovimentacao.id} registrada com sucesso`,
@@ -147,8 +193,67 @@ export default function EstoqueMovimentacoes() {
                   <DialogTitle>Registrar Movimentação</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleRegistrarMovimentacao} className="space-y-4">
+                  {/* 1. IMEI - com máscara e busca automática */}
                   <div>
-                    <Label htmlFor="data">Data *</Label>
+                    <Label htmlFor="imei">IMEI *</Label>
+                    <InputComMascara
+                      mascara="imei"
+                      value={formData.imei}
+                      onChange={handleIMEIChange}
+                      placeholder="00-000000-000000-0"
+                    />
+                    {imeiEncontrado === false && formData.imei.length === 15 && (
+                      <div className="flex items-center gap-1 mt-1 text-amber-600 text-sm">
+                        <AlertCircle className="h-4 w-4" />
+                        IMEI não encontrado no estoque
+                      </div>
+                    )}
+                    {imeiEncontrado === true && (
+                      <div className="text-green-600 text-sm mt-1">
+                        ✓ IMEI encontrado no estoque
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 2. Modelo - preenchido automaticamente, apenas leitura quando IMEI válido */}
+                  <div>
+                    <Label htmlFor="produto">Modelo *</Label>
+                    <Input 
+                      id="produto"
+                      value={formData.produto}
+                      onChange={(e) => setFormData(prev => ({ ...prev, produto: e.target.value }))}
+                      disabled={modeloBloqueado}
+                      placeholder={modeloBloqueado ? '' : 'Digite o modelo ou insira o IMEI acima'}
+                      required 
+                    />
+                    {modeloBloqueado && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Modelo preenchido automaticamente pelo IMEI
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 3. Responsável */}
+                  <div>
+                    <Label htmlFor="responsavel">Responsável *</Label>
+                    <Select 
+                      value={formData.responsavel}
+                      onValueChange={(v) => setFormData(prev => ({ ...prev, responsavel: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o colaborador" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {colaboradores.map(col => (
+                          <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* 4. Data da Movimentação */}
+                  <div>
+                    <Label htmlFor="data">Data da Movimentação *</Label>
                     <Input 
                       id="data" 
                       type="date" 
@@ -158,37 +263,7 @@ export default function EstoqueMovimentacoes() {
                     />
                   </div>
 
-                  <div>
-                    <Label htmlFor="produto">Produto *</Label>
-                    <Input 
-                      id="produto"
-                      value={formData.produto}
-                      onChange={(e) => setFormData(prev => ({ ...prev, produto: e.target.value }))}
-                      required 
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="imei">IMEI *</Label>
-                    <InputComMascara
-                      mascara="imei"
-                      value={formData.imei}
-                      onChange={handleIMEIChange}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="quantidade">Quantidade *</Label>
-                    <Input 
-                      id="quantidade" 
-                      type="number" 
-                      value={formData.quantidade}
-                      onChange={(e) => setFormData(prev => ({ ...prev, quantidade: e.target.value }))}
-                      min="1"
-                      required 
-                    />
-                  </div>
-
+                  {/* Origem e Destino */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="origem">Origem *</Label>
@@ -225,38 +300,24 @@ export default function EstoqueMovimentacoes() {
                     </div>
                   </div>
 
+                  {/* 5. Observações (opcional) */}
                   <div>
-                    <Label htmlFor="responsavel">Responsável *</Label>
-                    <Select 
-                      value={formData.responsavel}
-                      onValueChange={(v) => setFormData(prev => ({ ...prev, responsavel: v }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o colaborador" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {colaboradores.map(col => (
-                          <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="motivo">Motivo *</Label>
-                    <Input 
+                    <Label htmlFor="motivo">Observações</Label>
+                    <Textarea 
                       id="motivo"
                       value={formData.motivo}
                       onChange={(e) => setFormData(prev => ({ ...prev, motivo: e.target.value }))}
-                      required 
+                      placeholder="Observações adicionais (opcional)"
+                      rows={3}
                     />
                   </div>
 
+                  {/* 6. Botões de ação */}
                   <div className="flex justify-end gap-2">
                     <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                       Cancelar
                     </Button>
-                    <Button type="submit">Registrar</Button>
+                    <Button type="submit">Salvar</Button>
                   </div>
                 </form>
               </DialogContent>
@@ -274,28 +335,26 @@ export default function EstoqueMovimentacoes() {
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Produto</TableHead>
                 <TableHead>IMEI</TableHead>
-                <TableHead>Qtd</TableHead>
+                <TableHead>Modelo</TableHead>
+                <TableHead>Responsável</TableHead>
+                <TableHead>Data</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead>Destino</TableHead>
-                <TableHead>Responsável</TableHead>
-                <TableHead>Motivo</TableHead>
+                <TableHead>Observações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {movimentacoesFiltradas.map(mov => (
                 <TableRow key={mov.id}>
                   <TableCell className="font-mono text-xs">{mov.id}</TableCell>
-                  <TableCell>{new Date(mov.data).toLocaleDateString('pt-BR')}</TableCell>
-                  <TableCell>{mov.produto}</TableCell>
                   <TableCell className="font-mono text-xs">{formatIMEI(mov.imei)}</TableCell>
-                  <TableCell>{mov.quantidade}</TableCell>
+                  <TableCell>{mov.produto}</TableCell>
+                  <TableCell>{mov.responsavel}</TableCell>
+                  <TableCell>{new Date(mov.data).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell>{getLojaNome(mov.origem)}</TableCell>
                   <TableCell>{getLojaNome(mov.destino)}</TableCell>
-                  <TableCell>{mov.responsavel}</TableCell>
-                  <TableCell>{mov.motivo}</TableCell>
+                  <TableCell className="max-w-[200px] truncate" title={mov.motivo}>{mov.motivo}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

@@ -29,6 +29,14 @@ import { formatIMEI } from '@/utils/imeiMask';
 
 import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 
+// Tipos de status disponíveis
+type StatusAparelhosPendentes = 
+  | 'Pendente Estoque' 
+  | 'Em Análise Assistência' 
+  | 'Aguardando Peça' 
+  | 'Retornado da Assistência' 
+  | 'Devolvido para Fornecedor';
+
 export default function EstoqueProdutosPendentes() {
   const navigate = useNavigate();
   const [produtosPendentes, setProdutosPendentes] = useState<ProdutoPendente[]>([]);
@@ -62,8 +70,12 @@ export default function EstoqueProdutosPendentes() {
       if (filters.modelo && !produto.modelo.toLowerCase().includes(filters.modelo.toLowerCase())) return false;
       if (filters.loja !== 'todas' && produto.loja !== filters.loja) return false;
       if (filters.status !== 'todos' && produto.statusGeral !== filters.status) return false;
-      // Filtro de fornecedor - aqui você precisaria ter o campo fornecedor no produto
-      // Por ora, vamos simular
+      // Filtro de fornecedor
+      if (filters.fornecedor !== 'todos') {
+        // Verificar se o produto tem um fornecedor associado
+        const produtoFornecedor = (produto as any).fornecedor || (produto as any).fornecedorId;
+        if (produtoFornecedor !== filters.fornecedor) return false;
+      }
       return true;
     });
 
@@ -153,6 +165,12 @@ export default function EstoqueProdutosPendentes() {
     }
   };
 
+  // Obter nome do fornecedor
+  const getFornecedorNome = (fornecedorId: string) => {
+    const fornecedor = fornecedores.find(f => f.id === fornecedorId);
+    return fornecedor?.nome || fornecedorId || '-';
+  };
+
   const stats = {
     totalPendentes: filteredProdutos.length,
     pendenteEstoque: filteredProdutos.filter(p => p.statusGeral === 'Pendente Estoque').length,
@@ -171,6 +189,7 @@ export default function EstoqueProdutosPendentes() {
         Produto: `${p.marca} ${p.modelo}`,
         Cor: p.cor,
         Origem: p.origemEntrada,
+        Fornecedor: getFornecedorNome((p as any).fornecedor || (p as any).fornecedorId || ''),
         Loja: getLojaNome(p.loja),
         'Valor Custo': formatCurrency(p.valorCusto),
         'Saúde Bateria': `${p.saudeBateria}%`,
@@ -312,7 +331,7 @@ export default function EstoqueProdutosPendentes() {
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="todos">Todos os Fornecedores</SelectItem>
                   {fornecedores.map(f => (
                     <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
                   ))}
@@ -362,6 +381,7 @@ export default function EstoqueProdutosPendentes() {
                   <TableHead>IMEI</TableHead>
                   <TableHead>Produto</TableHead>
                   <TableHead>Origem</TableHead>
+                  <TableHead>Fornecedor</TableHead>
                   <TableHead>Loja</TableHead>
                   <TableHead>Valor Origem</TableHead>
                   <TableHead>SLA</TableHead>
@@ -373,7 +393,7 @@ export default function EstoqueProdutosPendentes() {
               <TableBody>
                 {filteredProdutos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                       Nenhum produto pendente de conferência
                     </TableCell>
                   </TableRow>
@@ -389,6 +409,9 @@ export default function EstoqueProdutosPendentes() {
                         </div>
                       </TableCell>
                       <TableCell>{getOrigemBadge(produto.origemEntrada)}</TableCell>
+                      <TableCell className="text-sm">
+                        {getFornecedorNome((produto as any).fornecedor || (produto as any).fornecedorId || '')}
+                      </TableCell>
                       <TableCell>{getLojaNome(produto.loja)}</TableCell>
                       <TableCell className="font-medium text-primary">{formatCurrency(produto.valorOrigem || produto.valorCusto)}</TableCell>
                       <TableCell>{getSLABadge(produto.dataEntrada)}</TableCell>
