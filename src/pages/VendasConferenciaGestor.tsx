@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Select, 
   SelectContent, 
@@ -30,7 +31,7 @@ import {
   DialogFooter,
   DialogDescription
 } from '@/components/ui/dialog';
-import { Eye, Download, Filter, X, Pencil, Check, XCircle, AlertTriangle, Clock, Undo2 } from 'lucide-react';
+import { Eye, Download, Filter, X, Pencil, Check, XCircle, AlertTriangle, Clock, Undo2, CreditCard, Banknote, Smartphone, Wallet } from 'lucide-react';
 import { useFluxoVendas } from '@/hooks/useFluxoVendas';
 import { 
   aprovarGestor, 
@@ -46,6 +47,13 @@ import { toast } from 'sonner';
 
 // Mock do usuário logado (gestor)
 const usuarioLogado = { id: 'COL-001', nome: 'João Gestor' };
+
+// Interface para validação de pagamentos
+interface ValidacaoPagamento {
+  metodoPagamento: string;
+  validadoGestor: boolean;
+  dataValidacao?: string;
+}
 
 export default function VendasConferenciaGestor() {
   const navigate = useNavigate();
@@ -68,6 +76,9 @@ export default function VendasConferenciaGestor() {
   const [modalRecusar, setModalRecusar] = useState(false);
   const [vendaSelecionada, setVendaSelecionada] = useState<VendaComFluxo | null>(null);
   const [motivoRecusa, setMotivoRecusa] = useState('');
+  
+  // Estado de validação de pagamentos
+  const [validacoesPagamento, setValidacoesPagamento] = useState<ValidacaoPagamento[]>([]);
 
   // Filtrar vendas
   const vendasFiltradas = useMemo(() => {
@@ -112,6 +123,33 @@ export default function VendasConferenciaGestor() {
     return resultado;
   }, [vendas, filtroDataInicio, filtroDataFim, filtroLoja, filtroResponsavel, filtroStatus]);
 
+  // Calcular somatórios por método de pagamento
+  const somatorioPagamentos = useMemo(() => {
+    const totais = {
+      cartaoCredito: 0,
+      cartaoDebito: 0,
+      pix: 0,
+      dinheiro: 0
+    };
+
+    vendasFiltradas.forEach(venda => {
+      venda.pagamentos?.forEach(pag => {
+        const meio = pag.meioPagamento.toLowerCase();
+        if (meio.includes('crédito') || meio.includes('credito')) {
+          totais.cartaoCredito += pag.valor;
+        } else if (meio.includes('débito') || meio.includes('debito')) {
+          totais.cartaoDebito += pag.valor;
+        } else if (meio.includes('pix')) {
+          totais.pix += pag.valor;
+        } else if (meio.includes('dinheiro')) {
+          totais.dinheiro += pag.valor;
+        }
+      });
+    });
+
+    return totais;
+  }, [vendasFiltradas]);
+
   // Contadores
   const conferenciaGestorCount = vendas.filter(v => v.statusFluxo === 'Conferência Gestor').length;
   const devolvidoFinanceiroCount = vendas.filter(v => v.statusFluxo === 'Devolvido pelo Financeiro').length;
@@ -134,6 +172,26 @@ export default function VendasConferenciaGestor() {
 
   const handleAbrirModalAprovar = (venda: VendaComFluxo) => {
     setVendaSelecionada(venda);
+    
+    // Extrair métodos de pagamento únicos da venda
+    const metodos = venda.pagamentos?.map(p => p.meioPagamento) || [];
+    const metodosUnicos = [...new Set(metodos)];
+    
+    // Carregar validações existentes do localStorage
+    const storedValidacoes = localStorage.getItem(`validacao_pagamentos_${venda.id}`);
+    const existingValidacoes = storedValidacoes ? JSON.parse(storedValidacoes) : [];
+    
+    // Criar array de validações com estado atual
+    const validacoes = metodosUnicos.map(metodo => {
+      const existing = existingValidacoes.find((v: ValidacaoPagamento) => v.metodoPagamento === metodo);
+      return {
+        metodoPagamento: metodo,
+        validadoGestor: existing?.validadoGestor || false,
+        dataValidacao: existing?.dataValidacao
+      };
+    });
+    
+    setValidacoesPagamento(validacoes);
     setModalAprovar(true);
   };
 
@@ -143,8 +201,24 @@ export default function VendasConferenciaGestor() {
     setModalRecusar(true);
   };
 
+  const handleToggleValidacao = (metodo: string) => {
+    setValidacoesPagamento(prev => 
+      prev.map(v => 
+        v.metodoPagamento === metodo 
+          ? { ...v, validadoGestor: !v.validadoGestor, dataValidacao: new Date().toISOString() }
+          : v
+      )
+    );
+  };
+
   const handleAprovarGestor = () => {
     if (!vendaSelecionada) return;
+
+    // Salvar validações de pagamento
+    localStorage.setItem(
+      `validacao_pagamentos_${vendaSelecionada.id}`,
+      JSON.stringify(validacoesPagamento)
+    );
 
     const resultado = aprovarGestor(
       vendaSelecionada.id,
@@ -156,6 +230,7 @@ export default function VendasConferenciaGestor() {
       toast.success(`Venda ${vendaSelecionada.id} aprovada! Enviada para Conferência Financeira.`);
       setModalAprovar(false);
       setVendaSelecionada(null);
+      setValidacoesPagamento([]);
       recarregar();
     } else {
       toast.error('Erro ao aprovar venda. Verifique o status.');
@@ -227,7 +302,58 @@ export default function VendasConferenciaGestor() {
 
   return (
     <VendasLayout title="Conferência de Vendas - Gestor">
-      {/* Cards de resumo */}
+      {/* Cards de somatório por método de pagamento */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <CreditCard className="h-8 w-8 text-blue-600 opacity-70" />
+              <div>
+                <p className="text-sm text-blue-700 dark:text-blue-300">Cartão de Crédito</p>
+                <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">{formatCurrency(somatorioPagamentos.cartaoCredito)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Wallet className="h-8 w-8 text-green-600 opacity-70" />
+              <div>
+                <p className="text-sm text-green-700 dark:text-green-300">Cartão de Débito</p>
+                <p className="text-2xl font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.cartaoDebito)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-950/50 dark:to-teal-900/30 border-teal-200 dark:border-teal-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Smartphone className="h-8 w-8 text-teal-600 opacity-70" />
+              <div>
+                <p className="text-sm text-teal-700 dark:text-teal-300">Pix</p>
+                <p className="text-2xl font-bold text-teal-800 dark:text-teal-200">{formatCurrency(somatorioPagamentos.pix)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/50 dark:to-amber-900/30 border-amber-200 dark:border-amber-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Banknote className="h-8 w-8 text-amber-600 opacity-70" />
+              <div>
+                <p className="text-sm text-amber-700 dark:text-amber-300">Dinheiro</p>
+                <p className="text-2xl font-bold text-amber-800 dark:text-amber-200">{formatCurrency(somatorioPagamentos.dinheiro)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Cards de resumo de status */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
@@ -469,13 +595,13 @@ export default function VendasConferenciaGestor() {
         </span>
       </div>
 
-      {/* Modal de Aprovação */}
+      {/* Modal de Aprovação com Checkboxes de Pagamento */}
       <Dialog open={modalAprovar} onOpenChange={setModalAprovar}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Aprovar Venda</DialogTitle>
             <DialogDescription>
-              Você está prestes a aprovar esta venda e enviá-la para conferência financeira.
+              Valide os métodos de pagamento e confirme a aprovação.
             </DialogDescription>
           </DialogHeader>
           
@@ -501,6 +627,35 @@ export default function VendasConferenciaGestor() {
                   </p>
                 </div>
               </div>
+
+              {/* Seção de Validação de Pagamentos */}
+              {validacoesPagamento.length > 0 && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <h4 className="font-semibold text-blue-700 dark:text-blue-400 mb-3">
+                    Validação de Métodos de Pagamento
+                  </h4>
+                  <div className="space-y-3">
+                    {validacoesPagamento.map((validacao, idx) => (
+                      <div key={idx} className="flex items-center gap-3">
+                        <Checkbox
+                          id={`pagamento-${idx}`}
+                          checked={validacao.validadoGestor}
+                          onCheckedChange={() => handleToggleValidacao(validacao.metodoPagamento)}
+                        />
+                        <Label 
+                          htmlFor={`pagamento-${idx}`}
+                          className="flex-1 cursor-pointer font-normal"
+                        >
+                          {validacao.metodoPagamento}
+                        </Label>
+                        {validacao.validadoGestor && (
+                          <Check className="h-4 w-4 text-green-600" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {vendaSelecionada.statusFluxo === 'Devolvido pelo Financeiro' && vendaSelecionada.devolucaoFinanceiro && (
                 <div className="p-4 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
