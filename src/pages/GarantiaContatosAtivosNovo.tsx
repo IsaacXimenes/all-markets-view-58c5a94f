@@ -504,6 +504,7 @@ export default function GarantiaContatosAtivosNovo() {
         {/* Quadro de Pagamentos */}
         <PagamentoQuadro
           valorTotalProdutos={planoSelecionado?.valor || 0}
+          custoTotalProdutos={0}
           onPagamentosChange={setPagamentos}
           pagamentosIniciais={pagamentos}
         />

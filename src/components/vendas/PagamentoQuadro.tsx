@@ -7,27 +7,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { toast } from '@/hooks/use-toast';
-import { CreditCard, Plus, X, AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
+import { CreditCard, Plus, X, AlertTriangle, DollarSign, TrendingUp, Percent } from 'lucide-react';
 import { getContasFinanceiras, getMaquinasCartao, ContaFinanceira, MaquinaCartao } from '@/utils/cadastrosApi';
 import { Pagamento } from '@/utils/vendasApi';
 import { formatarMoeda, moedaMask, parseMoeda } from '@/utils/formatUtils';
+import { calcularValoresVenda, getTaxaCredito, TAXA_DEBITO, MAX_PARCELAS } from '@/config/taxasCartao';
 
 export interface PagamentoQuadroProps {
   valorTotalProdutos: number;
+  custoTotalProdutos: number; // Novo: custo total dos produtos para cálculo de lucro
   onPagamentosChange: (pagamentos: Pagamento[]) => void;
-  onValoresChange?: (valores: { valorProdutos: number; valorTaxas: number }) => void;
+  onValoresChange?: (valores: { 
+    valorProdutos: number; 
+    valorTaxas: number;
+    valorLiquido: number;
+    lucroResidual: number;
+  }) => void;
   pagamentosIniciais?: Pagamento[];
 }
 
 interface NovoPagamentoState extends Partial<Pagamento> {
   maquinaId?: string;
   taxaCartao?: number;
-  valorComTaxa?: number;
+  valorLiquido?: number;
 }
 
 export function PagamentoQuadro({ 
   valorTotalProdutos, 
+  custoTotalProdutos,
   onPagamentosChange, 
   onValoresChange,
   pagamentosIniciais = []
@@ -51,15 +59,29 @@ export function PagamentoQuadro({
     onPagamentosChange(pagamentos);
   }, [pagamentos, onPagamentosChange]);
 
-  // Calcular valores totais
+  // Calcular valores totais com nova lógica
   const totalPagamentos = useMemo(() => pagamentos.reduce((acc, p) => acc + p.valor, 0), [pagamentos]);
+  
+  // Calcular taxas totais de todos os pagamentos
   const totalTaxas = useMemo(() => pagamentos.reduce((acc, p) => acc + (p.taxaCartao || 0), 0), [pagamentos]);
+  
+  // Valor Líquido = Total Pagamentos - Taxas
+  const valorLiquido = useMemo(() => totalPagamentos - totalTaxas, [totalPagamentos, totalTaxas]);
+  
+  // Lucro Residual = Valor Líquido - Custo Total dos Produtos
+  const lucroResidual = useMemo(() => valorLiquido - custoTotalProdutos, [valorLiquido, custoTotalProdutos]);
+  
   const valorPendente = useMemo(() => valorTotalProdutos - totalPagamentos, [valorTotalProdutos, totalPagamentos]);
 
   // Notificar valores para componente pai
   useEffect(() => {
-    onValoresChange?.({ valorProdutos: valorTotalProdutos, valorTaxas: totalTaxas });
-  }, [valorTotalProdutos, totalTaxas, onValoresChange]);
+    onValoresChange?.({ 
+      valorProdutos: valorTotalProdutos, 
+      valorTaxas: totalTaxas,
+      valorLiquido,
+      lucroResidual
+    });
+  }, [valorTotalProdutos, totalTaxas, valorLiquido, lucroResidual, onValoresChange]);
 
   const getContaNome = (id: string) => {
     const conta = contasFinanceiras.find(c => c.id === id);
@@ -82,7 +104,7 @@ export function PagamentoQuadro({
         fiadoNumeroParcelas: undefined, 
         maquinaId: '', 
         taxaCartao: undefined, 
-        valorComTaxa: undefined 
+        valorLiquido: undefined 
       });
     } else if (v === 'Cartão Crédito') {
       setNovoPagamento({ 
@@ -94,10 +116,9 @@ export function PagamentoQuadro({
         fiadoNumeroParcelas: undefined, 
         maquinaId: '', 
         taxaCartao: undefined, 
-        valorComTaxa: undefined 
+        valorLiquido: undefined 
       });
     } else if (v === 'Fiado') {
-      // Auto-preencher conta "Pessoal - Thiago"
       const contaPessoal = contasFinanceiras.find(c => 
         c.nome.toLowerCase().includes('pessoal') && c.nome.toLowerCase().includes('thiago')
       );
@@ -110,10 +131,11 @@ export function PagamentoQuadro({
         fiadoNumeroParcelas: 1, 
         contaDestino: contaPessoal?.id || '', 
         maquinaId: undefined, 
-        taxaCartao: undefined, 
-        valorComTaxa: undefined 
+        taxaCartao: 0, 
+        valorLiquido: novoPagamento.valor 
       });
     } else {
+      // Pix, Dinheiro, Transferência - sem taxa
       setNovoPagamento({ 
         ...novoPagamento, 
         meioPagamento: v, 
@@ -122,63 +144,58 @@ export function PagamentoQuadro({
         fiadoDataBase: undefined, 
         fiadoNumeroParcelas: undefined, 
         maquinaId: undefined, 
-        taxaCartao: undefined, 
-        valorComTaxa: undefined 
+        taxaCartao: 0, 
+        valorLiquido: novoPagamento.valor 
       });
     }
   };
 
-  const calcularTaxa = (valor: number, maquinaId: string, parcelas: number, meioPagamento: string) => {
-    const maquina = maquinasCartao.find(m => m.id === maquinaId);
-    if (!maquina || !valor) return { taxaCartao: 0, valorComTaxa: valor };
-    
-    const taxaPercent = meioPagamento === 'Cartão Débito' 
-      ? maquina.taxas.debito 
-      : (maquina.taxas.credito[parcelas] || parcelas * 2);
-    
-    const taxaCartao = valor * (taxaPercent / 100);
-    return { taxaCartao, valorComTaxa: valor + taxaCartao };
+  // Nova lógica: calcular taxa a partir do valor final (bruto)
+  const calcularTaxaDoValorFinal = (valorFinal: number, parcelas: number, meioPagamento: string) => {
+    const resultado = calcularValoresVenda(valorFinal, parcelas, custoTotalProdutos, meioPagamento);
+    return {
+      taxaPercent: resultado.taxaPercent,
+      taxaCartao: resultado.taxaMaquina,
+      valorLiquido: resultado.valorLiquido
+    };
   };
 
   const handleValorChange = (valorFormatado: string) => {
     const valorNum = parseMoeda(valorFormatado);
     
-    if (novoPagamento.maquinaId) {
-      const { taxaCartao, valorComTaxa } = calcularTaxa(
+    if (novoPagamento.meioPagamento === 'Cartão Crédito' || novoPagamento.meioPagamento === 'Cartão Débito') {
+      const { taxaCartao, valorLiquido } = calcularTaxaDoValorFinal(
         valorNum, 
-        novoPagamento.maquinaId, 
         novoPagamento.parcelas || 1, 
         novoPagamento.meioPagamento || ''
       );
-      setNovoPagamento({ ...novoPagamento, valor: valorNum, taxaCartao, valorComTaxa });
+      setNovoPagamento({ ...novoPagamento, valor: valorNum, taxaCartao, valorLiquido });
     } else {
-      setNovoPagamento({ ...novoPagamento, valor: valorNum });
+      setNovoPagamento({ ...novoPagamento, valor: valorNum, taxaCartao: 0, valorLiquido: valorNum });
     }
   };
 
   const handleMaquinaChange = (maquinaId: string) => {
-    if (novoPagamento.valor) {
-      const { taxaCartao, valorComTaxa } = calcularTaxa(
+    if (novoPagamento.valor && (novoPagamento.meioPagamento === 'Cartão Crédito' || novoPagamento.meioPagamento === 'Cartão Débito')) {
+      const { taxaCartao, valorLiquido } = calcularTaxaDoValorFinal(
         novoPagamento.valor, 
-        maquinaId, 
         novoPagamento.parcelas || 1, 
         novoPagamento.meioPagamento || ''
       );
-      setNovoPagamento({ ...novoPagamento, maquinaId, taxaCartao, valorComTaxa });
+      setNovoPagamento({ ...novoPagamento, maquinaId, taxaCartao, valorLiquido });
     } else {
       setNovoPagamento({ ...novoPagamento, maquinaId });
     }
   };
 
   const handleParcelasChange = (parcelas: number) => {
-    if (novoPagamento.maquinaId && novoPagamento.valor) {
-      const { taxaCartao, valorComTaxa } = calcularTaxa(
+    if (novoPagamento.valor && novoPagamento.meioPagamento === 'Cartão Crédito') {
+      const { taxaCartao, valorLiquido } = calcularTaxaDoValorFinal(
         novoPagamento.valor, 
-        novoPagamento.maquinaId, 
         parcelas, 
-        novoPagamento.meioPagamento || ''
+        novoPagamento.meioPagamento
       );
-      setNovoPagamento({ ...novoPagamento, parcelas, taxaCartao, valorComTaxa });
+      setNovoPagamento({ ...novoPagamento, parcelas, taxaCartao, valorLiquido });
     } else {
       setNovoPagamento({ ...novoPagamento, parcelas });
     }
@@ -186,25 +203,25 @@ export function PagamentoQuadro({
 
   const handleAddPagamento = () => {
     if (!novoPagamento.meioPagamento || !novoPagamento.valor || !novoPagamento.contaDestino) {
-      toast({ title: "Erro", description: "Todos os campos são obrigatórios", variant: "destructive" });
+      toast.error('Todos os campos são obrigatórios');
       return;
     }
     
     // Validar máquina para cartão
     if ((novoPagamento.meioPagamento === 'Cartão Crédito' || novoPagamento.meioPagamento === 'Cartão Débito') && !novoPagamento.maquinaId) {
-      toast({ title: "Erro", description: "Selecione a máquina de cartão", variant: "destructive" });
+      toast.error('Selecione a máquina de cartão');
       return;
     }
     
     // Validar parcelas para cartão crédito
     if (novoPagamento.meioPagamento === 'Cartão Crédito' && !novoPagamento.parcelas) {
-      toast({ title: "Erro", description: "Selecione o número de parcelas", variant: "destructive" });
+      toast.error('Selecione o número de parcelas');
       return;
     }
 
     // Validar campos para Fiado
     if (novoPagamento.meioPagamento === 'Fiado' && (!novoPagamento.fiadoDataBase || !novoPagamento.fiadoNumeroParcelas)) {
-      toast({ title: "Erro", description: "Preencha os campos de data base e número de parcelas", variant: "destructive" });
+      toast.error('Preencha os campos de data base e número de parcelas');
       return;
     }
     
@@ -227,19 +244,23 @@ export function PagamentoQuadro({
       isFiado: novoPagamento.meioPagamento === 'Fiado',
       fiadoDataBase: novoPagamento.fiadoDataBase,
       fiadoNumeroParcelas: novoPagamento.fiadoNumeroParcelas,
-      taxaCartao: novoPagamento.taxaCartao,
-      valorComTaxa: novoPagamento.valorComTaxa,
+      taxaCartao: novoPagamento.taxaCartao || 0,
+      valorComTaxa: novoPagamento.valor, // Valor bruto é o que foi pago
       maquinaId: novoPagamento.maquinaId
     };
     
     setPagamentos([...pagamentos, pagamento]);
     setShowPagamentoModal(false);
     setNovoPagamento({});
+    toast.success('Pagamento adicionado');
   };
 
   const handleRemovePagamento = (pagamentoId: string) => {
     setPagamentos(pagamentos.filter(p => p.id !== pagamentoId));
+    toast.success('Pagamento removido');
   };
+
+  const isPrejuizo = lucroResidual < 0;
 
   return (
     <>
@@ -268,66 +289,108 @@ export function PagamentoQuadro({
                   <TableHead>Meio de Pagamento</TableHead>
                   <TableHead>Conta de Destino</TableHead>
                   <TableHead className="text-center">Parcelas</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead className="text-right">Valor Final</TableHead>
                   <TableHead className="text-right">Taxa</TableHead>
+                  <TableHead className="text-right">Valor Líquido</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pagamentos.map(pag => (
-                  <TableRow key={pag.id}>
-                    <TableCell className="font-medium">{pag.meioPagamento}</TableCell>
-                    <TableCell>{getContaNome(pag.contaDestino)}</TableCell>
-                    <TableCell className="text-center">
-                      {pag.parcelas && pag.parcelas > 1 ? (
-                        <span className="text-sm">
-                          {pag.parcelas}x {formatarMoeda(pag.valorParcela || 0)}
-                        </span>
-                      ) : pag.parcelas === 1 ? (
-                        <span className="text-sm text-muted-foreground">1x</span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">{formatarMoeda(pag.valor)}</TableCell>
-                    <TableCell className="text-right text-orange-600">
-                      {pag.taxaCartao ? `+${formatarMoeda(pag.taxaCartao)}` : '-'}
-                    </TableCell>
-                    <TableCell className="max-w-[150px] truncate text-sm text-muted-foreground">
-                      {pag.descricao || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleRemovePagamento(pag.id)}
-                      >
-                        <X className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {pagamentos.map(pag => {
+                  const valorLiquidoPag = pag.valor - (pag.taxaCartao || 0);
+                  return (
+                    <TableRow key={pag.id}>
+                      <TableCell className="font-medium">{pag.meioPagamento}</TableCell>
+                      <TableCell>{getContaNome(pag.contaDestino)}</TableCell>
+                      <TableCell className="text-center">
+                        {pag.parcelas && pag.parcelas > 1 ? (
+                          <span className="text-sm">
+                            {pag.parcelas}x {formatarMoeda((pag.valor - (pag.taxaCartao || 0)) / pag.parcelas)}
+                          </span>
+                        ) : pag.parcelas === 1 ? (
+                          <span className="text-sm text-muted-foreground">1x</span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">{formatarMoeda(pag.valor)}</TableCell>
+                      <TableCell className="text-right text-orange-600">
+                        {pag.taxaCartao ? `-${formatarMoeda(pag.taxaCartao)}` : '-'}
+                      </TableCell>
+                      <TableCell className="text-right text-green-600 font-medium">
+                        {formatarMoeda(valorLiquidoPag)}
+                      </TableCell>
+                      <TableCell className="max-w-[150px] truncate text-sm text-muted-foreground">
+                        {pag.descricao || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleRemovePagamento(pag.id)}
+                        >
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
           
-          {/* Resumo de valores */}
-          <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">Valor dos Produtos</p>
-              <p className="text-xl font-bold">{formatarMoeda(valorTotalProdutos)}</p>
-            </div>
-            {totalTaxas > 0 && (
-              <div className="p-3 bg-orange-100 dark:bg-orange-950/30 rounded-lg">
-                <p className="text-sm text-muted-foreground">Valor das Taxas</p>
-                <p className="text-xl font-bold text-orange-600">+{formatarMoeda(totalTaxas)}</p>
-              </div>
-            )}
-            <div className="p-3 bg-blue-100 dark:bg-blue-950/30 rounded-lg">
-              <p className="text-sm text-muted-foreground">Total Pagamentos</p>
-              <p className="text-lg font-medium text-blue-600">{formatarMoeda(totalPagamentos)}</p>
-            </div>
+          {/* 3 Cards Proeminentes - Nova Lógica */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Card 1: Valor com Taxas da Máquina */}
+            <Card className="bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Percent className="h-5 w-5 text-orange-600" />
+                  <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Valor com Taxas da Máquina</span>
+                </div>
+                <p className="text-2xl font-bold text-orange-600">
+                  {formatarMoeda(totalTaxas)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Taxa descontada do valor final
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* Card 2: Valor Total */}
+            <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <DollarSign className="h-5 w-5 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Valor Total</span>
+                </div>
+                <p className="text-2xl font-bold text-blue-600">
+                  {formatarMoeda(totalPagamentos)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Valor bruto pago pelo cliente
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* Card 3: Lucro Residual */}
+            <Card className={`border-2 ${isPrejuizo ? 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800' : 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-800'}`}>
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className={`h-5 w-5 ${isPrejuizo ? 'text-red-600' : 'text-green-600'}`} />
+                  <span className={`text-sm font-medium ${isPrejuizo ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}`}>
+                    {isPrejuizo ? 'Prejuízo Residual' : 'Lucro Residual'}
+                  </span>
+                </div>
+                <p className={`text-2xl font-bold ${isPrejuizo ? 'text-red-600' : 'text-green-600'}`}>
+                  {formatarMoeda(lucroResidual)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Líquido ({formatarMoeda(valorLiquido)}) - Custo ({formatarMoeda(custoTotalProdutos)})
+                </p>
+              </CardContent>
+            </Card>
           </div>
           
           {valorPendente > 0 && (
@@ -341,7 +404,7 @@ export function PagamentoQuadro({
 
       {/* Modal Pagamento */}
       <Dialog open={showPagamentoModal} onOpenChange={setShowPagamentoModal}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Adicionar Pagamento</DialogTitle>
           </DialogHeader>
@@ -367,7 +430,8 @@ export function PagamentoQuadro({
             </div>
             
             <div>
-              <label className="text-sm font-medium">Valor dos Produtos *</label>
+              <label className="text-sm font-medium">Valor Final (Bruto) *</label>
+              <p className="text-xs text-muted-foreground mb-1">Valor efetivamente pago pelo cliente (taxa será descontada)</p>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
                 <Input 
@@ -400,7 +464,7 @@ export function PagamentoQuadro({
               </div>
             )}
             
-            {/* Parcelas - Cartão Crédito */}
+            {/* Parcelas - Cartão Crédito - ATUALIZADO PARA 36x */}
             {novoPagamento.meioPagamento === 'Cartão Crédito' && (
               <div>
                 <label className="text-sm font-medium">Número de Parcelas *</label>
@@ -411,35 +475,44 @@ export function PagamentoQuadro({
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map(num => (
-                      <SelectItem key={num} value={String(num)}>{num}x</SelectItem>
-                    ))}
+                  <SelectContent className="max-h-[300px]">
+                    {Array.from({ length: MAX_PARCELAS }, (_, i) => i + 1).map(num => {
+                      const taxa = getTaxaCredito(num);
+                      return (
+                        <SelectItem key={num} value={String(num)}>
+                          {num}x {taxa > 0 ? `(${taxa}% taxa)` : '(sem taxa)'}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
             )}
             
-            {/* Exibir taxas calculadas */}
+            {/* Exibir cálculos em tempo real - NOVA LÓGICA */}
             {(novoPagamento.meioPagamento === 'Cartão Crédito' || novoPagamento.meioPagamento === 'Cartão Débito') && 
               novoPagamento.maquinaId && novoPagamento.valor && (
-              <div className="space-y-2 p-3 bg-muted rounded-lg">
+              <div className="space-y-2 p-4 bg-muted rounded-lg">
                 <div className="flex justify-between text-sm">
-                  <span>Valor dos Produtos:</span>
+                  <span>Valor Final (Bruto):</span>
                   <span className="font-medium">{formatarMoeda(novoPagamento.valor)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-orange-600">
-                  <span>Taxa da Máquina ({((novoPagamento.taxaCartao || 0) / novoPagamento.valor * 100).toFixed(1)}%):</span>
-                  <span className="font-medium">+{formatarMoeda(novoPagamento.taxaCartao || 0)}</span>
+                  <span>
+                    Taxa da Máquina ({novoPagamento.meioPagamento === 'Cartão Débito' 
+                      ? `${TAXA_DEBITO}%` 
+                      : `${getTaxaCredito(novoPagamento.parcelas || 1)}%`}):
+                  </span>
+                  <span className="font-medium">-{formatarMoeda(novoPagamento.taxaCartao || 0)}</span>
                 </div>
                 <Separator />
-                <div className="flex justify-between font-bold">
-                  <span>Valor Final para o Cliente:</span>
-                  <span className="text-primary">{formatarMoeda(novoPagamento.valorComTaxa || novoPagamento.valor)}</span>
+                <div className="flex justify-between font-bold text-green-600">
+                  <span>Valor Líquido:</span>
+                  <span>{formatarMoeda(novoPagamento.valorLiquido || 0)}</span>
                 </div>
                 {novoPagamento.meioPagamento === 'Cartão Crédito' && novoPagamento.parcelas && novoPagamento.parcelas > 1 && (
                   <p className="text-xs text-muted-foreground">
-                    {novoPagamento.parcelas}x de {formatarMoeda((novoPagamento.valorComTaxa || novoPagamento.valor) / novoPagamento.parcelas)}
+                    Cliente paga: {novoPagamento.parcelas}x de {formatarMoeda(novoPagamento.valor / novoPagamento.parcelas)}
                   </p>
                 )}
               </div>
@@ -447,7 +520,7 @@ export function PagamentoQuadro({
             
             {novoPagamento.meioPagamento === 'Cartão Débito' && !novoPagamento.maquinaId && (
               <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
-                Cartão de Débito: taxa aplicada automaticamente. Selecione a máquina.
+                Cartão de Débito: taxa de {TAXA_DEBITO}% aplicada. Selecione a máquina.
               </div>
             )}
 

@@ -1444,6 +1444,7 @@ export default function VendasNova() {
         {/* Pagamentos - Usando PagamentoQuadro */}
         <PagamentoQuadro
           valorTotalProdutos={total}
+          custoTotalProdutos={valorCustoTotal}
           onPagamentosChange={setPagamentos}
           pagamentosIniciais={pagamentos}
         />

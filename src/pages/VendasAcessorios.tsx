@@ -211,6 +211,12 @@ export default function VendasAcessorios() {
   const totalPagamentos = useMemo(() => pagamentos.reduce((acc, p) => acc + p.valor, 0), [pagamentos]);
   const total = useMemo(() => subtotal + taxaEntrega, [subtotal, taxaEntrega]);
   const valorPendente = useMemo(() => total - totalPagamentos, [total, totalPagamentos]);
+  
+  // Custo total dos acessórios
+  const custoTotalAcessorios = useMemo(() => acessorios.reduce((acc, a) => {
+    const acessorio = acessoriosEstoque.find(ae => ae.id === a.acessorioId);
+    return acc + (acessorio?.valorCusto || 0) * a.quantidade;
+  }, 0), [acessorios, acessoriosEstoque]);
 
   // Buscar cliente
   const clientesFiltrados = useMemo(() => {
@@ -598,6 +604,7 @@ export default function VendasAcessorios() {
         {/* Pagamentos - Usando PagamentoQuadro */}
         <PagamentoQuadro
           valorTotalProdutos={total}
+          custoTotalProdutos={custoTotalAcessorios}
           onPagamentosChange={setPagamentos}
           pagamentosIniciais={pagamentos}
         />
