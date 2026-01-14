@@ -136,7 +136,23 @@ const calcularTipoCliente = (idsCompras: string[]): 'Novo' | 'Normal' | 'VIP' =>
 };
 
 // Mock Data
+// Loja Online - Digital (não pode ser deletada ou editada)
+const LOJA_ONLINE: Loja = { 
+  id: 'LOJA-ONLINE', 
+  nome: 'Online - Digital', 
+  cnpj: '00.000.000/0000-00', 
+  endereco: 'Vendas Online', 
+  telefone: '', 
+  cep: '', 
+  cidade: 'Online', 
+  estado: 'BR', 
+  responsavel: '', 
+  horarioFuncionamento: '24h', 
+  status: 'Ativo' 
+};
+
 let lojas: Loja[] = [
+  LOJA_ONLINE, // Loja online sempre primeira
   { id: 'LOJA-001', nome: 'Thiago Imports Centro', cnpj: '12.345.678/0001-01', endereco: 'Rua das Flores, 123', telefone: '(11) 3456-7890', cep: '01310-100', cidade: 'São Paulo', estado: 'SP', responsavel: 'COL-001', horarioFuncionamento: '09:00 - 18:00', status: 'Ativo' },
   { id: 'LOJA-002', nome: 'Thiago Imports Norte', cnpj: '12.345.678/0002-02', endereco: 'Av. Norte, 456', telefone: '(11) 3456-7891', cep: '02020-000', cidade: 'São Paulo', estado: 'SP', responsavel: 'COL-002', horarioFuncionamento: '09:00 - 18:00', status: 'Ativo' },
   { id: 'LOJA-003', nome: 'Thiago Imports Sul', cnpj: '12.345.678/0003-03', endereco: 'Rua Sul, 789', telefone: '(11) 3456-7892', cep: '04040-000', cidade: 'São Paulo', estado: 'SP', responsavel: 'COL-003', horarioFuncionamento: '09:00 - 18:00', status: 'Ativo' },
