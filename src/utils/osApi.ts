@@ -565,3 +565,75 @@ export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeli
   produtosPendentes.push(newProduto);
   return newProduto;
 };
+
+// Interface para trade-in vindo da venda
+interface TradeInItem {
+  id: string;
+  produtoId?: string;
+  modelo: string;
+  descricao: string;
+  imei: string;
+  valorCompraUsado: number;
+  imeiValidado: boolean;
+  condicao: 'Novo' | 'Semi-novo';
+}
+
+// Migrar trade-ins da venda finalizada para Aparelhos Pendentes - Estoque
+export const migrarTradeInsParaPendentes = (
+  tradeIns: TradeInItem[],
+  vendaId: string,
+  lojaId: string,
+  responsavel: string
+): ProdutoPendente[] => {
+  const produtosMigrados: ProdutoPendente[] = [];
+  
+  for (const tradeIn of tradeIns) {
+    // Verificar se já não foi migrado (evitar duplicatas)
+    const jaExiste = produtosPendentes.find(p => p.imei === tradeIn.imei);
+    if (jaExiste) {
+      console.log(`[OS API] Trade-in ${tradeIn.imei} já existe nos pendentes, ignorando duplicata.`);
+      continue;
+    }
+    
+    const newId = generateProductId();
+    
+    const novoProdutoPendente: ProdutoPendente = {
+      id: newId,
+      imei: tradeIn.imei,
+      marca: 'Apple', // Por padrão, pode ser ajustado
+      modelo: tradeIn.modelo,
+      cor: 'N/A', // Definir cor padrão, será ajustado na análise
+      tipo: 'Seminovo',
+      condicao: tradeIn.condicao,
+      origemEntrada: 'Base de Troca',
+      notaOuVendaId: vendaId,
+      valorCusto: tradeIn.valorCompraUsado,
+      valorCustoOriginal: tradeIn.valorCompraUsado,
+      valorOrigem: tradeIn.valorCompraUsado,
+      saudeBateria: 80, // Valor padrão, será ajustado na análise
+      loja: lojaId,
+      dataEntrada: new Date().toISOString().split('T')[0],
+      timeline: [
+        {
+          id: `TL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          data: new Date().toISOString(),
+          tipo: 'entrada',
+          titulo: 'Entrada via Base de Troca - Financeiro Finalizado',
+          descricao: `Produto ${newId} migrado automaticamente após finalização financeira da venda ${vendaId}. Descrição: ${tradeIn.descricao}`,
+          responsavel
+        }
+      ],
+      custoAssistencia: 0,
+      statusGeral: 'Pendente Estoque',
+      contadorEncaminhamentos: 0
+    };
+    
+    produtosPendentes.push(novoProdutoPendente);
+    registerProductId(newId);
+    produtosMigrados.push(novoProdutoPendente);
+    
+    console.log(`[OS API] Trade-in ${tradeIn.modelo} (IMEI: ${tradeIn.imei}) migrado para Aparelhos Pendentes - Estoque com ID ${newId}`);
+  }
+  
+  return produtosMigrados;
+};

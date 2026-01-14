@@ -1,5 +1,7 @@
 // Fluxo de Vendas API - Gerenciamento do fluxo de conferência em 4 etapas
+// Fluxo: Lançamento Aprovada -> Conferência Gestor -> Conferência Financeiro -> Finalizado
 import { Venda, getVendas, getVendaById, updateVenda as updateVendaBase } from './vendasApi';
+import { migrarTradeInsParaPendentes } from './osApi';
 
 // Novo tipo para status de venda no fluxo de conferência
 export type StatusVenda = 
@@ -309,7 +311,7 @@ export const devolverFinanceiro = (
   return getVendaComFluxo(vendaId);
 };
 
-// Finalizar (Financeiro)
+// Finalizar (Financeiro) - Após finalizar, migra trade-ins para Aparelhos Pendentes Estoque
 export const finalizarVenda = (
   vendaId: string,
   usuarioId: string,
@@ -322,6 +324,9 @@ export const finalizarVenda = (
     return null;
   }
 
+  // Buscar a venda para obter trade-ins
+  const venda = getVendaById(vendaId);
+  
   const novaTimeline: TimelineVenda = {
     id: `TL-${Date.now()}`,
     dataHora: new Date().toISOString(),
@@ -344,6 +349,13 @@ export const finalizarVenda = (
   };
 
   saveFluxoData(fluxoData);
+  
+  // MIGRAÇÃO AUTOMÁTICA: Após pagamento financeiro, trade-ins vão para Aparelhos Pendentes - Estoque
+  if (venda && venda.tradeIns && venda.tradeIns.length > 0) {
+    migrarTradeInsParaPendentes(venda.tradeIns, vendaId, venda.lojaVenda, usuarioNome);
+    console.log(`[Fluxo Vendas] ${venda.tradeIns.length} trade-in(s) migrado(s) para Aparelhos Pendentes - Estoque`);
+  }
+  
   return getVendaComFluxo(vendaId);
 };
 
