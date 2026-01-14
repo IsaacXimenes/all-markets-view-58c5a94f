@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { StatsCard } from '@/components/ui/StatsCard';
 import { RankingVendedores } from '@/components/dashboard/RankingVendedores';
-import { Wallet2, Package, ShoppingCart, Users, Wrench, TrendingUp, Shield, ShieldAlert } from 'lucide-react';
+import { Wallet2, Package, ShoppingCart, Users, Wrench, TrendingUp, Shield, ShieldAlert, Percent } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getVendas } from '@/utils/vendasApi';
@@ -13,6 +13,7 @@ import { getOrdensServico } from '@/utils/assistenciaApi';
 import { getColaboradores } from '@/utils/cadastrosApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { getGarantiasExpirandoEm7Dias, getGarantiasExpirandoEm30Dias } from '@/utils/garantiasApi';
+import { getPercentualComissao, LOJA_ONLINE_ID } from '@/utils/calculoComissaoVenda';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -44,6 +45,15 @@ export function Dashboard() {
   
   const colaboradoresAtivos = colaboradores.length;
   
+  // Cálculo de comissão do dia (mock - baseado em lucro estimado)
+  const comissaoHoje = useMemo(() => {
+    // Simular cálculo de comissão baseado nas vendas de hoje
+    const lucroEstimadoHoje = receitaHoje * 0.3; // ~30% de margem estimada
+    // Média ponderada: 80% loja física (10%), 20% online (6%)
+    const percentualMedio = (0.8 * 10 + 0.2 * 6);
+    return lucroEstimadoHoje * (percentualMedio / 100);
+  }, [receitaHoje]);
+  
   const toggleSidebar = () => {
     setIsSidebarCollapsed(prev => !prev);
   };
@@ -62,7 +72,7 @@ export function Dashboard() {
             </div>
             
             {/* Stats Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4 animate-slide-up" style={{ '--delay': '100ms' } as React.CSSProperties}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4 animate-slide-up" style={{ '--delay': '100ms' } as React.CSSProperties}>
               <StatsCard 
                 title="Receita Hoje" 
                 value={formatCurrency(receitaHoje)}
@@ -76,6 +86,13 @@ export function Dashboard() {
                 description={`${vendas.length} vendas`}
                 icon={<ShoppingCart />}
                 className="bg-primary/5"
+              />
+              <StatsCard 
+                title="Comissão Hoje" 
+                value={formatCurrency(comissaoHoje)}
+                description="Estimativa"
+                icon={<Percent />}
+                className="bg-purple-500/10"
               />
               <StatsCard 
                 title="Estoque" 

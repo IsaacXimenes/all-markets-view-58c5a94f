@@ -1193,6 +1193,7 @@ export default function VendasFinalizarDigital() {
         <PagamentoQuadro
           valorTotalProdutos={total}
           custoTotalProdutos={valorCustoTotal}
+          lojaVendaId={lojaVenda}
           onPagamentosChange={setPagamentos}
           pagamentosIniciais={pagamentos}
         />

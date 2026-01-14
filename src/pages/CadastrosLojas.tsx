@@ -9,8 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getLojas, addLoja, updateLoja, deleteLoja, getColaboradores, Loja } from '@/utils/cadastrosApi';
 import { exportToCSV } from '@/utils/formatUtils';
-import { Plus, Pencil, Trash2, Download } from 'lucide-react';
+import { Plus, Pencil, Trash2, Download, Lock, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+// ID da loja online que não pode ser editada/deletada
+const LOJA_ONLINE_ID = 'LOJA-ONLINE';
 
 export default function CadastrosLojas() {
   const { toast } = useToast();
@@ -48,6 +51,12 @@ export default function CadastrosLojas() {
   };
 
   const handleOpenDialog = (loja?: Loja) => {
+    // Impedir edição da loja online
+    if (loja && loja.id === LOJA_ONLINE_ID) {
+      toast({ title: 'Ação não permitida', description: 'A loja Online - Digital não pode ser editada', variant: 'destructive' });
+      return;
+    }
+    
     if (loja) {
       setEditingLoja(loja);
       setForm({
@@ -88,6 +97,12 @@ export default function CadastrosLojas() {
   };
 
   const handleDelete = (id: string) => {
+    // Impedir exclusão da loja online
+    if (id === LOJA_ONLINE_ID) {
+      toast({ title: 'Ação não permitida', description: 'A loja Online - Digital não pode ser excluída', variant: 'destructive' });
+      return;
+    }
+    
     deleteLoja(id);
     setLojas(getLojas());
     toast({ title: 'Sucesso', description: 'Loja removida com sucesso' });
@@ -133,31 +148,50 @@ export default function CadastrosLojas() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {lojas.map(loja => (
-                <TableRow key={loja.id}>
-                  <TableCell className="font-mono text-xs">{loja.id}</TableCell>
-                  <TableCell className="font-medium">{loja.nome}</TableCell>
-                  <TableCell className="text-xs">{loja.cnpj}</TableCell>
-                  <TableCell>{loja.cidade}/{loja.estado}</TableCell>
-                  <TableCell>{loja.telefone}</TableCell>
-                  <TableCell>{getColaboradorNome(loja.responsavel)}</TableCell>
-                  <TableCell>
-                    <Badge variant={loja.status === 'Ativo' ? 'default' : 'secondary'}>
-                      {loja.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(loja)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(loja.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {lojas.map(loja => {
+                const isLojaOnline = loja.id === LOJA_ONLINE_ID;
+                
+                return (
+                  <TableRow key={loja.id} className={isLojaOnline ? 'bg-primary/5' : ''}>
+                    <TableCell className="font-mono text-xs">{loja.id}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {isLojaOnline && <Globe className="h-4 w-4 text-primary" />}
+                        {loja.nome}
+                        {isLojaOnline && (
+                          <Badge variant="outline" className="text-xs">Sistema</Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs">{loja.cnpj || '-'}</TableCell>
+                    <TableCell>{loja.cidade}/{loja.estado}</TableCell>
+                    <TableCell>{loja.telefone || '-'}</TableCell>
+                    <TableCell>{getColaboradorNome(loja.responsavel)}</TableCell>
+                    <TableCell>
+                      <Badge variant={loja.status === 'Ativo' ? 'default' : 'secondary'}>
+                        {loja.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {isLojaOnline ? (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Lock className="h-4 w-4" />
+                          <span className="text-xs">Protegido</span>
+                        </div>
+                      ) : (
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(loja)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(loja.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

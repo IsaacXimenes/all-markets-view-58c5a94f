@@ -8,21 +8,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { CreditCard, Plus, X, AlertTriangle, DollarSign, TrendingUp, Percent } from 'lucide-react';
+import { CreditCard, Plus, X, AlertTriangle, DollarSign, TrendingUp, Percent, Store } from 'lucide-react';
 import { getContasFinanceiras, getMaquinasCartao, ContaFinanceira, MaquinaCartao } from '@/utils/cadastrosApi';
 import { Pagamento } from '@/utils/vendasApi';
 import { formatarMoeda, moedaMask, parseMoeda } from '@/utils/formatUtils';
 import { calcularValoresVenda, getTaxaCredito, TAXA_DEBITO, MAX_PARCELAS } from '@/config/taxasCartao';
+import { calcularComissaoVenda, ResultadoComissaoVenda, LOJA_ONLINE_ID } from '@/utils/calculoComissaoVenda';
 
 export interface PagamentoQuadroProps {
   valorTotalProdutos: number;
-  custoTotalProdutos: number; // Novo: custo total dos produtos para cálculo de lucro
+  custoTotalProdutos: number; // Custo total dos produtos para cálculo de lucro
+  lojaVendaId?: string; // ID da loja para cálculo de comissão
   onPagamentosChange: (pagamentos: Pagamento[]) => void;
   onValoresChange?: (valores: { 
     valorProdutos: number; 
     valorTaxas: number;
     valorLiquido: number;
     lucroResidual: number;
+    comissaoVenda?: ResultadoComissaoVenda;
   }) => void;
   pagamentosIniciais?: Pagamento[];
 }
@@ -36,6 +39,7 @@ interface NovoPagamentoState extends Partial<Pagamento> {
 export function PagamentoQuadro({ 
   valorTotalProdutos, 
   custoTotalProdutos,
+  lojaVendaId,
   onPagamentosChange, 
   onValoresChange,
   pagamentosIniciais = []
@@ -73,15 +77,26 @@ export function PagamentoQuadro({
   
   const valorPendente = useMemo(() => valorTotalProdutos - totalPagamentos, [valorTotalProdutos, totalPagamentos]);
 
+  // Cálculo da comissão de venda baseado na loja
+  const comissaoVenda = useMemo((): ResultadoComissaoVenda | undefined => {
+    if (!lojaVendaId || lucroResidual <= 0) return undefined;
+    try {
+      return calcularComissaoVenda({ lojaVendaId, lucroResidual });
+    } catch {
+      return undefined;
+    }
+  }, [lojaVendaId, lucroResidual]);
+
   // Notificar valores para componente pai
   useEffect(() => {
     onValoresChange?.({ 
       valorProdutos: valorTotalProdutos, 
       valorTaxas: totalTaxas,
       valorLiquido,
-      lucroResidual
+      lucroResidual,
+      comissaoVenda
     });
-  }, [valorTotalProdutos, totalTaxas, valorLiquido, lucroResidual, onValoresChange]);
+  }, [valorTotalProdutos, totalTaxas, valorLiquido, lucroResidual, comissaoVenda, onValoresChange]);
 
   const getContaNome = (id: string) => {
     const conta = contasFinanceiras.find(c => c.id === id);
@@ -340,14 +355,14 @@ export function PagamentoQuadro({
             </Table>
           )}
           
-          {/* 3 Cards Proeminentes - Nova Lógica */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* 4 Cards Proeminentes - Com Comissão */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Card 1: Valor com Taxas da Máquina */}
             <Card className="bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800">
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Percent className="h-5 w-5 text-orange-600" />
-                  <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Valor com Taxas da Máquina</span>
+                  <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Taxas da Máquina</span>
                 </div>
                 <p className="text-2xl font-bold text-orange-600">
                   {formatarMoeda(totalTaxas)}
@@ -380,14 +395,33 @@ export function PagamentoQuadro({
                 <div className="flex items-center gap-2 mb-2">
                   <TrendingUp className={`h-5 w-5 ${isPrejuizo ? 'text-red-600' : 'text-green-600'}`} />
                   <span className={`text-sm font-medium ${isPrejuizo ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}`}>
-                    {isPrejuizo ? 'Prejuízo Residual' : 'Lucro Residual'}
+                    {isPrejuizo ? 'Prejuízo' : 'Lucro Residual'}
                   </span>
                 </div>
                 <p className={`text-2xl font-bold ${isPrejuizo ? 'text-red-600' : 'text-green-600'}`}>
                   {formatarMoeda(lucroResidual)}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Líquido ({formatarMoeda(valorLiquido)}) - Custo ({formatarMoeda(custoTotalProdutos)})
+                  Líquido - Custo
+                </p>
+              </CardContent>
+            </Card>
+            
+            {/* Card 4: Comissão da Venda */}
+            <Card className="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Store className="h-5 w-5 text-purple-600" />
+                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Comissão da Venda</span>
+                </div>
+                <p className="text-2xl font-bold text-purple-600">
+                  {comissaoVenda ? formatarMoeda(comissaoVenda.valorComissao) : '-'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {comissaoVenda 
+                    ? `${comissaoVenda.percentualComissao}% - ${lojaVendaId === LOJA_ONLINE_ID ? 'Online' : 'Loja Física'}`
+                    : 'Selecione uma loja'
+                  }
                 </p>
               </CardContent>
             </Card>

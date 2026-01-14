@@ -605,6 +605,7 @@ export default function VendasAcessorios() {
         <PagamentoQuadro
           valorTotalProdutos={total}
           custoTotalProdutos={custoTotalAcessorios}
+          lojaVendaId={lojaVenda}
           onPagamentosChange={setPagamentos}
           pagamentosIniciais={pagamentos}
         />

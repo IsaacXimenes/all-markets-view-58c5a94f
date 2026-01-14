@@ -1445,6 +1445,7 @@ export default function VendasNova() {
         <PagamentoQuadro
           valorTotalProdutos={total}
           custoTotalProdutos={valorCustoTotal}
+          lojaVendaId={lojaVenda}
           onPagamentosChange={setPagamentos}
           pagamentosIniciais={pagamentos}
         />

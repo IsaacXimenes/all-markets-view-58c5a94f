@@ -1,12 +1,13 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Trophy, Medal, Award, TrendingUp } from 'lucide-react';
+import { Trophy, Medal, Award, TrendingUp, Store } from 'lucide-react';
 import { getColaboradores, getLojaById, getCargos } from '@/utils/cadastrosApi';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/utils/formatUtils';
+import { getPercentualComissao } from '@/utils/calculoComissaoVenda';
 
-// Gerar dados mock de vendas para ranking
+// Gerar dados mock de vendas para ranking com comissões
 const getTopSellers = (limit: number) => {
   const colaboradores = getColaboradores().filter(c => c.status === 'Ativo');
   const cargos = getCargos();
@@ -22,13 +23,19 @@ const getTopSellers = (limit: number) => {
   const vendedoresComVendas = vendedores.map(v => {
     const seed = parseInt(v.id.replace('COL-', '')) || 1;
     const sales = Math.floor(15000 + (seed * 3500) + Math.sin(seed) * 5000);
-    const commission = sales * 0.05;
+    const lucro = sales * 0.3; // ~30% margem
+    // Calcular comissão baseada na loja do vendedor
+    const percentualComissao = getPercentualComissao(v.loja);
+    const commission = lucro * (percentualComissao / 100);
+    
     return {
       id: v.id,
       name: v.nome,
       storeId: v.loja || '',
       sales,
-      commission
+      lucro,
+      commission,
+      percentualComissao
     };
   });
   
@@ -94,8 +101,8 @@ export function RankingVendedores() {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-success">{formatCurrency(seller.sales)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatCurrency(seller.commission)}
+                    <p className="text-xs text-purple-600 font-medium">
+                      {formatCurrency(seller.commission)} ({seller.percentualComissao}%)
                     </p>
                   </div>
                 </div>
@@ -132,8 +139,8 @@ export function RankingVendedores() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold">{formatCurrency(seller.sales)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatCurrency(seller.commission)}
+                    <p className="text-xs text-purple-600">
+                      {formatCurrency(seller.commission)} ({seller.percentualComissao}%)
                     </p>
                   </div>
                 </div>
