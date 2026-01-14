@@ -15,9 +15,25 @@ import { toast } from 'sonner';
 
 import { formatCurrency } from '@/utils/formatUtils';
 
+// Tipo estendido para incluir status do localStorage
+interface NotaEstendida extends NotaCompra {
+  statusExtendido?: 'Pendente' | 'Concluído' | 'Recusado' | 'Enviado para Financeiro';
+}
+
 export default function FinanceiroConferenciaNotas() {
-  const [notas, setNotas] = useState(getNotasCompra());
-  const [notaSelecionada, setNotaSelecionada] = useState<NotaCompra | null>(null);
+  const [notasBase] = useState(getNotasCompra());
+  
+  // Mesclar status do localStorage com notas
+  const notas: NotaEstendida[] = useMemo(() => {
+    return notasBase.map(nota => {
+      const storedStatus = localStorage.getItem(`nota_status_${nota.id}`);
+      return {
+        ...nota,
+        statusExtendido: (storedStatus as NotaEstendida['statusExtendido']) || nota.status as NotaEstendida['statusExtendido']
+      };
+    });
+  }, [notasBase]);
+  const [notaSelecionada, setNotaSelecionada] = useState<NotaEstendida | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   
   const contasFinanceiras = getContasFinanceiras().filter(c => c.status === 'Ativo');
@@ -47,9 +63,12 @@ export default function FinanceiroConferenciaNotas() {
     return colaboradores.filter(col => cargosComPermissaoFinanceiro.includes(col.cargo));
   }, [colaboradores, cargos]);
 
-  // Filtrar e ordenar notas (pendentes no topo, depois por data)
+  // Filtrar apenas notas "Enviado para Financeiro" e ordenar
   const filteredNotas = useMemo(() => {
     let filtered = notas.filter(nota => {
+      // Mostrar apenas notas enviadas para financeiro ou concluídas
+      if (nota.statusExtendido !== 'Enviado para Financeiro' && nota.statusExtendido !== 'Concluído') return false;
+      
       if (filters.dataInicio && nota.data < filters.dataInicio) return false;
       if (filters.dataFim && nota.data > filters.dataFim) return false;
       if (filters.fornecedor !== 'todos' && nota.fornecedor !== filters.fornecedor) return false;
@@ -58,17 +77,17 @@ export default function FinanceiroConferenciaNotas() {
       return true;
     });
 
-    // Ordenar: pendentes primeiro (por data mais recente), depois concluídos (por data mais recente)
+    // Ordenar: pendentes (enviados para financeiro) primeiro, depois concluídos
     return filtered.sort((a, b) => {
-      if (a.status === 'Pendente' && b.status !== 'Pendente') return -1;
-      if (a.status !== 'Pendente' && b.status === 'Pendente') return 1;
+      if (a.statusExtendido === 'Enviado para Financeiro' && b.statusExtendido !== 'Enviado para Financeiro') return -1;
+      if (a.statusExtendido !== 'Enviado para Financeiro' && b.statusExtendido === 'Enviado para Financeiro') return 1;
       return new Date(b.data).getTime() - new Date(a.data).getTime();
     });
   }, [notas, filters]);
 
   const totalPendente = useMemo(() => {
     return filteredNotas
-      .filter(n => n.status === 'Pendente')
+      .filter(n => n.statusExtendido === 'Enviado para Financeiro')
       .reduce((acc, n) => acc + n.valorTotal, 0);
   }, [filteredNotas]);
 
@@ -98,7 +117,22 @@ export default function FinanceiroConferenciaNotas() {
     const notaFinalizada = finalizarNota(notaSelecionada.id, pagamento, responsavelFinanceiro);
     
     if (notaFinalizada) {
-      setNotas(getNotasCompra());
+      // Atualizar status no localStorage para Concluído
+      localStorage.setItem(`nota_status_${notaSelecionada.id}`, 'Concluído');
+      
+      // Adicionar timeline de aprovação
+      const storedTimeline = localStorage.getItem(`nota_timeline_${notaSelecionada.id}`);
+      const timeline = storedTimeline ? JSON.parse(storedTimeline) : [];
+      const newEntry = {
+        id: `TL-${notaSelecionada.id}-${String(timeline.length + 1).padStart(3, '0')}`,
+        dataHora: new Date().toISOString(),
+        usuarioId: 'FIN-001',
+        usuarioNome: responsavelFinanceiro,
+        tipoEvento: 'aprovado_financeiro',
+        observacoes: `Nota aprovada pelo financeiro. Pagamento: ${formaPagamento}, Parcelas: ${parcelas}`
+      };
+      localStorage.setItem(`nota_timeline_${notaSelecionada.id}`, JSON.stringify([newEntry, ...timeline]));
+      
       setDialogOpen(false);
       
       const totalProdutos = notaFinalizada.produtos.reduce((sum, p) => sum + p.quantidade, 0);
@@ -111,6 +145,9 @@ export default function FinanceiroConferenciaNotas() {
           border: 'none'
         }
       });
+      
+      // Forçar refresh da página para atualizar lista
+      window.location.reload();
     }
   };
 
@@ -245,7 +282,7 @@ export default function FinanceiroConferenciaNotas() {
                     filteredNotas.map(nota => (
                       <TableRow 
                         key={nota.id}
-                        className={nota.status === 'Pendente' ? 'bg-destructive/20' : 'bg-green-500/20'}
+                        className={nota.statusExtendido === 'Enviado para Financeiro' ? 'bg-blue-500/20' : 'bg-green-500/20'}
                       >
                         <TableCell className="font-mono text-xs">{nota.id}</TableCell>
                         <TableCell>{new Date(nota.data).toLocaleDateString('pt-BR')}</TableCell>
@@ -255,12 +292,12 @@ export default function FinanceiroConferenciaNotas() {
                           {formatCurrency(nota.valorTotal)}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={nota.status === 'Concluído' ? 'default' : 'destructive'}>
-                            {nota.status}
+                          <Badge variant={nota.statusExtendido === 'Concluído' ? 'default' : 'secondary'} className={nota.statusExtendido === 'Enviado para Financeiro' ? 'bg-blue-500 text-white' : ''}>
+                            {nota.statusExtendido}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {nota.status === 'Pendente' ? (
+                          {nota.statusExtendido === 'Enviado para Financeiro' ? (
                             <Button size="sm" onClick={() => handleVerNota(nota)}>
                               <Check className="h-4 w-4 mr-1" />
                               Conferir
@@ -279,7 +316,7 @@ export default function FinanceiroConferenciaNotas() {
             </div>
             <div className="mt-4 pt-4 border-t flex justify-between items-center">
               <span className="text-sm text-muted-foreground">
-                {filteredNotas.filter(n => n.status === 'Pendente').length} nota(s) pendente(s)
+                {filteredNotas.filter(n => n.statusExtendido === 'Enviado para Financeiro').length} nota(s) aguardando conferência
               </span>
               <span className="text-lg font-bold">
                 Total Pendente: {formatCurrency(totalPendente)}
@@ -330,7 +367,7 @@ export default function FinanceiroConferenciaNotas() {
                     </div>
                   </div>
 
-                  {notaSelecionada.status === 'Pendente' && (
+                  {notaSelecionada.statusExtendido === 'Enviado para Financeiro' && (
                     <div className="border-t pt-4">
                       <h3 className="font-semibold mb-3 text-primary">Seção "Pagamento" (Habilitada)</h3>
                       <div className="grid gap-4">
@@ -412,16 +449,16 @@ export default function FinanceiroConferenciaNotas() {
 
                 <div className="flex justify-end gap-2 pt-4 border-t">
                   <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                    {notaSelecionada.status === 'Pendente' ? 'Cancelar' : 'Fechar'}
+                    {notaSelecionada.statusExtendido === 'Enviado para Financeiro' ? 'Cancelar' : 'Fechar'}
                   </Button>
-                  {notaSelecionada.status === 'Pendente' && (
+                  {notaSelecionada.statusExtendido === 'Enviado para Financeiro' && (
                     <Button 
                       onClick={handleFinalizarNota}
                       className="bg-green-600 hover:bg-green-700"
                       disabled={botaoDesabilitado}
                     >
                       <CheckCircle className="mr-2 h-4 w-4" />
-                      Finalizar Nota
+                      Aprovar e Finalizar
                     </Button>
                   )}
                 </div>

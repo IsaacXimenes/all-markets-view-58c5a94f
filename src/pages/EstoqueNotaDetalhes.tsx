@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, Save, ChevronDown, ChevronUp, Clock, Edit, Send, XCircle, CheckCircle, FileText } from 'lucide-react';
 import { getNotasCompra, updateNota, NotaCompra } from '@/utils/estoqueApi';
 import { getFornecedores } from '@/utils/cadastrosApi';
@@ -241,6 +242,45 @@ export default function EstoqueNotaDetalhes() {
     });
   };
 
+  const handleEnviarParaFinanceiro = () => {
+    if (!nota) return;
+    
+    // Atualizar status
+    localStorage.setItem(`nota_status_${id}`, 'Enviado para Financeiro');
+    
+    // Adicionar entrada na timeline
+    addTimelineEntry('enviado_financeiro', 'Nota enviada para conferência do financeiro');
+    
+    // Atualizar estado local
+    setNota(prev => prev ? { ...prev, status: 'Enviado para Financeiro' } : null);
+    
+    toast.success('Nota enviada para o financeiro com sucesso!');
+  };
+
+  const [motivoRecusa, setMotivoRecusa] = useState('');
+  const [dialogRecusaOpen, setDialogRecusaOpen] = useState(false);
+
+  const handleRecusarNota = () => {
+    if (!nota || !motivoRecusa.trim()) {
+      toast.error('Informe o motivo da recusa');
+      return;
+    }
+    
+    // Atualizar status
+    localStorage.setItem(`nota_status_${id}`, 'Recusado');
+    localStorage.setItem(`nota_motivo_${id}`, motivoRecusa);
+    
+    // Adicionar entrada na timeline
+    addTimelineEntry('recusado_financeiro', `Nota recusada: ${motivoRecusa}`);
+    
+    // Atualizar estado local
+    setNota(prev => prev ? { ...prev, status: 'Recusado', motivoRecusa } : null);
+    
+    setDialogRecusaOpen(false);
+    setMotivoRecusa('');
+    toast.info('Nota marcada como recusada');
+  };
+
   return (
     <EstoqueLayout title={`Detalhes da Nota ${nota.id}`}>
       <div className="space-y-6">
@@ -250,12 +290,47 @@ export default function EstoqueNotaDetalhes() {
             Voltar para Notas de Compra
           </Button>
           
-          {!isEditing && (
-            <Button onClick={() => setIsEditing(true)}>
-              <Edit className="mr-2 h-4 w-4" />
-              Editar Nota
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {!isEditing && nota.status === 'Pendente' && (
+              <>
+                <Button variant="outline" onClick={() => setIsEditing(true)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar
+                </Button>
+                <Button onClick={handleEnviarParaFinanceiro}>
+                  <Send className="mr-2 h-4 w-4" />
+                  Enviar para Financeiro
+                </Button>
+              </>
+            )}
+            
+            {!isEditing && nota.status === 'Recusado' && (
+              <>
+                <Button variant="outline" onClick={() => setIsEditing(true)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar
+                </Button>
+                <Button onClick={handleEnviarParaFinanceiro}>
+                  <Send className="mr-2 h-4 w-4" />
+                  Reenviar para Financeiro
+                </Button>
+              </>
+            )}
+            
+            {!isEditing && nota.status === 'Enviado para Financeiro' && (
+              <Button variant="destructive" onClick={() => setDialogRecusaOpen(true)}>
+                <XCircle className="mr-2 h-4 w-4" />
+                Recusar Nota
+              </Button>
+            )}
+            
+            {!isEditing && nota.status !== 'Pendente' && nota.status !== 'Recusado' && nota.status !== 'Enviado para Financeiro' && (
+              <Button variant="outline" onClick={() => setIsEditing(true)}>
+                <Edit className="mr-2 h-4 w-4" />
+                Editar
+              </Button>
+            )}
+          </div>
         </div>
 
         <Card>
@@ -469,6 +544,37 @@ export default function EstoqueNotaDetalhes() {
           </Collapsible>
         </Card>
       </div>
+
+      {/* Dialog de Recusa */}
+      <Dialog open={dialogRecusaOpen} onOpenChange={setDialogRecusaOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <XCircle className="h-5 w-5" />
+              Recusar Nota
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Motivo da Recusa *</Label>
+              <Textarea
+                value={motivoRecusa}
+                onChange={(e) => setMotivoRecusa(e.target.value)}
+                placeholder="Descreva o motivo da recusa..."
+                rows={4}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setDialogRecusaOpen(false)}>
+                Cancelar
+              </Button>
+              <Button variant="destructive" onClick={handleRecusarNota} disabled={!motivoRecusa.trim()}>
+                Confirmar Recusa
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </EstoqueLayout>
   );
 }
