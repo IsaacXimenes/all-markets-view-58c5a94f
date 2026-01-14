@@ -189,13 +189,21 @@ export default function FinanceiroConferencia() {
   };
 
   const handleToggleValidacaoFinanceiro = (metodo: string) => {
-    setValidacoesPagamento(prev => 
-      prev.map(v => 
-        v.metodoPagamento === metodo 
-          ? { ...v, validadoFinanceiro: !v.validadoFinanceiro, dataValidacaoFinanceiro: new Date().toISOString() }
-          : v
-      )
+    const novasValidacoes = validacoesPagamento.map(v => 
+      v.metodoPagamento === metodo 
+        ? { ...v, validadoFinanceiro: !v.validadoFinanceiro, dataValidacaoFinanceiro: new Date().toISOString() }
+        : v
     );
+    
+    setValidacoesPagamento(novasValidacoes);
+    
+    // Salvar imediatamente no localStorage para atualização em tempo real da coluna Situação
+    if (vendaSelecionada) {
+      localStorage.setItem(
+        `validacao_pagamentos_financeiro_${vendaSelecionada.id}`,
+        JSON.stringify(novasValidacoes)
+      );
+    }
   };
 
   const handleSalvarValidacoes = () => {
