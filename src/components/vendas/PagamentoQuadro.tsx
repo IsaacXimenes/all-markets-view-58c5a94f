@@ -36,6 +36,31 @@ interface NovoPagamentoState extends Partial<Pagamento> {
   valorLiquido?: number;
 }
 
+// Função para obter parcelamentos da máquina ou usar valores padrão
+const getParcelamentosMaquina = (maquina: MaquinaCartao | undefined): { parcelas: number; taxa: number }[] => {
+  if (maquina?.parcelamentos && maquina.parcelamentos.length > 0) {
+    return maquina.parcelamentos.sort((a, b) => a.parcelas - b.parcelas);
+  }
+  // Valores padrão se a máquina não tiver parcelamentos configurados
+  return Array.from({ length: MAX_PARCELAS }, (_, i) => ({
+    parcelas: i + 1,
+    taxa: getTaxaCredito(i + 1)
+  }));
+};
+
+// Função para obter taxa de uma parcela específica da máquina
+const getTaxaMaquina = (maquina: MaquinaCartao | undefined, parcelas: number, meioPagamento: string): number => {
+  if (meioPagamento === 'Cartão Débito') {
+    return maquina?.taxas?.debito ?? TAXA_DEBITO;
+  }
+  if (meioPagamento === 'Cartão Crédito') {
+    const parcelamentos = getParcelamentosMaquina(maquina);
+    const parcelamento = parcelamentos.find(p => p.parcelas === parcelas);
+    return parcelamento?.taxa ?? getTaxaCredito(parcelas);
+  }
+  return 0;
+};
+
 export function PagamentoQuadro({ 
   valorTotalProdutos, 
   custoTotalProdutos,
@@ -165,13 +190,16 @@ export function PagamentoQuadro({
     }
   };
 
-  // Nova lógica: calcular taxa a partir do valor final (bruto)
-  const calcularTaxaDoValorFinal = (valorFinal: number, parcelas: number, meioPagamento: string) => {
-    const resultado = calcularValoresVenda(valorFinal, parcelas, custoTotalProdutos, meioPagamento);
+  // Nova lógica: calcular taxa a partir do valor final (bruto) usando taxas da máquina
+  const calcularTaxaDoValorFinal = (valorFinal: number, parcelas: number, meioPagamento: string, maquinaId?: string) => {
+    const maquina = maquinasCartao.find(m => m.id === maquinaId);
+    const taxaPercent = getTaxaMaquina(maquina, parcelas, meioPagamento);
+    const taxaCartao = valorFinal * (taxaPercent / 100);
+    const valorLiquido = valorFinal - taxaCartao;
     return {
-      taxaPercent: resultado.taxaPercent,
-      taxaCartao: resultado.taxaMaquina,
-      valorLiquido: resultado.valorLiquido
+      taxaPercent,
+      taxaCartao,
+      valorLiquido
     };
   };
 
@@ -182,7 +210,8 @@ export function PagamentoQuadro({
       const { taxaCartao, valorLiquido } = calcularTaxaDoValorFinal(
         valorNum, 
         novoPagamento.parcelas || 1, 
-        novoPagamento.meioPagamento || ''
+        novoPagamento.meioPagamento || '',
+        novoPagamento.maquinaId
       );
       setNovoPagamento({ ...novoPagamento, valor: valorNum, taxaCartao, valorLiquido });
     } else {
@@ -195,11 +224,13 @@ export function PagamentoQuadro({
       const { taxaCartao, valorLiquido } = calcularTaxaDoValorFinal(
         novoPagamento.valor, 
         novoPagamento.parcelas || 1, 
-        novoPagamento.meioPagamento || ''
+        novoPagamento.meioPagamento || '',
+        maquinaId
       );
-      setNovoPagamento({ ...novoPagamento, maquinaId, taxaCartao, valorLiquido });
+      // Reset parcelas para 1 ao mudar máquina, para garantir que seja uma parcela válida
+      setNovoPagamento({ ...novoPagamento, maquinaId, parcelas: 1, taxaCartao, valorLiquido });
     } else {
-      setNovoPagamento({ ...novoPagamento, maquinaId });
+      setNovoPagamento({ ...novoPagamento, maquinaId, parcelas: 1 });
     }
   };
 
@@ -208,7 +239,8 @@ export function PagamentoQuadro({
       const { taxaCartao, valorLiquido } = calcularTaxaDoValorFinal(
         novoPagamento.valor, 
         parcelas, 
-        novoPagamento.meioPagamento
+        novoPagamento.meioPagamento,
+        novoPagamento.maquinaId
       );
       setNovoPagamento({ ...novoPagamento, parcelas, taxaCartao, valorLiquido });
     } else {
@@ -498,8 +530,8 @@ export function PagamentoQuadro({
               </div>
             )}
             
-            {/* Parcelas - Cartão Crédito - ATUALIZADO PARA 36x */}
-            {novoPagamento.meioPagamento === 'Cartão Crédito' && (
+            {/* Parcelas - Cartão Crédito - DINÂMICO COM BASE NA MÁQUINA */}
+            {novoPagamento.meioPagamento === 'Cartão Crédito' && novoPagamento.maquinaId && (
               <div>
                 <label className="text-sm font-medium">Número de Parcelas *</label>
                 <Select 
@@ -510,16 +542,24 @@ export function PagamentoQuadro({
                     <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
-                    {Array.from({ length: MAX_PARCELAS }, (_, i) => i + 1).map(num => {
-                      const taxa = getTaxaCredito(num);
-                      return (
+                    {(() => {
+                      const maquina = maquinasCartao.find(m => m.id === novoPagamento.maquinaId);
+                      const parcelamentos = getParcelamentosMaquina(maquina);
+                      return parcelamentos.map(({ parcelas: num, taxa }) => (
                         <SelectItem key={num} value={String(num)}>
-                          {num}x {taxa > 0 ? `(${taxa}% taxa)` : '(sem taxa)'}
+                          {num}x {taxa > 0 ? `(${taxa.toFixed(1)}% taxa)` : '(sem taxa)'}
                         </SelectItem>
-                      );
-                    })}
+                      ));
+                    })()}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {/* Mensagem para selecionar máquina antes de parcelas */}
+            {novoPagamento.meioPagamento === 'Cartão Crédito' && !novoPagamento.maquinaId && (
+              <div className="p-3 bg-muted rounded-lg text-sm text-muted-foreground">
+                Selecione a máquina de cartão para ver as opções de parcelamento disponíveis.
               </div>
             )}
             
@@ -533,9 +573,11 @@ export function PagamentoQuadro({
                 </div>
                 <div className="flex justify-between text-sm text-orange-600">
                   <span>
-                    Taxa da Máquina ({novoPagamento.meioPagamento === 'Cartão Débito' 
-                      ? `${TAXA_DEBITO}%` 
-                      : `${getTaxaCredito(novoPagamento.parcelas || 1)}%`}):
+                    Taxa da Máquina ({(() => {
+                      const maquina = maquinasCartao.find(m => m.id === novoPagamento.maquinaId);
+                      const taxa = getTaxaMaquina(maquina, novoPagamento.parcelas || 1, novoPagamento.meioPagamento || '');
+                      return `${taxa.toFixed(1)}%`;
+                    })()}):
                   </span>
                   <span className="font-medium">-{formatarMoeda(novoPagamento.taxaCartao || 0)}</span>
                 </div>

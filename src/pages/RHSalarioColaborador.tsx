@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { DollarSign, Users, Percent, History, Save, ExternalLink } from 'lucide-react';
+import { DollarSign, Users, Percent, History, Save } from 'lucide-react';
 import { format } from 'date-fns';
 import { 
   getSalariosComColaboradores,
@@ -17,8 +17,7 @@ import {
   SalarioComColaborador,
   HistoricoSalario
 } from '@/utils/salarioColaboradorApi';
-import { getLojaById, getCargoNome } from '@/utils/cadastrosApi';
-import { useNavigate } from 'react-router-dom';
+import { getCargoNome } from '@/utils/cadastrosApi';
 
 interface SalarioEditavel extends SalarioComColaborador {
   novoSalarioFixo: number;
@@ -28,17 +27,12 @@ interface SalarioEditavel extends SalarioComColaborador {
 }
 
 export default function RHSalarioColaborador() {
-  const navigate = useNavigate();
   const [salarios, setSalarios] = useState<SalarioEditavel[]>([]);
   
   // Modal de histórico
   const [showHistoricoModal, setShowHistoricoModal] = useState(false);
   const [historicoSelecionado, setHistoricoSelecionado] = useState<HistoricoSalario[]>([]);
   const [colaboradorSelecionado, setColaboradorSelecionado] = useState<string>('');
-  
-  // Modal de comissão por loja
-  const [showComissaoLojaModal, setShowComissaoLojaModal] = useState(false);
-  const [comissaoLojaSelecionada, setComissaoLojaSelecionada] = useState<{ nome: string; percentual: number } | null>(null);
 
   useEffect(() => {
     carregarDados();
@@ -104,12 +98,6 @@ export default function RHSalarioColaborador() {
     setShowHistoricoModal(true);
   };
 
-  const handleVerComissaoLoja = (nome: string, percentual?: number) => {
-    if (percentual !== undefined) {
-      setComissaoLojaSelecionada({ nome, percentual });
-      setShowComissaoLojaModal(true);
-    }
-  };
 
   // Estatísticas
   const totalColaboradores = salarios.length;
@@ -203,7 +191,6 @@ export default function RHSalarioColaborador() {
                   <TableHead className="text-center">Salário Fixo</TableHead>
                   <TableHead className="text-center">Ajuda de Custo</TableHead>
                   <TableHead className="text-center">Comissão</TableHead>
-                  <TableHead className="text-center">Comissão Loja</TableHead>
                   <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -274,21 +261,6 @@ export default function RHSalarioColaborador() {
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                           </div>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {salario.comissaoPorLoja !== undefined ? (
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="text-green-600 hover:text-green-700"
-                            onClick={() => handleVerComissaoLoja(salario.colaborador.nome, salario.comissaoPorLoja)}
-                          >
-                            {salario.comissaoPorLoja.toFixed(2)}%
-                            <ExternalLink className="ml-1 h-3 w-3" />
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-2">
@@ -374,31 +346,6 @@ export default function RHSalarioColaborador() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Comissão por Loja */}
-      <Dialog open={showComissaoLojaModal} onOpenChange={setShowComissaoLojaModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Comissão por Loja - {comissaoLojaSelecionada?.nome}</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <div className="text-center p-6 bg-green-50 dark:bg-green-950/20 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-2">Percentual de Comissão sobre Lucro da Loja</p>
-              <p className="text-4xl font-bold text-green-600">
-                {comissaoLojaSelecionada?.percentual.toFixed(2)}%
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground mt-4 text-center">
-              Este percentual é aplicado sobre o lucro residual da loja onde o colaborador atua.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => navigate('/rh/comissao-por-loja')}>
-              Gerenciar Comissões por Loja
-            </Button>
-            <Button onClick={() => setShowComissaoLojaModal(false)}>Fechar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </RHLayout>
   );
 }

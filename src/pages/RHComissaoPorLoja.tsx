@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Store, Percent, Plus, Pencil, Trash2, History } from 'lucide-react';
+import { Store, Percent, Plus, Pencil, Trash2, History, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { 
   getComissoesPorLoja, 
@@ -21,6 +21,7 @@ import {
   HistoricoComissaoPorLoja
 } from '@/utils/comissaoPorLojaApi';
 import { getLojas, getCargos, getLojaById, getCargoNome } from '@/utils/cadastrosApi';
+import { exportToCSV } from '@/utils/formatUtils';
 
 export default function RHComissaoPorLoja() {
   const [comissoes, setComissoes] = useState<ComissaoPorLoja[]>([]);
@@ -128,6 +129,18 @@ export default function RHComissaoPorLoja() {
     ? comissoes.reduce((acc, c) => acc + c.percentualComissao, 0) / comissoes.length 
     : 0;
 
+  // Exportar CSV
+  const handleExportCSV = () => {
+    const dataToExport = comissoes.map(c => ({
+      ID: c.id,
+      Loja: getLojaById(c.lojaId)?.nome || c.lojaId,
+      Cargo: getCargoNome(c.cargoId),
+      'Comissão (%)': c.percentualComissao.toFixed(2)
+    }));
+    exportToCSV(dataToExport, `rh_comissao_por_loja_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    toast.success('CSV exportado com sucesso!');
+  };
+
   return (
     <RHLayout title="Comissão por Loja">
       {/* Cards de Resumo */}
@@ -185,10 +198,16 @@ export default function RHComissaoPorLoja() {
               <Percent className="h-5 w-5" />
               Comissões por Loja e Cargo
             </CardTitle>
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Comissão por Loja
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleExportCSV}>
+                <Download className="mr-2 h-4 w-4" />
+                Exportar CSV
+              </Button>
+              <Button onClick={() => handleOpenDialog()}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Comissão por Loja
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
