@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Check, Download, Filter, X, Eye, Clock, CheckCircle2, Undo2, AlertCircle, CreditCard, Banknote, Smartphone, Wallet, ChevronRight } from 'lucide-react';
+import { Check, Download, Filter, X, Clock, CheckCircle2, Undo2, AlertCircle, CreditCard, Banknote, Smartphone, Wallet, ChevronRight, Lock, MessageSquare, XCircle, Save, Building2 } from 'lucide-react';
 import { getContasFinanceiras, getColaboradores, getCargos, getLojas } from '@/utils/cadastrosApi';
 import { useFluxoVendas } from '@/hooks/useFluxoVendas';
 import { 
@@ -40,6 +40,14 @@ interface ValidacaoPagamento {
 // Interface para situação da conferência
 type SituacaoConferencia = 'Conferido' | `Pendente - ${string}`;
 
+// Interface para observações
+interface Observacao {
+  texto: string;
+  dataHora: string;
+  usuarioId: string;
+  usuarioNome: string;
+}
+
 export default function FinanceiroConferencia() {
   const navigate = useNavigate();
   const { vendas, recarregar } = useFluxoVendas({
@@ -53,16 +61,22 @@ export default function FinanceiroConferencia() {
   
   // Modais e estados
   const [vendaSelecionada, setVendaSelecionada] = useState<VendaComFluxo | null>(null);
-  const [modalDevolver, setModalDevolver] = useState(false);
-  const [motivoDevolucao, setMotivoDevolucao] = useState('');
+  const [modalRejeitar, setModalRejeitar] = useState(false);
+  const [motivoRejeicao, setMotivoRejeicao] = useState('');
   const [validacoesPagamento, setValidacoesPagamento] = useState<ValidacaoPagamento[]>([]);
+  
+  // Novos estados para funcionalidades adicionais
+  const [observacaoFinanceiro, setObservacaoFinanceiro] = useState('');
+  const [contaDestinoId, setContaDestinoId] = useState('');
+  const [observacaoGestorCarregada, setObservacaoGestorCarregada] = useState<Observacao | null>(null);
   
   const [filters, setFilters] = useState({
     dataInicio: '',
     dataFim: '',
     loja: 'todas',
     status: 'todos',
-    contaDestino: 'todas'
+    contaOrigem: 'todas',
+    situacao: 'todas'
   });
 
   // Filtrar colaboradores com permissão "Financeiro"
@@ -75,18 +89,10 @@ export default function FinanceiroConferencia() {
 
   // Calcular situação de conferência de uma venda
   const getSituacaoConferencia = (venda: VendaComFluxo): SituacaoConferencia => {
+    if (venda.statusFluxo === 'Finalizado') return 'Conferido';
+    
     const storedValidacoes = localStorage.getItem(`validacao_pagamentos_financeiro_${venda.id}`);
     if (!storedValidacoes) {
-      // Verificar validações do gestor
-      const gestorValidacoes = localStorage.getItem(`validacao_pagamentos_${venda.id}`);
-      if (gestorValidacoes) {
-        const validacoes = JSON.parse(gestorValidacoes);
-        const naoValidados = validacoes.filter((v: any) => !v.validadoGestor);
-        if (naoValidados.length > 0) {
-          return `Pendente - ${naoValidados[0].metodoPagamento}`;
-        }
-      }
-      // Se não tem validações salvas, verificar pagamentos
       const metodos = venda.pagamentos?.map(p => p.meioPagamento) || [];
       if (metodos.length > 0) {
         return `Pendente - ${metodos[0]}`;
@@ -101,6 +107,13 @@ export default function FinanceiroConferencia() {
     return `Pendente - ${naoValidados[0].metodoPagamento}`;
   };
 
+  // Obter conta de origem de uma venda (mock - usando lojaVenda como referência)
+  const getContaOrigem = (venda: VendaComFluxo) => {
+    // Buscar conta associada à loja da venda
+    const contaOrigem = contasFinanceiras.find(c => c.lojaVinculada === venda.lojaVenda);
+    return contaOrigem || null;
+  };
+
   const filteredVendas = useMemo(() => {
     return vendas.filter(v => {
       if (filters.dataInicio && new Date(v.dataHora) < new Date(filters.dataInicio)) return false;
@@ -111,47 +124,63 @@ export default function FinanceiroConferencia() {
       }
       if (filters.loja !== 'todas' && v.lojaVenda !== filters.loja) return false;
       if (filters.status !== 'todos' && v.statusFluxo !== filters.status) return false;
+      
+      // Filtro por conta de origem
+      if (filters.contaOrigem !== 'todas') {
+        const contaOrigem = getContaOrigem(v);
+        if (!contaOrigem || contaOrigem.id !== filters.contaOrigem) return false;
+      }
+      
+      // Filtro por situação
+      if (filters.situacao !== 'todas') {
+        const situacao = getSituacaoConferencia(v);
+        if (filters.situacao === 'conferido' && situacao !== 'Conferido') return false;
+        if (filters.situacao === 'pendente' && situacao === 'Conferido') return false;
+        if (filters.situacao.startsWith('pendente-')) {
+          const metodoFiltro = filters.situacao.replace('pendente-', '');
+          if (!situacao.toLowerCase().includes(metodoFiltro)) return false;
+        }
+      }
+      
       return true;
     }).sort((a, b) => {
       if (a.statusFluxo === 'Conferência Financeiro' && b.statusFluxo === 'Finalizado') return -1;
       if (a.statusFluxo === 'Finalizado' && b.statusFluxo === 'Conferência Financeiro') return 1;
       return new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime();
     });
-  }, [vendas, filters]);
+  }, [vendas, filters, contasFinanceiras]);
 
-  // Calcular somatórios por método de pagamento
+  // Calcular somatórios por método de pagamento - PENDENTE vs CONFERIDO
   const somatorioPagamentos = useMemo(() => {
     const totais = {
-      cartaoCredito: 0,
-      cartaoDebito: 0,
-      pix: 0,
-      dinheiro: 0
+      pendente: { cartaoCredito: 0, cartaoDebito: 0, pix: 0, dinheiro: 0 },
+      conferido: { cartaoCredito: 0, cartaoDebito: 0, pix: 0, dinheiro: 0 }
     };
 
     filteredVendas.forEach(venda => {
+      const storedValidacoes = localStorage.getItem(`validacao_pagamentos_financeiro_${venda.id}`);
+      const validacoesFinanceiro = storedValidacoes ? JSON.parse(storedValidacoes) : [];
+      
       venda.pagamentos?.forEach(pag => {
         const meio = pag.meioPagamento.toLowerCase();
+        const validacao = validacoesFinanceiro.find((v: ValidacaoPagamento) => v.metodoPagamento === pag.meioPagamento);
+        const isConferido = validacao?.validadoFinanceiro || venda.statusFluxo === 'Finalizado';
+        
+        const target = isConferido ? totais.conferido : totais.pendente;
+        
         if (meio.includes('crédito') || meio.includes('credito')) {
-          totais.cartaoCredito += pag.valor;
+          target.cartaoCredito += pag.valor;
         } else if (meio.includes('débito') || meio.includes('debito')) {
-          totais.cartaoDebito += pag.valor;
+          target.cartaoDebito += pag.valor;
         } else if (meio.includes('pix')) {
-          totais.pix += pag.valor;
+          target.pix += pag.valor;
         } else if (meio.includes('dinheiro')) {
-          totais.dinheiro += pag.valor;
+          target.dinheiro += pag.valor;
         }
       });
     });
 
     return totais;
-  }, [filteredVendas]);
-
-  // Calcular valor pendente (vendas com checkboxes não validados)
-  const valorPendente = useMemo(() => {
-    return filteredVendas
-      .filter(v => v.statusFluxo === 'Conferência Financeiro')
-      .filter(v => getSituacaoConferencia(v) !== 'Conferido')
-      .reduce((acc, v) => acc + v.total, 0);
   }, [filteredVendas]);
 
   const pendentes = vendas.filter(v => v.statusFluxo === 'Conferência Financeiro').length;
@@ -186,6 +215,40 @@ export default function FinanceiroConferencia() {
     });
     
     setValidacoesPagamento(validacoes);
+    
+    // Carregar observação do gestor
+    const storedObsGestor = localStorage.getItem(`observacao_gestor_${venda.id}`);
+    if (storedObsGestor) {
+      setObservacaoGestorCarregada(JSON.parse(storedObsGestor));
+    } else {
+      setObservacaoGestorCarregada(null);
+    }
+    
+    // Carregar observação do financeiro
+    const storedObsFinanceiro = localStorage.getItem(`observacao_financeiro_${venda.id}`);
+    if (storedObsFinanceiro) {
+      const obs: Observacao = JSON.parse(storedObsFinanceiro);
+      setObservacaoFinanceiro(obs.texto);
+    } else {
+      setObservacaoFinanceiro('');
+    }
+    
+    // Carregar conta de destino (default: conta de origem)
+    const storedContaDestino = localStorage.getItem(`conta_destino_${venda.id}`);
+    if (storedContaDestino) {
+      setContaDestinoId(storedContaDestino);
+    } else {
+      const contaOrigem = getContaOrigem(venda);
+      setContaDestinoId(contaOrigem?.id || '');
+    }
+  };
+
+  const handleFecharPainel = () => {
+    setVendaSelecionada(null);
+    setValidacoesPagamento([]);
+    setObservacaoFinanceiro('');
+    setObservacaoGestorCarregada(null);
+    setContaDestinoId('');
   };
 
   const handleToggleValidacaoFinanceiro = (metodo: string) => {
@@ -197,7 +260,7 @@ export default function FinanceiroConferencia() {
     
     setValidacoesPagamento(novasValidacoes);
     
-    // Salvar imediatamente no localStorage para atualização em tempo real da coluna Situação
+    // Salvar imediatamente no localStorage para atualização em tempo real
     if (vendaSelecionada) {
       localStorage.setItem(
         `validacao_pagamentos_financeiro_${vendaSelecionada.id}`,
@@ -206,31 +269,76 @@ export default function FinanceiroConferencia() {
     }
   };
 
-  const handleSalvarValidacoes = () => {
+  const handleSalvarSemFinalizar = () => {
     if (!vendaSelecionada) return;
     
+    // Salvar validações
     localStorage.setItem(
       `validacao_pagamentos_financeiro_${vendaSelecionada.id}`,
       JSON.stringify(validacoesPagamento)
     );
     
-    toast.success('Validações salvas com sucesso!');
+    // Salvar observação do financeiro
+    if (observacaoFinanceiro.trim()) {
+      const obsFinanceiro: Observacao = {
+        texto: observacaoFinanceiro.trim(),
+        dataHora: new Date().toISOString(),
+        usuarioId: usuarioLogado.id,
+        usuarioNome: usuarioLogado.nome
+      };
+      localStorage.setItem(
+        `observacao_financeiro_${vendaSelecionada.id}`,
+        JSON.stringify(obsFinanceiro)
+      );
+    }
+    
+    // Salvar conta de destino
+    if (contaDestinoId) {
+      localStorage.setItem(`conta_destino_${vendaSelecionada.id}`, contaDestinoId);
+    }
+    
+    toast.success('Validações e observações salvas com sucesso!');
     recarregar();
-  };
-
-  const handleAbrirModalDevolver = () => {
-    setMotivoDevolucao('');
-    setModalDevolver(true);
   };
 
   const handleFinalizar = () => {
     if (!vendaSelecionada) return;
+
+    // Validar se todos os checkboxes estão marcados
+    const naoValidados = validacoesPagamento.filter(v => !v.validadoFinanceiro);
+    if (naoValidados.length > 0) {
+      toast.error('Não é possível finalizar com pendências. Todos os métodos de pagamento devem ser validados.');
+      return;
+    }
+
+    // Validar se conta de destino foi selecionada
+    if (!contaDestinoId) {
+      toast.error('Por favor, selecione uma conta de destino.');
+      return;
+    }
 
     // Salvar validações antes de finalizar
     localStorage.setItem(
       `validacao_pagamentos_financeiro_${vendaSelecionada.id}`,
       JSON.stringify(validacoesPagamento)
     );
+
+    // Salvar observação do financeiro
+    if (observacaoFinanceiro.trim()) {
+      const obsFinanceiro: Observacao = {
+        texto: observacaoFinanceiro.trim(),
+        dataHora: new Date().toISOString(),
+        usuarioId: usuarioLogado.id,
+        usuarioNome: usuarioLogado.nome
+      };
+      localStorage.setItem(
+        `observacao_financeiro_${vendaSelecionada.id}`,
+        JSON.stringify(obsFinanceiro)
+      );
+    }
+
+    // Salvar conta de destino
+    localStorage.setItem(`conta_destino_${vendaSelecionada.id}`, contaDestinoId);
 
     const resultado = finalizarVenda(
       vendaSelecionada.id,
@@ -240,36 +348,50 @@ export default function FinanceiroConferencia() {
 
     if (resultado) {
       toast.success(`Venda ${vendaSelecionada.id} finalizada com sucesso!`);
-      setVendaSelecionada(null);
-      setValidacoesPagamento([]);
+      handleFecharPainel();
       recarregar();
     } else {
       toast.error('Erro ao finalizar venda.');
     }
   };
 
-  const handleDevolver = () => {
-    if (!vendaSelecionada || !motivoDevolucao.trim()) {
-      toast.error('Por favor, informe o motivo da devolução.');
+  const handleAbrirModalRejeitar = () => {
+    setMotivoRejeicao('');
+    setModalRejeitar(true);
+  };
+
+  const handleRejeitar = () => {
+    if (!vendaSelecionada || !motivoRejeicao.trim()) {
+      toast.error('Por favor, informe o motivo da rejeição.');
       return;
     }
+
+    // Salvar rejeição com observação
+    const rejeicaoFinanceiro = {
+      motivo: motivoRejeicao.trim(),
+      dataHora: new Date().toISOString(),
+      usuarioId: usuarioLogado.id,
+      usuarioNome: usuarioLogado.nome
+    };
+    localStorage.setItem(
+      `rejeicao_financeiro_${vendaSelecionada.id}`,
+      JSON.stringify(rejeicaoFinanceiro)
+    );
 
     const resultado = devolverFinanceiro(
       vendaSelecionada.id,
       usuarioLogado.id,
       usuarioLogado.nome,
-      motivoDevolucao.trim()
+      motivoRejeicao.trim()
     );
 
     if (resultado) {
-      toast.success(`Venda ${vendaSelecionada.id} devolvida para o gestor.`);
-      setModalDevolver(false);
-      setVendaSelecionada(null);
-      setMotivoDevolucao('');
-      setValidacoesPagamento([]);
+      toast.success(`Conferência da venda ${vendaSelecionada.id} recusada.`);
+      setModalRejeitar(false);
+      handleFecharPainel();
       recarregar();
     } else {
-      toast.error('Erro ao devolver venda.');
+      toast.error('Erro ao rejeitar venda.');
     }
   };
 
@@ -280,7 +402,7 @@ export default function FinanceiroConferencia() {
   };
 
   const handleLimpar = () => {
-    setFilters({ dataInicio: '', dataFim: '', loja: 'todas', status: 'todos', contaDestino: 'todas' });
+    setFilters({ dataInicio: '', dataFim: '', loja: 'todas', status: 'todos', contaOrigem: 'todas', situacao: 'todas' });
   };
 
   const getStatusBadge = (status: StatusVenda) => {
@@ -312,70 +434,110 @@ export default function FinanceiroConferencia() {
 
   const getLojaNome = (lojaId: string) => lojas.find(l => l.id === lojaId)?.nome || lojaId;
   const getVendedorNome = (vendedorId: string) => colaboradores.find(c => c.id === vendedorId)?.nome || vendedorId;
+  const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === contaId)?.nome || 'Não informada';
 
   return (
     <FinanceiroLayout title="Conferência de Contas - Vendas">
       <div className="flex gap-6">
-        {/* Painel Principal - Tabela */}
-        <div className={`flex-1 ${vendaSelecionada ? 'w-2/3' : 'w-full'} transition-all`}>
-          {/* Cards de somatório por método de pagamento */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
-              <CardContent className="pt-4 pb-4">
+        {/* Painel Principal - Tabela (70%) */}
+        <div className={`transition-all ${vendaSelecionada ? 'w-[70%]' : 'w-full'}`}>
+          {/* Cards Pendente vs Conferido por método */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            {/* Pendentes */}
+            <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+              <CardContent className="pt-3 pb-3">
                 <div className="flex items-center gap-2">
-                  <CreditCard className="h-6 w-6 text-blue-600 opacity-70" />
+                  <CreditCard className="h-5 w-5 text-red-600 opacity-70" />
                   <div>
-                    <p className="text-xs text-blue-700 dark:text-blue-300">Cartão Crédito</p>
-                    <p className="text-lg font-bold text-blue-800 dark:text-blue-200">{formatCurrency(somatorioPagamentos.cartaoCredito)}</p>
+                    <p className="text-xs text-red-700 dark:text-red-300">Pendente - Crédito</p>
+                    <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.cartaoCredito)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+              <CardContent className="pt-3 pb-3">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-red-600 opacity-70" />
+                  <div>
+                    <p className="text-xs text-red-700 dark:text-red-300">Pendente - Débito</p>
+                    <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.cartaoDebito)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+              <CardContent className="pt-3 pb-3">
+                <div className="flex items-center gap-2">
+                  <Smartphone className="h-5 w-5 text-red-600 opacity-70" />
+                  <div>
+                    <p className="text-xs text-red-700 dark:text-red-300">Pendente - Pix</p>
+                    <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.pix)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+              <CardContent className="pt-3 pb-3">
+                <div className="flex items-center gap-2">
+                  <Banknote className="h-5 w-5 text-red-600 opacity-70" />
+                  <div>
+                    <p className="text-xs text-red-700 dark:text-red-300">Pendente - Dinheiro</p>
+                    <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.dinheiro)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {/* Conferidos */}
+            <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+              <CardContent className="pt-3 pb-3">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-green-600 opacity-70" />
+                  <div>
+                    <p className="text-xs text-green-700 dark:text-green-300">Conferido - Crédito</p>
+                    <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.cartaoCredito)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
             <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
-              <CardContent className="pt-4 pb-4">
+              <CardContent className="pt-3 pb-3">
                 <div className="flex items-center gap-2">
-                  <Wallet className="h-6 w-6 text-green-600 opacity-70" />
+                  <Wallet className="h-5 w-5 text-green-600 opacity-70" />
                   <div>
-                    <p className="text-xs text-green-700 dark:text-green-300">Cartão Débito</p>
-                    <p className="text-lg font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.cartaoDebito)}</p>
+                    <p className="text-xs text-green-700 dark:text-green-300">Conferido - Débito</p>
+                    <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.cartaoDebito)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-950/50 dark:to-teal-900/30 border-teal-200 dark:border-teal-800">
-              <CardContent className="pt-4 pb-4">
+            <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+              <CardContent className="pt-3 pb-3">
                 <div className="flex items-center gap-2">
-                  <Smartphone className="h-6 w-6 text-teal-600 opacity-70" />
+                  <Smartphone className="h-5 w-5 text-green-600 opacity-70" />
                   <div>
-                    <p className="text-xs text-teal-700 dark:text-teal-300">Pix</p>
-                    <p className="text-lg font-bold text-teal-800 dark:text-teal-200">{formatCurrency(somatorioPagamentos.pix)}</p>
+                    <p className="text-xs text-green-700 dark:text-green-300">Conferido - Pix</p>
+                    <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.pix)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/50 dark:to-amber-900/30 border-amber-200 dark:border-amber-800">
-              <CardContent className="pt-4 pb-4">
+            <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+              <CardContent className="pt-3 pb-3">
                 <div className="flex items-center gap-2">
-                  <Banknote className="h-6 w-6 text-amber-600 opacity-70" />
+                  <Banknote className="h-5 w-5 text-green-600 opacity-70" />
                   <div>
-                    <p className="text-xs text-amber-700 dark:text-amber-300">Dinheiro</p>
-                    <p className="text-lg font-bold text-amber-800 dark:text-amber-200">{formatCurrency(somatorioPagamentos.dinheiro)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Card de Valor Pendente */}
-            <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
-              <CardContent className="pt-4 pb-4">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-6 w-6 text-red-600 opacity-70" />
-                  <div>
-                    <p className="text-xs text-red-700 dark:text-red-300">Valor Pendente</p>
-                    <p className="text-lg font-bold text-red-800 dark:text-red-200">{formatCurrency(valorPendente)}</p>
+                    <p className="text-xs text-green-700 dark:text-green-300">Conferido - Dinheiro</p>
+                    <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.dinheiro)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -418,78 +580,154 @@ export default function FinanceiroConferencia() {
 
           {/* Filtros */}
           <Card className="mb-6">
-            <CardHeader><CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5" />Filtros</CardTitle></CardHeader>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filtros
+              </CardTitle>
+            </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <div><Label>Data Início</Label><Input type="date" value={filters.dataInicio} onChange={(e) => setFilters({ ...filters, dataInicio: e.target.value })} /></div>
-                <div><Label>Data Fim</Label><Input type="date" value={filters.dataFim} onChange={(e) => setFilters({ ...filters, dataFim: e.target.value })} /></div>
-                <div><Label>Loja</Label><Select value={filters.loja} onValueChange={(value) => setFilters({ ...filters, loja: value })}><SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger><SelectContent><SelectItem value="todas">Todas</SelectItem>{lojas.map(l => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}</SelectContent></Select></div>
-                <div><Label>Status</Label><Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}><SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger><SelectContent><SelectItem value="todos">Todos</SelectItem><SelectItem value="Conferência Financeiro">Conferência Financeiro</SelectItem><SelectItem value="Finalizado">Finalizado</SelectItem></SelectContent></Select></div>
-                <div className="flex items-end gap-2"><Button variant="outline" onClick={handleLimpar}><X className="h-4 w-4 mr-1" />Limpar</Button><Button onClick={handleExport} variant="secondary"><Download className="h-4 w-4 mr-1" />CSV</Button></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
+                <div>
+                  <Label>Data Início</Label>
+                  <Input type="date" value={filters.dataInicio} onChange={(e) => setFilters({ ...filters, dataInicio: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Data Fim</Label>
+                  <Input type="date" value={filters.dataFim} onChange={(e) => setFilters({ ...filters, dataFim: e.target.value })} />
+                </div>
+                <div>
+                  <Label>Loja</Label>
+                  <Select value={filters.loja} onValueChange={(value) => setFilters({ ...filters, loja: value })}>
+                    <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas</SelectItem>
+                      {lojas.map(l => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Status</Label>
+                  <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
+                    <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="Conferência Financeiro">Conferência Financeiro</SelectItem>
+                      <SelectItem value="Finalizado">Finalizado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Conta de Origem</Label>
+                  <Select value={filters.contaOrigem} onValueChange={(value) => setFilters({ ...filters, contaOrigem: value })}>
+                    <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas as Contas</SelectItem>
+                      {contasFinanceiras.map(c => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Situação</Label>
+                  <Select value={filters.situacao} onValueChange={(value) => setFilters({ ...filters, situacao: value })}>
+                    <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas as Situações</SelectItem>
+                      <SelectItem value="conferido">Conferido</SelectItem>
+                      <SelectItem value="pendente">Pendente</SelectItem>
+                      <SelectItem value="pendente-crédito">Pendente - Cartão de Crédito</SelectItem>
+                      <SelectItem value="pendente-débito">Pendente - Cartão de Débito</SelectItem>
+                      <SelectItem value="pendente-pix">Pendente - Pix</SelectItem>
+                      <SelectItem value="pendente-dinheiro">Pendente - Dinheiro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end gap-2">
+                  <Button variant="outline" onClick={handleLimpar} className="flex-1">
+                    <X className="h-4 w-4 mr-1" />
+                    Limpar
+                  </Button>
+                  <Button onClick={handleExport} variant="secondary">
+                    <Download className="h-4 w-4 mr-1" />
+                    CSV
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Tabela com coluna Situação */}
+          {/* Tabela com coluna Conta de Origem e Situação */}
           <Card>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID Venda</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Loja</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Vendedor</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead>Situação</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredVendas.length === 0 ? (
-                    <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">Nenhuma venda encontrada</TableCell></TableRow>
-                  ) : filteredVendas.map(venda => (
-                    <TableRow 
-                      key={venda.id} 
-                      className={`${getRowClassName(venda)} ${vendaSelecionada?.id === venda.id ? 'ring-2 ring-primary' : ''} cursor-pointer`}
-                      onClick={() => handleSelecionarVenda(venda)}
-                    >
-                      <TableCell className="font-medium">{venda.id}</TableCell>
-                      <TableCell>{new Date(venda.dataHora).toLocaleDateString('pt-BR')}</TableCell>
-                      <TableCell>{getLojaNome(venda.lojaVenda)}</TableCell>
-                      <TableCell className="max-w-[120px] truncate">{venda.clienteNome}</TableCell>
-                      <TableCell>{getVendedorNome(venda.vendedor)}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(venda.total)}</TableCell>
-                      <TableCell>{getSituacaoBadge(getSituacaoConferencia(venda))}</TableCell>
-                      <TableCell>{getStatusBadge(venda.statusFluxo as StatusVenda)}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSelecionarVenda(venda); }}>
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID Venda</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead>Conta de Origem</TableHead>
+                      <TableHead>Situação</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Ações</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredVendas.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          Nenhuma venda encontrada
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredVendas.map(venda => {
+                      const contaOrigem = getContaOrigem(venda);
+                      return (
+                        <TableRow 
+                          key={venda.id} 
+                          className={`${getRowClassName(venda)} ${vendaSelecionada?.id === venda.id ? 'ring-2 ring-primary' : ''} cursor-pointer`}
+                          onClick={() => handleSelecionarVenda(venda)}
+                        >
+                          <TableCell className="font-medium">{venda.id}</TableCell>
+                          <TableCell>{new Date(venda.dataHora).toLocaleDateString('pt-BR')}</TableCell>
+                          <TableCell className="max-w-[120px] truncate">{venda.clienteNome}</TableCell>
+                          <TableCell className="text-right font-semibold">{formatCurrency(venda.total)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Building2 className="h-3 w-3 text-muted-foreground" />
+                              <span className="text-sm">{contaOrigem?.nome || 'Não informada'}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>{getSituacaoBadge(getSituacaoConferencia(venda))}</TableCell>
+                          <TableCell>{getStatusBadge(venda.statusFluxo as StatusVenda)}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSelecionarVenda(venda); }}>
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Painel de Detalhes - Lateral */}
+        {/* Painel Lateral (30%) */}
         {vendaSelecionada && (
-          <div className="w-[400px] sticky top-4 h-fit">
-            <Card>
-              <CardHeader className="pb-3">
+          <div className="w-[30%] sticky top-4 h-fit min-w-[350px]">
+            <Card className="max-h-[calc(100vh-120px)] overflow-y-auto">
+              <CardHeader className="pb-3 sticky top-0 bg-card z-10 border-b">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">Detalhes da Venda</CardTitle>
-                  <Button variant="ghost" size="sm" onClick={() => { setVendaSelecionada(null); setValidacoesPagamento([]); }}>
+                  <Button variant="ghost" size="sm" onClick={handleFecharPainel}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-4">
                 {/* Info da venda */}
                 <div className="grid grid-cols-2 gap-3 p-3 bg-muted rounded-lg text-sm">
                   <div>
@@ -527,7 +765,7 @@ export default function FinanceiroConferencia() {
 
                 {/* Resumo de pagamento */}
                 <div>
-                  <h4 className="font-semibold text-sm mb-2">Resumo de Pagamento</h4>
+                  <h4 className="font-semibold text-sm mb-2">Pagamentos</h4>
                   <div className="space-y-1">
                     {vendaSelecionada.pagamentos?.map((pag, idx) => (
                       <div key={idx} className="text-xs p-2 bg-muted/50 rounded flex justify-between">
@@ -569,34 +807,104 @@ export default function FinanceiroConferencia() {
                         </div>
                       ))}
                     </div>
-                    <Button 
-                      onClick={handleSalvarValidacoes} 
-                      size="sm" 
-                      variant="outline" 
-                      className="w-full mt-3"
-                    >
-                      Salvar Validações
-                    </Button>
+                  </div>
+                )}
+
+                {/* Observação do Gestor (Apenas Leitura) */}
+                <div className="p-3 bg-gray-50 dark:bg-gray-900/30 rounded-lg border">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                    <Label className="font-semibold text-sm">Observação do Gestor</Label>
+                  </div>
+                  {observacaoGestorCarregada ? (
+                    <div>
+                      <p className="text-sm text-muted-foreground">{observacaoGestorCarregada.texto}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Por {observacaoGestorCarregada.usuarioNome} em {new Date(observacaoGestorCarregada.dataHora).toLocaleString('pt-BR')}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Nenhuma observação do gestor</p>
+                  )}
+                </div>
+
+                {/* Observação do Financeiro (Editável) */}
+                {vendaSelecionada.statusFluxo === 'Conferência Financeiro' && (
+                  <div className="p-3 bg-muted/50 rounded-lg border">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                      <Label className="font-semibold text-sm">Observação do Financeiro</Label>
+                    </div>
+                    <Textarea
+                      placeholder="Adicione observações sobre esta conferência (ex: pagamento confirmado, aguardando comprovante, etc)"
+                      value={observacaoFinanceiro}
+                      onChange={(e) => setObservacaoFinanceiro(e.target.value.slice(0, 1000))}
+                      rows={3}
+                      className="text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1 text-right">
+                      {observacaoFinanceiro.length}/1000 caracteres
+                    </p>
+                  </div>
+                )}
+
+                {/* Campo Conta de Destino */}
+                {vendaSelecionada.statusFluxo === 'Conferência Financeiro' && (
+                  <div className="p-3 bg-muted/50 rounded-lg border">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <Label className="font-semibold text-sm">Conta de Destino *</Label>
+                    </div>
+                    <Select value={contaDestinoId} onValueChange={setContaDestinoId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a conta de destino" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contasFinanceiras.map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Confirme a conta para onde o pagamento será destinado
+                    </p>
                   </div>
                 )}
 
                 {/* Ações */}
                 {vendaSelecionada.statusFluxo === 'Conferência Financeiro' && (
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex flex-col gap-2 pt-2 border-t">
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={handleSalvarSemFinalizar}
+                      >
+                        <Save className="h-4 w-4 mr-1" />
+                        Salvar
+                      </Button>
+                      <Button 
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        onClick={handleFinalizar}
+                      >
+                        <Check className="h-4 w-4 mr-1" />
+                        Finalizar
+                      </Button>
+                    </div>
                     <Button 
-                      variant="outline" 
-                      className="flex-1"
-                      onClick={handleAbrirModalDevolver}
+                      variant="destructive" 
+                      className="w-full"
+                      onClick={handleAbrirModalRejeitar}
                     >
-                      <Undo2 className="h-4 w-4 mr-1" />
-                      Devolver
+                      <XCircle className="h-4 w-4 mr-1" />
+                      Rejeitar
                     </Button>
                     <Button 
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                      onClick={handleFinalizar}
+                      variant="ghost" 
+                      className="w-full"
+                      onClick={handleFecharPainel}
                     >
-                      <Check className="h-4 w-4 mr-1" />
-                      Finalizar
+                      Voltar
                     </Button>
                   </div>
                 )}
@@ -615,25 +923,51 @@ export default function FinanceiroConferencia() {
         )}
       </div>
 
-      {/* Modal Devolver */}
-      <Dialog open={modalDevolver} onOpenChange={setModalDevolver}>
+      {/* Modal Rejeitar */}
+      <Dialog open={modalRejeitar} onOpenChange={setModalRejeitar}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-purple-600">Devolver para Gestor</DialogTitle>
-            <DialogDescription>A venda será devolvida ao gestor para correção.</DialogDescription>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <XCircle className="h-5 w-5" />
+              Rejeitar Conferência
+            </DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja rejeitar esta conferência? A venda será devolvida ao gestor.
+            </DialogDescription>
           </DialogHeader>
           {vendaSelecionada && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-                <div><p className="text-sm text-muted-foreground">ID</p><p className="font-medium">{vendaSelecionada.id}</p></div>
-                <div><p className="text-sm text-muted-foreground">Valor</p><p className="font-medium">{formatCurrency(vendaSelecionada.total)}</p></div>
+                <div>
+                  <p className="text-sm text-muted-foreground">ID</p>
+                  <p className="font-medium">{vendaSelecionada.id}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Valor</p>
+                  <p className="font-medium">{formatCurrency(vendaSelecionada.total)}</p>
+                </div>
               </div>
-              <div><Label>Motivo da Devolução *</Label><Textarea placeholder="Descreva o motivo..." value={motivoDevolucao} onChange={(e) => setMotivoDevolucao(e.target.value)} rows={3} /></div>
+              <div>
+                <Label>Motivo da Rejeição *</Label>
+                <Textarea 
+                  placeholder="Descreva o motivo da rejeição..." 
+                  value={motivoRejeicao} 
+                  onChange={(e) => setMotivoRejeicao(e.target.value)} 
+                  rows={3} 
+                />
+              </div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setModalDevolver(false)}>Cancelar</Button>
-            <Button variant="secondary" onClick={handleDevolver} disabled={!motivoDevolucao.trim()}><Undo2 className="h-4 w-4 mr-2" />Confirmar Devolução</Button>
+            <Button variant="outline" onClick={() => setModalRejeitar(false)}>Cancelar</Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleRejeitar} 
+              disabled={!motivoRejeicao.trim()}
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              Confirmar Rejeição
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
