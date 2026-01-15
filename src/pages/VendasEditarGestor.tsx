@@ -363,14 +363,14 @@ export default function VendasEditarGestor() {
                       {formatCurrency(item.valorRecomendado)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end">
-                        <span className="text-muted-foreground mr-1">R$</span>
+                      <div className="relative w-32 ml-auto">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
                         <Input
                           type="text"
                           inputMode="decimal"
                           value={moedaMask(item.valorVenda)}
                           onChange={(e) => handleUpdateItemValor(item.id, parseMoeda(e.target.value))}
-                          className="w-28 text-right"
+                          className="pl-9 text-right"
                         />
                       </div>
                     </TableCell>
@@ -412,14 +412,14 @@ export default function VendasEditarGestor() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end">
-                          <span className="text-muted-foreground mr-1">R$</span>
+                        <div className="relative w-32 ml-auto">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
                           <Input
                             type="text"
                             inputMode="decimal"
                             value={moedaMask(trade.valorCompraUsado)}
                             onChange={(e) => handleUpdateTradeInValor(trade.id, parseMoeda(e.target.value))}
-                            className="w-28 text-right"
+                            className="pl-9 text-right"
                           />
                         </div>
                       </TableCell>
@@ -455,14 +455,14 @@ export default function VendasEditarGestor() {
                     <TableCell className="font-medium">{pag.meioPagamento}</TableCell>
                     <TableCell>{getContaNome(pag.contaDestino)}</TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end">
-                        <span className="text-muted-foreground mr-1">R$</span>
+                      <div className="relative w-32 ml-auto">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
                         <Input
                           type="text"
                           inputMode="decimal"
                           value={moedaMask(pag.valor)}
                           onChange={(e) => handleUpdatePagamento(pag.id, 'valor', parseMoeda(e.target.value))}
-                          className="w-28 text-right"
+                          className="pl-9 text-right"
                         />
                       </div>
                     </TableCell>
