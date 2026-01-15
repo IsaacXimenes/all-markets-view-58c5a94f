@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { DollarSign, Save, History } from 'lucide-react';
+import { DollarSign, Save, History, Download } from 'lucide-react';
 import { 
   getColaboradores, 
   getLojaById, 
@@ -21,6 +21,7 @@ import {
 } from '@/utils/comissoesApi';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
+import { exportToCSV } from '@/utils/formatUtils';
 
 interface ColaboradorComissao extends Colaborador {
   salarioFixo: number;
@@ -103,6 +104,21 @@ export default function RHComissoes() {
     setShowHistoricoModal(true);
   };
 
+  const handleExport = () => {
+    const data = colaboradoresComissao.map(col => {
+      const loja = getLojaById(col.loja);
+      return {
+        'Nome': col.nome,
+        'Cargo': getCargoNome(col.cargo),
+        'Loja': loja?.nome || '-',
+        'Salário Fixo': new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(col.salarioFixo),
+        'Comissão': `${col.percentualComissao.toFixed(1)}%`
+      };
+    });
+    exportToCSV(data, `rh_comissoes_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    toast({ title: "Exportado", description: "Dados exportados com sucesso!" });
+  };
+
   // Estatísticas
   const totalColaboradores = colaboradoresComissao.length;
   const mediaComissao = colaboradoresComissao.reduce((acc, c) => acc + c.percentualComissao, 0) / totalColaboradores || 0;
@@ -160,10 +176,16 @@ export default function RHComissoes() {
       {/* Tabela de Comissões */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
-            Configuração de Comissões
-          </CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Configuração de Comissões
+            </CardTitle>
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Exportar CSV
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">

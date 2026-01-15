@@ -2,19 +2,23 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GarantiasLayout } from '@/components/layout/GarantiasLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { 
-  Eye, Clock, Package, Smartphone, Wrench, AlertTriangle, CheckCircle, Download
+  Eye, Clock, Package, Smartphone, Wrench, AlertTriangle, CheckCircle, Download, Filter, X
 } from 'lucide-react';
 import { exportToCSV, formatCurrency } from '@/utils/formatUtils';
 import {
   getGarantiasEmAndamento, getTratativas, updateTratativa, updateGarantia,
   addTimelineEntry, getContadoresGarantia, GarantiaItem, TratativaGarantia
 } from '@/utils/garantiasApi';
+import { getClientes, getLojas } from '@/utils/cadastrosApi';
 import { format, differenceInDays } from 'date-fns';
 
 export default function GarantiasEmAndamento() {
@@ -24,6 +28,17 @@ export default function GarantiasEmAndamento() {
   const garantiasEmAndamento = getGarantiasEmAndamento();
   const todasTratativas = getTratativas();
   const contadores = getContadoresGarantia();
+  const clientes = getClientes();
+  const lojas = getLojas();
+  
+  // Filtros
+  const [filters, setFilters] = useState({
+    cliente: '',
+    status: 'todos',
+    dataInicio: '',
+    dataFim: '',
+    aparelho: ''
+  });
   
   // Modal devolução
   const [showDevolucaoModal, setShowDevolucaoModal] = useState(false);
@@ -46,6 +61,53 @@ export default function GarantiasEmAndamento() {
       };
     });
   }, [garantiasEmAndamento, todasTratativas]);
+
+  // Dados filtrados
+  const dadosFiltrados = useMemo(() => {
+    return dadosTabela.filter(({ garantia, tratativa, diasAberto }) => {
+      // Filtro por cliente
+      if (filters.cliente && !garantia.clienteNome.toLowerCase().includes(filters.cliente.toLowerCase())) {
+        return false;
+      }
+      
+      // Filtro por status/tipo tratativa
+      if (filters.status !== 'todos') {
+        if (filters.status === 'emprestimo' && !tratativa?.aparelhoEmprestadoId) return false;
+        if (filters.status === 'assistencia' && !tratativa?.osId) return false;
+        if (filters.status === 'mais7dias' && diasAberto <= 7) return false;
+      }
+      
+      // Filtro por data
+      if (filters.dataInicio && tratativa) {
+        const dataTratativa = new Date(tratativa.dataHora);
+        if (dataTratativa < new Date(filters.dataInicio)) return false;
+      }
+      if (filters.dataFim && tratativa) {
+        const dataTratativa = new Date(tratativa.dataHora);
+        const dataFimFiltro = new Date(filters.dataFim);
+        dataFimFiltro.setHours(23, 59, 59);
+        if (dataTratativa > dataFimFiltro) return false;
+      }
+      
+      // Filtro por aparelho/modelo
+      if (filters.aparelho && !garantia.modelo.toLowerCase().includes(filters.aparelho.toLowerCase())) {
+        return false;
+      }
+      
+      return true;
+    });
+  }, [dadosTabela, filters]);
+  
+  // Limpar filtros
+  const handleLimparFiltros = () => {
+    setFilters({
+      cliente: '',
+      status: 'todos',
+      dataInicio: '',
+      dataFim: '',
+      aparelho: ''
+    });
+  };
   
   // Registrar devolução
   const handleDevolucao = () => {
@@ -149,27 +211,94 @@ export default function GarantiasEmAndamento() {
           </Card>
         </div>
 
-        {/* Botão Exportar */}
-        <div className="flex justify-end">
-          <Button variant="outline" onClick={() => {
-            const data = dadosTabela.map(({ garantia, tratativa, diasAberto }) => ({
-              ID: garantia.id,
-              'Data Abertura': tratativa ? format(new Date(tratativa.dataHora), 'dd/MM/yyyy') : '-',
-              Cliente: garantia.clienteNome,
-              Modelo: garantia.modelo,
-              IMEI: garantia.imei,
-              'Tipo Tratativa': tratativa?.tipo || '-',
-              Dias: diasAberto
-            }));
-            exportToCSV(data, `garantias_em_andamento_${format(new Date(), 'dd_MM_yyyy')}.csv`);
-          }}>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar CSV
-          </Button>
-        </div>
+        {/* Filtros */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filtros
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div>
+                <Label>Cliente</Label>
+                <Input
+                  placeholder="Buscar cliente..."
+                  value={filters.cliente}
+                  onChange={(e) => setFilters({ ...filters, cliente: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Status</Label>
+                <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="emprestimo">Com Empréstimo</SelectItem>
+                    <SelectItem value="assistencia">Em Assistência</SelectItem>
+                    <SelectItem value="mais7dias">Mais de 7 dias</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Data Início</Label>
+                <Input
+                  type="date"
+                  value={filters.dataInicio}
+                  onChange={(e) => setFilters({ ...filters, dataInicio: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Data Fim</Label>
+                <Input
+                  type="date"
+                  value={filters.dataFim}
+                  onChange={(e) => setFilters({ ...filters, dataFim: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Aparelho</Label>
+                <Input
+                  placeholder="Modelo..."
+                  value={filters.aparelho}
+                  onChange={(e) => setFilters({ ...filters, aparelho: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button variant="outline" onClick={handleLimparFiltros}>
+                <X className="h-4 w-4 mr-2" />
+                Limpar Filtros
+              </Button>
+              <Button variant="outline" onClick={() => {
+                const data = dadosFiltrados.map(({ garantia, tratativa, diasAberto }) => ({
+                  ID: garantia.id,
+                  'Data Abertura': tratativa ? format(new Date(tratativa.dataHora), 'dd/MM/yyyy') : '-',
+                  Cliente: garantia.clienteNome,
+                  Modelo: garantia.modelo,
+                  IMEI: garantia.imei,
+                  'Tipo Tratativa': tratativa?.tipo || '-',
+                  Dias: diasAberto
+                }));
+                exportToCSV(data, `garantias_em_andamento_${format(new Date(), 'dd_MM_yyyy')}.csv`);
+              }}>
+                <Download className="h-4 w-4 mr-2" />
+                Exportar CSV
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
         
         {/* Tabela */}
         <Card>
+          <CardHeader>
+            <CardTitle>
+              Garantias em Andamento ({dadosFiltrados.length})
+            </CardTitle>
+          </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
@@ -186,14 +315,14 @@ export default function GarantiasEmAndamento() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dadosTabela.length === 0 ? (
+                  {dadosFiltrados.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                         Nenhuma garantia em andamento
                       </TableCell>
                     </TableRow>
                   ) : (
-                    dadosTabela.map(({ garantia, tratativa, diasAberto }) => (
+                    dadosFiltrados.map(({ garantia, tratativa, diasAberto }) => (
                       <TableRow key={garantia.id} className={diasAberto > 7 ? 'bg-red-50 dark:bg-red-950/20' : ''}>
                         <TableCell className="font-medium">{garantia.id}</TableCell>
                         <TableCell>

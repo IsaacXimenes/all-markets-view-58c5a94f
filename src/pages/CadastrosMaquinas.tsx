@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Download, Edit, Plus, Trash2, CreditCard, Percent } from 'lucide-react';
+import { Download, Edit, Plus, Trash2, CreditCard, Percent, Settings, X } from 'lucide-react';
 import { 
   getMaquinasCartao, 
   addMaquinaCartao, 
@@ -23,12 +23,49 @@ import {
 import { exportToCSV } from '@/utils/formatUtils';
 import { toast } from 'sonner';
 
+// Interface para parcelamento
+interface Parcelamento {
+  parcelas: number;
+  taxa: number;
+}
+
+// Valores padrão de parcelamento
+const getParcelamentoPadrao = (): Parcelamento[] => {
+  const parcelamentos: Parcelamento[] = [];
+  for (let i = 1; i <= 36; i++) {
+    let taxa = 0;
+    if (i === 1) taxa = 0;
+    else if (i === 2) taxa = 2;
+    else if (i === 3) taxa = 2.5;
+    else if (i === 4) taxa = 3;
+    else if (i === 5) taxa = 3.5;
+    else if (i === 6) taxa = 4;
+    else if (i === 7) taxa = 4.5;
+    else if (i === 8) taxa = 5;
+    else if (i === 9) taxa = 5.5;
+    else if (i === 10) taxa = 6;
+    else if (i === 11) taxa = 6.5;
+    else if (i === 12) taxa = 7;
+    else taxa = 7 + (i - 12) * 0.5;
+    parcelamentos.push({ parcelas: i, taxa: parseFloat(taxa.toFixed(2)) });
+  }
+  return parcelamentos;
+};
+
 export default function CadastrosMaquinas() {
   const [maquinas, setMaquinas] = useState(getMaquinasCartao());
   const lojas = getLojas().filter(l => l.status === 'Ativo');
   const contasFinanceiras = getContasFinanceiras().filter(c => c.status === 'Ativo');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMaquina, setEditingMaquina] = useState<MaquinaCartao | null>(null);
+  
+  // Modal de parcelamento
+  const [showParcelamentoModal, setShowParcelamentoModal] = useState(false);
+  const [maquinaParcelamento, setMaquinaParcelamento] = useState<MaquinaCartao | null>(null);
+  const [parcelamentos, setParcelamentos] = useState<Parcelamento[]>([]);
+  const [showAddParcelamento, setShowAddParcelamento] = useState(false);
+  const [novoParcelamento, setNovoParcelamento] = useState({ parcelas: 1, taxa: 0 });
+  const [editingParcelamento, setEditingParcelamento] = useState<Parcelamento | null>(null);
   
   // Edição inline de percentual
   const [editingPercentual, setEditingPercentual] = useState<string | null>(null);
@@ -75,11 +112,12 @@ export default function CadastrosMaquinas() {
       return;
     }
 
-    // Taxas padrão para novas máquinas
-    const defaultTaxas = {
-      credito: { 1: 2, 2: 4, 3: 6, 4: 8, 5: 10, 6: 12, 7: 14, 8: 16, 9: 18, 10: 20, 11: 22, 12: 24 },
-      debito: form.percentualMaquina
-    };
+    // Parcelamentos padrão para novas máquinas
+    const parcelamentoPadrao = getParcelamentoPadrao();
+    const creditoTaxas: { [key: number]: number } = {};
+    parcelamentoPadrao.forEach(p => {
+      creditoTaxas[p.parcelas] = p.taxa;
+    });
 
     const maquinaData = {
       nome: form.nome,
@@ -87,7 +125,8 @@ export default function CadastrosMaquinas() {
       contaOrigem: form.contaOrigem,
       status: form.status,
       percentualMaquina: form.percentualMaquina,
-      taxas: editingMaquina?.taxas || defaultTaxas
+      taxas: editingMaquina?.taxas || { credito: creditoTaxas, debito: form.percentualMaquina },
+      parcelamentos: editingMaquina?.parcelamentos || parcelamentoPadrao
     };
 
     if (editingMaquina) {
@@ -152,6 +191,75 @@ export default function CadastrosMaquinas() {
   const handleCancelEditPercentual = () => {
     setEditingPercentual(null);
     setTempPercentual('');
+  };
+
+  // Handlers para parcelamento
+  const handleOpenParcelamentoModal = (maquina: MaquinaCartao) => {
+    setMaquinaParcelamento(maquina);
+    // Carregar parcelamentos existentes ou usar padrão
+    const parcelamentosExistentes = maquina.parcelamentos || getParcelamentoPadrao();
+    setParcelamentos([...parcelamentosExistentes].sort((a, b) => a.parcelas - b.parcelas));
+    setShowParcelamentoModal(true);
+  };
+
+  const handleSaveParcelamentos = () => {
+    if (!maquinaParcelamento) return;
+
+    // Converter parcelamentos para o formato de taxas
+    const creditoTaxas: { [key: number]: number } = {};
+    parcelamentos.forEach(p => {
+      creditoTaxas[p.parcelas] = p.taxa;
+    });
+
+    updateMaquinaCartao(maquinaParcelamento.id, { 
+      parcelamentos: parcelamentos,
+      taxas: { 
+        credito: creditoTaxas, 
+        debito: maquinaParcelamento.taxas?.debito || 2 
+      }
+    });
+    setMaquinas(getMaquinasCartao());
+    toast.success('Parcelamentos salvos com sucesso!');
+    setShowParcelamentoModal(false);
+  };
+
+  const handleAddParcelamento = () => {
+    if (novoParcelamento.parcelas < 1 || novoParcelamento.parcelas > 36) {
+      toast.error('Parcelas devem ser entre 1 e 36');
+      return;
+    }
+    if (novoParcelamento.taxa < 0 || novoParcelamento.taxa > 100) {
+      toast.error('Taxa deve ser entre 0 e 100');
+      return;
+    }
+    if (parcelamentos.find(p => p.parcelas === novoParcelamento.parcelas)) {
+      toast.error('Já existe parcelamento para este número de parcelas');
+      return;
+    }
+
+    setParcelamentos([...parcelamentos, { ...novoParcelamento }].sort((a, b) => a.parcelas - b.parcelas));
+    setNovoParcelamento({ parcelas: 1, taxa: 0 });
+    setShowAddParcelamento(false);
+    toast.success('Parcelamento adicionado');
+  };
+
+  const handleUpdateParcelamento = () => {
+    if (!editingParcelamento) return;
+    if (editingParcelamento.taxa < 0 || editingParcelamento.taxa > 100) {
+      toast.error('Taxa deve ser entre 0 e 100');
+      return;
+    }
+
+    setParcelamentos(parcelamentos.map(p => 
+      p.parcelas === editingParcelamento.parcelas ? editingParcelamento : p
+    ));
+    setEditingParcelamento(null);
+    toast.success('Parcelamento atualizado');
+  };
+
+  const handleDeleteParcelamento = (parcelas: number) => {
+    setParcelamentos(parcelamentos.filter(p => p.parcelas !== parcelas));
+    toast.success('Parcelamento removido');
   };
 
   return (
@@ -221,7 +329,7 @@ export default function CadastrosMaquinas() {
                       </Select>
                     </div>
                     <div>
-                      <Label>% da Máquina *</Label>
+                      <Label>% da Máquina (Débito) *</Label>
                       <div className="flex items-center gap-2">
                         <Input
                           type="number"
@@ -236,7 +344,7 @@ export default function CadastrosMaquinas() {
                         <span className="text-muted-foreground">%</span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Taxa percentual padrão da máquina (0-100)
+                        Taxa percentual para débito (0-100)
                       </p>
                     </div>
                     <div>
@@ -336,7 +444,15 @@ export default function CadastrosMaquinas() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1">
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => handleOpenParcelamentoModal(maquina)}
+                            title="Configurar Parcelamento"
+                          >
+                            <Settings className="h-4 w-4" />
+                          </Button>
                           <Button size="sm" variant="ghost" onClick={() => handleOpenDialog(maquina)}>
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -358,6 +474,154 @@ export default function CadastrosMaquinas() {
           )}
         </CardContent>
       </Card>
+
+      {/* Modal de Parcelamento */}
+      <Dialog open={showParcelamentoModal} onOpenChange={setShowParcelamentoModal}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Configurar Parcelamento - {maquinaParcelamento?.nome}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <p className="text-sm text-muted-foreground">
+                Configure as taxas de juros para cada opção de parcelamento desta máquina.
+              </p>
+              <Button onClick={() => setShowAddParcelamento(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Parcelamento
+              </Button>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-24">Parcelas</TableHead>
+                  <TableHead className="w-32">Taxa de Juros</TableHead>
+                  <TableHead className="w-24">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {parcelamentos.map((p) => (
+                  <TableRow key={p.parcelas}>
+                    <TableCell className="font-medium">{p.parcelas}x</TableCell>
+                    <TableCell>
+                      {editingParcelamento?.parcelas === p.parcelas ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            value={editingParcelamento.taxa}
+                            onChange={(e) => setEditingParcelamento({ 
+                              ...editingParcelamento, 
+                              taxa: parseFloat(e.target.value) || 0 
+                            })}
+                            className="w-20 h-8"
+                            autoFocus
+                          />
+                          <span className="text-sm text-muted-foreground">%</span>
+                          <Button size="sm" variant="ghost" onClick={handleUpdateParcelamento}>
+                            ✓
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingParcelamento(null)}>
+                            ✕
+                          </Button>
+                        </div>
+                      ) : (
+                        <span>{p.taxa.toFixed(2)}%</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={() => setEditingParcelamento({ ...p })}
+                          disabled={editingParcelamento !== null}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={() => handleDeleteParcelamento(p.parcelas)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {parcelamentos.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhum parcelamento configurado. Adicione pelo menos um.
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowParcelamentoModal(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveParcelamentos}>
+              Salvar Parcelamentos
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Adicionar Parcelamento */}
+      <Dialog open={showAddParcelamento} onOpenChange={setShowAddParcelamento}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Adicionar Parcelamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Parcelas *</Label>
+              <Input
+                type="number"
+                min="1"
+                max="36"
+                value={novoParcelamento.parcelas}
+                onChange={(e) => setNovoParcelamento({ ...novoParcelamento, parcelas: parseInt(e.target.value) || 1 })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">Entre 1 e 36</p>
+            </div>
+            <div>
+              <Label>Taxa de Juros *</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={novoParcelamento.taxa}
+                  onChange={(e) => setNovoParcelamento({ ...novoParcelamento, taxa: parseFloat(e.target.value) || 0 })}
+                />
+                <span className="text-muted-foreground">%</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Entre 0 e 100, até 2 casas decimais</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddParcelamento(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleAddParcelamento}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </CadastrosLayout>
   );
 }

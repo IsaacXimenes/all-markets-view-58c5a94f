@@ -125,6 +125,7 @@ export interface MaquinaCartao {
     credito: { [parcela: number]: number }; // Ex: { 1: 2, 2: 4, 3: 6, ... }
     debito: number; // Taxa fixa
   };
+  parcelamentos?: { parcelas: number; taxa: number }[]; // Parcelamento 1x-36x com taxas
 }
 
 // Helper para calcular tipo de cliente
