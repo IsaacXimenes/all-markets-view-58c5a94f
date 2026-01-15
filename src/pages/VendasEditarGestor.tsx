@@ -19,7 +19,6 @@ import {
   getVendaById, 
   updateVenda, 
   registrarEdicaoVenda, 
-  formatCurrency, 
   Venda, 
   ItemVenda, 
   ItemTradeIn, 
@@ -34,6 +33,7 @@ import {
 } from '@/utils/cadastrosApi';
 import { calcularComissaoVenda, getComissaoColaborador } from '@/utils/comissoesApi';
 import { displayIMEI } from '@/utils/imeiMask';
+import { formatCurrency, moedaMask, parseMoeda } from '@/utils/formatUtils';
 
 export default function VendasEditarGestor() {
   const { id } = useParams<{ id: string }>();
@@ -348,7 +348,7 @@ export default function VendasEditarGestor() {
                   <TableHead>IMEI</TableHead>
                   <TableHead className="text-right">Custo</TableHead>
                   <TableHead className="text-right">Valor Recomendado</TableHead>
-                  <TableHead className="text-right">Valor de Venda</TableHead>
+                  <TableHead className="text-right w-40">Valor de Venda</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -363,14 +363,16 @@ export default function VendasEditarGestor() {
                       {formatCurrency(item.valorRecomendado)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Input
-                        type="number"
-                        min={0}
-                        step={100}
-                        value={item.valorVenda}
-                        onChange={(e) => handleUpdateItemValor(item.id, parseFloat(e.target.value) || 0)}
-                        className="w-32 text-right"
-                      />
+                      <div className="flex items-center justify-end">
+                        <span className="text-muted-foreground mr-1">R$</span>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={moedaMask(item.valorVenda)}
+                          onChange={(e) => handleUpdateItemValor(item.id, parseMoeda(e.target.value))}
+                          className="w-28 text-right"
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -396,7 +398,7 @@ export default function VendasEditarGestor() {
                     <TableHead>Modelo</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>Condição</TableHead>
-                    <TableHead className="text-right">Valor de Compra Usado</TableHead>
+                    <TableHead className="text-right w-44">Valor de Compra Usado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -410,14 +412,16 @@ export default function VendasEditarGestor() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          type="number"
-                          min={0}
-                          step={100}
-                          value={trade.valorCompraUsado}
-                          onChange={(e) => handleUpdateTradeInValor(trade.id, parseFloat(e.target.value) || 0)}
-                          className="w-32 text-right"
-                        />
+                        <div className="flex items-center justify-end">
+                          <span className="text-muted-foreground mr-1">R$</span>
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            value={moedaMask(trade.valorCompraUsado)}
+                            onChange={(e) => handleUpdateTradeInValor(trade.id, parseMoeda(e.target.value))}
+                            className="w-28 text-right"
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -442,7 +446,7 @@ export default function VendasEditarGestor() {
                 <TableRow>
                   <TableHead>Meio de Pagamento</TableHead>
                   <TableHead>Conta de Destino</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
+                  <TableHead className="text-right w-40">Valor</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -451,14 +455,16 @@ export default function VendasEditarGestor() {
                     <TableCell className="font-medium">{pag.meioPagamento}</TableCell>
                     <TableCell>{getContaNome(pag.contaDestino)}</TableCell>
                     <TableCell className="text-right">
-                      <Input
-                        type="number"
-                        min={0}
-                        step={100}
-                        value={pag.valor}
-                        onChange={(e) => handleUpdatePagamento(pag.id, 'valor', parseFloat(e.target.value) || 0)}
-                        className="w-32 text-right"
-                      />
+                      <div className="flex items-center justify-end">
+                        <span className="text-muted-foreground mr-1">R$</span>
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          value={moedaMask(pag.valor)}
+                          onChange={(e) => handleUpdatePagamento(pag.id, 'valor', parseMoeda(e.target.value))}
+                          className="w-28 text-right"
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
