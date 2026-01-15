@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { DollarSign, Users, Percent, History, Save } from 'lucide-react';
+import { DollarSign, Users, Percent, History, Save, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { 
   getSalariosComColaboradores,
@@ -18,6 +18,7 @@ import {
   HistoricoSalario
 } from '@/utils/salarioColaboradorApi';
 import { getCargoNome } from '@/utils/cadastrosApi';
+import { exportToCSV } from '@/utils/formatUtils';
 
 interface SalarioEditavel extends SalarioComColaborador {
   novoSalarioFixo: number;
@@ -98,6 +99,21 @@ export default function RHSalarioColaborador() {
     setShowHistoricoModal(true);
   };
 
+  const handleExportCSV = () => {
+    const data = salarios.map(s => ({
+      'ID': s.colaboradorId,
+      'Nome': s.colaborador.nome,
+      'Cargo': getCargoNome(s.colaborador.cargo),
+      'Data Admissão': format(new Date(s.colaborador.dataAdmissao), 'dd/MM/yyyy'),
+      'Salário Fixo': formatCurrencyLocal(s.salarioFixo),
+      'Ajuda de Custo': formatCurrencyLocal(s.ajudaCusto),
+      'Comissão': `${s.percentualComissao.toFixed(1)}%`
+    }));
+    
+    const hoje = new Date().toISOString().split('T')[0];
+    exportToCSV(data, `salario_colaborador_${hoje}.csv`);
+    toast.success('Arquivo CSV exportado com sucesso');
+  };
 
   // Estatísticas
   const totalColaboradores = salarios.length;
@@ -107,7 +123,7 @@ export default function RHSalarioColaborador() {
     ? salarios.reduce((acc, s) => acc + s.percentualComissao, 0) / salarios.length
     : 0;
 
-  const formatCurrency = (value: number) => 
+  const formatCurrencyLocal = (value: number) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
   return (
@@ -136,7 +152,7 @@ export default function RHSalarioColaborador() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Salários Fixos</p>
-                <p className="text-xl font-bold">{formatCurrency(totalSalariosFixos)}</p>
+                <p className="text-xl font-bold">{formatCurrencyLocal(totalSalariosFixos)}</p>
               </div>
             </div>
           </CardContent>
@@ -150,7 +166,7 @@ export default function RHSalarioColaborador() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Ajuda de Custo</p>
-                <p className="text-xl font-bold">{formatCurrency(totalAjudaCusto)}</p>
+                <p className="text-xl font-bold">{formatCurrencyLocal(totalAjudaCusto)}</p>
               </div>
             </div>
           </CardContent>
@@ -173,11 +189,15 @@ export default function RHSalarioColaborador() {
 
       {/* Tabela de Salários */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
             Configuração de Salários
           </CardTitle>
+          <Button variant="outline" onClick={handleExportCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
