@@ -59,6 +59,7 @@ export interface NotaCompra {
     cor: string;
     imei: string;
     tipo: 'Novo' | 'Seminovo';
+    tipoProduto?: 'Aparelho' | 'Acessório';
     quantidade: number;
     valorUnitario: number;
     valorTotal: number;

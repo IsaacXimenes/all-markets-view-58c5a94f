@@ -52,6 +52,7 @@ export interface ProdutoPendente {
   saudeBateria: number;
   loja: string;
   dataEntrada: string;
+  fornecedor?: string; // Nome do fornecedor para notas de entrada
   parecerEstoque?: ParecerEstoque;
   parecerAssistencia?: ParecerAssistencia;
   timeline: TimelineEntry[];
@@ -633,6 +634,88 @@ export const migrarTradeInsParaPendentes = (
     produtosMigrados.push(novoProdutoPendente);
     
     console.log(`[OS API] Trade-in ${tradeIn.modelo} (IMEI: ${tradeIn.imei}) migrado para Aparelhos Pendentes - Estoque com ID ${newId}`);
+  }
+  
+  return produtosMigrados;
+};
+
+// Interface para produtos de nota de entrada
+interface ProdutoNota {
+  marca: string;
+  modelo: string;
+  cor: string;
+  imei: string;
+  tipo: string;
+  tipoProduto?: 'Aparelho' | 'Acessório';
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+  saudeBateria?: number;
+}
+
+// Migrar produtos de nota de entrada para Aparelhos Pendentes - Estoque
+export const migrarProdutosNotaParaPendentes = (
+  produtos: ProdutoNota[],
+  notaId: string,
+  fornecedor: string,
+  lojaDestino: string,
+  responsavel: string
+): ProdutoPendente[] => {
+  const produtosMigrados: ProdutoPendente[] = [];
+  
+  for (const produto of produtos) {
+    // Ignorar acessórios - eles vão direto para o estoque de acessórios
+    if (produto.tipoProduto === 'Acessório') {
+      console.log(`[OS API] Produto ${produto.modelo} é acessório, ignorando migração para pendentes.`);
+      continue;
+    }
+    
+    // Verificar duplicata por IMEI
+    const jaExiste = produtosPendentes.find(p => p.imei === produto.imei);
+    if (jaExiste) {
+      console.log(`[OS API] Produto ${produto.imei} já existe nos pendentes, ignorando duplicata.`);
+      continue;
+    }
+    
+    const newId = generateProductId();
+    
+    const novoProduto: ProdutoPendente = {
+      id: newId,
+      imei: produto.imei,
+      marca: produto.marca,
+      modelo: produto.modelo,
+      cor: produto.cor,
+      tipo: produto.tipo === 'Novo' ? 'Novo' : 'Seminovo',
+      condicao: produto.tipo === 'Novo' ? 'Novo' : 'Semi-novo',
+      origemEntrada: 'Fornecedor',
+      notaOuVendaId: notaId,
+      valorCusto: produto.valorUnitario,
+      valorCustoOriginal: produto.valorUnitario,
+      valorOrigem: produto.valorUnitario,
+      saudeBateria: produto.saudeBateria || 100,
+      loja: lojaDestino,
+      dataEntrada: new Date().toISOString().split('T')[0],
+      fornecedor: fornecedor,
+      timeline: [
+        {
+          id: `TL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          data: new Date().toISOString(),
+          tipo: 'entrada',
+          titulo: 'Entrada via Nota de Compra - Financeiro Aprovado',
+          descricao: `Produto ${newId} recebido via nota ${notaId} do fornecedor ${fornecedor}`,
+          responsavel
+        }
+      ],
+      custoAssistencia: 0,
+      statusGeral: 'Pendente Estoque',
+      contadorEncaminhamentos: 0
+    };
+    
+    produtosPendentes.push(novoProduto);
+    registerProductId(newId);
+    produtosMigrados.push(novoProduto);
+    
+    console.log(`[OS API] Produto ${produto.marca} ${produto.modelo} (IMEI: ${produto.imei}) migrado para Aparelhos Pendentes com ID ${newId}`);
   }
   
   return produtosMigrados;

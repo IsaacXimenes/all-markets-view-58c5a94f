@@ -8,10 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getNotasCompra, finalizarNota, NotaCompra } from '@/utils/estoqueApi';
-import { getContasFinanceiras, getColaboradores, getCargos, getFornecedores } from '@/utils/cadastrosApi';
+import { getContasFinanceiras, getColaboradores, getCargos, getFornecedores, getLojas } from '@/utils/cadastrosApi';
 import { Eye, CheckCircle, Download, Filter, X, Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { migrarProdutosNotaParaPendentes } from '@/utils/osApi';
+import { adicionarEstoqueAcessorio, getOrCreateAcessorio } from '@/utils/acessoriosApi';
 
 import { formatCurrency } from '@/utils/formatUtils';
 
@@ -45,6 +47,9 @@ export default function FinanceiroConferenciaNotas() {
   const [formaPagamento, setFormaPagamento] = useState('');
   const [parcelas, setParcelas] = useState('1');
   const [responsavelFinanceiro, setResponsavelFinanceiro] = useState('');
+  const [lojaDestino, setLojaDestino] = useState('');
+  
+  const lojas = getLojas().filter(l => l.status === 'Ativo');
 
   // Filtros - igual à Conferência de Contas
   const [filters, setFilters] = useState({
@@ -97,12 +102,13 @@ export default function FinanceiroConferenciaNotas() {
     setFormaPagamento('');
     setParcelas('1');
     setResponsavelFinanceiro('');
+    setLojaDestino('');
     setDialogOpen(true);
   };
 
   const mostrarCampoParcelas = formaPagamento === 'Cartão de Crédito' || formaPagamento === 'Boleto';
   
-  const botaoDesabilitado = !contaPagamento || !formaPagamento || !responsavelFinanceiro || (mostrarCampoParcelas && !parcelas);
+  const botaoDesabilitado = !contaPagamento || !formaPagamento || !responsavelFinanceiro || !lojaDestino || (mostrarCampoParcelas && !parcelas);
 
   const handleFinalizarNota = () => {
     if (!notaSelecionada || botaoDesabilitado) return;
@@ -133,11 +139,52 @@ export default function FinanceiroConferenciaNotas() {
       };
       localStorage.setItem(`nota_timeline_${notaSelecionada.id}`, JSON.stringify([newEntry, ...timeline]));
       
+      // NOVO: Migrar aparelhos para Aparelhos Pendentes (Triagem)
+      const aparelhos = notaFinalizada.produtos.filter(p => 
+        p.tipoProduto === 'Aparelho' || !p.tipoProduto // fallback para aparelho se não definido
+      );
+      
+      let qtdAparelhosMigrados = 0;
+      if (aparelhos.length > 0) {
+        const produtosMigrados = migrarProdutosNotaParaPendentes(
+          aparelhos,
+          notaFinalizada.id,
+          notaFinalizada.fornecedor,
+          lojaDestino,
+          responsavelFinanceiro
+        );
+        qtdAparelhosMigrados = produtosMigrados.length;
+        console.log(`[FINANCEIRO] ${qtdAparelhosMigrados} aparelho(s) migrado(s) para Aparelhos Pendentes`);
+      }
+      
+      // NOVO: Adicionar acessórios diretamente ao estoque
+      const acessorios = notaFinalizada.produtos.filter(p => p.tipoProduto === 'Acessório');
+      let qtdAcessoriosAdicionados = 0;
+      for (const acessorio of acessorios) {
+        const acessorioExistente = getOrCreateAcessorio(
+          `${acessorio.marca} ${acessorio.modelo}`, // descrição
+          acessorio.marca, // categoria
+          acessorio.quantidade, // quantidade
+          acessorio.valorUnitario, // valorCusto
+          lojaDestino // loja
+        );
+        adicionarEstoqueAcessorio(acessorioExistente.id, acessorio.quantidade, acessorio.valorUnitario);
+        qtdAcessoriosAdicionados += acessorio.quantidade;
+        console.log(`[FINANCEIRO] Acessório ${acessorio.marca} ${acessorio.modelo} adicionado ao estoque`);
+      }
+      
       setDialogOpen(false);
       
-      const totalProdutos = notaFinalizada.produtos.reduce((sum, p) => sum + p.quantidade, 0);
+      // Mensagem de sucesso detalhada
+      let mensagem = `✅ Nota ${notaFinalizada.id} liberada!`;
+      if (qtdAparelhosMigrados > 0) {
+        mensagem += ` ${qtdAparelhosMigrados} aparelho(s) enviado(s) para triagem.`;
+      }
+      if (qtdAcessoriosAdicionados > 0) {
+        mensagem += ` ${qtdAcessoriosAdicionados} acessório(s) adicionado(s) ao estoque.`;
+      }
       
-      toast.success(`✅ Nota ${notaFinalizada.id} liberada – ${totalProdutos} produtos adicionados ao estoque!`, {
+      toast.success(mensagem, {
         duration: 5000,
         style: {
           background: '#22c55e',
@@ -371,6 +418,23 @@ export default function FinanceiroConferenciaNotas() {
                     <div className="border-t pt-4">
                       <h3 className="font-semibold mb-3 text-primary">Seção "Pagamento" (Habilitada)</h3>
                       <div className="grid gap-4">
+                        <div>
+                          <Label htmlFor="lojaDestino">Loja de Destino dos Produtos *</Label>
+                          <Select value={lojaDestino} onValueChange={setLojaDestino}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a loja" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {lojas.map(l => (
+                                <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {!lojaDestino && (
+                            <p className="text-sm text-muted-foreground mt-1">Selecione a loja de destino dos aparelhos</p>
+                          )}
+                        </div>
+                        
                         <div>
                           <Label htmlFor="contaPagamento">Conta de Pagamento *</Label>
                           <Select value={contaPagamento} onValueChange={setContaPagamento}>
