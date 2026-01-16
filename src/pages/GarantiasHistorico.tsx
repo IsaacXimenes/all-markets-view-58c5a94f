@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, Download } from 'lucide-react';
+import { Eye, Download, X } from 'lucide-react';
 import { 
   getGarantias, getTratativasByGarantiaId, exportGarantiasToCSV
 } from '@/utils/garantiasApi';
@@ -64,6 +64,17 @@ export default function GarantiasHistorico() {
     });
   }, [garantias, dataInicio, dataFim, lojaFiltro, tipoTratativaFiltro, statusFiltro]);
   
+  // Limpar Filtros
+  const handleLimparFiltros = () => {
+    setDataInicio('');
+    setDataFim('');
+    setLojaFiltro('');
+    setTipoTratativaFiltro('');
+    setStatusFiltro('');
+  };
+
+  const temFiltroAtivo = dataInicio || dataFim || lojaFiltro || tipoTratativaFiltro || statusFiltro;
+
   // Exportar CSV
   const handleExport = () => {
     exportGarantiasToCSV(garantiasFiltradas, `garantias-historico-${format(new Date(), 'yyyy-MM-dd')}.csv`);
@@ -136,8 +147,13 @@ export default function GarantiasHistorico() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-end">
-                <Button onClick={handleExport} variant="outline" className="w-full gap-2">
+              <div className="flex items-end gap-2">
+                {temFiltroAtivo && (
+                  <Button onClick={handleLimparFiltros} variant="ghost" size="icon" title="Limpar filtros">
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button onClick={handleExport} variant="outline" className="flex-1 gap-2">
                   <Download className="h-4 w-4" />
                   Exportar CSV
                 </Button>

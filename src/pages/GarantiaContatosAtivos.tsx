@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Edit, Eye, Download } from 'lucide-react';
+import { Plus, Edit, Eye, Download, X } from 'lucide-react';
 import { exportToCSV } from '@/utils/formatUtils';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/planosGarantiaApi';
@@ -63,6 +63,14 @@ export default function GarantiaContatosAtivos() {
   const pendentes = contatos.filter(c => c.status === 'Pendente').length;
   const garantiasCriadas = contatos.filter(c => c.status === 'Garantia Criada').length;
   const entregues = contatos.filter(c => c.status === 'Entregue').length;
+
+  // Limpar filtros
+  const handleLimparFiltros = () => {
+    setFiltroCliente('');
+    setFiltroStatus('todos');
+  };
+
+  const temFiltroAtivo = filtroCliente || filtroStatus !== 'todos';
 
   return (
     <GarantiasLayout title="Contatos - Ativos">
@@ -119,6 +127,11 @@ export default function GarantiaContatosAtivos() {
               </Select>
             </div>
             <div className="flex items-end gap-2 md:col-span-2">
+              {temFiltroAtivo && (
+                <Button variant="ghost" size="icon" onClick={handleLimparFiltros} title="Limpar filtros">
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
               <Button variant="outline" onClick={() => {
                 const data = contatosFiltrados.map(c => ({
                   ID: c.id,

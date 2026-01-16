@@ -84,6 +84,7 @@ import GarantiasExtendida from "./pages/GarantiasExtendida";
 import GarantiaExtendidaDetalhes from "./pages/GarantiaExtendidaDetalhes";
 import GarantiaContatosAtivos from "./pages/GarantiaContatosAtivos";
 import GarantiaContatosAtivosNovo from "./pages/GarantiaContatosAtivosNovo";
+import GarantiaContatosAtivosEditar from "./pages/GarantiaContatosAtivosEditar";
 import OSAnaliseGarantia from "./pages/OSAnaliseGarantia";
 import CadastrosPlanosGarantia from "./pages/CadastrosPlanosGarantia";
 
@@ -175,6 +176,7 @@ const App = () => (
           <Route path="/garantias/em-andamento" element={<GarantiasEmAndamento />} />
           <Route path="/garantias/contatos-ativos" element={<GarantiaContatosAtivos />} />
           <Route path="/garantias/contatos-ativos/novo" element={<GarantiaContatosAtivosNovo />} />
+          <Route path="/garantias/contatos-ativos/editar/:id" element={<GarantiaContatosAtivosEditar />} />
           <Route path="/garantias/historico" element={<GarantiasHistorico />} />
           <Route path="/garantias/extendida" element={<GarantiasExtendida />} />
           <Route path="/garantias/extendida/:id" element={<GarantiaExtendidaDetalhes />} />
