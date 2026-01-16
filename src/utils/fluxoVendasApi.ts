@@ -6,6 +6,7 @@ import { migrarTradeInsParaPendentes } from './osApi';
 // Novo tipo para status de venda no fluxo de conferência
 export type StatusVenda = 
   | 'Aguardando Conferência'    // Após vendedor finalizar
+  | 'Feito Sinal'               // Venda com sinal - produtos bloqueados
   | 'Conferência Gestor'        // Após lançador aprovar
   | 'Recusada - Gestor'         // Se gestor recusar
   | 'Conferência Financeiro'    // Após gestor aprovar
@@ -467,6 +468,8 @@ export const getCorBadgeStatus = (status: StatusVenda): { bg: string; text: stri
   switch (status) {
     case 'Aguardando Conferência':
       return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' };
+    case 'Feito Sinal':
+      return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' };
     case 'Conferência Gestor':
       return { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200' };
     case 'Recusada - Gestor':

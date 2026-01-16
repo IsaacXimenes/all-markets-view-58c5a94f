@@ -135,6 +135,12 @@ export interface Venda {
   aprovacaoFinanceiro?: RegistroAprovacao;
   timeline?: TimelineVenda[];
   bloqueadoParaEdicao?: boolean;
+  
+  // Campos específicos para Sinal
+  valorSinal?: number;
+  valorPendenteSinal?: number;
+  dataSinal?: string;
+  observacaoSinal?: string;
 }
 
 export interface HistoricoCompraCliente {

@@ -43,6 +43,7 @@ export interface Produto {
   origemEntrada: 'Base de Troca' | 'Fornecedor';
   timeline?: TimelineEntry[]; // Timeline de tratativas (pareceres estoque/assistência)
   custoAssistencia?: number; // Soma das peças/serviços de assistência
+  bloqueadoEmVendaId?: string; // ID da venda quando produto está bloqueado (sinal)
 }
 
 export interface NotaCompra {
@@ -752,4 +753,43 @@ export const addProdutoMigrado = (produto: Produto): Produto => {
   produtos.push(produto);
   console.log(`Produto ${produto.id} migrado com sucesso para o estoque principal.`);
   return produto;
+};
+
+// Bloquear produtos em uma venda com sinal
+export const bloquearProdutosEmVenda = (vendaId: string, produtoIds: string[]): boolean => {
+  let sucesso = true;
+  produtoIds.forEach(produtoId => {
+    const produto = produtos.find(p => p.id === produtoId);
+    if (produto) {
+      produto.bloqueadoEmVendaId = vendaId;
+      console.log(`Produto ${produtoId} bloqueado na venda ${vendaId}`);
+    } else {
+      sucesso = false;
+    }
+  });
+  return sucesso;
+};
+
+// Desbloquear produtos de uma venda
+export const desbloquearProdutosDeVenda = (vendaId: string): boolean => {
+  let produtosDesbloqueados = 0;
+  produtos.forEach(produto => {
+    if (produto.bloqueadoEmVendaId === vendaId) {
+      produto.bloqueadoEmVendaId = undefined;
+      produtosDesbloqueados++;
+    }
+  });
+  console.log(`${produtosDesbloqueados} produtos desbloqueados da venda ${vendaId}`);
+  return produtosDesbloqueados > 0;
+};
+
+// Obter produtos disponíveis (não bloqueados)
+export const getProdutosDisponiveis = (): Produto[] => {
+  return produtos.filter(p => p.quantidade > 0 && !p.bloqueadoEmVendaId);
+};
+
+// Verificar se produto está bloqueado
+export const isProdutoBloqueado = (produtoId: string): boolean => {
+  const produto = produtos.find(p => p.id === produtoId);
+  return produto?.bloqueadoEmVendaId !== undefined;
 };

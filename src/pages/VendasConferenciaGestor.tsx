@@ -775,7 +775,7 @@ export default function VendasConferenciaGestor() {
                       onClick={handleFinalizarAprovacao}
                     >
                       <Check className="h-4 w-4 mr-2" />
-                      Finalizar
+                      Conferir
                     </Button>
                     <div className="flex gap-2">
                       <Button 

@@ -28,7 +28,7 @@ import {
   DialogFooter,
   DialogDescription
 } from '@/components/ui/dialog';
-import { Eye, Download, Filter, X, Pencil, Check, Clock, AlertTriangle, CreditCard, Wallet, Smartphone, Banknote } from 'lucide-react';
+import { Eye, Download, Filter, X, Pencil, Check, Clock, AlertTriangle, CreditCard, Wallet, Smartphone, Banknote, AlertCircle } from 'lucide-react';
 import { useFluxoVendas } from '@/hooks/useFluxoVendas';
 import { 
   aprovarLancamento, 
@@ -38,34 +38,58 @@ import {
   StatusVenda
 } from '@/utils/fluxoVendasApi';
 import { formatCurrency } from '@/utils/formatUtils';
-import { getLojas, getColaboradores } from '@/utils/cadastrosApi';
+import { getLojas, getColaboradores, getCargos } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
 
 // Mock do usuário logado
-const usuarioLogado = { id: 'COL-007', nome: 'Carlos Lançador' };
+const usuarioLogado = { id: 'COL-007', nome: 'Carlos Lançador', cargo: 'Vendedor' };
 
 export default function VendasConferenciaLancamento() {
   const navigate = useNavigate();
   const { vendas, recarregar, contadores } = useFluxoVendas({
-    status: ['Aguardando Conferência', 'Recusada - Gestor']
+    status: ['Aguardando Conferência', 'Recusada - Gestor', 'Feito Sinal']
   });
   
   const lojas = getLojas();
   const colaboradores = getColaboradores();
+  const cargos = getCargos();
+  
+  // Verificar se usuário é gestor ou financeiro
+  const isGestorOuFinanceiro = useMemo(() => {
+    const colaborador = colaboradores.find(c => c.id === usuarioLogado.id);
+    if (!colaborador) return false;
+    const cargo = cargos.find(c => c.id === colaborador.cargo);
+    if (!cargo) return false;
+    return cargo.permissoes.includes('Gestor') || cargo.permissoes.includes('Financeiro');
+  }, [colaboradores, cargos]);
   
   // Filtros
   const [filtroDataInicio, setFiltroDataInicio] = useState('');
   const [filtroDataFim, setFiltroDataFim] = useState('');
   const [filtroCliente, setFiltroCliente] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [filtroVendedor, setFiltroVendedor] = useState(isGestorOuFinanceiro ? 'todos' : usuarioLogado.id);
   
   // Modal de aprovação
   const [modalAprovar, setModalAprovar] = useState(false);
   const [vendaSelecionada, setVendaSelecionada] = useState<VendaComFluxo | null>(null);
 
+  // Vendedores disponíveis para filtro
+  const vendedoresDisponiveis = useMemo(() => {
+    const cargosVendas = cargos.filter(c => c.permissoes.includes('Vendas')).map(c => c.id);
+    return colaboradores.filter(col => cargosVendas.includes(col.cargo));
+  }, [colaboradores, cargos]);
+
   // Filtrar vendas
   const vendasFiltradas = useMemo(() => {
     let resultado = [...vendas];
+
+    // Filtro automático por vendedor se não for gestor/financeiro
+    if (!isGestorOuFinanceiro) {
+      resultado = resultado.filter(v => v.vendedor === usuarioLogado.id);
+    } else if (filtroVendedor !== 'todos') {
+      resultado = resultado.filter(v => v.vendedor === filtroVendedor);
+    }
 
     if (filtroDataInicio) {
       resultado = resultado.filter(v => 
@@ -88,15 +112,21 @@ export default function VendasConferenciaLancamento() {
       resultado = resultado.filter(v => v.statusFluxo === filtroStatus);
     }
 
-    // Ordenar: Recusadas primeiro, depois por data
+    // Ordenar: Feito Sinal primeiro, depois Recusadas, depois por data
     resultado.sort((a, b) => {
-      if (a.statusFluxo === 'Recusada - Gestor' && b.statusFluxo !== 'Recusada - Gestor') return -1;
-      if (a.statusFluxo !== 'Recusada - Gestor' && b.statusFluxo === 'Recusada - Gestor') return 1;
+      const ordem: Record<string, number> = {
+        'Feito Sinal': 0,
+        'Recusada - Gestor': 1,
+        'Aguardando Conferência': 2
+      };
+      const ordemA = ordem[a.statusFluxo || ''] ?? 3;
+      const ordemB = ordem[b.statusFluxo || ''] ?? 3;
+      if (ordemA !== ordemB) return ordemA - ordemB;
       return new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime();
     });
 
     return resultado;
-  }, [vendas, filtroDataInicio, filtroDataFim, filtroCliente, filtroStatus]);
+  }, [vendas, filtroDataInicio, filtroDataFim, filtroCliente, filtroStatus, filtroVendedor, isGestorOuFinanceiro]);
 
   // Calcular somatórios por método de pagamento - DINÂMICO baseado nas vendas filtradas
   const somatorioPagamentos = useMemo(() => {
@@ -104,7 +134,8 @@ export default function VendasConferenciaLancamento() {
       cartaoCredito: 0,
       cartaoDebito: 0,
       pix: 0,
-      dinheiro: 0
+      dinheiro: 0,
+      sinal: 0
     };
 
     vendasFiltradas.forEach(venda => {
@@ -118,6 +149,8 @@ export default function VendasConferenciaLancamento() {
           totais.pix += pag.valor;
         } else if (meio.includes('dinheiro')) {
           totais.dinheiro += pag.valor;
+        } else if (meio.includes('sinal')) {
+          totais.sinal += pag.valor;
         }
       });
     });
@@ -130,6 +163,9 @@ export default function VendasConferenciaLancamento() {
     setFiltroDataFim('');
     setFiltroCliente('');
     setFiltroStatus('todos');
+    if (isGestorOuFinanceiro) {
+      setFiltroVendedor('todos');
+    }
   };
 
   const handleExportar = () => {
@@ -169,12 +205,36 @@ export default function VendasConferenciaLancamento() {
         variant="outline" 
         className={`${cores.bg} ${cores.text} ${cores.border} whitespace-nowrap dark:bg-opacity-20`}
       >
+        {status === 'Feito Sinal' && <AlertCircle className="h-3 w-3 mr-1" />}
         {status}
       </Badge>
     );
   };
 
-  const getRowClassName = (status: StatusVenda) => {
+  // Verificar se tem pagamento Sinal
+  const temPagamentoSinal = (venda: VendaComFluxo) => {
+    return venda.pagamentos?.some(p => p.meioPagamento.toLowerCase().includes('sinal')) || 
+           venda.statusFluxo === 'Feito Sinal' ||
+           venda.valorSinal !== undefined;
+  };
+
+  // Calcular valor pendente do sinal
+  const calcularValorPendenteSinal = (venda: VendaComFluxo) => {
+    if (venda.valorPendenteSinal !== undefined) {
+      return venda.valorPendenteSinal;
+    }
+    const pagamentoSinal = venda.pagamentos?.find(p => p.meioPagamento.toLowerCase().includes('sinal'));
+    if (pagamentoSinal) {
+      return venda.total - pagamentoSinal.valor;
+    }
+    return null;
+  };
+
+  const getRowClassName = (status: StatusVenda, venda: VendaComFluxo) => {
+    // Linha vermelha para vendas com Sinal
+    if (temPagamentoSinal(venda) || status === 'Feito Sinal') {
+      return 'bg-red-100 dark:bg-red-950/40 hover:bg-red-150 dark:hover:bg-red-950/60';
+    }
     if (status === 'Recusada - Gestor') {
       return 'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50';
     }
@@ -191,11 +251,12 @@ export default function VendasConferenciaLancamento() {
 
   const pendentesCount = vendas.filter(v => v.statusFluxo === 'Aguardando Conferência').length;
   const recusadasCount = vendas.filter(v => v.statusFluxo === 'Recusada - Gestor').length;
+  const sinalCount = vendas.filter(v => v.statusFluxo === 'Feito Sinal').length;
 
   return (
     <VendasLayout title="Conferência - Lançamento de Vendas">
       {/* Cards de somatório por método de pagamento - DINÂMICO */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -243,10 +304,22 @@ export default function VendasConferenciaLancamento() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-8 w-8 text-red-600 opacity-70" />
+              <div>
+                <p className="text-sm text-red-700 dark:text-red-300">Sinal</p>
+                <p className="text-2xl font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.sinal)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Cards de resumo de status */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -273,6 +346,18 @@ export default function VendasConferenciaLancamento() {
 
         <Card>
           <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-8 w-8 text-red-600 opacity-70" />
+              <div>
+                <p className="text-sm text-muted-foreground">Feito Sinal</p>
+                <p className="text-3xl font-bold text-red-600">{sinalCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
             <div>
               <p className="text-sm text-muted-foreground">Total para Análise</p>
               <p className="text-3xl font-bold">{vendas.length}</p>
@@ -290,7 +375,7 @@ export default function VendasConferenciaLancamento() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Data Início</label>
               <Input 
@@ -315,6 +400,25 @@ export default function VendasConferenciaLancamento() {
                 onChange={e => setFiltroCliente(e.target.value)} 
               />
             </div>
+            {/* Filtro de Vendedor - só aparece para gestores */}
+            {isGestorOuFinanceiro && (
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">Filtrar por Vendedor</label>
+                <Select value={filtroVendedor} onValueChange={setFiltroVendedor}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os Vendedores" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos os Vendedores</SelectItem>
+                    {vendedoresDisponiveis.map(vendedor => (
+                      <SelectItem key={vendedor.id} value={vendedor.id}>
+                        {vendedor.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <label className="text-sm text-muted-foreground mb-1 block">Status</label>
               <Select value={filtroStatus} onValueChange={setFiltroStatus}>
@@ -325,6 +429,7 @@ export default function VendasConferenciaLancamento() {
                   <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="Aguardando Conferência">Aguardando Conferência</SelectItem>
                   <SelectItem value="Recusada - Gestor">Recusada - Gestor</SelectItem>
+                  <SelectItem value="Feito Sinal">Feito Sinal</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -355,6 +460,7 @@ export default function VendasConferenciaLancamento() {
                   <TableHead>Vendedor</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead className="text-right">Valor Total</TableHead>
+                  <TableHead className="text-right">Valor Pendente</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
@@ -362,67 +468,83 @@ export default function VendasConferenciaLancamento() {
               <TableBody>
                 {vendasFiltradas.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       Nenhuma venda encontrada para conferência de lançamento.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  vendasFiltradas.map(venda => (
-                    <TableRow 
-                      key={venda.id}
-                      className={getRowClassName(venda.statusFluxo as StatusVenda)}
-                    >
-                      <TableCell className="font-medium">{venda.id}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        {new Date(venda.dataHora).toLocaleDateString('pt-BR')}
-                        <span className="text-muted-foreground ml-1">
-                          {new Date(venda.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </TableCell>
-                      <TableCell className="max-w-[150px] truncate">
-                        {getLojaNome(venda.lojaVenda)}
-                      </TableCell>
-                      <TableCell>{getVendedorNome(venda.vendedor)}</TableCell>
-                      <TableCell className="max-w-[120px] truncate" title={venda.clienteNome}>
-                        {venda.clienteNome}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(venda.total)}
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(venda.statusFluxo as StatusVenda)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => navigate(`/vendas/${venda.id}`)}
-                            title="Ver detalhes"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => navigate(`/vendas/editar-gestor/${venda.id}`)}
-                            title="Editar venda"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm"
-                            onClick={() => handleAbrirModalAprovar(venda)}
-                            title="Aprovar lançamento"
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Aprovar
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  vendasFiltradas.map(venda => {
+                    const valorPendente = calcularValorPendenteSinal(venda);
+                    const isSinal = temPagamentoSinal(venda);
+                    
+                    return (
+                      <TableRow 
+                        key={venda.id}
+                        className={getRowClassName(venda.statusFluxo as StatusVenda, venda)}
+                      >
+                        <TableCell className="font-medium">{venda.id}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {new Date(venda.dataHora).toLocaleDateString('pt-BR')}
+                          <span className="text-muted-foreground ml-1">
+                            {new Date(venda.dataHora).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </TableCell>
+                        <TableCell className="max-w-[150px] truncate">
+                          {getLojaNome(venda.lojaVenda)}
+                        </TableCell>
+                        <TableCell>{getVendedorNome(venda.vendedor)}</TableCell>
+                        <TableCell className="max-w-[120px] truncate" title={venda.clienteNome}>
+                          {venda.clienteNome}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(venda.total)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {isSinal && valorPendente !== null ? (
+                            <span className="font-medium text-red-600">
+                              {formatCurrency(valorPendente)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(venda.statusFluxo as StatusVenda)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => navigate(`/vendas/${venda.id}`)}
+                              title="Ver detalhes"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => navigate(`/vendas/editar-gestor/${venda.id}`)}
+                              title="Editar venda"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            {venda.statusFluxo !== 'Feito Sinal' && (
+                              <Button 
+                                size="sm"
+                                onClick={() => handleAbrirModalAprovar(venda)}
+                                title="Aprovar lançamento"
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <Check className="h-4 w-4 mr-1" />
+                                Conferir
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -437,6 +559,8 @@ export default function VendasConferenciaLancamento() {
           <span>Aguardando: <strong className="text-blue-600">{pendentesCount}</strong></span>
           <span>|</span>
           <span>Recusadas: <strong className="text-red-600">{recusadasCount}</strong></span>
+          <span>|</span>
+          <span>Sinal: <strong className="text-red-600">{sinalCount}</strong></span>
         </span>
       </div>
 
@@ -444,9 +568,9 @@ export default function VendasConferenciaLancamento() {
       <Dialog open={modalAprovar} onOpenChange={setModalAprovar}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Aprovar Lançamento</DialogTitle>
+            <DialogTitle>Conferir Lançamento</DialogTitle>
             <DialogDescription>
-              Você está prestes a aprovar o lançamento da venda e enviá-la para conferência do gestor.
+              Você está prestes a conferir o lançamento da venda e enviá-la para conferência do gestor.
             </DialogDescription>
           </DialogHeader>
           
@@ -489,7 +613,7 @@ export default function VendasConferenciaLancamento() {
               )}
 
               <div className="text-sm text-muted-foreground">
-                <p>Ao aprovar, a venda será enviada para:</p>
+                <p>Ao conferir, a venda será enviada para:</p>
                 <p className="font-medium text-foreground mt-1">📋 Conferência do Gestor</p>
               </div>
             </div>
@@ -501,7 +625,7 @@ export default function VendasConferenciaLancamento() {
             </Button>
             <Button onClick={handleAprovarLancamento} className="bg-green-600 hover:bg-green-700">
               <Check className="h-4 w-4 mr-2" />
-              Confirmar Aprovação
+              Confirmar Conferência
             </Button>
           </DialogFooter>
         </DialogContent>

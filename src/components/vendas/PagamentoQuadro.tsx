@@ -174,6 +174,18 @@ export function PagamentoQuadro({
         taxaCartao: 0, 
         valorLiquido: novoPagamento.valor 
       });
+    } else if (v === 'Sinal') {
+      setNovoPagamento({ 
+        ...novoPagamento, 
+        meioPagamento: v, 
+        parcelas: undefined, 
+        isFiado: false, 
+        fiadoDataBase: undefined, 
+        fiadoNumeroParcelas: undefined, 
+        maquinaId: undefined, 
+        taxaCartao: 0, 
+        valorLiquido: novoPagamento.valor 
+      });
     } else {
       // Pix, Dinheiro, Transferência - sem taxa
       setNovoPagamento({ 

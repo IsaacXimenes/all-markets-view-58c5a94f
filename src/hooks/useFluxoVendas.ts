@@ -48,6 +48,7 @@ export const useFluxoVendas = (options: UseFluxoVendasOptions = {}) => {
   // Contadores por status
   const contadores = {
     aguardandoConferencia: vendas.filter(v => v.statusFluxo === 'Aguardando Conferência').length,
+    feitoSinal: vendas.filter(v => v.statusFluxo === 'Feito Sinal').length,
     conferenciaGestor: vendas.filter(v => v.statusFluxo === 'Conferência Gestor').length,
     recusadaGestor: vendas.filter(v => v.statusFluxo === 'Recusada - Gestor').length,
     conferenciaFinanceiro: vendas.filter(v => v.statusFluxo === 'Conferência Financeiro').length,

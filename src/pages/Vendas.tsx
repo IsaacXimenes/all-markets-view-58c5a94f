@@ -290,9 +290,10 @@ export default function Vendas() {
             <div>
               <label className="text-sm font-medium mb-2 block">IMEI</label>
               <Input
-                placeholder="Buscar IMEI..."
+                placeholder="WW-XXXXXX-YYYYYY-Z"
                 value={imeiFiltro}
-                onChange={(e) => setImeiFiltro(e.target.value)}
+                onChange={(e) => setImeiFiltro(e.target.value.replace(/\D/g, ''))}
+                className="w-full"
               />
             </div>
             <div>
@@ -414,8 +415,8 @@ export default function Vendas() {
                         {new Date(venda.dataHora).toLocaleString('pt-BR')}
                       </TableCell>
                       <TableCell className="font-medium">{venda.clienteNome}</TableCell>
-                      <TableCell className="max-w-[150px] truncate" title={modelos}>{modelos || '-'}</TableCell>
-                      <TableCell className="font-mono text-xs max-w-[120px] truncate" title={imeis}>{imeis || '-'}</TableCell>
+                      <TableCell className="max-w-[200px] truncate" title={modelos}>{modelos || '-'}</TableCell>
+                      <TableCell className="font-mono text-xs min-w-[160px]" title={imeis}>{imeis || '-'}</TableCell>
                       <TableCell>{getColaboradorNome(venda.vendedor)}</TableCell>
                       <TableCell>{getLojaName(venda.lojaVenda)}</TableCell>
                       <TableCell className="text-muted-foreground">{getResponsavelLoja(venda.lojaVenda)}</TableCell>
