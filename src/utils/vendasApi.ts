@@ -771,30 +771,15 @@ export const addVenda = (venda: Omit<Venda, 'id' | 'numero'>): Venda => {
     });
   }
   
-  // ========== INTEGRAÇÃO: Trade-In para Produtos Pendentes ==========
-  // Cada trade-in cria um produto pendente no sistema de estoque
-  tradeInsComIds.forEach(ti => {
-    try {
-      addProdutoPendente({
-        imei: ti.imei || '',
-        marca: extrairMarca(ti.modelo),
-        modelo: ti.modelo,
-        cor: 'A definir', // Cor não informada no trade-in
-        tipo: 'Seminovo',
-        condicao: ti.condicao,
-        origemEntrada: 'Base de Troca',
-        notaOuVendaId: newId,
-        valorCusto: ti.valorCompraUsado,
-        valorOrigem: ti.valorCompraUsado, // Valor original de aquisição
-        saudeBateria: 0, // Será definido na conferência
-        loja: venda.lojaVenda,
-        dataEntrada: new Date().toISOString()
-      });
-      console.log(`[VENDAS] Trade-In ${ti.modelo} registrado como produto pendente (ID: ${ti.produtoId})`);
-    } catch (error) {
-      console.error(`[VENDAS] Erro ao registrar trade-in como pendente:`, error);
-    }
-  });
+  // ========== INTEGRAÇÃO: Trade-In - Migração Após Finalização Financeira ==========
+  // IMPORTANTE: Trade-ins NÃO são criados aqui como produtos pendentes.
+  // A migração para "Aparelhos Pendentes - Estoque" ocorre APENAS após a 
+  // aprovação financeira, através da função migrarTradeInsParaPendentes() 
+  // chamada em fluxoVendasApi.ts → finalizarVenda()
+  // Isso evita duplicação e garante que só entram no estoque após confirmação de pagamento.
+  if (tradeInsComIds.length > 0) {
+    console.log(`[VENDAS] ${tradeInsComIds.length} trade-in(s) serão migrados para pendentes após aprovação financeira.`);
+  }
   
   // ========== INTEGRAÇÃO: Criar Pagamentos no Financeiro ==========
   if (venda.pagamentos && venda.pagamentos.length > 0) {

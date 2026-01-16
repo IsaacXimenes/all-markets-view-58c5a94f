@@ -535,6 +535,15 @@ export const updateProdutoPendente = (id: string, dados: Partial<ProdutoPendente
 };
 
 export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeline' | 'custoAssistencia' | 'statusGeral' | 'valorCustoOriginal' | 'contadorEncaminhamentos'>): ProdutoPendente => {
+  // VALIDAÇÃO: Verificar se já existe produto com mesmo IMEI (evitar duplicatas)
+  if (produto.imei) {
+    const jaExiste = produtosPendentes.find(p => p.imei === produto.imei);
+    if (jaExiste) {
+      console.log(`[OS API] Produto com IMEI ${produto.imei} já existe nos pendentes (ID: ${jaExiste.id}), retornando existente.`);
+      return jaExiste;
+    }
+  }
+  
   // Gerar ID único usando o sistema centralizado
   const newId = generateProductId();
   
