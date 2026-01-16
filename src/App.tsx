@@ -87,6 +87,7 @@ import GarantiaContatosAtivosNovo from "./pages/GarantiaContatosAtivosNovo";
 import GarantiaContatosAtivosEditar from "./pages/GarantiaContatosAtivosEditar";
 import OSAnaliseGarantia from "./pages/OSAnaliseGarantia";
 import CadastrosPlanosGarantia from "./pages/CadastrosPlanosGarantia";
+import VendasEditar from "./pages/VendasEditar";
 
 const queryClient = new QueryClient();
 
@@ -168,6 +169,7 @@ const App = () => (
           <Route path="/vendas/conferencia-gestor" element={<VendasConferenciaGestor />} />
           <Route path="/vendas/conferencia-gestor/:id" element={<VendasConferenciaGestorDetalhes />} />
           <Route path="/vendas/editar-gestor/:id" element={<VendasEditarGestor />} />
+          <Route path="/vendas/editar/:id" element={<VendasEditar />} />
           <Route path="/vendas/:id" element={<VendaDetalhes />} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/garantias" element={<GarantiasNova />} />

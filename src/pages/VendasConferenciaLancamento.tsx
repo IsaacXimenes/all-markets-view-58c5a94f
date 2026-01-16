@@ -522,7 +522,7 @@ export default function VendasConferenciaLancamento() {
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => navigate(`/vendas/editar-gestor/${venda.id}`)}
+                              onClick={() => navigate(`/vendas/editar/${venda.id}`)}
                               title="Editar venda"
                             >
                               <Pencil className="h-4 w-4" />
