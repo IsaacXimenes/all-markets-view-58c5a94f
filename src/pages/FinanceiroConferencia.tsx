@@ -304,7 +304,7 @@ export default function FinanceiroConferencia() {
       setAprovacaoGestor(JSON.parse(storedAprovacao));
     } else {
       // Tentar carregar do timeline
-      const timelineEvento = venda.timeline?.find(t => t.status === 'Conferência Gestor' || t.descricao?.includes('Gestor'));
+      const timelineEvento = venda.timeline?.find(t => t.tipo === 'aprovacao_gestor' || t.descricao?.includes('Gestor'));
       if (timelineEvento) {
         setAprovacaoGestor({
           aprovadoPor: timelineEvento.usuarioId || '',
@@ -343,7 +343,7 @@ export default function FinanceiroConferencia() {
     if (storedFinalizacao) {
       setDataFinalizacao(storedFinalizacao);
     } else if (venda.statusFluxo === 'Finalizado') {
-      const finalizacaoEvento = venda.timeline?.find(t => t.status === 'Finalizado');
+      const finalizacaoEvento = venda.timeline?.find(t => t.tipo === 'finalizacao');
       setDataFinalizacao(finalizacaoEvento?.dataHora || null);
     } else {
       setDataFinalizacao(null);
