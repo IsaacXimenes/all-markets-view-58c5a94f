@@ -44,7 +44,7 @@ export interface ProdutoPendente {
   cor: string;
   tipo: 'Novo' | 'Seminovo';
   condicao: 'Novo' | 'Semi-novo';
-  origemEntrada: 'Base de Troca' | 'Fornecedor';
+  origemEntrada: 'Base de Troca' | 'Fornecedor' | 'Emprestado - Garantia';
   notaOuVendaId?: string;
   valorCusto: number;
   valorCustoOriginal: number; // Valor original preservado (não soma custo assistência)
