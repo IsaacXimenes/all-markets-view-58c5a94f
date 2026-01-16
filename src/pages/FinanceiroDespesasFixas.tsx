@@ -103,7 +103,7 @@ export default function FinanceiroDespesasFixas() {
                 <InputComMascara
                   mascara="moeda"
                   value={form.valor}
-                  onChange={(e) => setForm({ ...form, valor: e.target.value })}
+                  onChange={(valor) => setForm({ ...form, valor })}
                   placeholder="R$ 0,00"
                 />
               </div>
