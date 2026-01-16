@@ -6,10 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Shield, User, Phone, Mail, Save, Search, Plus, Award } from 'lucide-react';
+import { 
+  ArrowLeft, Shield, User, Phone, Mail, Save, Search, Plus, 
+  FileText, Package, Clock, Award 
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { getLojas, getProdutosCadastro, getClientes, addCliente, Cliente } from '@/utils/cadastrosApi';
 import { addGarantia, addTimelineEntry } from '@/utils/garantiasApi';
@@ -116,7 +121,7 @@ export default function GarantiasNovaManual() {
 
   // Calculate end date
   const dataFimGarantia = useMemo(() => {
-    if (!formData.dataInicioGarantia) return '';
+    if (!formData.dataInicioGarantia || formData.mesesGarantia <= 0) return '-';
     const dataInicio = new Date(formData.dataInicioGarantia);
     return format(addMonths(dataInicio, formData.mesesGarantia), 'dd/MM/yyyy');
   }, [formData.dataInicioGarantia, formData.mesesGarantia]);
@@ -237,117 +242,37 @@ export default function GarantiasNovaManual() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Column */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Product Data */}
+          {/* Dados da Venda Original */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Dados do Produto
+                <FileText className="h-5 w-5" />
+                Dados da Venda Original
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>IMEI *</Label>
-                  <Input
-                    placeholder="00-000000-000000-0"
-                    value={formData.imei}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      imei: formatIMEI(e.target.value) 
-                    }))}
-                  />
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">ID Venda</p>
+                  <p className="font-medium text-muted-foreground italic">Registro Manual</p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Modelo *</Label>
-                  <Select 
-                    value={formData.modelo} 
-                    onValueChange={(v) => setFormData(prev => ({ ...prev, modelo: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o modelo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {produtos.map(p => (
-                        <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Condição *</Label>
-                  <Select 
-                    value={formData.condicao} 
-                    onValueChange={(v) => setFormData(prev => ({ ...prev, condicao: v as 'Novo' | 'Seminovo' }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a condição" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Novo">Novo</SelectItem>
-                      <SelectItem value="Seminovo">Seminovo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Warranty Plan Selection - Shows when model and condition are selected */}
-              {formData.modelo && formData.condicao && (
-                <div className="space-y-3 pt-2">
-                  <Label className="flex items-center gap-2">
-                    <Award className="h-4 w-4" />
-                    Plano de Garantia *
-                  </Label>
-                  {planosDisponiveis.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {planosDisponiveis.map((plano) => (
-                        <div
-                          key={plano.id}
-                          onClick={() => handleSelectPlano(plano.id)}
-                          className={`p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-primary/50 ${
-                            formData.planoGarantiaId === plano.id
-                              ? 'border-primary bg-primary/5'
-                              : 'border-border'
-                          }`}
-                        >
-                          <div className="font-semibold text-sm">{plano.nome}</div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {plano.meses > 0 ? `${plano.meses} meses` : 'Sem garantia adicional'}
-                          </div>
-                          <div className="text-lg font-bold text-primary mt-2">
-                            {plano.valor > 0 ? formatCurrency(plano.valor) : 'Gratuito'}
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {plano.tipo}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-muted/50 rounded-lg text-center text-muted-foreground">
-                      Nenhum plano de garantia disponível para este modelo e condição.
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Data Início *</Label>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Data *</p>
                   <Input
                     type="date"
                     value={formData.dataInicioGarantia}
                     onChange={(e) => setFormData(prev => ({ ...prev, dataInicioGarantia: e.target.value }))}
+                    className="h-9"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Loja *</Label>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Loja *</p>
                   <Select 
                     value={formData.lojaVenda} 
                     onValueChange={(v) => setFormData(prev => ({ ...prev, lojaVenda: v }))}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a loja" />
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
                       {lojas.map(l => (
@@ -356,11 +281,15 @@ export default function GarantiasNovaManual() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status Garantia</p>
+                  <Badge variant="secondary" className="mt-1">Nova Garantia</Badge>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Client Data */}
+          {/* Dados do Cliente */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -369,140 +298,296 @@ export default function GarantiasNovaManual() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Cliente *</Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Selecione um cliente..."
-                    value={formData.clienteNome}
-                    readOnly
-                    className="flex-1"
-                  />
-                  <Button onClick={() => setShowClienteModal(true)}>
-                    <Search className="h-4 w-4 mr-2" />
-                    Buscar
-                  </Button>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Nome *</p>
+                  <p className="font-medium">{formData.clienteNome || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Telefone</p>
+                  <p className="font-medium flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    {formData.clienteTelefone || '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Email</p>
+                  <p className="font-medium flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    {formData.clienteEmail || '-'}
+                  </p>
                 </div>
               </div>
               
-              {formData.clienteId && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      Telefone
-                    </Label>
-                    <p className="text-sm font-medium">{formData.clienteTelefone || '-'}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      E-mail
-                    </Label>
-                    <p className="text-sm font-medium">{formData.clienteEmail || '-'}</p>
-                  </div>
-                </div>
-              )}
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowClienteModal(true)}>
+                  <Search className="h-4 w-4 mr-2" />
+                  Buscar Cliente
+                </Button>
+                <Button variant="outline" onClick={() => setShowNovoClienteModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Cliente
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Observations */}
+          {/* Dados do Aparelho + Garantia */}
           <Card>
             <CardHeader>
-              <CardTitle>Observações</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                Dados do Aparelho + Garantia
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Modelo *</p>
+                  <Select 
+                    value={formData.modelo} 
+                    onValueChange={(v) => setFormData(prev => ({ ...prev, modelo: v }))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {produtos.map(p => (
+                        <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">IMEI *</p>
+                  <Input
+                    placeholder="00-000000-000000-0"
+                    value={formData.imei}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      imei: formatIMEI(e.target.value) 
+                    }))}
+                    className="h-9 font-mono text-sm"
+                  />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Tipo Garantia</p>
+                  <Badge variant="outline" className="mt-1">
+                    {formData.tipoGarantia || '-'}
+                  </Badge>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Meses</p>
+                  <p className="font-medium">{formData.mesesGarantia > 0 ? `${formData.mesesGarantia} meses` : '-'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Condição *</p>
+                  <Select 
+                    value={formData.condicao} 
+                    onValueChange={(v) => setFormData(prev => ({ ...prev, condicao: v as 'Novo' | 'Seminovo' }))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Novo">Novo</SelectItem>
+                      <SelectItem value="Seminovo">Seminovo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Data Início</p>
+                  <p className="font-medium">
+                    {formData.dataInicioGarantia ? format(new Date(formData.dataInicioGarantia), 'dd/MM/yyyy') : '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Data Fim</p>
+                  <p className="font-medium">{dataFimGarantia}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Status Expiração</p>
+                  <Badge variant="secondary" className="bg-blue-500 text-white mt-1">
+                    Pendente Registro
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Plano de Garantia */}
+          {formData.modelo && formData.condicao && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5" />
+                  Plano de Garantia *
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {planosDisponiveis.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {planosDisponiveis.map((plano) => (
+                      <div
+                        key={plano.id}
+                        onClick={() => handleSelectPlano(plano.id)}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-primary/50 ${
+                          formData.planoGarantiaId === plano.id
+                            ? 'border-primary bg-primary/5'
+                            : 'border-border'
+                        }`}
+                      >
+                        <div className="font-semibold text-sm">{plano.nome}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {plano.meses > 0 ? `${plano.meses} meses` : 'Sem garantia adicional'}
+                        </div>
+                        <div className="text-lg font-bold text-primary mt-2">
+                          {plano.valor > 0 ? formatCurrency(plano.valor) : 'Gratuito'}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {plano.tipo}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 bg-muted/50 rounded-lg text-center text-muted-foreground">
+                    Nenhum plano de garantia disponível para este modelo e condição.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Timeline - Empty for new warranty */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Timeline
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <Textarea
-                placeholder="Observações sobre a garantia..."
-                value={formData.observacoes}
-                onChange={(e) => setFormData(prev => ({ ...prev, observacoes: e.target.value }))}
-                rows={4}
-              />
+              <p className="text-muted-foreground text-center py-4">
+                A timeline será criada após o registro da garantia.
+              </p>
             </CardContent>
           </Card>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Warranty Summary */}
+          {/* Observações Iniciais */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                Observações Iniciais
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea 
+                  placeholder="Descreva observações sobre esta garantia..."
+                  value={formData.observacoes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, observacoes: e.target.value }))}
+                  rows={4}
+                />
+              </div>
+              
+              <Separator />
+              
+              <Button 
+                className="w-full" 
+                onClick={handleSalvar}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Salvar Registro
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Resumo da Garantia */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
                 Resumo da Garantia
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">IMEI</p>
-                <p className="font-mono font-medium">{formData.imei || '-'}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Modelo</p>
-                <p className="font-medium">{formData.modelo || '-'}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Condição</p>
-                <p className="font-medium">{formData.condicao || '-'}</p>
-              </div>
-              {planoSelecionado && (
-                <>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Plano</p>
-                    <p className="font-medium">{planoSelecionado.nome}</p>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">Valor</p>
-                    <p className="font-medium text-primary">
-                      {planoSelecionado.valor > 0 ? formatCurrency(planoSelecionado.valor) : 'Gratuito'}
+            <CardContent>
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">IMEI</p>
+                  <p className="font-mono text-sm">{formData.imei || '-'}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Modelo</p>
+                  <p className="font-medium">{formData.modelo || '-'}</p>
+                </div>
+                
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Condição</p>
+                  <p className="font-medium">{formData.condicao || '-'}</p>
+                </div>
+                
+                {planoSelecionado && (
+                  <>
+                    <Separator />
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Plano</p>
+                      <p className="font-medium">{planoSelecionado.nome}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Valor</p>
+                      <p className="font-medium text-primary">
+                        {planoSelecionado.valor > 0 ? formatCurrency(planoSelecionado.valor) : 'Gratuito'}
+                      </p>
+                    </div>
+                  </>
+                )}
+                
+                <Separator />
+                
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Tipo Garantia</p>
+                  <Badge variant="outline">{formData.tipoGarantia}</Badge>
+                </div>
+                
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Período</p>
+                  <p className="font-medium text-sm">
+                    {formData.dataInicioGarantia 
+                      ? `${format(new Date(formData.dataInicioGarantia), 'dd/MM/yyyy')} → ${dataFimGarantia}`
+                      : '-'
+                    }
+                  </p>
+                </div>
+                
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Loja</p>
+                  <p className="font-medium">{formData.lojaVenda ? getLojaName(formData.lojaVenda) : '-'}</p>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">Cliente</p>
+                  <p className="font-medium">{formData.clienteNome || '-'}</p>
+                </div>
+                
+                {formData.clienteTelefone && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Telefone</p>
+                    <p className="font-medium flex items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      {formData.clienteTelefone}
                     </p>
                   </div>
-                </>
-              )}
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Resp. Garantia</p>
-                <p className="font-medium">{formData.tipoGarantia}</p>
+                )}
               </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Duração</p>
-                <p className="font-medium">{formData.mesesGarantia > 0 ? `${formData.mesesGarantia} meses` : '-'}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Data Fim Garantia</p>
-                <p className="font-medium text-primary">{dataFimGarantia || '-'}</p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Loja</p>
-                <p className="font-medium">{formData.lojaVenda ? getLojaName(formData.lojaVenda) : '-'}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Client Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <User className="h-5 w-5" />
-                Cliente
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">Nome</p>
-                <p className="font-medium">{formData.clienteNome || '-'}</p>
-              </div>
-              {formData.clienteTelefone && (
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Telefone</p>
-                  <p className="font-medium">{formData.clienteTelefone}</p>
-                </div>
-              )}
-              {formData.clienteEmail && (
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">E-mail</p>
-                  <p className="font-medium">{formData.clienteEmail}</p>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
