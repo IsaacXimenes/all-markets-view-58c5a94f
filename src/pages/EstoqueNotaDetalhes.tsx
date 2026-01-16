@@ -42,13 +42,16 @@ interface NotaCompraExtendida extends Omit<NotaCompra, 'status'> {
 const usuarioLogado = { id: 'COL-003', nome: 'Carlos Estoque' };
 
 export default function EstoqueNotaDetalhes() {
+  console.log('[EstoqueNotaDetalhes] Component mounting...');
   const { id } = useParams();
+  console.log('[EstoqueNotaDetalhes] ID from params:', id);
   const navigate = useNavigate();
   
   const [nota, setNota] = useState<NotaCompraExtendida | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(true);
   const [fornecedores, setFornecedores] = useState<ReturnType<typeof getFornecedores>>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Estado de edição
   const [editData, setEditData] = useState({
@@ -59,57 +62,103 @@ export default function EstoqueNotaDetalhes() {
   
   // Carregar fornecedores no mount
   useEffect(() => {
+    console.log('[EstoqueNotaDetalhes] useEffect fornecedores running...');
     try {
       const data = getFornecedores();
+      console.log('[EstoqueNotaDetalhes] Fornecedores loaded:', data?.length);
       setFornecedores(data);
     } catch (error) {
-      console.error('Erro ao carregar fornecedores:', error);
+      console.error('[EstoqueNotaDetalhes] Erro ao carregar fornecedores:', error);
     }
   }, []);
 
   useEffect(() => {
-    const notaBase = getNotasCompra().find(n => n.id === id);
-    if (notaBase) {
-      // Carregar timeline do localStorage ou criar padrão
-      const storedTimeline = localStorage.getItem(`nota_timeline_${id}`);
-      const timeline: TimelineNotaEntry[] = storedTimeline 
-        ? JSON.parse(storedTimeline) 
-        : [{
-            id: `TL-${id}-001`,
-            dataHora: notaBase.data + 'T09:00:00',
-            usuarioId: 'COL-001',
-            usuarioNome: 'Sistema',
-            tipoEvento: 'criacao' as const,
-            observacoes: 'Nota criada com sucesso'
-          }];
-      
-      // Carregar status estendido
-      const storedStatus = localStorage.getItem(`nota_status_${id}`);
-      const status = storedStatus || notaBase.status;
-      
-      // Carregar motivo de recusa se houver
-      const storedMotivo = localStorage.getItem(`nota_motivo_${id}`);
-      
-      setNota({
-        ...notaBase,
-        timeline,
-        status: status as NotaCompraExtendida['status'],
-        motivoRecusa: storedMotivo || undefined
-      });
-      
-      setEditData({
-        numeroNota: notaBase.numeroNota,
-        fornecedor: notaBase.fornecedor,
-        observacoes: ''
-      });
-    }
+    console.log('[EstoqueNotaDetalhes] useEffect nota running, id:', id);
+    
+    const loadNota = () => {
+      try {
+        const notas = getNotasCompra();
+        console.log('[EstoqueNotaDetalhes] Notas loaded:', notas?.length);
+        const notaBase = notas.find(n => n.id === id);
+        console.log('[EstoqueNotaDetalhes] NotaBase found:', !!notaBase);
+        
+        if (notaBase) {
+          // Carregar timeline do localStorage com tratamento de erro
+          let timeline: TimelineNotaEntry[];
+          try {
+            const storedTimeline = localStorage.getItem(`nota_timeline_${id}`);
+            timeline = storedTimeline 
+              ? JSON.parse(storedTimeline) 
+              : [{
+                  id: `TL-${id}-001`,
+                  dataHora: notaBase.data + 'T09:00:00',
+                  usuarioId: 'COL-001',
+                  usuarioNome: 'Sistema',
+                  tipoEvento: 'criacao' as const,
+                  observacoes: 'Nota criada com sucesso'
+                }];
+          } catch (parseError) {
+            console.error('[EstoqueNotaDetalhes] Error parsing timeline:', parseError);
+            timeline = [{
+              id: `TL-${id}-001`,
+              dataHora: notaBase.data + 'T09:00:00',
+              usuarioId: 'COL-001',
+              usuarioNome: 'Sistema',
+              tipoEvento: 'criacao' as const,
+              observacoes: 'Nota criada com sucesso'
+            }];
+          }
+          
+          // Carregar status estendido
+          const storedStatus = localStorage.getItem(`nota_status_${id}`);
+          const status = storedStatus || notaBase.status;
+          
+          // Carregar motivo de recusa se houver
+          const storedMotivo = localStorage.getItem(`nota_motivo_${id}`);
+          
+          setNota({
+            ...notaBase,
+            timeline,
+            status: status as NotaCompraExtendida['status'],
+            motivoRecusa: storedMotivo || undefined
+          });
+          
+          setEditData({
+            numeroNota: notaBase.numeroNota,
+            fornecedor: notaBase.fornecedor,
+            observacoes: ''
+          });
+          console.log('[EstoqueNotaDetalhes] Nota set successfully');
+        } else {
+          console.log('[EstoqueNotaDetalhes] Nota not found for id:', id);
+        }
+      } catch (error) {
+        console.error('[EstoqueNotaDetalhes] Error loading nota:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadNota();
   }, [id]);
+
+  console.log('[EstoqueNotaDetalhes] Rendering, nota:', !!nota, 'isLoading:', isLoading);
+
+  if (isLoading) {
+    return (
+      <EstoqueLayout title="Carregando...">
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Carregando detalhes da nota...</p>
+        </div>
+      </EstoqueLayout>
+    );
+  }
 
   if (!nota) {
     return (
       <EstoqueLayout title="Nota não encontrada">
         <div className="text-center py-8">
-          <p className="text-muted-foreground mb-4">Nota não encontrada</p>
+          <p className="text-muted-foreground mb-4">Nota não encontrada (ID: {id})</p>
           <Button onClick={() => navigate('/estoque/notas-compra')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar para Notas
