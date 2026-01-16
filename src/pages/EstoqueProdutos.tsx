@@ -258,6 +258,8 @@ export default function EstoqueProdutos() {
                     <Badge variant="outline" className={cn(
                       produto.origemEntrada === 'Base de Troca' 
                         ? 'bg-purple-500/10 text-purple-600 border-purple-500/30'
+                        : produto.origemEntrada === 'Emprestado - Garantia'
+                        ? 'bg-orange-500/10 text-orange-600 border-orange-500/30'
                         : 'bg-green-500/10 text-green-600 border-green-500/30'
                     )}>
                       {produto.origemEntrada}

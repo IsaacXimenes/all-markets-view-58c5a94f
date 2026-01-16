@@ -310,7 +310,10 @@ export default function GarantiasNovaManual() {
 
       // Ações específicas por tipo
       if (tipoTratativa === 'Assistência + Empréstimo' && aparelhoSelecionado) {
-        updateProduto(aparelhoSelecionado.id, { quantidade: 0 });
+        updateProduto(aparelhoSelecionado.id, { 
+          quantidade: 0,
+          origemEntrada: 'Emprestado - Garantia'
+        });
         addMovimentacao({
           data: new Date().toISOString(),
           produto: aparelhoSelecionado.modelo,

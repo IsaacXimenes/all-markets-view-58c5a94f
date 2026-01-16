@@ -40,7 +40,7 @@ export interface Produto {
   historicoCusto: { data: string; fornecedor: string; valor: number }[];
   historicoValorRecomendado: HistoricoValorRecomendado[];
   statusNota: 'Pendente' | 'Concluído';
-  origemEntrada: 'Base de Troca' | 'Fornecedor';
+  origemEntrada: 'Base de Troca' | 'Fornecedor' | 'Emprestado - Garantia';
   timeline?: TimelineEntry[]; // Timeline de tratativas (pareceres estoque/assistência)
   custoAssistencia?: number; // Soma das peças/serviços de assistência
   bloqueadoEmVendaId?: string; // ID da venda quando produto está bloqueado (sinal)

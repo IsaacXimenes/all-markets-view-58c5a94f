@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 
 import { toast } from 'sonner';
-import { Download, Package, Edit, AlertTriangle, DollarSign } from 'lucide-react';
+import { Download, Package, Edit, AlertTriangle, DollarSign, Layers, Hash, TrendingUp } from 'lucide-react';
 import { 
   getAcessorios, 
   getCategoriasAcessorios, 
@@ -21,13 +21,13 @@ import {
   Acessorio,
   HistoricoValorRecomendadoAcessorio
 } from '@/utils/acessoriosApi';
-import { getLojas } from '@/utils/estoqueApi';
+import { getLojas, getLojaById, Loja } from '@/utils/cadastrosApi';
 import { getColaboradores, getCargos } from '@/utils/cadastrosApi';
 
 export default function EstoqueAcessorios() {
   const [acessorios, setAcessorios] = useState<Acessorio[]>(getAcessorios());
   const [categorias] = useState<string[]>(getCategoriasAcessorios());
-  const [lojas] = useState<string[]>(getLojas());
+  const [lojas] = useState<Loja[]>(getLojas());
   const [colaboradores] = useState(getColaboradores());
   const [cargos] = useState(getCargos());
 
@@ -38,6 +38,7 @@ export default function EstoqueAcessorios() {
   });
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [filtroLoja, setFiltroLoja] = useState('');
+  const [filtroDescricao, setFiltroDescricao] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [acessorioSelecionado, setAcessorioSelecionado] = useState<Acessorio | null>(null);
   const [novaQuantidade, setNovaQuantidade] = useState(0);
@@ -46,6 +47,12 @@ export default function EstoqueAcessorios() {
   const [showValorRecomendadoModal, setShowValorRecomendadoModal] = useState(false);
   const [novoValorRecomendado, setNovoValorRecomendado] = useState('');
   const [colaboradorSelecionado, setColaboradorSelecionado] = useState('');
+
+  // Helper para obter nome da loja
+  const getLojaNome = (lojaId: string) => {
+    const loja = getLojaById(lojaId);
+    return loja?.nome || lojaId;
+  };
 
   // Agrupa acessórios por ID/Descrição
   const acessoriosAgrupados = useMemo(() => {
@@ -93,9 +100,25 @@ export default function EstoqueAcessorios() {
         const temNaLoja = a.itens.some(item => item.loja === filtroLoja && item.quantidade > 0);
         if (!temNaLoja) return false;
       }
+      // Filtro de descrição
+      if (filtroDescricao && !a.descricao.toLowerCase().includes(filtroDescricao.toLowerCase())) {
+        return false;
+      }
       return true;
     });
-  }, [acessoriosAgrupados, filtroCategoria, filtroLoja]);
+  }, [acessoriosAgrupados, filtroCategoria, filtroLoja, filtroDescricao]);
+
+  // Estatísticas dinâmicas baseadas nos filtros
+  const estatisticas = useMemo(() => {
+    const totalDistintos = acessoriosFiltrados.length;
+    const quantidadeTotal = acessoriosFiltrados.reduce((acc, a) => acc + a.quantidadeTotal, 0);
+    const valorCustoTotal = acessoriosFiltrados.reduce((acc, a) => acc + (a.valorCusto * a.quantidadeTotal), 0);
+    const valorRecomendadoTotal = acessoriosFiltrados.reduce((acc, a) => 
+      acc + ((a.valorRecomendado || 0) * a.quantidadeTotal), 0
+    );
+    
+    return { totalDistintos, quantidadeTotal, valorCustoTotal, valorRecomendadoTotal };
+  }, [acessoriosFiltrados]);
 
   const handleEditQuantidade = (acessorio: Acessorio) => {
     setAcessorioSelecionado(acessorio);
@@ -160,6 +183,53 @@ export default function EstoqueAcessorios() {
   return (
     <EstoqueLayout title="Gerenciamento de Acessórios">
       <div className="space-y-6">
+        {/* Cards de Estatísticas */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Acessórios Distintos</CardTitle>
+              <Layers className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{estatisticas.totalDistintos}</div>
+              <p className="text-xs text-muted-foreground">Tipos diferentes</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Quantidade Total</CardTitle>
+              <Hash className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{estatisticas.quantidadeTotal}</div>
+              <p className="text-xs text-muted-foreground">Unidades em estoque</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Valor de Custo Total</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(estatisticas.valorCustoTotal)}</div>
+              <p className="text-xs text-muted-foreground">Base custo</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Valor Recomendado Total</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">{formatCurrency(estatisticas.valorRecomendadoTotal)}</div>
+              <p className="text-xs text-muted-foreground">Potencial de venda</p>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Filtros */}
         <Card>
           <CardHeader>
@@ -169,7 +239,15 @@ export default function EstoqueAcessorios() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <Label>Descrição</Label>
+                <Input
+                  placeholder="Buscar por descrição..."
+                  value={filtroDescricao}
+                  onChange={(e) => setFiltroDescricao(e.target.value)}
+                />
+              </div>
               <div>
                 <Label>Categoria</Label>
                 <Select value={filtroCategoria} onValueChange={setFiltroCategoria}>
@@ -193,7 +271,7 @@ export default function EstoqueAcessorios() {
                   <SelectContent>
                     <SelectItem value="todas">Todas</SelectItem>
                     {lojas.map(loja => (
-                      <SelectItem key={loja} value={loja}>{loja}</SelectItem>
+                      <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -235,7 +313,7 @@ export default function EstoqueAcessorios() {
                         <Badge variant="secondary">{acessorio.categoria}</Badge>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {acessorio.lojas.join(', ')}
+                        {acessorio.lojas.map(lojaId => getLojaNome(lojaId)).join(', ')}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
