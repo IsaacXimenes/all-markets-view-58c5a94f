@@ -11,8 +11,8 @@ import { Download, Plus, Trash2 } from 'lucide-react';
 import { getDespesas, addDespesa, deleteDespesa } from '@/utils/financeApi';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
-
-import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
+import { InputComMascara } from '@/components/ui/InputComMascara';
+import { formatCurrency, exportToCSV, parseMoeda } from '@/utils/formatUtils';
 
 export default function FinanceiroDespesasFixas() {
   const [despesas, setDespesas] = useState(getDespesas());
@@ -40,8 +40,8 @@ export default function FinanceiroDespesasFixas() {
     const novaDespesa = addDespesa({
       tipo: 'Fixa',
       descricao: form.descricao,
-      valor: parseFloat(form.valor),
-      data: form.data,
+      valor: parseMoeda(form.valor),
+      data: new Date().toISOString().split('T')[0], // Data atual correta
       competencia: form.competencia,
       conta: form.conta,
       observacoes: `${form.recorrencia} - ${form.observacoes}`
@@ -100,12 +100,11 @@ export default function FinanceiroDespesasFixas() {
               </div>
               <div>
                 <Label>Valor (R$) *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
+                <InputComMascara
+                  mascara="moeda"
                   value={form.valor}
                   onChange={(e) => setForm({ ...form, valor: e.target.value })}
-                  placeholder="0,00"
+                  placeholder="R$ 0,00"
                 />
               </div>
               <div>
