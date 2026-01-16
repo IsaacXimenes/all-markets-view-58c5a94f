@@ -265,9 +265,21 @@ export default function FinanceiroConferencia() {
     };
   }, [filters.metodoPagamento]);
 
-  const pendentes = vendas.filter(v => v.statusFluxo === 'Conferência Financeiro').length;
-  const finalizados = vendas.filter(v => v.statusFluxo === 'Finalizado').length;
-  const totalPendente = filteredLinhas.filter(l => !l.conferido).reduce((acc, l) => acc + l.valor, 0);
+  const contadoresDinamicos = useMemo(() => {
+    // Obter vendas únicas das linhas filtradas
+    const vendasFiltradasIds = [...new Set(filteredLinhas.map(l => l.vendaId))];
+    const vendasFiltradas = vendasFiltradasIds.map(id => 
+      filteredLinhas.find(l => l.vendaId === id)!.venda
+    );
+    
+    return {
+      pendentes: vendasFiltradas.filter(v => v.statusFluxo === 'Conferência Financeiro').length,
+      finalizados: vendasFiltradas.filter(v => v.statusFluxo === 'Finalizado').length,
+      totalPendente: filteredLinhas.filter(l => !l.conferido).reduce((acc, l) => acc + l.valor, 0)
+    };
+  }, [filteredLinhas]);
+
+  const { pendentes, finalizados, totalPendente } = contadoresDinamicos;
 
   const handleSelecionarVenda = (venda: VendaComFluxo) => {
     setVendaSelecionada(venda);
