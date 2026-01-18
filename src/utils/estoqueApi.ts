@@ -40,7 +40,7 @@ export interface Produto {
   historicoCusto: { data: string; fornecedor: string; valor: number }[];
   historicoValorRecomendado: HistoricoValorRecomendado[];
   statusNota: 'Pendente' | 'Concluído';
-  origemEntrada: 'Base de Troca' | 'Fornecedor' | 'Emprestado - Garantia';
+  origemEntrada: 'Base de Troca' | 'Fornecedor' | 'Emprestado - Garantia' | 'NEGOCIADO';
   timeline?: TimelineEntry[]; // Timeline de tratativas (pareceres estoque/assistência)
   custoAssistencia?: number; // Soma das peças/serviços de assistência
   bloqueadoEmVendaId?: string; // ID da venda quando produto está bloqueado (sinal)
@@ -56,6 +56,8 @@ export interface NotaCompra {
   valorTotal: number;
   status: 'Pendente' | 'Concluído';
   origem?: 'Normal' | 'Urgência';
+  statusUrgencia?: 'Aguardando Financeiro' | 'Pago - Aguardando Produtos' | 'Produtos Inseridos' | 'Concluído';
+  dataPagamentoFinanceiro?: string;
   produtos: {
     marca: string;
     modelo: string;

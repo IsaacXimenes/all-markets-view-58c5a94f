@@ -32,6 +32,7 @@ import EstoqueNotaDetalhes from "./pages/EstoqueNotaDetalhes";
 import EstoqueNotaCadastrar from "./pages/EstoqueNotaCadastrar";
 import EstoqueMovimentacoes from "./pages/EstoqueMovimentacoes";
 import EstoqueMovimentacoesAcessorios from "./pages/EstoqueMovimentacoesAcessorios";
+import EstoqueNotasUrgenciaPendentes from "./pages/EstoqueNotasUrgenciaPendentes";
 import Cadastros from "./pages/Cadastros";
 import CadastrosLojas from "./pages/CadastrosLojas";
 import CadastrosClientes from "./pages/CadastrosClientes";
@@ -128,6 +129,7 @@ const App = () => (
           <Route path="/estoque/nota/:id" element={<EstoqueNotaDetalhes />} />
           <Route path="/estoque/movimentacoes" element={<EstoqueMovimentacoes />} />
           <Route path="/estoque/movimentacoes-acessorios" element={<EstoqueMovimentacoesAcessorios />} />
+          <Route path="/estoque/notas-urgencia" element={<EstoqueNotasUrgenciaPendentes />} />
           <Route path="/estoque/acessorios" element={<EstoqueAcessorios />} />
           <Route path="/os/produtos-analise" element={<OSProdutosAnalise />} />
           <Route path="/os/historico-assistencia" element={<OSHistoricoAssistencia />} />

@@ -131,6 +131,9 @@ export default function EstoqueProdutosPendentes() {
     if (origem === 'Emprestado - Garantia') {
       return <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">Emprestado - Garantia</Badge>;
     }
+    if (origem === 'NEGOCIADO') {
+      return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">NEGOCIADO</Badge>;
+    }
     return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">Fornecedor</Badge>;
   };
 
