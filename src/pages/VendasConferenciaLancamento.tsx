@@ -46,8 +46,10 @@ const usuarioLogado = { id: 'COL-007', nome: 'Carlos Lançador', cargo: 'Vendedo
 
 export default function VendasConferenciaLancamento() {
   const navigate = useNavigate();
+  // Incluir histórico para manter vendas na tela após aprovação
   const { vendas, recarregar, contadores } = useFluxoVendas({
-    status: ['Aguardando Conferência', 'Recusada - Gestor', 'Feito Sinal']
+    status: ['Aguardando Conferência', 'Recusada - Gestor', 'Feito Sinal'],
+    incluirHistorico: true // Manter vendas mesmo após aprovação
   });
   
   const lojas = getLojas();

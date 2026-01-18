@@ -84,6 +84,9 @@ export interface Movimentacao {
   destino: string;
   responsavel: string;
   motivo: string;
+  status?: 'Pendente' | 'Recebido'; // Status da movimentação
+  dataRecebimento?: string; // Data/hora da confirmação
+  responsavelRecebimento?: string; // Quem confirmou
 }
 
 // Dados mockados
@@ -714,9 +717,35 @@ export const addMovimentacao = (mov: Omit<Movimentacao, 'id'>): Movimentacao => 
   const year = new Date().getFullYear();
   const num = movimentacoes.filter(m => m.id.includes(String(year))).length + 1;
   const newId = `MOV-${year}-${String(num).padStart(4, '0')}`;
-  const newMov: Movimentacao = { ...mov, id: newId };
+  const newMov: Movimentacao = { 
+    ...mov, 
+    id: newId,
+    status: 'Pendente' // Movimentação começa pendente
+  };
   movimentacoes.push(newMov);
   return newMov;
+};
+
+// Confirmar recebimento de uma movimentação
+export const confirmarRecebimentoMovimentacao = (
+  movId: string, 
+  responsavel: string
+): Movimentacao | null => {
+  const mov = movimentacoes.find(m => m.id === movId);
+  if (!mov) return null;
+  
+  mov.status = 'Recebido';
+  mov.dataRecebimento = new Date().toISOString();
+  mov.responsavelRecebimento = responsavel;
+  
+  // Atualizar loja do produto apenas após confirmação
+  const produto = produtos.find(p => p.imei === mov.imei);
+  if (produto) {
+    produto.loja = mov.destino;
+    console.log(`Produto ${produto.id} transferido para ${mov.destino} após confirmação`);
+  }
+  
+  return mov;
 };
 
 export const getLojas = (): string[] => {

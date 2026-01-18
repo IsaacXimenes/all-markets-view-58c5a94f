@@ -10,17 +10,32 @@ interface UseFluxoVendasOptions {
   status?: StatusVenda | StatusVenda[];
   autoRefresh?: boolean;
   refreshInterval?: number;
+  incluirHistorico?: boolean; // Nova opção para incluir vendas finalizadas
 }
 
 export const useFluxoVendas = (options: UseFluxoVendasOptions = {}) => {
-  const { status, autoRefresh = true, refreshInterval = 2000 } = options;
+  const { status, autoRefresh = true, refreshInterval = 2000, incluirHistorico = false } = options;
   const [vendas, setVendas] = useState<VendaComFluxo[]>([]);
   const [loading, setLoading] = useState(true);
 
   const carregarVendas = useCallback(() => {
     try {
       if (status) {
-        setVendas(getVendasPorStatus(status));
+        let vendasFiltradas = getVendasPorStatus(status);
+        
+        // Se incluirHistorico = true, incluir também vendas já finalizadas
+        if (incluirHistorico) {
+          const todasVendas = getVendasComFluxo();
+          // Adicionar vendas com outros status que não estão no filtro (para histórico)
+          const statusArray = Array.isArray(status) ? status : [status];
+          const vendasOutrosStatus = todasVendas.filter(v => 
+            !statusArray.includes(v.statusFluxo as StatusVenda) &&
+            ['Conferência Gestor', 'Conferência Financeiro', 'Finalizado'].includes(v.statusFluxo || '')
+          );
+          vendasFiltradas = [...vendasFiltradas, ...vendasOutrosStatus];
+        }
+        
+        setVendas(vendasFiltradas);
       } else {
         setVendas(getVendasComFluxo());
       }
@@ -29,7 +44,7 @@ export const useFluxoVendas = (options: UseFluxoVendasOptions = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [status]);
+  }, [status, incluirHistorico]);
 
   useEffect(() => {
     carregarVendas();

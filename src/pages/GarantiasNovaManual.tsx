@@ -39,12 +39,14 @@ export default function GarantiasNovaManual() {
     mesesGarantia: number;
     valorGarantia: number;
     dataInicioGarantia: string;
+    dataFimGarantia: string; // Campo manual
     lojaVenda: string;
     clienteId: string;
     clienteNome: string;
     clienteTelefone: string;
     clienteEmail: string;
     observacoes: string;
+    modoManual: boolean; // Flag para modo manual de garantia
   }>({
     imei: '',
     modelo: '',
@@ -54,20 +56,22 @@ export default function GarantiasNovaManual() {
     mesesGarantia: 12,
     valorGarantia: 0,
     dataInicioGarantia: format(new Date(), 'yyyy-MM-dd'),
+    dataFimGarantia: format(addMonths(new Date(), 12), 'yyyy-MM-dd'),
     lojaVenda: '',
     clienteId: '',
     clienteNome: '',
     clienteTelefone: '',
     clienteEmail: '',
-    observacoes: ''
+    observacoes: '',
+    modoManual: true // Iniciando em modo manual por padrão
   });
 
   // Available warranty plans based on model and condition
   const [planosDisponiveis, setPlanosDisponiveis] = useState<PlanoGarantia[]>([]);
 
-  // Update available plans when model or condition changes
+  // Update available plans when model or condition changes (only if not in manual mode)
   useEffect(() => {
-    if (formData.modelo && formData.condicao) {
+    if (formData.modelo && formData.condicao && !formData.modoManual) {
       const planos = getPlanosPorModelo(formData.modelo, formData.condicao as 'Novo' | 'Seminovo');
       setPlanosDisponiveis(planos);
       // Reset selected plan when model/condition changes
@@ -78,10 +82,13 @@ export default function GarantiasNovaManual() {
         valorGarantia: 0,
         tipoGarantia: 'Garantia - Apple'
       }));
+    } else if (formData.modoManual) {
+      // Em modo manual, não buscar planos automaticamente
+      setPlanosDisponiveis([]);
     } else {
       setPlanosDisponiveis([]);
     }
-  }, [formData.modelo, formData.condicao]);
+  }, [formData.modelo, formData.condicao, formData.modoManual]);
 
   // Handle plan selection
   const handleSelectPlano = (planoId: string) => {
@@ -117,11 +124,12 @@ export default function GarantiasNovaManual() {
   // Flag para indicar se precisa de aparelho
   const precisaAparelho = tipoTratativa === 'Assistência + Empréstimo' || tipoTratativa === 'Troca Direta';
 
-  // Lista de aparelhos disponíveis
+  // Lista de aparelhos disponíveis - FILTRAR APENAS SEMINOVOS para empréstimo
   const aparelhosDisponiveis = useMemo(() => {
     const produtos = getProdutos();
     return produtos.filter(p => 
       p.quantidade > 0 && 
+      p.tipo === 'Seminovo' && // Apenas Seminovos
       (buscaAparelho === '' || 
         p.imei?.toLowerCase().includes(buscaAparelho.toLowerCase()) ||
         p.modelo.toLowerCase().includes(buscaAparelho.toLowerCase()))
@@ -141,12 +149,15 @@ export default function GarantiasNovaManual() {
     );
   }, [clientes, buscaCliente]);
 
-  // Calculate end date
-  const dataFimGarantia = useMemo(() => {
+  // Calculate end date - usar dataFimGarantia se modo manual, senão calcular
+  const dataFimGarantiaCalculada = useMemo(() => {
+    if (formData.modoManual && formData.dataFimGarantia) {
+      return format(new Date(formData.dataFimGarantia), 'dd/MM/yyyy');
+    }
     if (!formData.dataInicioGarantia || formData.mesesGarantia <= 0) return '-';
     const dataInicio = new Date(formData.dataInicioGarantia);
     return format(addMonths(dataInicio, formData.mesesGarantia), 'dd/MM/yyyy');
-  }, [formData.dataInicioGarantia, formData.mesesGarantia]);
+  }, [formData.dataInicioGarantia, formData.mesesGarantia, formData.dataFimGarantia, formData.modoManual]);
 
   const handleSelectCliente = (cliente: Cliente) => {
     setFormData(prev => ({
@@ -223,7 +234,8 @@ export default function GarantiasNovaManual() {
       return;
     }
 
-    if (!formData.planoGarantiaId) {
+    // Em modo manual, não precisa de plano selecionado
+    if (!formData.modoManual && !formData.planoGarantiaId) {
       toast.error('Selecione um plano de garantia');
       return;
     }
@@ -245,8 +257,10 @@ export default function GarantiasNovaManual() {
       return;
     }
 
-    const dataInicio = new Date(formData.dataInicioGarantia);
-    const dataFimCalc = format(addMonths(dataInicio, formData.mesesGarantia), 'yyyy-MM-dd');
+    // Em modo manual, usar a data fim manual; senão, calcular
+    const dataFimCalc = formData.modoManual && formData.dataFimGarantia 
+      ? formData.dataFimGarantia 
+      : format(addMonths(new Date(formData.dataInicioGarantia), formData.mesesGarantia), 'yyyy-MM-dd');
 
     const novaGarantia = addGarantia({
       vendaId: '',
@@ -481,28 +495,6 @@ export default function GarantiasNovaManual() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">IMEI *</p>
-                  <Input
-                    placeholder="00-000000-000000-0"
-                    value={formData.imei}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      imei: formatIMEI(e.target.value) 
-                    }))}
-                    className="h-9 font-mono text-sm"
-                  />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Tipo Garantia</p>
-                  <Badge variant="outline" className="mt-1">
-                    {formData.tipoGarantia || '-'}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Meses</p>
-                  <p className="font-medium">{formData.mesesGarantia > 0 ? `${formData.mesesGarantia} meses` : '-'}</p>
-                </div>
-                <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Condição *</p>
                   <Select 
                     value={formData.condicao} 
@@ -517,21 +509,79 @@ export default function GarantiasNovaManual() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Data Início</p>
-                  <p className="font-medium">
-                    {formData.dataInicioGarantia ? format(new Date(formData.dataInicioGarantia), 'dd/MM/yyyy') : '-'}
-                  </p>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">IMEI *</p>
+                  <Input
+                    placeholder="00-000000-000000-0"
+                    value={formData.imei}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      imei: formatIMEI(e.target.value) 
+                    }))}
+                    className="h-9 font-mono text-sm"
+                  />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Data Fim</p>
-                  <p className="font-medium">{dataFimGarantia}</p>
-                </div>
-                <div>
+                <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Status Expiração</p>
                   <Badge variant="secondary" className="bg-blue-500 text-white mt-1">
                     Pendente Registro
                   </Badge>
+                </div>
+              </div>
+
+              {/* Campos de Garantia Manuais */}
+              <Separator className="my-4" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Tipo Garantia *</p>
+                  <Select 
+                    value={formData.tipoGarantia} 
+                    onValueChange={(v) => setFormData(prev => ({ ...prev, tipoGarantia: v as 'Garantia - Apple' | 'Garantia - Thiago Imports' }))}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Garantia - Apple">Garantia - Apple</SelectItem>
+                      <SelectItem value="Garantia - Thiago Imports">Garantia - Thiago Imports</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Meses *</p>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={36}
+                    value={formData.mesesGarantia}
+                    onChange={(e) => {
+                      const meses = parseInt(e.target.value) || 0;
+                      const novaDataFim = format(addMonths(new Date(formData.dataInicioGarantia), meses), 'yyyy-MM-dd');
+                      setFormData(prev => ({ ...prev, mesesGarantia: meses, dataFimGarantia: novaDataFim }));
+                    }}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Data Início *</p>
+                  <Input
+                    type="date"
+                    value={formData.dataInicioGarantia}
+                    onChange={(e) => {
+                      const novaDataFim = format(addMonths(new Date(e.target.value), formData.mesesGarantia), 'yyyy-MM-dd');
+                      setFormData(prev => ({ ...prev, dataInicioGarantia: e.target.value, dataFimGarantia: novaDataFim }));
+                    }}
+                    className="h-9"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Data Fim *</p>
+                  <Input
+                    type="date"
+                    value={formData.dataFimGarantia}
+                    onChange={(e) => setFormData(prev => ({ ...prev, dataFimGarantia: e.target.value }))}
+                    className="h-9"
+                  />
                 </div>
               </div>
             </CardContent>
@@ -741,7 +791,7 @@ export default function GarantiasNovaManual() {
                   <p className="text-xs text-muted-foreground">Período</p>
                   <p className="font-medium text-sm">
                     {formData.dataInicioGarantia 
-                      ? `${format(new Date(formData.dataInicioGarantia), 'dd/MM/yyyy')} → ${dataFimGarantia}`
+                      ? `${format(new Date(formData.dataInicioGarantia), 'dd/MM/yyyy')} → ${dataFimGarantiaCalculada}`
                       : '-'
                     }
                   </p>

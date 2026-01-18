@@ -4,12 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { getMovimentacoes, addMovimentacao, getProdutos, Produto } from '@/utils/estoqueApi';
+import { getMovimentacoes, addMovimentacao, getProdutos, Produto, confirmarRecebimentoMovimentacao, Movimentacao } from '@/utils/estoqueApi';
 import { getLojas, getLojaById, getColaboradores } from '@/utils/cadastrosApi';
 import { exportToCSV } from '@/utils/formatUtils';
 import { formatIMEI, unformatIMEI, isValidIMEI } from '@/utils/imeiMask';
 import { InputComMascara } from '@/components/ui/InputComMascara';
-import { Download, Plus, AlertCircle } from 'lucide-react';
+import { Download, Plus, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,9 +27,10 @@ const obterModeloPorIMEI = (imei: string): { modelo: string; produto: Produto } 
 };
 
 export default function EstoqueMovimentacoes() {
-  const [movimentacoes, setMovimentacoes] = useState(getMovimentacoes());
+  const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>(getMovimentacoes());
   const [origemFilter, setOrigemFilter] = useState<string>('todas');
   const [destinoFilter, setDestinoFilter] = useState<string>('todas');
+  const [statusFilter, setStatusFilter] = useState<string>('todos');
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
@@ -62,8 +63,29 @@ export default function EstoqueMovimentacoes() {
   const movimentacoesFiltradas = movimentacoes.filter(m => {
     if (origemFilter !== 'todas' && m.origem !== origemFilter) return false;
     if (destinoFilter !== 'todas' && m.destino !== destinoFilter) return false;
+    if (statusFilter !== 'todos' && m.status !== statusFilter) return false;
     return true;
   });
+
+  // Confirmar recebimento de uma movimentação
+  const handleConfirmarRecebimento = (movId: string) => {
+    const responsavel = colaboradores[0]?.nome || 'Usuário Sistema';
+    const result = confirmarRecebimentoMovimentacao(movId, responsavel);
+    
+    if (result) {
+      setMovimentacoes(getMovimentacoes());
+      toast({
+        title: 'Recebimento confirmado',
+        description: `Movimentação ${movId} confirmada por ${responsavel}`,
+      });
+    } else {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível confirmar o recebimento',
+        variant: 'destructive'
+      });
+    }
+  };
 
   const handleExport = () => {
     const dataToExport = movimentacoesFiltradas.map(m => ({
@@ -177,6 +199,17 @@ export default function EstoqueMovimentacoes() {
               {lojas.map(loja => (
                 <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos status</SelectItem>
+              <SelectItem value="Pendente">Pendente</SelectItem>
+              <SelectItem value="Recebido">Recebido</SelectItem>
             </SelectContent>
           </Select>
 
@@ -341,12 +374,14 @@ export default function EstoqueMovimentacoes() {
                 <TableHead>Data</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead>Destino</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Observações</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {movimentacoesFiltradas.map(mov => (
-                <TableRow key={mov.id}>
+                <TableRow key={mov.id} className={mov.status === 'Pendente' ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}>
                   <TableCell className="font-mono text-xs">{mov.id}</TableCell>
                   <TableCell className="font-mono text-xs">{formatIMEI(mov.imei)}</TableCell>
                   <TableCell>{mov.produto}</TableCell>
@@ -354,7 +389,38 @@ export default function EstoqueMovimentacoes() {
                   <TableCell>{new Date(mov.data).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell>{getLojaNome(mov.origem)}</TableCell>
                   <TableCell>{getLojaNome(mov.destino)}</TableCell>
-                  <TableCell className="max-w-[200px] truncate" title={mov.motivo}>{mov.motivo}</TableCell>
+                  <TableCell>
+                    {mov.status === 'Recebido' ? (
+                      <div className="flex items-center gap-1 text-green-600">
+                        <CheckCircle className="h-4 w-4" />
+                        <span className="text-xs">Recebido</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-yellow-600">
+                        <Clock className="h-4 w-4" />
+                        <span className="text-xs">Pendente</span>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="max-w-[150px] truncate" title={mov.motivo}>{mov.motivo}</TableCell>
+                  <TableCell className="text-right">
+                    {mov.status === 'Pendente' && (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="text-green-600 border-green-600 hover:bg-green-50"
+                        onClick={() => handleConfirmarRecebimento(mov.id)}
+                      >
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Confirmar
+                      </Button>
+                    )}
+                    {mov.status === 'Recebido' && mov.dataRecebimento && (
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(mov.dataRecebimento).toLocaleDateString('pt-BR')}
+                      </span>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

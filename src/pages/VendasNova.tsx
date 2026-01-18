@@ -450,16 +450,31 @@ export default function VendasNova() {
     toast({ title: "Sucesso", description: "Cliente cadastrado com sucesso!" });
   };
 
-  // Produtos filtrados
+  // Produtos filtrados - FILTRA PELA LOJA SELECIONADA NA VENDA
   const produtosFiltrados = useMemo(() => {
     return produtosEstoque.filter(p => {
       if (p.quantidade <= 0) return false;
+      // Se uma loja foi selecionada para a venda, só mostrar produtos dessa loja
+      if (lojaVenda && p.loja !== lojaVenda) return false;
+      // Filtros adicionais do modal
       if (filtroLojaProduto && p.loja !== filtroLojaProduto) return false;
       if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
       if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
       return true;
     });
-  }, [produtosEstoque, filtroLojaProduto, buscaProduto, buscaModeloProduto]);
+  }, [produtosEstoque, lojaVenda, filtroLojaProduto, buscaProduto, buscaModeloProduto]);
+
+  // Produtos de OUTRAS lojas (para visualização apenas)
+  const produtosOutrasLojas = useMemo(() => {
+    if (!lojaVenda) return [];
+    return produtosEstoque.filter(p => {
+      if (p.quantidade <= 0) return false;
+      if (p.loja === lojaVenda) return false; // Excluir loja da venda
+      if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
+      if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
+      return true;
+    });
+  }, [produtosEstoque, lojaVenda, buscaProduto, buscaModeloProduto]);
 
   // Adicionar produto à venda
   const handleAddProduto = (produto: Produto) => {
