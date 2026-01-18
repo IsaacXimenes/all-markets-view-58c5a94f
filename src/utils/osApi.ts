@@ -44,7 +44,7 @@ export interface ProdutoPendente {
   cor: string;
   tipo: 'Novo' | 'Seminovo';
   condicao: 'Novo' | 'Semi-novo';
-  origemEntrada: 'Base de Troca' | 'Fornecedor' | 'Emprestado - Garantia';
+  origemEntrada: 'Base de Troca' | 'Fornecedor' | 'Emprestado - Garantia' | 'NEGOCIADO';
   notaOuVendaId?: string;
   valorCusto: number;
   valorCustoOriginal: number; // Valor original preservado (não soma custo assistência)
@@ -668,7 +668,8 @@ export const migrarProdutosNotaParaPendentes = (
   notaId: string,
   fornecedor: string,
   lojaDestino: string,
-  responsavel: string
+  responsavel: string,
+  origemEntrada: 'Fornecedor' | 'Base de Troca' | 'Emprestado - Garantia' | 'NEGOCIADO' = 'Fornecedor'
 ): ProdutoPendente[] => {
   const produtosMigrados: ProdutoPendente[] = [];
   
@@ -696,7 +697,7 @@ export const migrarProdutosNotaParaPendentes = (
       cor: produto.cor,
       tipo: produto.tipo === 'Novo' ? 'Novo' : 'Seminovo',
       condicao: produto.tipo === 'Novo' ? 'Novo' : 'Semi-novo',
-      origemEntrada: 'Fornecedor',
+      origemEntrada: origemEntrada,
       notaOuVendaId: notaId,
       valorCusto: produto.valorUnitario,
       valorCustoOriginal: produto.valorUnitario,

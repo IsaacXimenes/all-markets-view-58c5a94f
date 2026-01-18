@@ -120,6 +120,45 @@ export default function FinanceiroConferenciaNotas() {
       dataVencimento: new Date().toISOString().split('T')[0]
     };
 
+    // TRATAMENTO ESPECIAL PARA NOTAS DE URGÊNCIA
+    if (notaSelecionada.origem === 'Urgência') {
+      // Não finalizar a nota, apenas atualizar status para aguardar produtos
+      localStorage.setItem(`nota_status_${notaSelecionada.id}`, 'Pago - Aguardando Produtos');
+      localStorage.setItem(`nota_statusUrgencia_${notaSelecionada.id}`, 'Pago - Aguardando Produtos');
+      localStorage.setItem(`nota_dataPagamentoFinanceiro_${notaSelecionada.id}`, new Date().toISOString());
+      localStorage.setItem(`nota_pagamento_${notaSelecionada.id}`, JSON.stringify(pagamento));
+      localStorage.setItem(`nota_responsavelFinanceiro_${notaSelecionada.id}`, responsavelFinanceiro);
+      localStorage.setItem(`nota_lojaDestino_${notaSelecionada.id}`, lojaDestino);
+      
+      // Adicionar timeline de aprovação
+      const storedTimeline = localStorage.getItem(`nota_timeline_${notaSelecionada.id}`);
+      const timeline = storedTimeline ? JSON.parse(storedTimeline) : [];
+      const newEntry = {
+        id: `TL-${notaSelecionada.id}-${String(timeline.length + 1).padStart(3, '0')}`,
+        dataHora: new Date().toISOString(),
+        usuarioId: 'FIN-001',
+        usuarioNome: responsavelFinanceiro,
+        tipoEvento: 'aprovado_financeiro_urgencia',
+        observacoes: `Nota de urgência aprovada pelo financeiro. Pagamento: ${formaPagamento}, Parcelas: ${parcelas}. Aguardando inserção de produtos pelo Estoque.`
+      };
+      localStorage.setItem(`nota_timeline_${notaSelecionada.id}`, JSON.stringify([newEntry, ...timeline]));
+      
+      setDialogOpen(false);
+      
+      toast.success(`✅ Nota de Urgência ${notaSelecionada.id} aprovada! Aguardando inserção de produtos pelo Estoque.`, {
+        duration: 5000,
+        style: {
+          background: '#f97316',
+          color: 'white',
+          border: 'none'
+        }
+      });
+      
+      window.location.reload();
+      return;
+    }
+
+    // FLUXO NORMAL PARA NOTAS REGULARES
     const notaFinalizada = finalizarNota(notaSelecionada.id, pagamento, responsavelFinanceiro);
     
     if (notaFinalizada) {
