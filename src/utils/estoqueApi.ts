@@ -604,6 +604,22 @@ let movimentacoes: Movimentacao[] = [
   }
 ];
 
+// Inicializar status de movimentação nos produtos que têm movimentações pendentes
+const initializeMovimentacaoStatus = () => {
+  movimentacoes.forEach(mov => {
+    if (mov.status === 'Pendente') {
+      const produto = produtos.find(p => p.imei === mov.imei);
+      if (produto) {
+        produto.statusMovimentacao = 'Em movimentação';
+        produto.movimentacaoId = mov.id;
+      }
+    }
+  });
+};
+
+// Executar inicialização
+initializeMovimentacaoStatus();
+
 // Funções de API
 export const getProdutos = (): Produto[] => {
   return [...produtos];

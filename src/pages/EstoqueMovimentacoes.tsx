@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,25 +7,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { getMovimentacoes, addMovimentacao, getProdutos, Produto, confirmarRecebimentoMovimentacao, Movimentacao } from '@/utils/estoqueApi';
 import { getLojas, getLojaById, getColaboradores } from '@/utils/cadastrosApi';
 import { exportToCSV } from '@/utils/formatUtils';
-import { formatIMEI, unformatIMEI, isValidIMEI } from '@/utils/imeiMask';
-import { InputComMascara } from '@/components/ui/InputComMascara';
-import { Download, Plus, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { formatIMEI } from '@/utils/imeiMask';
+import { Download, Plus, CheckCircle, Clock, Search, Package } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
-
-// Função para buscar modelo por IMEI no estoque
-const obterModeloPorIMEI = (imei: string): { modelo: string; produto: Produto } | null => {
-  const produtos = getProdutos();
-  const imeiLimpo = unformatIMEI(imei);
-  const produtoEncontrado = produtos.find(p => unformatIMEI(p.imei) === imeiLimpo);
-  if (produtoEncontrado) {
-    return { modelo: `${produtoEncontrado.marca} ${produtoEncontrado.modelo}`, produto: produtoEncontrado };
-  }
-  return null;
-};
+import { Badge } from '@/components/ui/badge';
 
 export default function EstoqueMovimentacoes() {
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>(getMovimentacoes());
@@ -40,27 +29,46 @@ export default function EstoqueMovimentacoes() {
 
   const lojas = getLojas().filter(l => l.status === 'Ativo');
   const colaboradores = getColaboradores().filter(c => c.status === 'Ativo');
+  const [produtos] = useState<Produto[]>(getProdutos());
 
-  // Form state - nova ordem: IMEI, Modelo, Responsável, Data, Observações
+  // Form state
   const [formData, setFormData] = useState({
-    imei: '',
-    produto: '',
+    produtoId: '',
     responsavel: '',
     data: '',
     motivo: '',
     origem: '',
     destino: '',
-    quantidade: '1'
   });
   
-  const [imeiEncontrado, setImeiEncontrado] = useState<boolean | null>(null);
-  const [modeloBloqueado, setModeloBloqueado] = useState(false);
+  // Modal de busca de produto
+  const [showProdutoModal, setShowProdutoModal] = useState(false);
+  const [buscaProduto, setBuscaProduto] = useState('');
+  const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
+
+  // Produtos disponíveis para movimentação (não bloqueados, não em movimentação)
+  const produtosDisponiveis = useMemo(() => {
+    return produtos.filter(p => 
+      p.quantidade > 0 && 
+      !p.bloqueadoEmVendaId && 
+      !p.statusMovimentacao
+    );
+  }, [produtos]);
+
+  // Filtro de produtos na busca
+  const produtosFiltrados = useMemo(() => {
+    if (!buscaProduto) return produtosDisponiveis;
+    const busca = buscaProduto.toLowerCase();
+    return produtosDisponiveis.filter(p => 
+      p.modelo.toLowerCase().includes(busca) ||
+      p.imei.includes(busca) ||
+      p.marca.toLowerCase().includes(busca)
+    );
+  }, [produtosDisponiveis, buscaProduto]);
 
   const getLojaNome = (lojaIdOuNome: string) => {
-    // Primeiro tenta buscar por ID
     const lojaPorId = getLojaById(lojaIdOuNome);
     if (lojaPorId) return lojaPorId.nome;
-    // Se não encontrar, retorna o valor original (pode ser um nome legado)
     return lojaIdOuNome;
   };
 
@@ -121,33 +129,27 @@ export default function EstoqueMovimentacoes() {
     exportToCSV(dataToExport, 'movimentacoes-estoque.csv');
   };
 
-  const handleIMEIChange = (formatted: string, raw: string | number) => {
-    const imeiStr = String(raw);
-    setFormData(prev => ({ ...prev, imei: imeiStr }));
-    
-    // Se IMEI completo (15 dígitos), buscar automaticamente
-    if (imeiStr.length === 15) {
-      const resultado = obterModeloPorIMEI(imeiStr);
-      if (resultado) {
-        setFormData(prev => ({ ...prev, produto: resultado.modelo }));
-        setImeiEncontrado(true);
-        setModeloBloqueado(true);
-      } else {
-        setImeiEncontrado(false);
-        setModeloBloqueado(false);
-      }
-    } else {
-      setImeiEncontrado(null);
-      if (imeiStr.length === 0) {
-        setFormData(prev => ({ ...prev, produto: '' }));
-      }
-      setModeloBloqueado(false);
-    }
+  // Selecionar produto
+  const handleSelecionarProduto = (produto: Produto) => {
+    setProdutoSelecionado(produto);
+    // Preencher origem com a loja atual do produto
+    setFormData(prev => ({ ...prev, origem: produto.loja, produtoId: produto.id }));
+    setShowProdutoModal(false);
+    setBuscaProduto('');
   };
 
   const handleRegistrarMovimentacao = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
+    if (!produtoSelecionado) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'Selecione um produto',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     if (!formData.responsavel) {
       toast({
         title: 'Campo obrigatório',
@@ -156,21 +158,30 @@ export default function EstoqueMovimentacoes() {
       });
       return;
     }
-    
-    if (!formData.imei || formData.imei.length !== 15) {
+
+    if (!formData.destino) {
       toast({
         title: 'Campo obrigatório',
-        description: 'IMEI deve ter 15 dígitos',
+        description: 'Selecione o destino',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (formData.origem === formData.destino) {
+      toast({
+        title: 'Erro',
+        description: 'Origem e destino não podem ser iguais',
         variant: 'destructive'
       });
       return;
     }
 
     const novaMovimentacao = addMovimentacao({
-      data: formData.data,
-      produto: formData.produto,
-      imei: formData.imei,
-      quantidade: parseInt(formData.quantidade),
+      data: formData.data || new Date().toISOString().split('T')[0],
+      produto: `${produtoSelecionado.marca} ${produtoSelecionado.modelo}`,
+      imei: produtoSelecionado.imei,
+      quantidade: 1,
       origem: formData.origem,
       destino: formData.destino,
       responsavel: colaboradores.find(c => c.id === formData.responsavel)?.nome || formData.responsavel,
@@ -180,20 +191,17 @@ export default function EstoqueMovimentacoes() {
     setMovimentacoes([...movimentacoes, novaMovimentacao]);
     setDialogOpen(false);
     setFormData({
-      imei: '',
-      produto: '',
+      produtoId: '',
       responsavel: '',
       data: '',
       motivo: '',
       origem: '',
       destino: '',
-      quantidade: '1'
     });
-    setImeiEncontrado(null);
-    setModeloBloqueado(false);
+    setProdutoSelecionado(null);
     toast({
       title: 'Movimentação registrada',
-      description: `Movimentação ${novaMovimentacao.id} registrada com sucesso`,
+      description: `Movimentação ${novaMovimentacao.id} registrada com sucesso. Produto agora está "Em movimentação".`,
     });
   };
 
@@ -249,47 +257,44 @@ export default function EstoqueMovimentacoes() {
                   <DialogTitle>Registrar Movimentação</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleRegistrarMovimentacao} className="space-y-4">
-                  {/* 1. IMEI - com máscara e busca automática */}
+                  {/* 1. Buscar Produto */}
                   <div>
-                    <Label htmlFor="imei">IMEI *</Label>
-                    <InputComMascara
-                      mascara="imei"
-                      value={formData.imei}
-                      onChange={handleIMEIChange}
-                      placeholder="00-000000-000000-0"
-                    />
-                    {imeiEncontrado === false && formData.imei.length === 15 && (
-                      <div className="flex items-center gap-1 mt-1 text-amber-600 text-sm">
-                        <AlertCircle className="h-4 w-4" />
-                        IMEI não encontrado no estoque
+                    <Label>Produto *</Label>
+                    {produtoSelecionado ? (
+                      <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
+                        <Package className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex-1">
+                          <p className="font-medium">{produtoSelecionado.marca} {produtoSelecionado.modelo}</p>
+                          <p className="text-sm text-muted-foreground">
+                            IMEI: {formatIMEI(produtoSelecionado.imei)} | Cor: {produtoSelecionado.cor} | Loja: {getLojaNome(produtoSelecionado.loja)}
+                          </p>
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => {
+                            setProdutoSelecionado(null);
+                            setFormData(prev => ({ ...prev, origem: '', produtoId: '' }));
+                          }}
+                        >
+                          Trocar
+                        </Button>
                       </div>
-                    )}
-                    {imeiEncontrado === true && (
-                      <div className="text-green-600 text-sm mt-1">
-                        ✓ IMEI encontrado no estoque
-                      </div>
+                    ) : (
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        className="w-full justify-start"
+                        onClick={() => setShowProdutoModal(true)}
+                      >
+                        <Search className="h-4 w-4 mr-2" />
+                        Buscar Produto no Estoque
+                      </Button>
                     )}
                   </div>
 
-                  {/* 2. Modelo - preenchido automaticamente, apenas leitura quando IMEI válido */}
-                  <div>
-                    <Label htmlFor="produto">Modelo *</Label>
-                    <Input 
-                      id="produto"
-                      value={formData.produto}
-                      onChange={(e) => setFormData(prev => ({ ...prev, produto: e.target.value }))}
-                      disabled={modeloBloqueado}
-                      placeholder={modeloBloqueado ? '' : 'Digite o modelo ou insira o IMEI acima'}
-                      required 
-                    />
-                    {modeloBloqueado && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Modelo preenchido automaticamente pelo IMEI
-                      </p>
-                    )}
-                  </div>
-
-                  {/* 3. Responsável */}
+                  {/* 2. Responsável */}
                   <div>
                     <Label htmlFor="responsavel">Responsável *</Label>
                     <Select 
@@ -307,35 +312,32 @@ export default function EstoqueMovimentacoes() {
                     </Select>
                   </div>
 
-                  {/* 4. Data da Movimentação */}
+                  {/* 3. Data da Movimentação */}
                   <div>
-                    <Label htmlFor="data">Data da Movimentação *</Label>
+                    <Label htmlFor="data">Data da Movimentação</Label>
                     <Input 
                       id="data" 
                       type="date" 
                       value={formData.data}
                       onChange={(e) => setFormData(prev => ({ ...prev, data: e.target.value }))}
-                      required 
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Se não informado, será usada a data atual
+                    </p>
                   </div>
 
                   {/* Origem e Destino */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="origem">Origem *</Label>
-                      <Select 
-                        value={formData.origem}
-                        onValueChange={(v) => setFormData(prev => ({ ...prev, origem: v }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {lojas.map(loja => (
-                            <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="origem">Origem</Label>
+                      <Input 
+                        value={produtoSelecionado ? getLojaNome(produtoSelecionado.loja) : ''}
+                        disabled
+                        placeholder="Selecione um produto"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Preenchido automaticamente
+                      </p>
                     </div>
 
                     <div>
@@ -348,15 +350,17 @@ export default function EstoqueMovimentacoes() {
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          {lojas.map(loja => (
-                            <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
-                          ))}
+                          {lojas
+                            .filter(loja => !produtoSelecionado || loja.id !== produtoSelecionado.loja)
+                            .map(loja => (
+                              <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
-                  {/* 5. Observações (opcional) */}
+                  {/* 4. Observações (opcional) */}
                   <div>
                     <Label htmlFor="motivo">Observações</Label>
                     <Textarea 
@@ -368,12 +372,23 @@ export default function EstoqueMovimentacoes() {
                     />
                   </div>
 
-                  {/* 6. Botões de ação */}
+                  {/* 5. Botões de ação */}
                   <div className="flex justify-end gap-2">
-                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                    <Button type="button" variant="outline" onClick={() => {
+                      setDialogOpen(false);
+                      setProdutoSelecionado(null);
+                      setFormData({
+                        produtoId: '',
+                        responsavel: '',
+                        data: '',
+                        motivo: '',
+                        origem: '',
+                        destino: '',
+                      });
+                    }}>
                       Cancelar
                     </Button>
-                    <Button type="submit">Salvar</Button>
+                    <Button type="submit" disabled={!produtoSelecionado}>Salvar</Button>
                   </div>
                 </form>
               </DialogContent>
@@ -489,6 +504,78 @@ export default function EstoqueMovimentacoes() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Modal de Busca de Produto */}
+        <Dialog open={showProdutoModal} onOpenChange={setShowProdutoModal}>
+          <DialogContent className="max-w-3xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>Buscar Produto no Estoque</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Input
+                placeholder="Buscar por modelo, marca ou IMEI..."
+                value={buscaProduto}
+                onChange={(e) => setBuscaProduto(e.target.value)}
+                className="w-full"
+              />
+              
+              <div className="rounded-md border max-h-[400px] overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>IMEI</TableHead>
+                      <TableHead>Produto</TableHead>
+                      <TableHead>Cor</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Loja</TableHead>
+                      <TableHead>Ação</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {produtosFiltrados.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          Nenhum produto disponível encontrado
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      produtosFiltrados.map(produto => (
+                        <TableRow key={produto.id} className="cursor-pointer hover:bg-muted/50">
+                          <TableCell className="font-mono text-xs">{formatIMEI(produto.imei)}</TableCell>
+                          <TableCell>
+                            <div>
+                              <span className="font-medium">{produto.modelo}</span>
+                              <span className="text-muted-foreground ml-1 text-sm">({produto.marca})</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>{produto.cor}</TableCell>
+                          <TableCell>
+                            <Badge variant={produto.tipo === 'Novo' ? 'default' : 'secondary'}>
+                              {produto.tipo}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{getLojaNome(produto.loja)}</TableCell>
+                          <TableCell>
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleSelecionarProduto(produto)}
+                            >
+                              Selecionar
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              
+              <p className="text-sm text-muted-foreground">
+                Exibindo {produtosFiltrados.length} de {produtosDisponiveis.length} produtos disponíveis
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </EstoqueLayout>
   );
