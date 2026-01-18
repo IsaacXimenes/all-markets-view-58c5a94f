@@ -11,9 +11,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { getNotasCompra, getFornecedores } from '@/utils/estoqueApi';
-import { exportToCSV, formatCurrency } from '@/utils/formatUtils';
+import { exportToCSV, formatCurrency, moedaMask, parseMoeda } from '@/utils/formatUtils';
 import { Download, Plus, Eye, FileText, DollarSign, CheckCircle, Clock, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Função para gerar ID de urgência
+const gerarIdUrgencia = () => {
+  const year = new Date().getFullYear();
+  const timestamp = Date.now().toString().slice(-6);
+  return `URG-${year}-${timestamp}`;
+};
 
 export default function EstoqueNotasCompra() {
   const navigate = useNavigate();
@@ -23,8 +30,8 @@ export default function EstoqueNotasCompra() {
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [showUrgenciaModal, setShowUrgenciaModal] = useState(false);
+  const [urgenciaId, setUrgenciaId] = useState('');
   const [urgenciaForm, setUrgenciaForm] = useState({
-    numeroNota: '',
     fornecedor: '',
     valorTotal: '',
     formaPagamento: '',
@@ -148,7 +155,10 @@ export default function EstoqueNotasCompra() {
           </Select>
 
           <div className="ml-auto flex gap-2">
-            <Button variant="outline" className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/30" onClick={() => setShowUrgenciaModal(true)}>
+            <Button variant="outline" className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/30" onClick={() => {
+              setUrgenciaId(gerarIdUrgencia());
+              setShowUrgenciaModal(true);
+            }}>
               <Zap className="mr-2 h-4 w-4" />
               Lançamento Urgência
             </Button>
@@ -221,12 +231,13 @@ export default function EstoqueNotasCompra() {
               </p>
               <div className="space-y-3">
                 <div>
-                  <Label>Nº da Nota *</Label>
+                  <Label>ID</Label>
                   <Input
-                    value={urgenciaForm.numeroNota}
-                    onChange={(e) => setUrgenciaForm(prev => ({ ...prev, numeroNota: e.target.value }))}
-                    placeholder="Ex: NF-12345"
+                    value={urgenciaId}
+                    disabled
+                    className="font-mono bg-muted"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">Gerado automaticamente</p>
                 </div>
                 <div>
                   <Label>Fornecedor *</Label>
@@ -244,10 +255,9 @@ export default function EstoqueNotasCompra() {
                 <div>
                   <Label>Valor Total (R$) *</Label>
                   <Input
-                    type="number"
                     value={urgenciaForm.valorTotal}
-                    onChange={(e) => setUrgenciaForm(prev => ({ ...prev, valorTotal: e.target.value }))}
-                    placeholder="0,00"
+                    onChange={(e) => setUrgenciaForm(prev => ({ ...prev, valorTotal: moedaMask(e.target.value) }))}
+                    placeholder="R$ 0,00"
                   />
                 </div>
                 <div>
@@ -257,9 +267,8 @@ export default function EstoqueNotasCompra() {
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Pix">Pix</SelectItem>
-                      <SelectItem value="Transferência">Transferência</SelectItem>
                       <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="Pix">Pix</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -281,13 +290,13 @@ export default function EstoqueNotasCompra() {
               <Button 
                 className="bg-orange-600 hover:bg-orange-700"
                 onClick={() => {
-                  if (!urgenciaForm.numeroNota || !urgenciaForm.fornecedor || !urgenciaForm.valorTotal || !urgenciaForm.formaPagamento) {
+                  if (!urgenciaForm.fornecedor || !urgenciaForm.valorTotal || !urgenciaForm.formaPagamento) {
                     toast.error('Preencha todos os campos obrigatórios');
                     return;
                   }
-                  toast.success('Nota de urgência enviada para o Financeiro!');
+                  toast.success(`Nota de urgência ${urgenciaId} enviada para o Financeiro!`);
                   setShowUrgenciaModal(false);
-                  setUrgenciaForm({ numeroNota: '', fornecedor: '', valorTotal: '', formaPagamento: '', observacoes: '' });
+                  setUrgenciaForm({ fornecedor: '', valorTotal: '', formaPagamento: '', observacoes: '' });
                 }}
               >
                 <Zap className="mr-2 h-4 w-4" />
