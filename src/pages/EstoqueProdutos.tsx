@@ -9,8 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { getProdutos, getLojas, getEstoqueStats, updateValorRecomendado, updateProdutoLoja, Produto } from '@/utils/estoqueApi';
-import { getColaboradores, getCargos, getLojaById } from '@/utils/cadastrosApi';
+import { getProdutos, getEstoqueStats, updateValorRecomendado, updateProdutoLoja, Produto } from '@/utils/estoqueApi';
+import { getColaboradores, getCargos, getLojaById, getLojas } from '@/utils/cadastrosApi';
 import { Download, Eye, CheckCircle, XCircle, Package, DollarSign, AlertTriangle, FileWarning, AlertCircle, Edit, Wrench, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,7 +23,7 @@ export default function EstoqueProdutos() {
   const navigate = useNavigate();
   const [produtos, setProdutos] = useState(getProdutos());
   const stats = getEstoqueStats();
-  const lojasEstoque = getLojas();
+  const lojasEstoque = getLojas().filter(l => l.status === 'Ativo');
   const colaboradores = getColaboradores();
   const cargos = getCargos();
   
@@ -202,7 +202,7 @@ export default function EstoqueProdutos() {
               <SelectContent>
                 <SelectItem value="todas">Todas as lojas</SelectItem>
                 {lojasEstoque.map(loja => (
-                  <SelectItem key={loja} value={loja}>{loja}</SelectItem>
+                  <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
