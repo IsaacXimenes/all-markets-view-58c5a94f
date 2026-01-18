@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getProdutos, getLojas, getEstoqueStats, updateValorRecomendado, updateProdutoLoja, Produto } from '@/utils/estoqueApi';
 import { getColaboradores, getCargos, getLojaById } from '@/utils/cadastrosApi';
-import { Download, Eye, CheckCircle, XCircle, Package, DollarSign, AlertTriangle, FileWarning, AlertCircle, Edit, Wrench } from 'lucide-react';
+import { Download, Eye, CheckCircle, XCircle, Package, DollarSign, AlertTriangle, FileWarning, AlertCircle, Edit, Wrench, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -286,8 +286,16 @@ export default function EstoqueProdutos() {
                   <TableCell className="font-mono text-xs">{produto.id}</TableCell>
                   <TableCell className="font-mono text-xs">{formatIMEI(produto.imei)}</TableCell>
                   <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-medium">{produto.modelo}</span>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{produto.modelo}</span>
+                        {produto.statusMovimentacao === 'Em movimentação' && (
+                          <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
+                            <Truck className="h-3 w-3 mr-1" />
+                            Em movimentação
+                          </Badge>
+                        )}
+                      </div>
                       <span className="text-xs text-muted-foreground">{produto.cor}</span>
                     </div>
                   </TableCell>

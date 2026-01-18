@@ -44,6 +44,8 @@ export interface Produto {
   timeline?: TimelineEntry[]; // Timeline de tratativas (pareceres estoque/assistência)
   custoAssistencia?: number; // Soma das peças/serviços de assistência
   bloqueadoEmVendaId?: string; // ID da venda quando produto está bloqueado (sinal)
+  statusMovimentacao?: 'Em movimentação' | null; // Status quando produto está em trânsito
+  movimentacaoId?: string; // ID da movimentação ativa
 }
 
 export interface NotaCompra {
@@ -722,6 +724,15 @@ export const addMovimentacao = (mov: Omit<Movimentacao, 'id'>): Movimentacao => 
     id: newId,
     status: 'Pendente' // Movimentação começa pendente
   };
+  
+  // Marcar produto como "Em movimentação"
+  const produto = produtos.find(p => p.imei === mov.imei);
+  if (produto) {
+    produto.statusMovimentacao = 'Em movimentação';
+    produto.movimentacaoId = newId;
+    console.log(`Produto ${produto.id} marcado como "Em movimentação" (${mov.origem} → ${mov.destino})`);
+  }
+  
   movimentacoes.push(newMov);
   return newMov;
 };
@@ -738,10 +749,12 @@ export const confirmarRecebimentoMovimentacao = (
   mov.dataRecebimento = new Date().toISOString();
   mov.responsavelRecebimento = responsavel;
   
-  // Atualizar loja do produto apenas após confirmação
+  // Atualizar loja do produto e limpar status de movimentação
   const produto = produtos.find(p => p.imei === mov.imei);
   if (produto) {
     produto.loja = mov.destino;
+    produto.statusMovimentacao = null; // Limpar status de movimentação
+    produto.movimentacaoId = undefined; // Limpar referência
     console.log(`Produto ${produto.id} transferido para ${mov.destino} após confirmação`);
   }
   
@@ -813,9 +826,9 @@ export const desbloquearProdutosDeVenda = (vendaId: string): boolean => {
   return produtosDesbloqueados > 0;
 };
 
-// Obter produtos disponíveis (não bloqueados)
+// Obter produtos disponíveis (não bloqueados e não em movimentação)
 export const getProdutosDisponiveis = (): Produto[] => {
-  return produtos.filter(p => p.quantidade > 0 && !p.bloqueadoEmVendaId);
+  return produtos.filter(p => p.quantidade > 0 && !p.bloqueadoEmVendaId && !p.statusMovimentacao);
 };
 
 // Verificar se produto está bloqueado
