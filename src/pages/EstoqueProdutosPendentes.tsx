@@ -21,11 +21,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Eye, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, Wrench, RotateCcw, Undo2 } from 'lucide-react';
+import { Eye, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, Wrench, RotateCcw, Undo2, DollarSign } from 'lucide-react';
 import { getProdutosPendentes, ProdutoPendente, calcularSLA } from '@/utils/osApi';
 import { getLojas, getLojaById, getFornecedores } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
-import { formatIMEI } from '@/utils/imeiMask';
+import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
+import { InputComMascara } from '@/components/ui/InputComMascara';
 
 import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 
@@ -48,13 +49,14 @@ export default function EstoqueProdutosPendentes() {
     return loja?.nome || lojaId;
   };
 
-  // Filtros - igual à aba Produtos + filtro de status + filtro de fornecedor
+  // Filtros - igual à aba Produtos + filtro de status + filtro de fornecedor + filtro de parecer estoque
   const [filters, setFilters] = useState({
     imei: '',
     modelo: '',
     loja: 'todas',
     status: 'todos',
-    fornecedor: 'todos'
+    fornecedor: 'todos',
+    parecerEstoque: 'todos'
   });
 
   useEffect(() => {
@@ -66,7 +68,11 @@ export default function EstoqueProdutosPendentes() {
   // Filtrar e ordenar produtos (Devolvido para Fornecedor no final)
   const filteredProdutos = useMemo(() => {
     const filtered = produtosPendentes.filter(produto => {
-      if (filters.imei && !produto.imei.toLowerCase().includes(filters.imei.toLowerCase())) return false;
+      // Filtro de IMEI (limpar formatação para buscar)
+      if (filters.imei) {
+        const imeiLimpo = unformatIMEI(filters.imei);
+        if (!produto.imei.includes(imeiLimpo)) return false;
+      }
       if (filters.modelo && !produto.modelo.toLowerCase().includes(filters.modelo.toLowerCase())) return false;
       if (filters.loja !== 'todas' && produto.loja !== filters.loja) return false;
       if (filters.status !== 'todos' && produto.statusGeral !== filters.status) return false;
@@ -75,6 +81,11 @@ export default function EstoqueProdutosPendentes() {
         // Verificar se o produto tem um fornecedor associado
         const produtoFornecedor = (produto as any).fornecedor || (produto as any).fornecedorId;
         if (produtoFornecedor !== filters.fornecedor) return false;
+      }
+      // Filtro de Parecer Estoque
+      if (filters.parecerEstoque !== 'todos') {
+        const parecerStatus = produto.parecerEstoque?.status || 'Aguardando Parecer';
+        if (parecerStatus !== filters.parecerEstoque) return false;
       }
       return true;
     });
@@ -86,6 +97,11 @@ export default function EstoqueProdutosPendentes() {
       return aDevolvido - bDevolvido;
     });
   }, [produtosPendentes, filters]);
+
+  // Cálculo do somatório do valor de origem
+  const totalValorOrigem = useMemo(() => {
+    return filteredProdutos.reduce((acc, p) => acc + (p.valorOrigem || p.valorCusto || 0), 0);
+  }, [filteredProdutos]);
 
   const getStatusBadge = (produto: ProdutoPendente) => {
     // Badge baseado no statusGeral para maior clareza visual
@@ -205,11 +221,24 @@ export default function EstoqueProdutosPendentes() {
   };
 
   const handleLimpar = () => {
-    setFilters({ imei: '', modelo: '', loja: 'todas', status: 'todos', fornecedor: 'todos' });
+    setFilters({ imei: '', modelo: '', loja: 'todas', status: 'todos', fornecedor: 'todos', parecerEstoque: 'todos' });
   };
 
   return (
     <EstoqueLayout title="Produtos Pendentes">
+      {/* Card de Somatório Valor Origem */}
+      <Card className="mb-4 bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950/50 dark:to-emerald-900/30 border-green-200 dark:border-green-800">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-3">
+            <DollarSign className="h-8 w-8 text-green-600 opacity-70" />
+            <div>
+              <p className="text-sm text-green-700 dark:text-green-300">Valor Total de Origem (Pendentes)</p>
+              <p className="text-3xl font-bold text-green-800 dark:text-green-200">{formatCurrency(totalValorOrigem)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Dashboard Cards - Sticky */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6 sticky top-0 z-10 bg-background py-2">
         <Card>
@@ -294,14 +323,14 @@ export default function EstoqueProdutosPendentes() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
               <Label htmlFor="imei">IMEI</Label>
-              <Input
-                id="imei"
-                placeholder="Buscar por IMEI..."
+              <InputComMascara
+                mascara="imei"
                 value={filters.imei}
-                onChange={(e) => setFilters({ ...filters, imei: e.target.value })}
+                onChange={(formatted) => setFilters({ ...filters, imei: formatted })}
+                placeholder="00-000000-000000-0"
               />
             </div>
             <div>
@@ -342,7 +371,7 @@ export default function EstoqueProdutosPendentes() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="status">Status Geral</Label>
               <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
                 <SelectTrigger id="status">
                   <SelectValue placeholder="Todos" />
@@ -354,6 +383,22 @@ export default function EstoqueProdutosPendentes() {
                   <SelectItem value="Aguardando Peça">Aguardando Peça</SelectItem>
                   <SelectItem value="Retornado da Assistência">Revisão Final</SelectItem>
                   <SelectItem value="Devolvido para Fornecedor">Devolvido p/ Fornecedor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="parecerEstoque">Parecer Estoque</Label>
+              <Select value={filters.parecerEstoque} onValueChange={(value) => setFilters({ ...filters, parecerEstoque: value })}>
+                <SelectTrigger id="parecerEstoque">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="Aguardando Parecer">Aguardando Parecer</SelectItem>
+                  <SelectItem value="Aprovado">Aprovado</SelectItem>
+                  <SelectItem value="Reprovado">Reprovado</SelectItem>
+                  <SelectItem value="Encaminhado para conferência da Assistência">Encaminhado Assistência</SelectItem>
+                  <SelectItem value="Devolvido ao fornecedor">Devolvido ao Fornecedor</SelectItem>
                 </SelectContent>
               </Select>
             </div>

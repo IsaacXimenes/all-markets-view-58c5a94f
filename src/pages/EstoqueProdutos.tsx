@@ -30,6 +30,8 @@ export default function EstoqueProdutos() {
   const [lojaFilter, setLojaFilter] = useState<string>('todas');
   const [modeloFilter, setModeloFilter] = useState('');
   const [imeiFilter, setImeiFilter] = useState('');
+  const [tipoFilter, setTipoFilter] = useState<string>('todos');
+  const [origemFilter, setOrigemFilter] = useState<string>('todas');
   const [somenteNaoConferidos, setSomenteNaoConferidos] = useState(false);
   
   // Modal para informar valor recomendado
@@ -54,6 +56,8 @@ export default function EstoqueProdutos() {
     if (lojaFilter !== 'todas' && p.loja !== lojaFilter) return false;
     if (modeloFilter && !p.modelo.toLowerCase().includes(modeloFilter.toLowerCase())) return false;
     if (imeiFilter && !unformatIMEI(p.imei).includes(unformatIMEI(imeiFilter))) return false;
+    if (tipoFilter !== 'todos' && p.tipo !== tipoFilter) return false;
+    if (origemFilter !== 'todas' && p.origemEntrada !== origemFilter) return false;
     if (somenteNaoConferidos && (p.estoqueConferido && p.assistenciaConferida)) return false;
     return true;
   });
@@ -168,34 +172,72 @@ export default function EstoqueProdutos() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-4">
-          <Input
-            placeholder="WW-XXXXXX-YYYYYY-Z"
-            value={imeiFilter}
-            onChange={(e) => setImeiFilter(formatIMEI(e.target.value))}
-            className="w-[200px]"
-          />
+        <div className="flex flex-wrap gap-4 items-end">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">IMEI</p>
+            <Input
+              placeholder="WW-XXXXXX-YYYYYY-Z"
+              value={imeiFilter}
+              onChange={(e) => setImeiFilter(formatIMEI(e.target.value))}
+              className="w-[180px]"
+            />
+          </div>
 
-          <Input
-            placeholder="Modelo"
-            value={modeloFilter}
-            onChange={(e) => setModeloFilter(e.target.value)}
-            className="w-[200px]"
-          />
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Modelo</p>
+            <Input
+              placeholder="Modelo"
+              value={modeloFilter}
+              onChange={(e) => setModeloFilter(e.target.value)}
+              className="w-[180px]"
+            />
+          </div>
 
-          <Select value={lojaFilter} onValueChange={setLojaFilter}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Todas as lojas" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as lojas</SelectItem>
-              {lojasEstoque.map(loja => (
-                <SelectItem key={loja} value={loja}>{loja}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Loja</p>
+            <Select value={lojaFilter} onValueChange={setLojaFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Todas as lojas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas as lojas</SelectItem>
+                {lojasEstoque.map(loja => (
+                  <SelectItem key={loja} value={loja}>{loja}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <div className="flex items-center space-x-2">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Tipo</p>
+            <Select value={tipoFilter} onValueChange={setTipoFilter}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="Novo">Novo</SelectItem>
+                <SelectItem value="Seminovo">Seminovo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Origem</p>
+            <Select value={origemFilter} onValueChange={setOrigemFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Todas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas</SelectItem>
+                <SelectItem value="Fornecedor">Fornecedor</SelectItem>
+                <SelectItem value="Base de Troca">Base de Troca</SelectItem>
+                <SelectItem value="Emprestado - Garantia">Emprestado - Garantia</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center space-x-2 h-10">
             <Checkbox 
               id="naoConferidos" 
               checked={somenteNaoConferidos}
