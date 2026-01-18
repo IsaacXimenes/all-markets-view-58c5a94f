@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 
 // Função para buscar modelo por IMEI no estoque
 const obterModeloPorIMEI = (imei: string): { modelo: string; produto: Produto } | null => {
@@ -32,6 +33,9 @@ export default function EstoqueMovimentacoes() {
   const [destinoFilter, setDestinoFilter] = useState<string>('todas');
   const [statusFilter, setStatusFilter] = useState<string>('todos');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [movimentacaoParaConfirmar, setMovimentacaoParaConfirmar] = useState<string | null>(null);
+  const [responsavelConfirmacao, setResponsavelConfirmacao] = useState<string>('');
   const { toast } = useToast();
 
   const lojas = getLojas().filter(l => l.status === 'Ativo');
@@ -67,16 +71,35 @@ export default function EstoqueMovimentacoes() {
     return true;
   });
 
+  // Abrir diálogo de confirmação
+  const handleAbrirConfirmacao = (movId: string) => {
+    setMovimentacaoParaConfirmar(movId);
+    setResponsavelConfirmacao('');
+    setConfirmDialogOpen(true);
+  };
+
   // Confirmar recebimento de uma movimentação
-  const handleConfirmarRecebimento = (movId: string) => {
-    const responsavel = colaboradores[0]?.nome || 'Usuário Sistema';
-    const result = confirmarRecebimentoMovimentacao(movId, responsavel);
+  const handleConfirmarRecebimento = () => {
+    if (!movimentacaoParaConfirmar || !responsavelConfirmacao) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'Selecione o responsável pela confirmação',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const nomeResponsavel = colaboradores.find(c => c.id === responsavelConfirmacao)?.nome || responsavelConfirmacao;
+    const result = confirmarRecebimentoMovimentacao(movimentacaoParaConfirmar, nomeResponsavel);
     
     if (result) {
       setMovimentacoes(getMovimentacoes());
+      setConfirmDialogOpen(false);
+      setMovimentacaoParaConfirmar(null);
+      setResponsavelConfirmacao('');
       toast({
         title: 'Recebimento confirmado',
-        description: `Movimentação ${movId} confirmada por ${responsavel}`,
+        description: `Movimentação ${movimentacaoParaConfirmar} confirmada por ${nomeResponsavel}`,
       });
     } else {
       toast({
@@ -409,7 +432,7 @@ export default function EstoqueMovimentacoes() {
                         size="sm" 
                         variant="outline"
                         className="text-green-600 border-green-600 hover:bg-green-50"
-                        onClick={() => handleConfirmarRecebimento(mov.id)}
+                        onClick={() => handleAbrirConfirmacao(mov.id)}
                       >
                         <CheckCircle className="h-4 w-4 mr-1" />
                         Confirmar
@@ -426,6 +449,46 @@ export default function EstoqueMovimentacoes() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Dialog de Confirmação de Recebimento */}
+        <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Recebimento</AlertDialogTitle>
+              <AlertDialogDescription>
+                Selecione o responsável que está confirmando o recebimento desta movimentação.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <Label htmlFor="responsavelConfirmacao">Responsável *</Label>
+              <Select 
+                value={responsavelConfirmacao}
+                onValueChange={setResponsavelConfirmacao}
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Selecione o colaborador" />
+                </SelectTrigger>
+                <SelectContent>
+                  {colaboradores.map(col => (
+                    <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {
+                setConfirmDialogOpen(false);
+                setMovimentacaoParaConfirmar(null);
+                setResponsavelConfirmacao('');
+              }}>
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmarRecebimento}>
+                Confirmar Recebimento
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </EstoqueLayout>
   );
