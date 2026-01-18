@@ -8,7 +8,7 @@ import { getMovimentacoes, addMovimentacao, getProdutos, Produto, confirmarReceb
 import { getLojas, getLojaById, getColaboradores } from '@/utils/cadastrosApi';
 import { exportToCSV } from '@/utils/formatUtils';
 import { formatIMEI } from '@/utils/imeiMask';
-import { Download, Plus, CheckCircle, Clock, Search, Package } from 'lucide-react';
+import { Download, Plus, CheckCircle, Clock, Search, Package, Eye, Edit } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -45,6 +45,18 @@ export default function EstoqueMovimentacoes() {
   const [showProdutoModal, setShowProdutoModal] = useState(false);
   const [buscaProduto, setBuscaProduto] = useState('');
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
+
+  // Modal de detalhes
+  const [showDetalhesModal, setShowDetalhesModal] = useState(false);
+  const [movimentacaoDetalhe, setMovimentacaoDetalhe] = useState<Movimentacao | null>(null);
+
+  // Modal de edição
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [movimentacaoParaEditar, setMovimentacaoParaEditar] = useState<Movimentacao | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    destino: '',
+    motivo: '',
+  });
 
   // Produtos disponíveis para movimentação (não bloqueados, não em movimentação)
   const produtosDisponiveis = useMemo(() => {
@@ -116,6 +128,40 @@ export default function EstoqueMovimentacoes() {
         variant: 'destructive'
       });
     }
+  };
+
+  // Salvar edição de movimentação
+  const handleSalvarEdicao = () => {
+    if (!movimentacaoParaEditar) return;
+
+    if (!editFormData.destino) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'Selecione o destino',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Atualizar a movimentação na lista
+    const movIndex = movimentacoes.findIndex(m => m.id === movimentacaoParaEditar.id);
+    if (movIndex !== -1) {
+      const updatedMov = {
+        ...movimentacoes[movIndex],
+        destino: editFormData.destino,
+        motivo: editFormData.motivo,
+      };
+      const newMovimentacoes = [...movimentacoes];
+      newMovimentacoes[movIndex] = updatedMov;
+      setMovimentacoes(newMovimentacoes);
+    }
+
+    setEditDialogOpen(false);
+    setMovimentacaoParaEditar(null);
+    toast({
+      title: 'Movimentação atualizada',
+      description: 'Os dados da movimentação foram atualizados com sucesso',
+    });
   };
 
   const handleExport = () => {
@@ -442,22 +488,50 @@ export default function EstoqueMovimentacoes() {
                   </TableCell>
                   <TableCell className="max-w-[150px] truncate" title={mov.motivo}>{mov.motivo}</TableCell>
                   <TableCell className="text-right">
-                    {mov.status === 'Pendente' && (
+                    <div className="flex items-center justify-end gap-1">
+                      {/* Botão Ver Detalhes */}
                       <Button 
                         size="sm" 
-                        variant="outline"
-                        className="text-green-600 border-green-600 hover:bg-green-50"
-                        onClick={() => handleAbrirConfirmacao(mov.id)}
+                        variant="ghost"
+                        onClick={() => {
+                          setMovimentacaoDetalhe(mov);
+                          setShowDetalhesModal(true);
+                        }}
                       >
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Confirmar
+                        <Eye className="h-4 w-4" />
                       </Button>
-                    )}
-                    {mov.status === 'Recebido' && mov.dataRecebimento && (
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(mov.dataRecebimento).toLocaleDateString('pt-BR')}
-                      </span>
-                    )}
+
+                      {/* Botão Editar - só disponível enquanto pendente */}
+                      {mov.status === 'Pendente' && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => {
+                            setMovimentacaoParaEditar(mov);
+                            setEditFormData({
+                              destino: mov.destino,
+                              motivo: mov.motivo,
+                            });
+                            setEditDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+
+                      {/* Botão Confirmar - só disponível enquanto pendente */}
+                      {mov.status === 'Pendente' && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="text-green-600 border-green-600 hover:bg-green-50"
+                          onClick={() => handleAbrirConfirmacao(mov.id)}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Confirmar
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -574,6 +648,163 @@ export default function EstoqueMovimentacoes() {
                 Exibindo {produtosFiltrados.length} de {produtosDisponiveis.length} produtos disponíveis
               </p>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Detalhes da Movimentação */}
+        <Dialog open={showDetalhesModal} onOpenChange={setShowDetalhesModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Detalhes da Movimentação</DialogTitle>
+            </DialogHeader>
+            {movimentacaoDetalhe && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">ID</p>
+                    <p className="font-mono">{movimentacaoDetalhe.id}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Status</p>
+                    <Badge variant={movimentacaoDetalhe.status === 'Recebido' ? 'default' : 'secondary'}>
+                      {movimentacaoDetalhe.status || 'Pendente'}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm text-muted-foreground">Produto</p>
+                  <p className="font-medium">{movimentacaoDetalhe.produto}</p>
+                  <p className="text-sm text-muted-foreground font-mono">{formatIMEI(movimentacaoDetalhe.imei)}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Origem</p>
+                    <p>{getLojaNome(movimentacaoDetalhe.origem)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Destino</p>
+                    <p>{getLojaNome(movimentacaoDetalhe.destino)}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Responsável pela Movimentação</p>
+                    <p>{movimentacaoDetalhe.responsavel}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Data de Registro</p>
+                    <p>{new Date(movimentacaoDetalhe.data).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                </div>
+
+                {movimentacaoDetalhe.motivo && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Observações</p>
+                    <p className="text-sm">{movimentacaoDetalhe.motivo}</p>
+                  </div>
+                )}
+
+                {/* Informações de Confirmação */}
+                {movimentacaoDetalhe.status === 'Recebido' && (
+                  <div className="border-t pt-4 mt-4">
+                    <p className="text-sm font-medium text-green-600 mb-2">✓ Recebimento Confirmado</p>
+                    <div className="grid grid-cols-2 gap-4 bg-green-50 dark:bg-green-950/20 p-3 rounded-md">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Confirmado por</p>
+                        <p className="font-medium">{movimentacaoDetalhe.responsavelRecebimento || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Data/Hora</p>
+                        <p className="font-medium">
+                          {movimentacaoDetalhe.dataRecebimento 
+                            ? new Date(movimentacaoDetalhe.dataRecebimento).toLocaleString('pt-BR')
+                            : '-'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {movimentacaoDetalhe.status === 'Pendente' && (
+                  <div className="border-t pt-4 mt-4">
+                    <p className="text-sm font-medium text-yellow-600">⏳ Aguardando Confirmação de Recebimento</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      O produto está "Em movimentação" e não pode ser vendido até a confirmação.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Edição da Movimentação */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Editar Movimentação</DialogTitle>
+            </DialogHeader>
+            {movimentacaoParaEditar && (
+              <div className="space-y-4">
+                <div className="bg-muted/50 p-3 rounded-md">
+                  <p className="text-sm text-muted-foreground">Produto</p>
+                  <p className="font-medium">{movimentacaoParaEditar.produto}</p>
+                  <p className="text-sm text-muted-foreground font-mono">{formatIMEI(movimentacaoParaEditar.imei)}</p>
+                </div>
+
+                <div>
+                  <Label>Origem</Label>
+                  <Input value={getLojaNome(movimentacaoParaEditar.origem)} disabled />
+                </div>
+
+                <div>
+                  <Label htmlFor="editDestino">Destino *</Label>
+                  <Select 
+                    value={editFormData.destino}
+                    onValueChange={(v) => setEditFormData(prev => ({ ...prev, destino: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lojas
+                        .filter(loja => loja.id !== movimentacaoParaEditar.origem)
+                        .map(loja => (
+                          <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="editMotivo">Observações</Label>
+                  <Textarea 
+                    id="editMotivo"
+                    value={editFormData.motivo}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, motivo: e.target.value }))}
+                    placeholder="Observações adicionais (opcional)"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setEditDialogOpen(false);
+                      setMovimentacaoParaEditar(null);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSalvarEdicao}>Salvar</Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
