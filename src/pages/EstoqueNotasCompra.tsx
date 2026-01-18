@@ -7,9 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { getNotasCompra, getFornecedores } from '@/utils/estoqueApi';
 import { exportToCSV, formatCurrency } from '@/utils/formatUtils';
-import { Download, Plus, Eye, FileText, DollarSign, CheckCircle, Clock } from 'lucide-react';
+import { Download, Plus, Eye, FileText, DollarSign, CheckCircle, Clock, Zap } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function EstoqueNotasCompra() {
   const navigate = useNavigate();
@@ -18,6 +22,14 @@ export default function EstoqueNotasCompra() {
   const [statusFilter, setStatusFilter] = useState<string>('todos');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
+  const [showUrgenciaModal, setShowUrgenciaModal] = useState(false);
+  const [urgenciaForm, setUrgenciaForm] = useState({
+    numeroNota: '',
+    fornecedor: '',
+    valorTotal: '',
+    formaPagamento: '',
+    observacoes: ''
+  });
 
   const notasFiltradas = notas.filter(n => {
     if (fornecedorFilter !== 'todos' && n.fornecedor !== fornecedorFilter) return false;
@@ -136,6 +148,11 @@ export default function EstoqueNotasCompra() {
           </Select>
 
           <div className="ml-auto flex gap-2">
+            <Button variant="outline" className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/30" onClick={() => setShowUrgenciaModal(true)}>
+              <Zap className="mr-2 h-4 w-4" />
+              Lançamento Urgência
+            </Button>
+
             <Button onClick={() => navigate('/estoque/nota/cadastrar')}>
               <Plus className="mr-2 h-4 w-4" />
               Cadastrar Nova Nota
@@ -188,6 +205,97 @@ export default function EstoqueNotasCompra() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Modal de Lançamento Urgência */}
+        <Dialog open={showUrgenciaModal} onOpenChange={setShowUrgenciaModal}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-orange-600">
+                <Zap className="h-5 w-5" />
+                Lançamento Urgência
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                Cadastro básico para envio direto ao Financeiro. Os produtos serão inseridos após o pagamento.
+              </p>
+              <div className="space-y-3">
+                <div>
+                  <Label>Nº da Nota *</Label>
+                  <Input
+                    value={urgenciaForm.numeroNota}
+                    onChange={(e) => setUrgenciaForm(prev => ({ ...prev, numeroNota: e.target.value }))}
+                    placeholder="Ex: NF-12345"
+                  />
+                </div>
+                <div>
+                  <Label>Fornecedor *</Label>
+                  <Select value={urgenciaForm.fornecedor} onValueChange={(v) => setUrgenciaForm(prev => ({ ...prev, fornecedor: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getFornecedores().map(f => (
+                        <SelectItem key={f} value={f}>{f}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Valor Total (R$) *</Label>
+                  <Input
+                    type="number"
+                    value={urgenciaForm.valorTotal}
+                    onChange={(e) => setUrgenciaForm(prev => ({ ...prev, valorTotal: e.target.value }))}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div>
+                  <Label>Forma de Pagamento *</Label>
+                  <Select value={urgenciaForm.formaPagamento} onValueChange={(v) => setUrgenciaForm(prev => ({ ...prev, formaPagamento: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Pix">Pix</SelectItem>
+                      <SelectItem value="Transferência">Transferência</SelectItem>
+                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Observações</Label>
+                  <Textarea
+                    value={urgenciaForm.observacoes}
+                    onChange={(e) => setUrgenciaForm(prev => ({ ...prev, observacoes: e.target.value }))}
+                    placeholder="Motivo da urgência..."
+                    rows={2}
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowUrgenciaModal(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                className="bg-orange-600 hover:bg-orange-700"
+                onClick={() => {
+                  if (!urgenciaForm.numeroNota || !urgenciaForm.fornecedor || !urgenciaForm.valorTotal || !urgenciaForm.formaPagamento) {
+                    toast.error('Preencha todos os campos obrigatórios');
+                    return;
+                  }
+                  toast.success('Nota de urgência enviada para o Financeiro!');
+                  setShowUrgenciaModal(false);
+                  setUrgenciaForm({ numeroNota: '', fornecedor: '', valorTotal: '', formaPagamento: '', observacoes: '' });
+                }}
+              >
+                <Zap className="mr-2 h-4 w-4" />
+                Enviar para Financeiro
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </EstoqueLayout>
   );

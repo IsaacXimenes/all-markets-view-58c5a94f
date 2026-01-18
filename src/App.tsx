@@ -74,6 +74,7 @@ import FinanceiroExtrato from "./pages/FinanceiroExtrato";
 import FinanceiroFiado from "./pages/FinanceiroFiado";
 import FinanceiroLotesPagamento from "./pages/FinanceiroLotesPagamento";
 import FinanceiroExecucaoLotes from "./pages/FinanceiroExecucaoLotes";
+import AssistenciaLotesPagamento from "./pages/AssistenciaLotesPagamento";
 import Relatorios from "./pages/Relatorios";
 import GarantiasNova from "./pages/GarantiasNova";
 import GarantiasNovaManual from "./pages/GarantiasNovaManual";
@@ -143,6 +144,7 @@ const App = () => (
           <Route path="/financeiro/extrato" element={<FinanceiroExtrato />} />
           <Route path="/financeiro/lotes-pagamento" element={<FinanceiroLotesPagamento />} />
           <Route path="/financeiro/execucao-lotes" element={<FinanceiroExecucaoLotes />} />
+          <Route path="/assistencia/lotes-pagamento" element={<AssistenciaLotesPagamento />} />
           <Route path="/cadastros" element={<Cadastros />} />
           <Route path="/cadastros/planos-garantia" element={<CadastrosPlanosGarantia />} />
           <Route path="/cadastros/lojas" element={<CadastrosLojas />} />

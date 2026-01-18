@@ -42,6 +42,7 @@ export interface RegistroAprovacao {
 export interface VendaComFluxo extends Venda {
   statusFluxo?: StatusVenda;
   aprovacaoLancamento?: RegistroAprovacao;
+  recebimentoGestor?: RegistroAprovacao; // Registro de quando o gestor recebeu a venda
   aprovacaoGestor?: RegistroAprovacao;
   recusaGestor?: RegistroAprovacao;
   devolucaoFinanceiro?: RegistroAprovacao;
@@ -85,6 +86,7 @@ export const getVendaComFluxo = (vendaId: string): VendaComFluxo | null => {
     ...venda,
     statusFluxo: statusFluxo as StatusVenda,
     aprovacaoLancamento: dadosFluxo.aprovacaoLancamento,
+    recebimentoGestor: dadosFluxo.recebimentoGestor,
     aprovacaoGestor: dadosFluxo.aprovacaoGestor,
     recusaGestor: dadosFluxo.recusaGestor,
     devolucaoFinanceiro: dadosFluxo.devolucaoFinanceiro,
@@ -224,6 +226,12 @@ export const aprovarLancamento = (
     ...dadosFluxo,
     statusFluxo: 'Conferência Gestor',
     aprovacaoLancamento: {
+      usuarioId,
+      usuarioNome,
+      dataHora: new Date().toISOString()
+    },
+    // Registrar o recebimento pelo gestor (mesmo usuário/hora do envio)
+    recebimentoGestor: {
       usuarioId,
       usuarioNome,
       dataHora: new Date().toISOString()

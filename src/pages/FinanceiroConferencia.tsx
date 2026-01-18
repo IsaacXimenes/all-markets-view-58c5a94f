@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Check, Download, Filter, X, Clock, CheckCircle2, Undo2, AlertCircle, CreditCard, Banknote, Smartphone, Wallet, ChevronRight, Lock, MessageSquare, XCircle, Save, Building2, History, UserCheck, Calendar } from 'lucide-react';
+import { Check, Download, Filter, X, Clock, CheckCircle2, Undo2, AlertCircle, CreditCard, Banknote, Smartphone, Wallet, ChevronRight, Lock, MessageSquare, XCircle, Save, Building2, History, UserCheck, Calendar, User, CheckCircle } from 'lucide-react';
 import { getContasFinanceiras, getColaboradores, getCargos, getLojas } from '@/utils/cadastrosApi';
 import { useFluxoVendas } from '@/hooks/useFluxoVendas';
 import { 
@@ -1075,6 +1075,38 @@ export default function FinanceiroConferencia() {
                         );
                       })}
                     </div>
+                  </div>
+                )}
+
+                {/* Rastreabilidade - Recebimento pelo Gestor */}
+                {vendaSelecionada.recebimentoGestor && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-2 mb-2">
+                      <User className="h-4 w-4 text-blue-600" />
+                      <Label className="font-semibold text-sm text-blue-700 dark:text-blue-400">Recebido pelo Gestor</Label>
+                    </div>
+                    <p className="text-sm text-blue-600 dark:text-blue-300">
+                      {vendaSelecionada.recebimentoGestor.usuarioNome}
+                    </p>
+                    <p className="text-xs text-blue-500 dark:text-blue-400 mt-1">
+                      em {new Date(vendaSelecionada.recebimentoGestor.dataHora).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                )}
+
+                {/* Rastreabilidade - Aprovação pelo Gestor */}
+                {vendaSelecionada.aprovacaoGestor && (
+                  <div className="p-3 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="flex items-center gap-2 mb-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                      <Label className="font-semibold text-sm text-green-700 dark:text-green-400">Aprovado pelo Gestor</Label>
+                    </div>
+                    <p className="text-sm text-green-600 dark:text-green-300">
+                      {vendaSelecionada.aprovacaoGestor.usuarioNome}
+                    </p>
+                    <p className="text-xs text-green-500 dark:text-green-400 mt-1">
+                      em {new Date(vendaSelecionada.aprovacaoGestor.dataHora).toLocaleString('pt-BR')}
+                    </p>
                   </div>
                 )}
 

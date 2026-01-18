@@ -68,10 +68,13 @@ export default function EstoqueProdutoPendenteDetalhes() {
   const [produto, setProduto] = useState<ProdutoPendente | null>(null);
   const [colaboradoresEstoque, setColaboradoresEstoque] = useState<{ id: string; nome: string }[]>([]);
   
+  // Mock de usuário logado
+  const usuarioLogado = { id: 'COL-003', nome: 'Carlos Estoque' };
+
   // Form state
   const [parecerStatus, setParecerStatus] = useState<string>('');
   const [parecerObservacoes, setParecerObservacoes] = useState('');
-  const [parecerResponsavel, setParecerResponsavel] = useState('');
+  const [parecerResponsavel, setParecerResponsavel] = useState(usuarioLogado.nome);
 
   // Modal de confirmação dupla
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -98,6 +101,9 @@ export default function EstoqueProdutoPendenteDetalhes() {
       cargosComEstoque.includes(c.cargo)
     );
     setColaboradoresEstoque(colabsEstoque);
+    
+    // Pré-preencher com usuário logado
+    setParecerResponsavel(usuarioLogado.nome);
   }, [id]);
 
   const handleAbrirConfirmacao = () => {
@@ -372,18 +378,12 @@ export default function EstoqueProdutoPendenteDetalhes() {
 
                   <div className="space-y-2">
                     <Label>Responsável *</Label>
-                    <Select value={parecerResponsavel} onValueChange={setParecerResponsavel}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o responsável" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {colaboradoresEstoque.map((colab) => (
-                          <SelectItem key={colab.id} value={colab.nome}>
-                            {colab.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      value={parecerResponsavel}
+                      disabled
+                      className="bg-muted"
+                    />
+                    <p className="text-xs text-muted-foreground">Usuário logado (campo bloqueado)</p>
                   </div>
 
                   <div className="text-xs text-muted-foreground">
