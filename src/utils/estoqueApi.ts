@@ -55,6 +55,7 @@ export interface NotaCompra {
   fornecedor: string;
   valorTotal: number;
   status: 'Pendente' | 'Concluído';
+  origem?: 'Normal' | 'Urgência';
   produtos: {
     marca: string;
     modelo: string;
@@ -453,6 +454,7 @@ let notasCompra: NotaCompra[] = [
     fornecedor: 'Apple Distribuidor BR',
     valorTotal: 21000.00,
     status: 'Concluído',
+    origem: 'Normal',
     produtos: [
       { marca: 'Apple', modelo: 'iPhone 15 Pro Max', cor: 'Titânio Natural', imei: '352123456789012', tipo: 'Novo', quantidade: 1, valorUnitario: 7200.00, valorTotal: 7200.00, saudeBateria: 100 },
       { marca: 'Apple', modelo: 'iPhone 15 Pro', cor: 'Azul Titânio', imei: '352123456789013', tipo: 'Novo', quantidade: 2, valorUnitario: 6400.00, valorTotal: 12800.00, saudeBateria: 100 }
@@ -697,8 +699,8 @@ export const getNotaById = (id: string): NotaCompra | null => {
 export const addNotaCompra = (nota: Omit<NotaCompra, 'id' | 'status'>): NotaCompra => {
   const year = new Date().getFullYear();
   const num = notasCompra.filter(n => n.id.includes(String(year))).length + 1;
-  const newId = `NC-${year}-${String(num).padStart(4, '0')}`;
-  const newNota: NotaCompra = { ...nota, id: newId, status: 'Pendente' };
+  const newId = nota.origem === 'Urgência' ? `URG-${year}-${String(num).padStart(4, '0')}` : `NC-${year}-${String(num).padStart(4, '0')}`;
+  const newNota: NotaCompra = { ...nota, id: newId, status: 'Pendente', origem: nota.origem || 'Normal' };
   notasCompra.push(newNota);
   return newNota;
 };

@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { getNotasCompra, getFornecedores } from '@/utils/estoqueApi';
+import { getNotasCompra, getFornecedores, addNotaCompra } from '@/utils/estoqueApi';
 import { exportToCSV, formatCurrency, moedaMask, parseMoeda } from '@/utils/formatUtils';
 import { Download, Plus, Eye, FileText, DollarSign, CheckCircle, Clock, Zap } from 'lucide-react';
 import { toast } from 'sonner';
@@ -287,14 +287,35 @@ export default function EstoqueNotasCompra() {
               <Button variant="outline" onClick={() => setShowUrgenciaModal(false)}>
                 Cancelar
               </Button>
-              <Button 
+                <Button 
                 className="bg-orange-600 hover:bg-orange-700"
                 onClick={() => {
                   if (!urgenciaForm.fornecedor || !urgenciaForm.valorTotal || !urgenciaForm.formaPagamento) {
                     toast.error('Preencha todos os campos obrigatórios');
                     return;
                   }
-                  toast.success(`Nota de urgência ${urgenciaId} enviada para o Financeiro!`);
+                  
+                  // Criar nota de urgência no sistema
+                  const valorNumerico = parseMoeda(urgenciaForm.valorTotal);
+                  const novaNota = addNotaCompra({
+                    data: new Date().toISOString().split('T')[0],
+                    numeroNota: urgenciaId,
+                    fornecedor: urgenciaForm.fornecedor,
+                    valorTotal: valorNumerico,
+                    origem: 'Urgência',
+                    produtos: [],
+                    pagamento: {
+                      formaPagamento: urgenciaForm.formaPagamento,
+                      parcelas: 1,
+                      valorParcela: valorNumerico,
+                      dataVencimento: new Date().toISOString().split('T')[0]
+                    }
+                  });
+                  
+                  // Marcar como enviada para financeiro no localStorage
+                  localStorage.setItem(`nota_status_${novaNota.id}`, 'Enviado para Financeiro');
+                  
+                  toast.success(`Nota de urgência ${novaNota.id} enviada para o Financeiro!`);
                   setShowUrgenciaModal(false);
                   setUrgenciaForm({ fornecedor: '', valorTotal: '', formaPagamento: '', observacoes: '' });
                 }}

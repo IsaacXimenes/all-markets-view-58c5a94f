@@ -313,6 +313,7 @@ export default function FinanceiroConferenciaNotas() {
                     <TableHead>Data</TableHead>
                     <TableHead>Nº Nota</TableHead>
                     <TableHead>Fornecedor</TableHead>
+                    <TableHead>Origem</TableHead>
                     <TableHead>Valor Total</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Ações</TableHead>
@@ -321,7 +322,7 @@ export default function FinanceiroConferenciaNotas() {
                 <TableBody>
                   {filteredNotas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         Nenhuma nota encontrada
                       </TableCell>
                     </TableRow>
@@ -335,6 +336,11 @@ export default function FinanceiroConferenciaNotas() {
                         <TableCell>{new Date(nota.data).toLocaleDateString('pt-BR')}</TableCell>
                         <TableCell className="font-mono text-xs">{nota.numeroNota}</TableCell>
                         <TableCell>{nota.fornecedor}</TableCell>
+                        <TableCell>
+                          <Badge variant={nota.origem === 'Urgência' ? 'destructive' : 'outline'} className={nota.origem === 'Urgência' ? 'bg-orange-500 hover:bg-orange-600' : ''}>
+                            {nota.origem || 'Normal'}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="font-semibold">
                           {formatCurrency(nota.valorTotal)}
                         </TableCell>
