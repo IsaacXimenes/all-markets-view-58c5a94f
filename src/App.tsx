@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { NotificationSystem } from "@/components/notifications/NotificationSystem";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useCadastroStore } from "@/store/cadastroStore";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Performance from "./pages/Performance";
@@ -93,104 +95,118 @@ import VendasEditar from "./pages/VendasEditar";
 
 const queryClient = new QueryClient();
 
+const AppInitializer = ({ children }: { children: React.ReactNode }) => {
+  const { inicializarDadosMockados, inicializado } = useCadastroStore();
+  
+  useEffect(() => {
+    if (!inicializado) {
+      inicializarDadosMockados();
+    }
+  }, [inicializarDadosMockados, inicializado]);
+  
+  return <>{children}</>;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <NotificationSystem />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/performance" element={<Performance />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/rh" element={<RecursosHumanos />} />
-          <Route path="/rh/loja/:id" element={<LojaRH />} />
-          <Route path="/rh/funcionario/:id" element={<FuncionarioDetalhes />} />
-          <Route path="/rh/feedback" element={<RHFeedback />} />
-          <Route path="/rh/comissoes" element={<RHComissoes />} />
-          <Route path="/rh/comissao-por-loja" element={<RHComissaoPorLoja />} />
-          <Route path="/rh/salario-colaborador" element={<RHSalarioColaborador />} />
-          <Route path="/rh/vales" element={<RHVales />} />
-          <Route path="/rh/adiantamentos" element={<RHAdiantamentos />} />
-          <Route path="/financeiro/conferencia" element={<FinanceiroConferencia />} />
-          <Route path="/financeiro/fiado" element={<FinanceiroFiado />} />
-          <Route path="/financeiro/contas" element={<FinanceiroContas />} />
-          <Route path="/financeiro/despesas-fixas" element={<FinanceiroDespesasFixas />} />
-          <Route path="/financeiro/despesas-variaveis" element={<FinanceiroDespesasVariaveis />} />
-          <Route path="/financeiro/conferencia-notas-entrada" element={<FinanceiroConferenciaNotas />} />
-          <Route path="/estoque" element={<Estoque />} />
-          <Route path="/estoque/produtos" element={<EstoqueProdutos />} />
-          <Route path="/estoque/produto/:id" element={<EstoqueProdutoDetalhes />} />
-          <Route path="/estoque/produtos-pendentes" element={<EstoqueProdutosPendentes />} />
-          <Route path="/estoque/produto-pendente/:id" element={<EstoqueProdutoPendenteDetalhes />} />
-          <Route path="/estoque/notas-compra" element={<EstoqueNotasCompra />} />
-          <Route path="/estoque/nota/cadastrar" element={<EstoqueNotaCadastrar />} />
-          <Route path="/estoque/nota/:id" element={<EstoqueNotaDetalhes />} />
-          <Route path="/estoque/movimentacoes" element={<EstoqueMovimentacoes />} />
-          <Route path="/estoque/movimentacoes-acessorios" element={<EstoqueMovimentacoesAcessorios />} />
-          <Route path="/estoque/notas-urgencia" element={<EstoqueNotasUrgenciaPendentes />} />
-          <Route path="/estoque/acessorios" element={<EstoqueAcessorios />} />
-          <Route path="/os/produtos-analise" element={<OSProdutosAnalise />} />
-          <Route path="/os/historico-assistencia" element={<OSHistoricoAssistencia />} />
-          <Route path="/os/produto/:id" element={<OSProdutoDetalhes />} />
-          <Route path="/os/assistencia" element={<OSAssistencia />} />
-          <Route path="/os/assistencia/nova" element={<OSAssistenciaNova />} />
-          <Route path="/os/assistencia/:id" element={<OSAssistenciaDetalhes />} />
-          <Route path="/os/assistencia/:id/editar" element={<OSAssistenciaEditar />} />
-          <Route path="/os/solicitacoes-pecas" element={<OSSolicitacoesPecas />} />
-          <Route path="/os/historico-notas" element={<OSHistoricoNotas />} />
-          <Route path="/os/analise-garantia" element={<OSAnaliseGarantia />} />
-          <Route path="/os/pecas" element={<OSPecas />} />
-          <Route path="/financeiro/notas-assistencia" element={<FinanceiroNotasAssistencia />} />
-          <Route path="/financeiro/extrato" element={<FinanceiroExtrato />} />
-          <Route path="/financeiro/lotes-pagamento" element={<FinanceiroLotesPagamento />} />
-          <Route path="/financeiro/execucao-lotes" element={<FinanceiroExecucaoLotes />} />
-          <Route path="/assistencia/lotes-pagamento" element={<AssistenciaLotesPagamento />} />
-          <Route path="/cadastros" element={<Cadastros />} />
-          <Route path="/cadastros/planos-garantia" element={<CadastrosPlanosGarantia />} />
-          <Route path="/cadastros/lojas" element={<CadastrosLojas />} />
-          <Route path="/cadastros/clientes" element={<CadastrosClientes />} />
-          <Route path="/cadastros/colaboradores" element={<CadastrosColaboradores />} />
-          <Route path="/cadastros/fornecedores" element={<CadastrosFornecedores />} />
-          <Route path="/cadastros/origens-venda" element={<CadastrosOrigensVenda />} />
-          <Route path="/cadastros/produtos" element={<CadastrosProdutos />} />
-          <Route path="/cadastros/pecas" element={<CadastrosPecas />} />
-          <Route path="/cadastros/acessorios" element={<CadastrosAcessorios />} />
-          <Route path="/cadastros/tipos-desconto" element={<CadastrosTiposDesconto />} />
-          <Route path="/cadastros/cargos" element={<CadastrosCargos />} />
-          <Route path="/cadastros/modelos-pagamento" element={<CadastrosModelosPagamento />} />
-          <Route path="/cadastros/contas-financeiras" element={<CadastrosContasFinanceiras />} />
-          <Route path="/cadastros/maquinas" element={<CadastrosMaquinas />} />
-          <Route path="/cadastros/cores" element={<CadastrosCores />} />
-          <Route path="/vendas" element={<Vendas />} />
-          <Route path="/vendas/nova" element={<VendasNova />} />
-          <Route path="/vendas/nova-digital" element={<VendasNovaDigital />} />
-          <Route path="/vendas/pendentes-digitais" element={<VendasPendentesDigitais />} />
-          <Route path="/vendas/finalizar-digital/:id" element={<VendasFinalizarDigital />} />
-          <Route path="/vendas/balcao" element={<VendasAcessorios />} />
-          <Route path="/vendas/conferencia-lancamento" element={<VendasConferenciaLancamento />} />
-          <Route path="/vendas/conferencia-gestor" element={<VendasConferenciaGestor />} />
-          <Route path="/vendas/conferencia-gestor/:id" element={<VendasConferenciaGestorDetalhes />} />
-          <Route path="/vendas/editar-gestor/:id" element={<VendasEditarGestor />} />
-          <Route path="/vendas/editar/:id" element={<VendasEditar />} />
-          <Route path="/vendas/:id" element={<VendaDetalhes />} />
-          <Route path="/relatorios" element={<Relatorios />} />
-          <Route path="/garantias" element={<GarantiasNova />} />
-          <Route path="/garantias/nova" element={<GarantiasNova />} />
-          <Route path="/garantias/nova/manual" element={<GarantiasNovaManual />} />
-          <Route path="/garantias/em-andamento" element={<GarantiasEmAndamento />} />
-          <Route path="/garantias/contatos-ativos" element={<GarantiaContatosAtivos />} />
-          <Route path="/garantias/contatos-ativos/novo" element={<GarantiaContatosAtivosNovo />} />
-          <Route path="/garantias/contatos-ativos/editar/:id" element={<GarantiaContatosAtivosEditar />} />
-          <Route path="/garantias/historico" element={<GarantiasHistorico />} />
-          <Route path="/garantias/extendida" element={<GarantiasExtendida />} />
-          <Route path="/garantias/extendida/:id" element={<GarantiaExtendidaDetalhes />} />
-          <Route path="/garantias/:id" element={<GarantiaDetalhes />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AppInitializer>
+        <Toaster />
+        <Sonner />
+        <NotificationSystem />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/performance" element={<Performance />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/rh" element={<RecursosHumanos />} />
+            <Route path="/rh/loja/:id" element={<LojaRH />} />
+            <Route path="/rh/funcionario/:id" element={<FuncionarioDetalhes />} />
+            <Route path="/rh/feedback" element={<RHFeedback />} />
+            <Route path="/rh/comissoes" element={<RHComissoes />} />
+            <Route path="/rh/comissao-por-loja" element={<RHComissaoPorLoja />} />
+            <Route path="/rh/salario-colaborador" element={<RHSalarioColaborador />} />
+            <Route path="/rh/vales" element={<RHVales />} />
+            <Route path="/rh/adiantamentos" element={<RHAdiantamentos />} />
+            <Route path="/financeiro/conferencia" element={<FinanceiroConferencia />} />
+            <Route path="/financeiro/fiado" element={<FinanceiroFiado />} />
+            <Route path="/financeiro/contas" element={<FinanceiroContas />} />
+            <Route path="/financeiro/despesas-fixas" element={<FinanceiroDespesasFixas />} />
+            <Route path="/financeiro/despesas-variaveis" element={<FinanceiroDespesasVariaveis />} />
+            <Route path="/financeiro/conferencia-notas-entrada" element={<FinanceiroConferenciaNotas />} />
+            <Route path="/estoque" element={<Estoque />} />
+            <Route path="/estoque/produtos" element={<EstoqueProdutos />} />
+            <Route path="/estoque/produto/:id" element={<EstoqueProdutoDetalhes />} />
+            <Route path="/estoque/produtos-pendentes" element={<EstoqueProdutosPendentes />} />
+            <Route path="/estoque/produto-pendente/:id" element={<EstoqueProdutoPendenteDetalhes />} />
+            <Route path="/estoque/notas-compra" element={<EstoqueNotasCompra />} />
+            <Route path="/estoque/nota/cadastrar" element={<EstoqueNotaCadastrar />} />
+            <Route path="/estoque/nota/:id" element={<EstoqueNotaDetalhes />} />
+            <Route path="/estoque/movimentacoes" element={<EstoqueMovimentacoes />} />
+            <Route path="/estoque/movimentacoes-acessorios" element={<EstoqueMovimentacoesAcessorios />} />
+            <Route path="/estoque/notas-urgencia" element={<EstoqueNotasUrgenciaPendentes />} />
+            <Route path="/estoque/acessorios" element={<EstoqueAcessorios />} />
+            <Route path="/os/produtos-analise" element={<OSProdutosAnalise />} />
+            <Route path="/os/historico-assistencia" element={<OSHistoricoAssistencia />} />
+            <Route path="/os/produto/:id" element={<OSProdutoDetalhes />} />
+            <Route path="/os/assistencia" element={<OSAssistencia />} />
+            <Route path="/os/assistencia/nova" element={<OSAssistenciaNova />} />
+            <Route path="/os/assistencia/:id" element={<OSAssistenciaDetalhes />} />
+            <Route path="/os/assistencia/:id/editar" element={<OSAssistenciaEditar />} />
+            <Route path="/os/solicitacoes-pecas" element={<OSSolicitacoesPecas />} />
+            <Route path="/os/historico-notas" element={<OSHistoricoNotas />} />
+            <Route path="/os/analise-garantia" element={<OSAnaliseGarantia />} />
+            <Route path="/os/pecas" element={<OSPecas />} />
+            <Route path="/financeiro/notas-assistencia" element={<FinanceiroNotasAssistencia />} />
+            <Route path="/financeiro/extrato" element={<FinanceiroExtrato />} />
+            <Route path="/financeiro/lotes-pagamento" element={<FinanceiroLotesPagamento />} />
+            <Route path="/financeiro/execucao-lotes" element={<FinanceiroExecucaoLotes />} />
+            <Route path="/assistencia/lotes-pagamento" element={<AssistenciaLotesPagamento />} />
+            <Route path="/cadastros" element={<Cadastros />} />
+            <Route path="/cadastros/planos-garantia" element={<CadastrosPlanosGarantia />} />
+            <Route path="/cadastros/lojas" element={<CadastrosLojas />} />
+            <Route path="/cadastros/clientes" element={<CadastrosClientes />} />
+            <Route path="/cadastros/colaboradores" element={<CadastrosColaboradores />} />
+            <Route path="/cadastros/fornecedores" element={<CadastrosFornecedores />} />
+            <Route path="/cadastros/origens-venda" element={<CadastrosOrigensVenda />} />
+            <Route path="/cadastros/produtos" element={<CadastrosProdutos />} />
+            <Route path="/cadastros/pecas" element={<CadastrosPecas />} />
+            <Route path="/cadastros/acessorios" element={<CadastrosAcessorios />} />
+            <Route path="/cadastros/tipos-desconto" element={<CadastrosTiposDesconto />} />
+            <Route path="/cadastros/cargos" element={<CadastrosCargos />} />
+            <Route path="/cadastros/modelos-pagamento" element={<CadastrosModelosPagamento />} />
+            <Route path="/cadastros/contas-financeiras" element={<CadastrosContasFinanceiras />} />
+            <Route path="/cadastros/maquinas" element={<CadastrosMaquinas />} />
+            <Route path="/cadastros/cores" element={<CadastrosCores />} />
+            <Route path="/vendas" element={<Vendas />} />
+            <Route path="/vendas/nova" element={<VendasNova />} />
+            <Route path="/vendas/nova-digital" element={<VendasNovaDigital />} />
+            <Route path="/vendas/pendentes-digitais" element={<VendasPendentesDigitais />} />
+            <Route path="/vendas/finalizar-digital/:id" element={<VendasFinalizarDigital />} />
+            <Route path="/vendas/balcao" element={<VendasAcessorios />} />
+            <Route path="/vendas/conferencia-lancamento" element={<VendasConferenciaLancamento />} />
+            <Route path="/vendas/conferencia-gestor" element={<VendasConferenciaGestor />} />
+            <Route path="/vendas/conferencia-gestor/:id" element={<VendasConferenciaGestorDetalhes />} />
+            <Route path="/vendas/editar-gestor/:id" element={<VendasEditarGestor />} />
+            <Route path="/vendas/editar/:id" element={<VendasEditar />} />
+            <Route path="/vendas/:id" element={<VendaDetalhes />} />
+            <Route path="/relatorios" element={<Relatorios />} />
+            <Route path="/garantias" element={<GarantiasNova />} />
+            <Route path="/garantias/nova" element={<GarantiasNova />} />
+            <Route path="/garantias/nova/manual" element={<GarantiasNovaManual />} />
+            <Route path="/garantias/em-andamento" element={<GarantiasEmAndamento />} />
+            <Route path="/garantias/contatos-ativos" element={<GarantiaContatosAtivos />} />
+            <Route path="/garantias/contatos-ativos/novo" element={<GarantiaContatosAtivosNovo />} />
+            <Route path="/garantias/contatos-ativos/editar/:id" element={<GarantiaContatosAtivosEditar />} />
+            <Route path="/garantias/historico" element={<GarantiasHistorico />} />
+            <Route path="/garantias/extendida" element={<GarantiasExtendida />} />
+            <Route path="/garantias/extendida/:id" element={<GarantiaExtendidaDetalhes />} />
+            <Route path="/garantias/:id" element={<GarantiaDetalhes />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </AppInitializer>
     </TooltipProvider>
   </QueryClientProvider>
 );

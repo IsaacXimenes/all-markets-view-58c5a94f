@@ -1,6 +1,6 @@
 import React from 'react';
 import { RHLayout } from '@/components/layout/RHLayout';
-import { getLojas, getColaboradores, getAniversariantesDaSemana, getLojaById, getCargoNome, getContagemColaboradoresPorLoja } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -11,10 +11,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 export default function RecursosHumanos() {
   const navigate = useNavigate();
-  const lojas = getLojas().filter(l => l.status === 'Ativo');
-  const colaboradores = getColaboradores().filter(c => c.status === 'Ativo');
-  const birthdays = getAniversariantesDaSemana();
-  const contagemPorLoja = getContagemColaboradoresPorLoja();
+  const { obterLojasAtivas, obterColaboradoresAtivos, obterAniversariantesDaSemana, obterLojaById, obterContagemColaboradoresPorLoja } = useCadastroStore();
+  const lojas = obterLojasAtivas();
+  const colaboradores = obterColaboradoresAtivos();
+  const birthdays = obterAniversariantesDaSemana();
+  const contagemPorLoja = obterContagemColaboradoresPorLoja();
   
   const getDaysUntilBirthday = (dataNascimento: string) => {
     const today = new Date();
@@ -69,7 +70,7 @@ export default function RecursosHumanos() {
                           <p className="font-semibold">{loja.nome}</p>
                           <p className="text-sm text-muted-foreground flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
-                            {loja.endereco}, {loja.cidade}
+                            {loja.endereco}
                           </p>
                         </div>
                       </div>
@@ -121,16 +122,16 @@ export default function RecursosHumanos() {
                 </TableHeader>
                 <TableBody>
                   {colaboradores.map((colaborador) => {
-                    const loja = getLojaById(colaborador.loja);
+                    const loja = obterLojaById(colaborador.loja_id);
                     return (
                       <TableRow key={colaborador.id} className="cursor-pointer hover:bg-muted/50">
                         <TableCell className="font-medium">{loja?.nome || '-'}</TableCell>
                         <TableCell>{colaborador.nome}</TableCell>
                         <TableCell className="text-muted-foreground">{colaborador.cpf}</TableCell>
-                        <TableCell>{getCargoNome(colaborador.cargo)}</TableCell>
-                        <TableCell>{new Date(colaborador.dataAdmissao).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell>{colaborador.cargo}</TableCell>
+                        <TableCell>{new Date(colaborador.data_admissao).toLocaleDateString('pt-BR')}</TableCell>
                         <TableCell className="text-right font-medium">
-                          {colaborador.salario ? `R$ ${colaborador.salario.toLocaleString('pt-BR')}` : '-'}
+                          {colaborador.salario_fixo ? `R$ ${colaborador.salario_fixo.toLocaleString('pt-BR')}` : '-'}
                         </TableCell>
                       </TableRow>
                     );
@@ -153,9 +154,9 @@ export default function RecursosHumanos() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {birthdays.map((colaborador) => {
-                  const loja = getLojaById(colaborador.loja);
-                  const daysUntil = getDaysUntilBirthday(colaborador.dataNascimento!);
-                  const age = getAge(colaborador.dataNascimento!);
+                  const loja = obterLojaById(colaborador.loja_id);
+                  const daysUntil = getDaysUntilBirthday(colaborador.data_admissao);
+                  const age = getAge(colaborador.data_admissao);
                   
                   return (
                     <Card key={colaborador.id} className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -166,7 +167,7 @@ export default function RecursosHumanos() {
                           </AvatarFallback>
                         </Avatar>
                         <h3 className="font-bold text-lg mb-1">{colaborador.nome}</h3>
-                        <p className="text-sm text-muted-foreground mb-1">{getCargoNome(colaborador.cargo)}</p>
+                        <p className="text-sm text-muted-foreground mb-1">{colaborador.cargo}</p>
                         <p className="text-xs text-muted-foreground mb-3">{loja?.nome || '-'}</p>
                         <div className="bg-primary/10 rounded-lg p-3">
                           <p className="text-2xl font-bold text-primary">{age + 1} anos</p>

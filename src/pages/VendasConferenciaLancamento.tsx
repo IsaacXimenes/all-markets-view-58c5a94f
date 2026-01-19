@@ -38,7 +38,7 @@ import {
   StatusVenda
 } from '@/utils/fluxoVendasApi';
 import { formatCurrency } from '@/utils/formatUtils';
-import { getLojas, getColaboradores, getCargos } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { toast } from 'sonner';
 
 // Mock do usuário logado
@@ -46,24 +46,23 @@ const usuarioLogado = { id: 'COL-007', nome: 'Carlos Lançador', cargo: 'Vendedo
 
 export default function VendasConferenciaLancamento() {
   const navigate = useNavigate();
+  const { obterLojasAtivas, obterColaboradoresAtivos, obterVendedores, obterGestores, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   // Incluir histórico para manter vendas na tela após aprovação
   const { vendas, recarregar, contadores } = useFluxoVendas({
     status: ['Aguardando Conferência', 'Recusada - Gestor', 'Feito Sinal'],
     incluirHistorico: true // Manter vendas mesmo após aprovação
   });
   
-  const lojas = getLojas();
-  const colaboradores = getColaboradores();
-  const cargos = getCargos();
+  const lojas = obterLojasAtivas();
+  const colaboradores = obterColaboradoresAtivos();
   
   // Verificar se usuário é gestor ou financeiro
   const isGestorOuFinanceiro = useMemo(() => {
     const colaborador = colaboradores.find(c => c.id === usuarioLogado.id);
     if (!colaborador) return false;
-    const cargo = cargos.find(c => c.id === colaborador.cargo);
-    if (!cargo) return false;
-    return cargo.permissoes.includes('Gestor') || cargo.permissoes.includes('Financeiro');
-  }, [colaboradores, cargos]);
+    // Usando as flags do novo modelo
+    return colaborador.eh_gestor;
+  }, [colaboradores]);
   
   // Filtros
   const [filtroDataInicio, setFiltroDataInicio] = useState('');
@@ -76,11 +75,10 @@ export default function VendasConferenciaLancamento() {
   const [modalAprovar, setModalAprovar] = useState(false);
   const [vendaSelecionada, setVendaSelecionada] = useState<VendaComFluxo | null>(null);
 
-  // Vendedores disponíveis para filtro
+  // Vendedores disponíveis para filtro (usando a flag eh_vendedor)
   const vendedoresDisponiveis = useMemo(() => {
-    const cargosVendas = cargos.filter(c => c.permissoes.includes('Vendas')).map(c => c.id);
-    return colaboradores.filter(col => cargosVendas.includes(col.cargo));
-  }, [colaboradores, cargos]);
+    return colaboradores.filter(col => col.eh_vendedor);
+  }, [colaboradores]);
 
   // Filtrar vendas
   const vendasFiltradas = useMemo(() => {

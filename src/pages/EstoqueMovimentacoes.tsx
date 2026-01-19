@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { getMovimentacoes, addMovimentacao, getProdutos, Produto, confirmarRecebimentoMovimentacao, Movimentacao } from '@/utils/estoqueApi';
-import { getLojas, getLojaById, getColaboradores } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { exportToCSV } from '@/utils/formatUtils';
 import { formatIMEI } from '@/utils/imeiMask';
 import { Download, Plus, CheckCircle, Clock, Search, Package, Eye, Edit } from 'lucide-react';
@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Badge } from '@/components/ui/badge';
 
 export default function EstoqueMovimentacoes() {
+  const { obterLojasAtivas, obterColaboradoresAtivos, obterLojaById, obterNomeLoja } = useCadastroStore();
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>(getMovimentacoes());
   const [origemFilter, setOrigemFilter] = useState<string>('todas');
   const [destinoFilter, setDestinoFilter] = useState<string>('todas');
@@ -27,8 +28,8 @@ export default function EstoqueMovimentacoes() {
   const [responsavelConfirmacao, setResponsavelConfirmacao] = useState<string>('');
   const { toast } = useToast();
 
-  const lojas = getLojas().filter(l => l.status === 'Ativo');
-  const colaboradores = getColaboradores().filter(c => c.status === 'Ativo');
+  const lojas = obterLojasAtivas();
+  const colaboradores = obterColaboradoresAtivos();
   const [produtos] = useState<Produto[]>(getProdutos());
 
   // Form state
@@ -79,9 +80,9 @@ export default function EstoqueMovimentacoes() {
   }, [produtosDisponiveis, buscaProduto]);
 
   const getLojaNome = (lojaIdOuNome: string) => {
-    const lojaPorId = getLojaById(lojaIdOuNome);
-    if (lojaPorId) return lojaPorId.nome;
-    return lojaIdOuNome;
+    const loja = obterLojaById(lojaIdOuNome);
+    if (loja) return loja.nome;
+    return obterNomeLoja(lojaIdOuNome);
   };
 
   const movimentacoesFiltradas = movimentacoes.filter(m => {
