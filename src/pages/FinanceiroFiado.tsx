@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Check, Download, Filter, X, AlertTriangle, Clock, CheckCircle2, Calendar } from 'lucide-react';
-import { getContasFinanceiras, getColaboradores, getCargos, getLojas } from '@/utils/cadastrosApi';
+import { getContasFinanceiras } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { 
   getParcelasFiado, 
   pagarParcelaFiado, 
@@ -23,10 +24,11 @@ import { toast } from 'sonner';
 
 export default function FinanceiroFiado() {
   const [parcelas, setParcelas] = useState<ParcelaFiado[]>([]);
+  const { obterLojasAtivas, obterFinanceiros, obterNomeLoja } = useCadastroStore();
+  
   const contasFinanceiras = getContasFinanceiras();
-  const colaboradores = getColaboradores();
-  const cargos = getCargos();
-  const lojas = getLojas();
+  const colaboradoresFinanceiros = obterFinanceiros();
+  const lojas = obterLojasAtivas();
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [parcelaSelecionada, setParcelaSelecionada] = useState<ParcelaFiado | null>(null);
@@ -49,15 +51,6 @@ export default function FinanceiroFiado() {
   const recarregarParcelas = () => {
     setParcelas(getParcelasFiado());
   };
-
-  // Filtrar colaboradores com permissão "Financeiro"
-  const colaboradoresFinanceiros = useMemo(() => {
-    const cargosComPermissaoFinanceiro = cargos
-      .filter(c => c.permissoes.includes('Financeiro'))
-      .map(c => c.id);
-    
-    return colaboradores.filter(col => cargosComPermissaoFinanceiro.includes(col.cargo));
-  }, [colaboradores, cargos]);
 
   const handleAbrirPagamento = (parcela: ParcelaFiado) => {
     setParcelaSelecionada(parcela);
