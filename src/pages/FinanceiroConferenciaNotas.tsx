@@ -8,12 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getNotasCompra, finalizarNota, NotaCompra } from '@/utils/estoqueApi';
-import { getContasFinanceiras, getColaboradores, getCargos, getFornecedores, getLojas } from '@/utils/cadastrosApi';
+import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
 import { Eye, CheckCircle, Download, Filter, X, Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { migrarProdutosNotaParaPendentes } from '@/utils/osApi';
 import { adicionarEstoqueAcessorio, getOrCreateAcessorio } from '@/utils/acessoriosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 
 import { formatCurrency } from '@/utils/formatUtils';
 
@@ -38,18 +39,18 @@ export default function FinanceiroConferenciaNotas() {
   const [notaSelecionada, setNotaSelecionada] = useState<NotaEstendida | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   
+  const { obterLojasAtivas, obterFinanceiros, obterNomeLoja } = useCadastroStore();
+  
   const contasFinanceiras = getContasFinanceiras().filter(c => c.status === 'Ativo');
-  const colaboradores = getColaboradores();
-  const cargos = getCargos();
+  const colaboradoresFinanceiros = obterFinanceiros();
   const fornecedoresList = getFornecedores();
+  const lojas = obterLojasAtivas();
   
   const [contaPagamento, setContaPagamento] = useState('');
   const [formaPagamento, setFormaPagamento] = useState('');
   const [parcelas, setParcelas] = useState('1');
   const [responsavelFinanceiro, setResponsavelFinanceiro] = useState('');
   const [lojaDestino, setLojaDestino] = useState('');
-  
-  const lojas = getLojas().filter(l => l.status === 'Ativo');
 
   // Filtros - igual à Conferência de Contas
   const [filters, setFilters] = useState({
@@ -58,15 +59,6 @@ export default function FinanceiroConferenciaNotas() {
     fornecedor: 'todos',
     palavraChave: ''
   });
-
-  // Filtrar colaboradores que têm permissão "Financeiro"
-  const colaboradoresFinanceiros = useMemo(() => {
-    const cargosComPermissaoFinanceiro = cargos
-      .filter(c => c.permissoes.includes('Financeiro'))
-      .map(c => c.id);
-    
-    return colaboradores.filter(col => cargosComPermissaoFinanceiro.includes(col.cargo));
-  }, [colaboradores, cargos]);
 
   // Filtrar apenas notas "Enviado para Financeiro" e ordenar
   const filteredNotas = useMemo(() => {

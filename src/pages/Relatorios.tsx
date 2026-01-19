@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart3, Download, FileSpreadsheet, Store, Wrench, MessageSquareWarning, Shield } from 'lucide-react';
-import { getLojas } from '@/utils/cadastrosApi';
 import { getVendas } from '@/utils/vendasApi';
 import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 import { getOrdensServico } from '@/utils/assistenciaApi';
@@ -15,10 +14,12 @@ import { getGarantias, getTratativasByGarantiaId, exportGarantiasToCSV } from '@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { useCadastroStore } from '@/store/cadastroStore';
 
 
 export default function Relatorios() {
-  const lojas = getLojas();
+  const { obterLojasAtivas, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
+  const lojas = obterLojasAtivas();
   const vendas = getVendas();
   const ordensServico = getOrdensServico();
   const feedbacks = getFeedbacks();
@@ -30,13 +31,12 @@ export default function Relatorios() {
   const [lojaFiltro, setLojaFiltro] = useState('todas');
 
   const getLojaName = (id: string) => {
-    const loja = lojas.find(l => l.id === id);
-    return loja?.nome || id;
+    return obterNomeLoja(id);
   };
 
   const getColaboradorNome = (id: string) => {
     const col = colaboradores.find(c => c.id === id);
-    return col?.nome || id;
+    return col?.nome || obterNomeColaborador(id);
   };
 
   // Filtrar dados por período e loja

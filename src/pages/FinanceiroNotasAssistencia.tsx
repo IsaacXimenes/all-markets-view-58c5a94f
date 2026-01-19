@@ -15,20 +15,23 @@ import {
   NotaAssistencia,
   getSolicitacoesByOS
 } from '@/utils/solicitacaoPecasApi';
-import { getContasFinanceiras, getColaboradores, getCargos, getFornecedores } from '@/utils/cadastrosApi';
+import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
 import { getOrdemServicoById, updateOrdemServico } from '@/utils/assistenciaApi';
 import { Eye, Check, Download, Filter, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCadastroStore } from '@/store/cadastroStore';
 
 export default function FinanceiroNotasAssistencia() {
   const [notas, setNotas] = useState(getNotasAssistencia());
   const [notaSelecionada, setNotaSelecionada] = useState<NotaAssistencia | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   
+  const { obterLojasAtivas, obterFinanceiros, obterNomeLoja } = useCadastroStore();
+  
   const contasFinanceiras = getContasFinanceiras().filter(c => c.status === 'Ativo');
-  const colaboradores = getColaboradores();
-  const cargos = getCargos();
+  const colaboradoresFinanceiros = obterFinanceiros();
   const fornecedoresList = getFornecedores();
+  const lojas = obterLojasAtivas();
   
   const [contaPagamento, setContaPagamento] = useState('');
   const [formaPagamento, setFormaPagamento] = useState('');
@@ -43,16 +46,8 @@ export default function FinanceiroNotasAssistencia() {
     status: 'todos'
   });
 
-  const lojasSolicitantes = ['Loja Centro', 'Loja Shopping', 'Loja Norte', 'Loja Sul', 'Loja Oeste', 'Loja Leste'];
-
-  // Filtrar colaboradores que têm permissão "Financeiro"
-  const colaboradoresFinanceiros = useMemo(() => {
-    const cargosComPermissaoFinanceiro = cargos
-      .filter(c => c.permissoes.includes('Financeiro'))
-      .map(c => c.id);
-    
-    return colaboradores.filter(col => cargosComPermissaoFinanceiro.includes(col.cargo));
-  }, [colaboradores, cargos]);
+  // Usar lojas do store ao invés de array hardcoded
+  const lojasSolicitantes = lojas.map(l => l.nome);
 
   // Filtrar e ordenar notas
   const filteredNotas = useMemo(() => {

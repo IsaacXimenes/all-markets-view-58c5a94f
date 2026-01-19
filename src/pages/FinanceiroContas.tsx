@@ -8,13 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Download, Edit, Plus, Trash2 } from 'lucide-react';
-import { getContas, getLojas, addConta, updateConta, deleteConta, Conta } from '@/utils/financeApi';
+import { getContas, addConta, updateConta, deleteConta, Conta } from '@/utils/financeApi';
 import { exportToCSV } from '@/utils/formatUtils';
 import { toast } from 'sonner';
+import { useCadastroStore } from '@/store/cadastroStore';
 
 export default function FinanceiroContas() {
   const [contas, setContas] = useState(getContas());
-  const lojas = getLojas();
+  const { obterLojasAtivas, obterNomeLoja } = useCadastroStore();
+  const lojas = obterLojasAtivas();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingConta, setEditingConta] = useState<Conta | null>(null);
 
@@ -182,7 +184,7 @@ export default function FinanceiroContas() {
                         </SelectTrigger>
                         <SelectContent>
                           {lojas.map(loja => (
-                            <SelectItem key={loja} value={loja}>{loja}</SelectItem>
+                            <SelectItem key={loja.id} value={loja.nome}>{loja.nome}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
