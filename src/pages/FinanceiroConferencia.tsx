@@ -12,7 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Check, Download, Filter, X, Clock, CheckCircle2, Undo2, AlertCircle, CreditCard, Banknote, Smartphone, Wallet, ChevronRight, Lock, MessageSquare, XCircle, Save, Building2, History, UserCheck, Calendar, User, CheckCircle } from 'lucide-react';
-import { getContasFinanceiras, getColaboradores, getCargos, getLojas } from '@/utils/cadastrosApi';
+import { getContasFinanceiras } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { useFluxoVendas } from '@/hooks/useFluxoVendas';
 import { 
   finalizarVenda, 
@@ -81,14 +82,14 @@ interface AprovacaoGestor {
 
 export default function FinanceiroConferencia() {
   const navigate = useNavigate();
+  const { obterLojasAtivas, obterColaboradoresAtivos, obterFinanceiros, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   const { vendas, recarregar } = useFluxoVendas({
     status: ['Conferência Financeiro', 'Finalizado']
   });
   
   const contasFinanceiras = getContasFinanceiras();
-  const colaboradores = getColaboradores();
-  const cargos = getCargos();
-  const lojas = getLojas();
+  const colaboradores = obterColaboradoresAtivos();
+  const lojas = obterLojasAtivas();
   
   // Modais e estados
   const [vendaSelecionada, setVendaSelecionada] = useState<VendaComFluxo | null>(null);
@@ -119,13 +120,12 @@ export default function FinanceiroConferencia() {
     metodoPagamento: 'todos' // NOVO: Filtro por método de pagamento
   });
 
-  // Filtrar colaboradores com permissão "Financeiro"
+  // Filtrar colaboradores com permissão "Financeiro" (usando a flag do cargo)
   const colaboradoresFinanceiros = useMemo(() => {
-    const cargosComPermissaoFinanceiro = cargos
-      .filter(c => c.permissoes.includes('Financeiro'))
-      .map(c => c.id);
-    return colaboradores.filter(col => cargosComPermissaoFinanceiro.includes(col.cargo));
-  }, [colaboradores, cargos]);
+    return colaboradores.filter(col => 
+      col.cargo.toLowerCase().includes('financeiro') || col.eh_gestor
+    );
+  }, [colaboradores]);
 
   // Calcular situação de conferência de uma venda
   const getSituacaoConferencia = (venda: VendaComFluxo): SituacaoConferencia => {

@@ -34,6 +34,8 @@ interface CadastroStore {
   obterEstoquistas: () => ColaboradorMockado[];
   obterTecnicos: () => ColaboradorMockado[];
   obterMotoboys: () => ColaboradorMockado[];
+  obterFinanceiros: () => ColaboradorMockado[];
+  obterAniversariantesDaSemana: () => ColaboradorMockado[];
   adicionarColaborador: (colaborador: Omit<ColaboradorMockado, 'id' | 'data_criacao'>) => ColaboradorMockado;
   atualizarColaborador: (id: string, updates: Partial<ColaboradorMockado>) => void;
   deletarColaborador: (id: string) => void;
@@ -41,6 +43,7 @@ interface CadastroStore {
   // Lookup helpers
   obterNomeLoja: (lojaId: string) => string;
   obterNomeColaborador: (colaboradorId: string) => string;
+  obterContagemColaboradoresPorLoja: () => Record<string, number>;
 }
 
 // Gerar ID único
@@ -196,6 +199,35 @@ export const useCadastroStore = create<CadastroStore>((set, get) => ({
     );
   },
   
+  obterFinanceiros: () => {
+    return get().colaboradores.filter(col => 
+      col.cargo.toLowerCase().includes('financeiro') && col.ativo
+    );
+  },
+  
+  obterAniversariantesDaSemana: () => {
+    const hoje = new Date();
+    const umaSemana = new Date(hoje);
+    umaSemana.setDate(hoje.getDate() + 7);
+    
+    return get().colaboradores.filter(col => {
+      if (!col.ativo) return false;
+      
+      // Extrair mês e dia do aniversário
+      const [, mesNasc, diaNasc] = col.data_admissao.split('-').map(Number);
+      
+      // Criar data de aniversário para este ano
+      const aniversarioEsteAno = new Date(hoje.getFullYear(), mesNasc - 1, diaNasc);
+      
+      // Se já passou, verificar próximo ano
+      if (aniversarioEsteAno < hoje) {
+        aniversarioEsteAno.setFullYear(hoje.getFullYear() + 1);
+      }
+      
+      return aniversarioEsteAno >= hoje && aniversarioEsteAno <= umaSemana;
+    });
+  },
+  
   adicionarColaborador: (colaborador) => {
     const novoColaborador: ColaboradorMockado = {
       ...colaborador,
@@ -239,5 +271,13 @@ export const useCadastroStore = create<CadastroStore>((set, get) => ({
   obterNomeColaborador: (colaboradorId: string) => {
     const colaborador = get().colaboradores.find(c => c.id === colaboradorId);
     return colaborador?.nome || colaboradorId;
+  },
+  
+  obterContagemColaboradoresPorLoja: () => {
+    const contagem: Record<string, number> = {};
+    get().colaboradores.filter(c => c.ativo).forEach(col => {
+      contagem[col.loja_id] = (contagem[col.loja_id] || 0) + 1;
+    });
+    return contagem;
   }
 }));

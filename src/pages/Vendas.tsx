@@ -9,16 +9,17 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Download, Eye, TrendingUp, DollarSign, Percent, ShoppingCart, CreditCard } from 'lucide-react';
 import { getVendas, exportVendasToCSV, formatCurrency, Venda } from '@/utils/vendasApi';
-import { getLojas, getColaboradores, Loja, Colaborador } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { getStatusConferenciaByVendaId, StatusConferencia } from '@/utils/conferenciaGestorApi';
 import { getGarantiasByVendaId, calcularStatusExpiracao } from '@/utils/garantiasApi';
 import { format, addMonths } from 'date-fns';
 
 export default function Vendas() {
   const navigate = useNavigate();
+  const { obterLojasAtivas, obterColaboradoresAtivos, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   const [vendas] = useState<Venda[]>(getVendas());
-  const [lojas] = useState<Loja[]>(getLojas());
-  const [colaboradores] = useState<Colaborador[]>(getColaboradores());
+  const lojas = obterLojasAtivas();
+  const colaboradores = obterColaboradoresAtivos();
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [lojaFiltro, setLojaFiltro] = useState('');
@@ -34,20 +35,17 @@ export default function Vendas() {
   };
 
   const getLojaName = (id: string) => {
-    const loja = lojas.find(l => l.id === id);
-    return loja?.nome || id;
+    return obterNomeLoja(id);
   };
 
   const getColaboradorNome = (id: string) => {
-    const col = colaboradores.find(c => c.id === id);
-    return col?.nome || id;
+    return obterNomeColaborador(id);
   };
 
   const getResponsavelLoja = (lojaId: string) => {
-    const loja = lojas.find(l => l.id === lojaId);
-    if (!loja) return '-';
-    const responsavel = colaboradores.find(c => c.id === loja.responsavel);
-    return responsavel?.nome || loja.responsavel;
+    // Para o novo modelo, buscamos o gestor da loja
+    const gestorLoja = colaboradores.find(c => c.loja_id === lojaId && c.eh_gestor);
+    return gestorLoja?.nome || '-';
   };
 
   // Cálculos corretos para cada venda

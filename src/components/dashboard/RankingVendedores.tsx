@@ -2,36 +2,29 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Trophy, Medal, Award, TrendingUp, Store } from 'lucide-react';
-import { getColaboradores, getLojaById, getCargos } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/utils/formatUtils';
 import { getPercentualComissao } from '@/utils/calculoComissaoVenda';
 
 // Gerar dados mock de vendas para ranking com comissões
-const getTopSellers = (limit: number) => {
-  const colaboradores = getColaboradores().filter(c => c.status === 'Ativo');
-  const cargos = getCargos();
-  
-  // Filtrar apenas vendedores
-  const cargoVendedor = cargos.find(c => c.funcao.toLowerCase().includes('vendedor'));
-  const vendedores = colaboradores.filter(c => 
-    c.cargo === cargoVendedor?.id || 
-    cargos.find(cargo => cargo.id === c.cargo)?.funcao.toLowerCase().includes('vendedor')
-  );
+const useTopSellers = (limit: number) => {
+  const { obterVendedores, obterLojaById } = useCadastroStore();
+  const vendedores = obterVendedores();
   
   // Gerar vendas mock baseadas no ID para consistência
   const vendedoresComVendas = vendedores.map(v => {
-    const seed = parseInt(v.id.replace('COL-', '')) || 1;
+    const seed = parseInt(v.id.replace(/\D/g, '')) || 1;
     const sales = Math.floor(15000 + (seed * 3500) + Math.sin(seed) * 5000);
     const lucro = sales * 0.3; // ~30% margem
     // Calcular comissão baseada na loja do vendedor
-    const percentualComissao = getPercentualComissao(v.loja);
+    const percentualComissao = v.comissao || getPercentualComissao(v.loja_id);
     const commission = lucro * (percentualComissao / 100);
     
     return {
       id: v.id,
       name: v.nome,
-      storeId: v.loja || '',
+      storeId: v.loja_id || '',
       sales,
       lucro,
       commission,
@@ -45,7 +38,8 @@ const getTopSellers = (limit: number) => {
 };
 
 export function RankingVendedores() {
-  const topSellers = getTopSellers(10);
+  const { obterLojaById } = useCadastroStore();
+  const topSellers = useTopSellers(10);
   
   const getInitials = (name: string) => {
     const parts = name.split(' ');
@@ -71,7 +65,7 @@ export function RankingVendedores() {
         <div className="space-y-2">
           {/* Top 3 em Destaque */}
           {topSellers.slice(0, 3).map((seller, index) => {
-            const store = getLojaById(seller.storeId);
+            const store = obterLojaById(seller.storeId);
             const position = index + 1;
             
             return (
@@ -113,7 +107,7 @@ export function RankingVendedores() {
           {/* Demais (4º ao 10º) */}
           <div className="pt-2 space-y-1">
             {topSellers.slice(3).map((seller, index) => {
-              const store = getLojaById(seller.storeId);
+              const store = obterLojaById(seller.storeId);
               const position = index + 4;
               
               return (
