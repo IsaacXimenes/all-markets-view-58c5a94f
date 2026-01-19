@@ -1,73 +1,110 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CadastrosLayout } from '@/components/layout/CadastrosLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { getColaboradores, addColaborador, updateColaborador, deleteColaborador, getCargos, getModelosPagamento, Colaborador, getCargoById, getModeloPagamentoById, getLojas, getLojaById } from '@/utils/cadastrosApi';
-import { exportToCSV } from '@/utils/formatUtils';
-import { Plus, Pencil, Trash2, Download } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { useCadastroStore } from '@/store/cadastroStore';
+import { ColaboradorMockado } from '@/types/mockData';
+import { exportToCSV, formatCurrency } from '@/utils/formatUtils';
+import { Plus, Pencil, Trash2, Download, User, Users, Shield, Package, Wrench, Bike } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+
+const CARGOS = [
+  'Gestor (a)',
+  'Gestor (a) Geral',
+  'Vendedor (a)',
+  'Estoquista',
+  'Técnico',
+  'Motoboy',
+  'Assistente Administrativo',
+  'Socio Administrador'
+];
 
 export default function CadastrosColaboradores() {
   const { toast } = useToast();
-  const [colaboradores, setColaboradores] = useState(getColaboradores());
-  const [cargos] = useState(getCargos());
-  const [modelosPagamento] = useState(getModelosPagamento());
-  const [lojas] = useState(getLojas().filter(l => l.status === 'Ativo'));
+  const { 
+    colaboradores,
+    lojas,
+    inicializarDadosMockados, 
+    adicionarColaborador, 
+    atualizarColaborador, 
+    deletarColaborador,
+    obterNomeLoja
+  } = useCadastroStore();
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingColaborador, setEditingColaborador] = useState<Colaborador | null>(null);
+  const [editingColaborador, setEditingColaborador] = useState<ColaboradorMockado | null>(null);
+  const [filtroLoja, setFiltroLoja] = useState<string>('todos');
+  const [filtroCargo, setFiltroCargo] = useState<string>('todos');
+  const [filtroNome, setFiltroNome] = useState('');
+  const [filtroStatus, setFiltroStatus] = useState<string>('ativos');
+  
   const [form, setForm] = useState({
-    cpf: '',
     nome: '',
-    cargo: '',
-    loja: '',
-    dataAdmissao: '',
-    dataInativacao: '',
-    dataNascimento: '',
+    cpf: '',
     email: '',
     telefone: '',
-    modeloPagamento: '',
-    salario: '',
-    status: 'Ativo' as 'Ativo' | 'Inativo'
+    loja_id: '',
+    cargo: '',
+    data_admissao: '',
+    salario_fixo: 0,
+    ajuda_custo: 0,
+    comissao: 0,
+    eh_gestor: false,
+    eh_vendedor: false,
+    eh_estoquista: false,
+    ativo: true
   });
+
+  // Inicializar dados ao carregar
+  useEffect(() => {
+    inicializarDadosMockados();
+  }, [inicializarDadosMockados]);
 
   const resetForm = () => {
     setForm({
-      cpf: '',
       nome: '',
-      cargo: '',
-      loja: '',
-      dataAdmissao: '',
-      dataInativacao: '',
-      dataNascimento: '',
+      cpf: '',
       email: '',
       telefone: '',
-      modeloPagamento: '',
-      salario: '',
-      status: 'Ativo'
+      loja_id: '',
+      cargo: '',
+      data_admissao: '',
+      salario_fixo: 0,
+      ajuda_custo: 0,
+      comissao: 0,
+      eh_gestor: false,
+      eh_vendedor: false,
+      eh_estoquista: false,
+      ativo: true
     });
     setEditingColaborador(null);
   };
 
-  const handleOpenDialog = (colaborador?: Colaborador) => {
+  const handleOpenDialog = (colaborador?: ColaboradorMockado) => {
     if (colaborador) {
       setEditingColaborador(colaborador);
       setForm({
-        cpf: colaborador.cpf,
         nome: colaborador.nome,
-        cargo: colaborador.cargo,
-        loja: colaborador.loja,
-        dataAdmissao: colaborador.dataAdmissao,
-        dataInativacao: colaborador.dataInativacao || '',
-        dataNascimento: colaborador.dataNascimento || '',
+        cpf: colaborador.cpf,
         email: colaborador.email,
         telefone: colaborador.telefone,
-        modeloPagamento: colaborador.modeloPagamento,
-        salario: colaborador.salario?.toString() || '',
-        status: colaborador.status
+        loja_id: colaborador.loja_id,
+        cargo: colaborador.cargo,
+        data_admissao: colaborador.data_admissao,
+        salario_fixo: colaborador.salario_fixo,
+        ajuda_custo: colaborador.ajuda_custo,
+        comissao: colaborador.comissao,
+        eh_gestor: colaborador.eh_gestor,
+        eh_vendedor: colaborador.eh_vendedor,
+        eh_estoquista: colaborador.eh_estoquista,
+        ativo: colaborador.ativo
       });
     } else {
       resetForm();
@@ -76,43 +113,145 @@ export default function CadastrosColaboradores() {
   };
 
   const handleSave = () => {
-    if (!form.nome || !form.cpf || !form.cargo || !form.loja) {
-      toast({ title: 'Erro', description: 'Nome, CPF, Cargo e Loja são obrigatórios', variant: 'destructive' });
+    if (!form.nome || !form.loja_id || !form.cargo) {
+      toast({ title: 'Erro', description: 'Nome, Loja e Cargo são obrigatórios', variant: 'destructive' });
       return;
     }
 
-    const colaboradorData = {
-      ...form,
-      salario: form.salario ? parseFloat(form.salario) : undefined
-    };
-
     if (editingColaborador) {
-      updateColaborador(editingColaborador.id, colaboradorData);
+      atualizarColaborador(editingColaborador.id, form);
       toast({ title: 'Sucesso', description: 'Colaborador atualizado com sucesso' });
     } else {
-      addColaborador(colaboradorData);
+      adicionarColaborador(form);
       toast({ title: 'Sucesso', description: 'Colaborador cadastrado com sucesso' });
     }
 
-    setColaboradores(getColaboradores());
     setIsDialogOpen(false);
     resetForm();
   };
 
   const handleDelete = (id: string) => {
-    deleteColaborador(id);
-    setColaboradores(getColaboradores());
+    deletarColaborador(id);
     toast({ title: 'Sucesso', description: 'Colaborador removido com sucesso' });
   };
 
   const handleExport = () => {
-    exportToCSV(colaboradores, 'colaboradores.csv');
+    const dadosExport = colaboradoresFiltrados.map(col => ({
+      ID: col.id,
+      Nome: col.nome,
+      CPF: col.cpf,
+      Email: col.email,
+      Telefone: col.telefone,
+      Loja: obterNomeLoja(col.loja_id),
+      Cargo: col.cargo,
+      'Data Admissão': col.data_admissao,
+      'Salário Fixo': col.salario_fixo,
+      'Ajuda de Custo': col.ajuda_custo,
+      Comissão: col.comissao,
+      'É Gestor': col.eh_gestor ? 'Sim' : 'Não',
+      'É Vendedor': col.eh_vendedor ? 'Sim' : 'Não',
+      'É Estoquista': col.eh_estoquista ? 'Sim' : 'Não',
+      Status: col.ativo ? 'Ativo' : 'Inativo'
+    }));
+    exportToCSV(dadosExport, 'colaboradores.csv');
+  };
+
+  // Atualizar flags baseado no cargo
+  const handleCargoChange = (cargo: string) => {
+    const cargoLower = cargo.toLowerCase();
+    setForm({ 
+      ...form, 
+      cargo,
+      eh_gestor: cargoLower.includes('gestor') || cargoLower.includes('soci'),
+      eh_vendedor: cargoLower.includes('vendedor'),
+      eh_estoquista: cargoLower.includes('estoquista')
+    });
+  };
+
+  const colaboradoresFiltrados = colaboradores.filter(col => {
+    if (filtroStatus === 'ativos' && !col.ativo) return false;
+    if (filtroStatus === 'inativos' && col.ativo) return false;
+    if (filtroLoja !== 'todos' && col.loja_id !== filtroLoja) return false;
+    if (filtroCargo !== 'todos' && col.cargo !== filtroCargo) return false;
+    if (filtroNome && !col.nome.toLowerCase().includes(filtroNome.toLowerCase())) return false;
+    return true;
+  });
+
+  const getCargoBadgeClass = (cargo: string) => {
+    const cargoLower = cargo.toLowerCase();
+    if (cargoLower.includes('gestor') || cargoLower.includes('soci')) return 'bg-purple-500/10 text-purple-600 border-purple-500/30';
+    if (cargoLower.includes('vendedor')) return 'bg-green-500/10 text-green-600 border-green-500/30';
+    if (cargoLower.includes('estoquista')) return 'bg-blue-500/10 text-blue-600 border-blue-500/30';
+    if (cargoLower.includes('técnico')) return 'bg-orange-500/10 text-orange-600 border-orange-500/30';
+    if (cargoLower.includes('motoboy')) return 'bg-cyan-500/10 text-cyan-600 border-cyan-500/30';
+    return 'bg-gray-500/10 text-gray-600 border-gray-500/30';
+  };
+
+  const getCargoIcon = (cargo: string) => {
+    const cargoLower = cargo.toLowerCase();
+    if (cargoLower.includes('gestor') || cargoLower.includes('soci')) return <Shield className="h-4 w-4" />;
+    if (cargoLower.includes('vendedor')) return <User className="h-4 w-4" />;
+    if (cargoLower.includes('estoquista')) return <Package className="h-4 w-4" />;
+    if (cargoLower.includes('técnico')) return <Wrench className="h-4 w-4" />;
+    if (cargoLower.includes('motoboy')) return <Bike className="h-4 w-4" />;
+    return <Users className="h-4 w-4" />;
+  };
+
+  // Contadores
+  const contadores = {
+    gestores: colaboradores.filter(c => c.eh_gestor && c.ativo).length,
+    vendedores: colaboradores.filter(c => c.eh_vendedor && c.ativo).length,
+    estoquistas: colaboradores.filter(c => c.eh_estoquista && c.ativo).length,
+    tecnicos: colaboradores.filter(c => c.cargo.toLowerCase().includes('técnico') && c.ativo).length,
+    motoboys: colaboradores.filter(c => c.cargo.toLowerCase().includes('motoboy') && c.ativo).length,
+    total: colaboradores.filter(c => c.ativo).length
   };
 
   return (
     <CadastrosLayout title="Cadastro de Colaboradores">
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
+        {/* Filtros e Ações */}
+        <div className="flex flex-wrap justify-between items-center gap-4">
+          <div className="flex gap-2 flex-wrap">
+            <Input 
+              placeholder="Buscar por nome..." 
+              value={filtroNome}
+              onChange={(e) => setFiltroNome(e.target.value)}
+              className="w-60"
+            />
+            <Select value={filtroLoja} onValueChange={setFiltroLoja}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Loja" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todas as Lojas</SelectItem>
+                {lojas.filter(l => l.ativa).map(loja => (
+                  <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filtroCargo} onValueChange={setFiltroCargo}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Cargo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os Cargos</SelectItem>
+                {CARGOS.map(cargo => (
+                  <SelectItem key={cargo} value={cargo}>{cargo}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ativos">Ativos</SelectItem>
+                <SelectItem value="inativos">Inativos</SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex gap-2">
             <Button onClick={() => handleOpenDialog()}>
               <Plus className="mr-2 h-4 w-4" />
@@ -125,35 +264,67 @@ export default function CadastrosColaboradores() {
           </div>
         </div>
 
+        {/* Contadores */}
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500/30">
+            <Shield className="h-3 w-3 mr-1" /> Gestores: {contadores.gestores}
+          </Badge>
+          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+            <User className="h-3 w-3 mr-1" /> Vendedores: {contadores.vendedores}
+          </Badge>
+          <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">
+            <Package className="h-3 w-3 mr-1" /> Estoquistas: {contadores.estoquistas}
+          </Badge>
+          <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">
+            <Wrench className="h-3 w-3 mr-1" /> Técnicos: {contadores.tecnicos}
+          </Badge>
+          <Badge variant="outline" className="bg-cyan-500/10 text-cyan-600 border-cyan-500/30">
+            <Bike className="h-3 w-3 mr-1" /> Motoboys: {contadores.motoboys}
+          </Badge>
+          <Badge variant="outline" className="bg-muted">
+            <Users className="h-3 w-3 mr-1" /> Total Ativos: {contadores.total}
+          </Badge>
+        </div>
+
+        {/* Tabela */}
         <div className="rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
                 <TableHead>Nome</TableHead>
-                <TableHead>CPF</TableHead>
                 <TableHead>Loja</TableHead>
                 <TableHead>Cargo</TableHead>
-                <TableHead>Admissão</TableHead>
+                <TableHead>Telefone</TableHead>
+                <TableHead>Data Admissão</TableHead>
                 <TableHead>Salário</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {colaboradores.map(col => (
+              {colaboradoresFiltrados.map(col => (
                 <TableRow key={col.id}>
-                  <TableCell className="font-mono text-xs">{col.id}</TableCell>
-                  <TableCell className="font-medium">{col.nome}</TableCell>
-                  <TableCell className="text-xs">{col.cpf}</TableCell>
-                  <TableCell>{getLojaById(col.loja)?.nome || '-'}</TableCell>
-                  <TableCell>{getCargoById(col.cargo)?.funcao || '-'}</TableCell>
-                  <TableCell>{new Date(col.dataAdmissao).toLocaleDateString('pt-BR')}</TableCell>
-                  <TableCell>{col.salario ? `R$ ${col.salario.toLocaleString('pt-BR')}` : '-'}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {getCargoIcon(col.cargo)}
+                      {col.nome}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm">{obterNomeLoja(col.loja_id)}</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${col.status === 'Ativo' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {col.status}
-                    </span>
+                    <Badge variant="outline" className={getCargoBadgeClass(col.cargo)}>
+                      {col.cargo}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">{col.telefone || '-'}</TableCell>
+                  <TableCell className="text-sm">
+                    {col.data_admissao ? format(new Date(col.data_admissao), 'dd/MM/yyyy') : '-'}
+                  </TableCell>
+                  <TableCell className="text-sm">{formatCurrency(col.salario_fixo)}</TableCell>
+                  <TableCell>
+                    <Badge variant={col.ativo ? 'default' : 'secondary'}>
+                      {col.ativo ? 'Ativo' : 'Inativo'}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -167,31 +338,47 @@ export default function CadastrosColaboradores() {
                   </TableCell>
                 </TableRow>
               ))}
+              {colaboradoresFiltrados.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    Nenhum colaborador encontrado
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
       </div>
 
+      {/* Dialog de Cadastro/Edição */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingColaborador ? 'Editar Colaborador' : 'Novo Colaborador'}</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-            <div className="space-y-2">
-              <Label>CPF *</Label>
-              <Input value={form.cpf} onChange={e => setForm({ ...form, cpf: e.target.value })} placeholder="999.999.999-99" />
-            </div>
-            <div className="space-y-2">
-              <Label>Nome *</Label>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Nome Completo *</Label>
               <Input value={form.nome} onChange={e => setForm({ ...form, nome: e.target.value })} />
             </div>
             <div className="space-y-2">
+              <Label>CPF</Label>
+              <Input value={form.cpf} onChange={e => setForm({ ...form, cpf: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Telefone</Label>
+              <Input value={form.telefone} onChange={e => setForm({ ...form, telefone: e.target.value })} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Email</Label>
+              <Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+            </div>
+            <div className="space-y-2">
               <Label>Loja *</Label>
-              <Select value={form.loja} onValueChange={v => setForm({ ...form, loja: v })}>
+              <Select value={form.loja_id} onValueChange={v => setForm({ ...form, loja_id: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {lojas.map(loja => (
+                  {lojas.filter(l => l.ativa).map(loja => (
                     <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
                   ))}
                 </SelectContent>
@@ -199,53 +386,70 @@ export default function CadastrosColaboradores() {
             </div>
             <div className="space-y-2">
               <Label>Cargo *</Label>
-              <Select value={form.cargo} onValueChange={v => setForm({ ...form, cargo: v })}>
+              <Select value={form.cargo} onValueChange={handleCargoChange}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
-                  {cargos.map(cargo => (
-                    <SelectItem key={cargo.id} value={cargo.id}>{cargo.funcao}</SelectItem>
+                  {CARGOS.map(cargo => (
+                    <SelectItem key={cargo} value={cargo}>{cargo}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
               <Label>Data de Admissão</Label>
-              <Input type="date" value={form.dataAdmissao} onChange={e => setForm({ ...form, dataAdmissao: e.target.value })} />
+              <Input type="date" value={form.data_admissao} onChange={e => setForm({ ...form, data_admissao: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>Data de Nascimento</Label>
-              <Input type="date" value={form.dataNascimento} onChange={e => setForm({ ...form, dataNascimento: e.target.value })} />
+              <Label>Salário Fixo</Label>
+              <Input 
+                type="number" 
+                value={form.salario_fixo} 
+                onChange={e => setForm({ ...form, salario_fixo: parseFloat(e.target.value) || 0 })} 
+              />
             </div>
             <div className="space-y-2">
-              <Label>E-mail</Label>
-              <Input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+              <Label>Ajuda de Custo</Label>
+              <Input 
+                type="number" 
+                value={form.ajuda_custo} 
+                onChange={e => setForm({ ...form, ajuda_custo: parseFloat(e.target.value) || 0 })} 
+              />
             </div>
             <div className="space-y-2">
-              <Label>Telefone</Label>
-              <Input value={form.telefone} onChange={e => setForm({ ...form, telefone: e.target.value })} />
+              <Label>Comissão (%)</Label>
+              <Input 
+                type="number" 
+                value={form.comissao} 
+                onChange={e => setForm({ ...form, comissao: parseFloat(e.target.value) || 0 })} 
+              />
             </div>
-            <div className="space-y-2">
-              <Label>Salário Base (R$)</Label>
-              <Input type="number" value={form.salario} onChange={e => setForm({ ...form, salario: e.target.value })} placeholder="2500.00" />
+
+            {/* Flags */}
+            <div className="md:col-span-2 space-y-4 pt-4 border-t">
+              <Label className="text-base font-medium">Permissões</Label>
+              <div className="flex flex-wrap gap-6">
+                <div className="flex items-center gap-2">
+                  <Switch checked={form.eh_gestor} onCheckedChange={v => setForm({ ...form, eh_gestor: v })} />
+                  <Label>É Gestor</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={form.eh_vendedor} onCheckedChange={v => setForm({ ...form, eh_vendedor: v })} />
+                  <Label>É Vendedor</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={form.eh_estoquista} onCheckedChange={v => setForm({ ...form, eh_estoquista: v })} />
+                  <Label>É Estoquista</Label>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Modelo de Pagamento</Label>
-              <Select value={form.modeloPagamento} onValueChange={v => setForm({ ...form, modeloPagamento: v })}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {modelosPagamento.map(mp => (
-                    <SelectItem key={mp.id} value={mp.id}>{mp.modelo}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+
             <div className="space-y-2">
               <Label>Status</Label>
-              <Select value={form.status} onValueChange={v => setForm({ ...form, status: v as 'Ativo' | 'Inativo' })}>
+              <Select value={form.ativo ? 'ativo' : 'inativo'} onValueChange={v => setForm({ ...form, ativo: v === 'ativo' })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Ativo">Ativo</SelectItem>
-                  <SelectItem value="Inativo">Inativo</SelectItem>
+                  <SelectItem value="ativo">Ativo</SelectItem>
+                  <SelectItem value="inativo">Inativo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
