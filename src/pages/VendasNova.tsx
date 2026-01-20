@@ -25,7 +25,7 @@ import {
   addCliente
 } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
-import { getProdutos, Produto, updateProduto, bloquearProdutosEmVenda } from '@/utils/estoqueApi';
+import { getProdutos, Produto, updateProduto, bloquearProdutosEmVenda, getLojaEstoqueReal, LOJA_MATRIZ_ID, LOJA_ONLINE_ID } from '@/utils/estoqueApi';
 import { addVenda, getNextVendaNumber, getHistoricoComprasCliente, ItemVenda, ItemTradeIn, Pagamento } from '@/utils/vendasApi';
 import { inicializarVendaNoFluxo } from '@/utils/fluxoVendasApi';
 import { getAcessorios, Acessorio, subtrairEstoqueAcessorio, VendaAcessorio } from '@/utils/acessoriosApi';
@@ -37,6 +37,8 @@ import { getPlanosPorModelo, PlanoGarantia } from '@/utils/planosGarantiaApi';
 import { displayIMEI, formatIMEI } from '@/utils/imeiMask';
 import { formatarMoeda, moedaMask, parseMoeda } from '@/utils/formatUtils';
 import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 
 // Alias para compatibilidade
 const formatCurrency = formatarMoeda;
@@ -46,10 +48,11 @@ const DRAFT_KEY = 'draft_venda_nova';
 
 export default function VendasNova() {
   const navigate = useNavigate();
-  const { obterLojasAtivas, obterVendedores, obterMotoboys, obterLojaById, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
+  const { obterLojasAtivas, obterLojasTipoLoja, obterVendedores, obterMotoboys, obterLojaById, obterNomeLoja, obterNomeColaborador, obterLojaMatriz, obterLojaOnline } = useCadastroStore();
   
   // Dados do cadastros - usando Zustand store
   const lojas = obterLojasAtivas();
+  const lojasTipoLoja = obterLojasTipoLoja(); // Apenas lojas tipo 'Loja' para seleção
   const vendedoresDisponiveis = obterVendedores();
   const motoboys = obterMotoboys();
   const [clientes, setClientes] = useState<Cliente[]>(getClientes());
@@ -445,12 +448,20 @@ export default function VendasNova() {
     toast({ title: "Sucesso", description: "Cliente cadastrado com sucesso!" });
   };
 
-  // Produtos filtrados - FILTRA PELA LOJA SELECIONADA NA VENDA
+  // Produtos filtrados - FILTRA PELA LOJA SELECIONADA NA VENDA (considerando compartilhamento Online/Matriz)
   const produtosFiltrados = useMemo(() => {
     return produtosEstoque.filter(p => {
       if (p.quantidade <= 0) return false;
-      // Se uma loja foi selecionada para a venda, só mostrar produtos dessa loja
-      if (lojaVenda && p.loja !== lojaVenda) return false;
+      if (p.bloqueadoEmVendaId) return false; // Não mostrar produtos bloqueados
+      if (p.statusMovimentacao) return false; // Não mostrar produtos em movimentação
+      
+      // Se uma loja foi selecionada para a venda
+      if (lojaVenda) {
+        // Obter a loja de estoque real (considerando compartilhamento Online/Matriz)
+        const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
+        if (p.loja !== lojaEstoqueReal) return false;
+      }
+      
       // Filtros adicionais do modal
       if (filtroLojaProduto && p.loja !== filtroLojaProduto) return false;
       if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
@@ -459,12 +470,15 @@ export default function VendasNova() {
     });
   }, [produtosEstoque, lojaVenda, filtroLojaProduto, buscaProduto, buscaModeloProduto]);
 
-  // Produtos de OUTRAS lojas (para visualização apenas)
+  // Produtos de OUTRAS lojas (para visualização apenas - bloqueados para seleção)
   const produtosOutrasLojas = useMemo(() => {
     if (!lojaVenda) return [];
+    const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
     return produtosEstoque.filter(p => {
       if (p.quantidade <= 0) return false;
-      if (p.loja === lojaVenda) return false; // Excluir loja da venda
+      if (p.bloqueadoEmVendaId) return false;
+      if (p.statusMovimentacao) return false;
+      if (p.loja === lojaEstoqueReal) return false; // Excluir loja de estoque real
       if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
       if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
       return true;
@@ -878,29 +892,21 @@ export default function VendasNova() {
               </div>
               <div>
                 <label className="text-sm font-medium">Loja de Venda *</label>
-                <Select value={lojaVenda} onValueChange={setLojaVenda}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a loja" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lojas.filter(l => l.ativa).map(loja => (
-                      <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <AutocompleteLoja
+                  value={lojaVenda}
+                  onChange={setLojaVenda}
+                  placeholder="Selecione a loja"
+                  apenasLojasTipoLoja={true}
+                />
               </div>
               <div>
                 <label className="text-sm font-medium">Responsável pela Venda *</label>
-                <Select value={vendedor} onValueChange={setVendedor}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o responsável" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vendedoresDisponiveis.map(col => (
-                      <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <AutocompleteColaborador
+                  value={vendedor}
+                  onChange={setVendedor}
+                  placeholder="Selecione o responsável"
+                  filtrarPorTipo="vendedores"
+                />
               </div>
             </div>
 

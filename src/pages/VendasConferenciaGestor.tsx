@@ -215,7 +215,8 @@ export default function VendasConferenciaGestor() {
   const handleFecharPainelLateral = () => {
     setVendaSelecionada(null);
     setValidacoesPagamento([]);
-    setObservacaoGestor('');
+    setObservacaoGestor(''); // Limpar observação ao fechar
+    setMotivoRecusa(''); // Limpar motivo de recusa
   };
 
   const handleAbrirModalRecusar = () => {
@@ -475,7 +476,7 @@ export default function VendasConferenciaGestor() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="todas">Todas as lojas</SelectItem>
-                      {lojas.map(loja => (
+                      {lojas.filter(l => l.tipo === 'Loja').map(loja => (
                         <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
                       ))}
                     </SelectContent>
@@ -590,11 +591,11 @@ export default function VendasConferenciaGestor() {
                                 <Button 
                                   size="sm"
                                   onClick={(e) => { e.stopPropagation(); handleAbrirPainelLateral(venda); }}
-                                  title="Aprovar"
+                                  title="Conferir"
                                   className="bg-green-600 hover:bg-green-700"
                                 >
                                   <Check className="h-4 w-4 mr-1" />
-                                  Aprovar
+                                  Conferir
                                 </Button>
                               )}
                             </div>

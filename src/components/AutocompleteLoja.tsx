@@ -13,6 +13,7 @@ interface AutocompleteLojaProps {
   placeholder?: string;
   filtrarPorTipo?: TipoLoja;
   apenasAtivas?: boolean;
+  apenasLojasTipoLoja?: boolean; // Novo: filtrar apenas lojas tipo 'Loja'
   className?: string;
   disabled?: boolean;
 }
@@ -23,10 +24,11 @@ export function AutocompleteLoja({
   placeholder = 'Selecione uma loja',
   filtrarPorTipo,
   apenasAtivas = true,
+  apenasLojasTipoLoja = false,
   className,
   disabled = false
 }: AutocompleteLojaProps) {
-  const { lojas, obterLojaById } = useCadastroStore();
+  const { lojas, obterLojaById, obterLojasTipoLoja } = useCadastroStore();
   const [filtro, setFiltro] = useState('');
   const [aberto, setAberto] = useState(false);
 
@@ -36,13 +38,14 @@ export function AutocompleteLoja({
   }, [value, obterLojaById]);
 
   const lojasFiltradas = useMemo(() => {
-    let resultado = lojas;
+    // Se filtrar apenas por tipo 'Loja', usar método otimizado
+    let resultado = apenasLojasTipoLoja ? obterLojasTipoLoja() : lojas;
     
-    if (apenasAtivas) {
+    if (apenasAtivas && !apenasLojasTipoLoja) {
       resultado = resultado.filter(loja => loja.ativa);
     }
     
-    if (filtrarPorTipo) {
+    if (filtrarPorTipo && !apenasLojasTipoLoja) {
       resultado = resultado.filter(loja => loja.tipo === filtrarPorTipo);
     }
     
@@ -53,7 +56,7 @@ export function AutocompleteLoja({
     }
     
     return resultado;
-  }, [lojas, filtro, filtrarPorTipo, apenasAtivas]);
+  }, [lojas, filtro, filtrarPorTipo, apenasAtivas, apenasLojasTipoLoja, obterLojasTipoLoja]);
 
   const handleSelect = (lojaId: string) => {
     onChange(lojaId);

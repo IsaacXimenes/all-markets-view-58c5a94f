@@ -18,6 +18,9 @@ interface CadastroStore {
   obterLojas: () => LojaMockada[];
   obterLojasPorTipo: (tipo: TipoLoja) => LojaMockada[];
   obterLojasAtivas: () => LojaMockada[];
+  obterLojasTipoLoja: () => LojaMockada[]; // Novo: apenas lojas tipo 'Loja'
+  obterLojaMatriz: () => LojaMockada | undefined;
+  obterLojaOnline: () => LojaMockada | undefined;
   obterLojaById: (id: string) => LojaMockada | undefined;
   adicionarLoja: (loja: Omit<LojaMockada, 'id' | 'data_criacao'>) => LojaMockada;
   atualizarLoja: (id: string, updates: Partial<LojaMockada>) => void;
@@ -123,6 +126,21 @@ export const useCadastroStore = create<CadastroStore>((set, get) => ({
   
   obterLojasAtivas: () => {
     return get().lojas.filter(loja => loja.ativa);
+  },
+  
+  // Novo: apenas lojas com tipo 'Loja' (para filtros de vendas/movimentações)
+  obterLojasTipoLoja: () => {
+    return get().lojas.filter(loja => loja.tipo === 'Loja' && loja.ativa);
+  },
+  
+  // Novo: obter loja Matriz
+  obterLojaMatriz: () => {
+    return get().lojas.find(loja => loja.nome.toLowerCase().includes('matriz') && loja.tipo === 'Loja');
+  },
+  
+  // Novo: obter loja Online
+  obterLojaOnline: () => {
+    return get().lojas.find(loja => loja.nome.toLowerCase().includes('online') && loja.tipo === 'Loja');
   },
   
   obterLojaById: (id: string) => {

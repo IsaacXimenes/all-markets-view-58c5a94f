@@ -99,10 +99,27 @@ export interface Movimentacao {
 const LOJAS_IDS = {
   JK_SHOPPING: 'db894e7d',      // Loja - JK Shopping
   MATRIZ: '3ac7e00c',            // Loja - Matriz
-  ONLINE: 'fcc78c1a',            // Loja - Online
+  ONLINE: 'fcc78c1a',            // Loja - Online (COMPARTILHA ESTOQUE COM MATRIZ)
   SHOPPING_SUL: '5b9446d5',      // Loja - Shopping Sul
   AGUAS_LINDAS: '0d06e7db',      // Loja - Águas Lindas Shopping
   ACESSORIOS: '11a1d7d3',        // Loja - Acessórios
+};
+
+// Constantes para compartilhamento de estoque
+export const LOJA_MATRIZ_ID = LOJAS_IDS.MATRIZ;
+export const LOJA_ONLINE_ID = LOJAS_IDS.ONLINE;
+
+// Função para verificar se uma loja compartilha estoque com a Matriz
+export const compartilhaEstoqueComMatriz = (lojaId: string): boolean => {
+  return lojaId === LOJA_ONLINE_ID;
+};
+
+// Função para obter o ID da loja de estoque real (considerando compartilhamento)
+export const getLojaEstoqueReal = (lojaId: string): string => {
+  if (compartilhaEstoqueComMatriz(lojaId)) {
+    return LOJA_MATRIZ_ID;
+  }
+  return lojaId;
 };
 
 const fornecedores = [
@@ -864,8 +881,36 @@ export const getProdutosDisponiveis = (): Produto[] => {
   return produtos.filter(p => p.quantidade > 0 && !p.bloqueadoEmVendaId && !p.statusMovimentacao);
 };
 
+// Obter produtos disponíveis para uma loja específica (considerando compartilhamento Online/Matriz)
+export const getProdutosDisponiveisPorLoja = (lojaId: string): Produto[] => {
+  const lojaEstoqueReal = getLojaEstoqueReal(lojaId);
+  return produtos.filter(p => 
+    p.quantidade > 0 && 
+    !p.bloqueadoEmVendaId && 
+    !p.statusMovimentacao && 
+    p.loja === lojaEstoqueReal
+  );
+};
+
 // Verificar se produto está bloqueado
 export const isProdutoBloqueado = (produtoId: string): boolean => {
   const produto = produtos.find(p => p.id === produtoId);
   return produto?.bloqueadoEmVendaId !== undefined;
+};
+
+// Abater produto do estoque (considerando compartilhamento Online/Matriz)
+export const abaterProdutoDoEstoque = (produtoId: string, lojaVendaId: string): boolean => {
+  const produto = produtos.find(p => p.id === produtoId);
+  if (!produto) return false;
+  
+  // Se a venda é na Online, abate do estoque da Matriz
+  const lojaEstoqueReal = getLojaEstoqueReal(lojaVendaId);
+  
+  if (produto.loja === lojaEstoqueReal && produto.quantidade > 0) {
+    produto.quantidade -= 1;
+    console.log(`Produto ${produtoId} abatido do estoque da loja ${lojaEstoqueReal}`);
+    return true;
+  }
+  
+  return false;
 };

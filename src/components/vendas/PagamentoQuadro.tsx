@@ -34,6 +34,9 @@ interface NovoPagamentoState extends Partial<Pagamento> {
   maquinaId?: string;
   taxaCartao?: number;
   valorLiquido?: number;
+  // Campos específicos para Boleto/Crediário
+  boletoValorFinalCliente?: number;
+  boletoValorVenda?: number;
 }
 
 // Função para obter parcelamentos da máquina ou usar valores padrão
@@ -185,6 +188,21 @@ export function PagamentoQuadro({
         maquinaId: undefined, 
         taxaCartao: 0, 
         valorLiquido: novoPagamento.valor 
+      });
+    } else if (v === 'Boleto') {
+      // Boleto/Crediário - campos especiais
+      setNovoPagamento({ 
+        ...novoPagamento, 
+        meioPagamento: v, 
+        parcelas: undefined, 
+        isFiado: false, 
+        fiadoDataBase: undefined, 
+        fiadoNumeroParcelas: undefined, 
+        maquinaId: undefined, 
+        taxaCartao: 0, 
+        valorLiquido: undefined,
+        boletoValorFinalCliente: undefined,
+        boletoValorVenda: undefined
       });
     } else {
       // Pix, Dinheiro, Transferência - sem taxa
@@ -502,6 +520,7 @@ export function PagamentoQuadro({
                   <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
                   <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
                   <SelectItem value="Transferência">Transferência</SelectItem>
+                  <SelectItem value="Boleto">Boleto/Crediário</SelectItem>
                   <SelectItem value="Sinal">Sinal</SelectItem>
                   <SelectItem value="Fiado">Fiado</SelectItem>
                 </SelectContent>
@@ -659,6 +678,86 @@ export function PagamentoQuadro({
                 <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg text-sm text-yellow-700 dark:text-yellow-300 flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
                   As parcelas serão geradas automaticamente na tela "Conferências - Fiado" no módulo Financeiro.
+                </div>
+              </>
+            )}
+
+            {/* Campos específicos para Boleto/Crediário */}
+            {novoPagamento.meioPagamento === 'Boleto' && (
+              <>
+                <div>
+                  <label className="text-sm font-medium">Valor Final Cliente *</label>
+                  <p className="text-xs text-muted-foreground mb-1">Valor total que o cliente pagará ao crediário</p>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <Input 
+                      type="text"
+                      value={novoPagamento.boletoValorFinalCliente ? moedaMask(novoPagamento.boletoValorFinalCliente) : ''}
+                      onChange={(e) => {
+                        const valorNum = parseMoeda(e.target.value);
+                        const valorVenda = novoPagamento.boletoValorVenda || 0;
+                        setNovoPagamento({ 
+                          ...novoPagamento, 
+                          boletoValorFinalCliente: valorNum,
+                          valor: valorVenda, // Valor da venda é o que entra na loja
+                          valorLiquido: valorVenda,
+                          taxaCartao: 0
+                        });
+                      }}
+                      className="pl-10"
+                      placeholder="0,00"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Valor da Venda *</label>
+                  <p className="text-xs text-muted-foreground mb-1">Valor que a loja receberá</p>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                    <Input 
+                      type="text"
+                      value={novoPagamento.boletoValorVenda ? moedaMask(novoPagamento.boletoValorVenda) : ''}
+                      onChange={(e) => {
+                        const valorNum = parseMoeda(e.target.value);
+                        setNovoPagamento({ 
+                          ...novoPagamento, 
+                          boletoValorVenda: valorNum,
+                          valor: valorNum, // Valor da venda é o que entra na loja
+                          valorLiquido: valorNum,
+                          taxaCartao: 0
+                        });
+                      }}
+                      className="pl-10"
+                      placeholder="0,00"
+                    />
+                  </div>
+                </div>
+                
+                {/* Card de resumo do Boleto */}
+                {novoPagamento.boletoValorFinalCliente && novoPagamento.boletoValorVenda && (
+                  <div className="p-4 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                    <h4 className="font-semibold text-indigo-700 dark:text-indigo-300 mb-3">Resumo Boleto/Crediário</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Valor Final Cliente:</span>
+                        <span className="font-medium">{formatarMoeda(novoPagamento.boletoValorFinalCliente)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Valor da Venda:</span>
+                        <span className="font-medium text-green-600">{formatarMoeda(novoPagamento.boletoValorVenda)}</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between font-bold text-indigo-700 dark:text-indigo-300">
+                        <span>Valor Para o Crediário:</span>
+                        <span>{formatarMoeda(novoPagamento.boletoValorFinalCliente - novoPagamento.boletoValorVenda)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg text-sm text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Boleto/Crediário: O cliente pagará parcelado diretamente ao parceiro de crédito.
                 </div>
               </>
             )}
