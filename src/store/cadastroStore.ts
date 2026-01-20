@@ -60,11 +60,16 @@ export const useCadastroStore = create<CadastroStore>((set, get) => ({
     const state = get();
     if (state.inicializado) return;
     
-    // Tentar carregar do localStorage primeiro
+    // Versão dos dados mockados - incrementar quando houver alterações no JSON
+    const DATA_VERSION_KEY = 'cadastros_data_version';
+    const CURRENT_VERSION = '2.0'; // Incrementado para forçar reinicialização
+    
+    const storedVersion = localStorage.getItem(DATA_VERSION_KEY);
     const lojasStorage = localStorage.getItem(LOJAS_KEY);
     const colaboradoresStorage = localStorage.getItem(COLABORADORES_KEY);
     
-    if (lojasStorage && colaboradoresStorage) {
+    // Se a versão for diferente ou não existir, forçar reload dos dados mockados
+    if (storedVersion === CURRENT_VERSION && lojasStorage && colaboradoresStorage) {
       try {
         const lojas = JSON.parse(lojasStorage) as LojaMockada[];
         const colaboradores = JSON.parse(colaboradoresStorage) as ColaboradorMockado[];
@@ -75,7 +80,10 @@ export const useCadastroStore = create<CadastroStore>((set, get) => ({
       }
     }
     
-    // Se não houver dados no localStorage, usar dados mockados
+    // Limpar dados antigos e usar dados mockados atualizados
+    localStorage.removeItem(LOJAS_KEY);
+    localStorage.removeItem(COLABORADORES_KEY);
+    
     const dados = dadosMockados as DadosMockados;
     set({ 
       lojas: dados.lojas, 
@@ -83,9 +91,10 @@ export const useCadastroStore = create<CadastroStore>((set, get) => ({
       inicializado: true 
     });
     
-    // Salvar em localStorage
+    // Salvar em localStorage com versão
     localStorage.setItem(LOJAS_KEY, JSON.stringify(dados.lojas));
     localStorage.setItem(COLABORADORES_KEY, JSON.stringify(dados.colaboradores));
+    localStorage.setItem(DATA_VERSION_KEY, CURRENT_VERSION);
   },
   
   carregarDoLocalStorage: () => {
