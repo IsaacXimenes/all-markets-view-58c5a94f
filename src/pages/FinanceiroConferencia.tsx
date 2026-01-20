@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Check, Download, Filter, X, Clock, CheckCircle2, Undo2, AlertCircle, CreditCard, Banknote, Smartphone, Wallet, ChevronRight, Lock, MessageSquare, XCircle, Save, Building2, History, UserCheck, Calendar, User, CheckCircle } from 'lucide-react';
+import { Check, Download, Filter, X, Clock, CheckCircle2, Undo2, AlertCircle, CreditCard, Banknote, Smartphone, Wallet, ChevronRight, Lock, MessageSquare, XCircle, Save, Building2, History, UserCheck, Calendar, User, CheckCircle, FileText, Timer } from 'lucide-react';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useFluxoVendas } from '@/hooks/useFluxoVendas';
@@ -40,7 +40,37 @@ interface LinhaConferencia {
   conferido: boolean;
   conferidoPor?: string;
   dataConferencia?: string;
+  tempoSLA?: string;
+  slaHoras?: number;
 }
+
+// Função para calcular SLA em formato legível
+const calcularSLA = (dataEntradaFinanceiro: string | undefined, statusFluxo: string): { texto: string; horas: number } => {
+  if (!dataEntradaFinanceiro) return { texto: '-', horas: 0 };
+  
+  const dataInicio = new Date(dataEntradaFinanceiro);
+  const dataFim = statusFluxo === 'Finalizado' 
+    ? new Date() // Para finalizados, usamos agora (poderia ser a data de finalização)
+    : new Date();
+  
+  const diffMs = dataFim.getTime() - dataInicio.getTime();
+  const diffHoras = diffMs / (1000 * 60 * 60);
+  const diffMinutos = (diffMs % (1000 * 60 * 60)) / (1000 * 60);
+  
+  if (diffHoras >= 24) {
+    const dias = Math.floor(diffHoras / 24);
+    const horasRestantes = Math.floor(diffHoras % 24);
+    return { 
+      texto: `${dias} Dia${dias > 1 ? 's' : ''} e ${horasRestantes}h`, 
+      horas: diffHoras 
+    };
+  }
+  
+  return { 
+    texto: `${Math.floor(diffHoras)}h ${Math.floor(diffMinutos)}m`, 
+    horas: diffHoras 
+  };
+};
 
 // Interface para histórico de conferências
 interface HistoricoConferencia {
@@ -162,6 +192,12 @@ export default function FinanceiroConferencia() {
       const validacoesFinanceiro: ValidacaoPagamento[] = storedValidacoes ? JSON.parse(storedValidacoes) : [];
       const contaOrigem = getContaOrigem(venda);
       
+      // Calcular SLA baseado na entrada em Conferência Financeiro
+      const dataEntradaFinanceiro = venda.timeline?.find(t => 
+        t.descricao?.includes('Conferência Financeiro') || t.tipo === 'aprovacao_gestor'
+      )?.dataHora;
+      const slaResult = calcularSLA(dataEntradaFinanceiro, venda.statusFluxo);
+      
       venda.pagamentos?.forEach(pag => {
         const validacao = validacoesFinanceiro.find(v => v.metodoPagamento === pag.meioPagamento);
         const contaDestinoId = validacao?.contaDestinoId || contaOrigem?.id || '';
@@ -176,7 +212,9 @@ export default function FinanceiroConferencia() {
           contaDestinoNome: contaDestino?.nome || 'Não informada',
           conferido: validacao?.validadoFinanceiro || venda.statusFluxo === 'Finalizado',
           conferidoPor: validacao?.conferidoPor,
-          dataConferencia: validacao?.dataValidacaoFinanceiro
+          dataConferencia: validacao?.dataValidacaoFinanceiro,
+          tempoSLA: slaResult.texto,
+          slaHoras: slaResult.horas
         });
       });
     });
@@ -211,6 +249,7 @@ export default function FinanceiroConferencia() {
         if (filters.metodoPagamento === 'pix' && !metodoLower.includes('pix')) return false;
         if (filters.metodoPagamento === 'credito' && !(metodoLower.includes('crédito') || metodoLower.includes('credito'))) return false;
         if (filters.metodoPagamento === 'debito' && !(metodoLower.includes('débito') || metodoLower.includes('debito'))) return false;
+        if (filters.metodoPagamento === 'boleto' && !(metodoLower.includes('boleto') || metodoLower.includes('crediário'))) return false;
       }
       
       // Filtro por situação
@@ -230,8 +269,8 @@ export default function FinanceiroConferencia() {
   // Calcular somatórios dinâmicos baseados no filtro de método
   const somatorioPagamentos = useMemo(() => {
     const totais = {
-      pendente: { cartaoCredito: 0, cartaoDebito: 0, pix: 0, dinheiro: 0 },
-      conferido: { cartaoCredito: 0, cartaoDebito: 0, pix: 0, dinheiro: 0 }
+      pendente: { cartaoCredito: 0, cartaoDebito: 0, pix: 0, dinheiro: 0, boleto: 0 },
+      conferido: { cartaoCredito: 0, cartaoDebito: 0, pix: 0, dinheiro: 0, boleto: 0 }
     };
 
     filteredLinhas.forEach(linha => {
@@ -246,6 +285,8 @@ export default function FinanceiroConferencia() {
         target.pix += linha.valor;
       } else if (meio.includes('dinheiro')) {
         target.dinheiro += linha.valor;
+      } else if (meio.includes('boleto') || meio.includes('crediário')) {
+        target.boleto += linha.valor;
       }
     });
 
@@ -255,13 +296,14 @@ export default function FinanceiroConferencia() {
   // Verificar se deve mostrar cards específicos baseado no filtro
   const mostrarCardsPorFiltro = useMemo(() => {
     if (filters.metodoPagamento === 'todos') {
-      return { credito: true, debito: true, pix: true, dinheiro: true };
+      return { credito: true, debito: true, pix: true, dinheiro: true, boleto: true };
     }
     return {
       credito: filters.metodoPagamento === 'credito',
       debito: filters.metodoPagamento === 'debito',
       pix: filters.metodoPagamento === 'pix',
-      dinheiro: filters.metodoPagamento === 'dinheiro'
+      dinheiro: filters.metodoPagamento === 'dinheiro',
+      boleto: filters.metodoPagamento === 'boleto'
     };
   }, [filters.metodoPagamento]);
 
@@ -710,10 +752,23 @@ export default function FinanceiroConferencia() {
                 </CardContent>
               </Card>
             )}
+
+            {mostrarCardsPorFiltro.boleto && (
+              <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+                <CardContent className="pt-3 pb-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-red-600 opacity-70" />
+                    <div>
+                      <p className="text-xs text-red-700 dark:text-red-300">Pendente - Boleto</p>
+                      <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.boleto)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {/* Conferidos */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             {mostrarCardsPorFiltro.credito && (
               <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
                 <CardContent className="pt-3 pb-3">
@@ -764,6 +819,20 @@ export default function FinanceiroConferencia() {
                     <div>
                       <p className="text-xs text-green-700 dark:text-green-300">Conferido - Dinheiro</p>
                       <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.dinheiro)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {mostrarCardsPorFiltro.boleto && (
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+                <CardContent className="pt-3 pb-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-green-600 opacity-70" />
+                    <div>
+                      <p className="text-xs text-green-700 dark:text-green-300">Conferido - Boleto</p>
+                      <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.boleto)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -854,6 +923,7 @@ export default function FinanceiroConferencia() {
                       <SelectItem value="pix">Pix</SelectItem>
                       <SelectItem value="credito">Cartão de Crédito</SelectItem>
                       <SelectItem value="debito">Cartão de Débito</SelectItem>
+                      <SelectItem value="boleto">Boleto/Crediário</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -899,9 +969,14 @@ export default function FinanceiroConferencia() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[50px]">✓</TableHead>
                       <TableHead>ID Venda</TableHead>
                       <TableHead>Data</TableHead>
+                      <TableHead>
+                        <div className="flex items-center gap-1">
+                          <Timer className="h-4 w-4" />
+                          SLA
+                        </div>
+                      </TableHead>
                       <TableHead>Método Pagamento</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
                       <TableHead>Conta Destino</TableHead>
@@ -923,25 +998,20 @@ export default function FinanceiroConferencia() {
                         className={`${getRowClassName(linha)} ${vendaSelecionada?.id === linha.vendaId ? 'ring-2 ring-primary' : ''} cursor-pointer`}
                         onClick={() => handleSelecionarVenda(linha.venda)}
                       >
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Checkbox
-                            checked={linha.conferido}
-                            disabled={linha.venda.statusFluxo === 'Finalizado'}
-                            onCheckedChange={() => {
-                              handleSelecionarVenda(linha.venda);
-                              setTimeout(() => {
-                                const validacao = validacoesPagamento.find(v => v.metodoPagamento === linha.metodoPagamento) || {
-                                  metodoPagamento: linha.metodoPagamento,
-                                  validadoGestor: false,
-                                  validadoFinanceiro: linha.conferido
-                                };
-                                handleAbrirModalConfirmacao(validacao);
-                              }, 100);
-                            }}
-                          />
-                        </TableCell>
                         <TableCell className="font-medium">{linha.vendaId}</TableCell>
                         <TableCell>{new Date(linha.venda.dataHora).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell>
+                          <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                            linha.slaHoras && linha.slaHoras >= 24 
+                              ? 'bg-destructive/20 text-destructive' 
+                              : linha.slaHoras && linha.slaHoras >= 12 
+                                ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400' 
+                                : 'bg-muted text-muted-foreground'
+                          }`}>
+                            <Timer className="h-3 w-3" />
+                            {linha.tempoSLA || '-'}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="whitespace-nowrap">
                             {linha.metodoPagamento}

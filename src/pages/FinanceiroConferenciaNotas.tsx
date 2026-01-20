@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getNotasCompra, finalizarNota, NotaCompra } from '@/utils/estoqueApi';
 import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
-import { Eye, CheckCircle, Download, Filter, X, Check } from 'lucide-react';
+import { Eye, CheckCircle, Download, Filter, X, Check, FileText, Clock, CheckCircle2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { migrarProdutosNotaParaPendentes } from '@/utils/osApi';
@@ -81,6 +81,19 @@ export default function FinanceiroConferenciaNotas() {
       return new Date(b.data).getTime() - new Date(a.data).getTime();
     });
   }, [notas, filters]);
+
+  // Cards dinâmicos de resumo
+  const resumoNotas = useMemo(() => {
+    const valorTotal = filteredNotas.reduce((acc, n) => acc + n.valorTotal, 0);
+    const valorConferido = filteredNotas
+      .filter(n => n.statusExtendido === 'Concluído')
+      .reduce((acc, n) => acc + n.valorTotal, 0);
+    const valorPendente = filteredNotas
+      .filter(n => n.statusExtendido === 'Enviado para Financeiro')
+      .reduce((acc, n) => acc + n.valorTotal, 0);
+    
+    return { valorTotal, valorConferido, valorPendente };
+  }, [filteredNotas]);
 
   const totalPendente = useMemo(() => {
     return filteredNotas
@@ -263,6 +276,43 @@ export default function FinanceiroConferenciaNotas() {
   return (
     <FinanceiroLayout title="Conferência de Notas de Entrada">
       <div className="space-y-6">
+        {/* Cards de Resumo Dinâmicos */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Valor Total das Notas</p>
+                  <p className="text-2xl font-bold">{formatCurrency(resumoNotas.valorTotal)}</p>
+                </div>
+                <FileText className="h-10 w-10 text-muted-foreground opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Valor Conferido</p>
+                  <p className="text-2xl font-bold text-green-600">{formatCurrency(resumoNotas.valorConferido)}</p>
+                </div>
+                <CheckCircle2 className="h-10 w-10 text-green-500 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Valor Pendente de Conferência</p>
+                  <p className="text-2xl font-bold text-yellow-600">{formatCurrency(resumoNotas.valorPendente)}</p>
+                </div>
+                <Clock className="h-10 w-10 text-yellow-500 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Filtros - Igual à Conferência de Contas */}
         <Card>
           <CardHeader>
