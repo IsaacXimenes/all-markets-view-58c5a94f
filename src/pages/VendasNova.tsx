@@ -2098,6 +2098,61 @@ export default function VendasNova() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {produtosFiltrados.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
+                        Nenhum produto disponível nesta loja
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {/* Separador visual para produtos de outras lojas */}
+                  {lojaVenda && produtosOutrasLojas.length > 0 && (
+                    <>
+                      <TableRow className="bg-muted/50">
+                        <TableCell colSpan={8} className="text-center py-2 font-medium text-muted-foreground">
+                          📍 Produtos em outras lojas (apenas visualização)
+                        </TableCell>
+                      </TableRow>
+                      {produtosOutrasLojas.map(produto => (
+                        <TableRow key={produto.id} className="opacity-60 bg-muted/20">
+                          <TableCell className="font-mono text-xs">{produto.id}</TableCell>
+                          <TableCell className="font-medium">{produto.modelo}</TableCell>
+                          <TableCell>
+                            <Badge variant={produto.tipo === 'Novo' ? 'default' : 'secondary'}>
+                              {produto.tipo || 'Semi-novo'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{produto.imei}</TableCell>
+                          <TableCell>{produto.quantidade}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(produto.valorVendaSugerido)}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+                              {obterNomeLoja(produto.loja)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleVerDetalhes(produto)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="sm"
+                                variant="outline"
+                                disabled
+                                className="text-muted-foreground"
+                              >
+                                Outra loja
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </>
+                  )}
                 </TableBody>
               </Table>
             ) : (
