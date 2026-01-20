@@ -881,7 +881,7 @@ export default function VendasNova() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <label className="text-sm font-medium">ID da Venda</label>
                 <Input value={vendaInfo.id} disabled className="bg-muted" />
@@ -907,6 +907,19 @@ export default function VendasNova() {
                   placeholder="Selecione o responsável"
                   filtrarPorTipo="vendedores"
                 />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Origem da Venda *</label>
+                <Select value={origemVenda} onValueChange={setOrigemVenda}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a origem" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {origensVenda.filter(o => o.status === 'Ativo').map(origem => (
+                      <SelectItem key={origem.id} value={origem.origem}>{origem.origem}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -1011,34 +1024,6 @@ export default function VendasNova() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <label className="text-sm font-medium">Origem da Venda *</label>
-                <Select value={origemVenda} onValueChange={setOrigemVenda}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a origem" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {origensVenda.filter(o => o.status === 'Ativo').map(origem => (
-                      <SelectItem key={origem.id} value={origem.origem}>{origem.origem}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Local de Retirada *</label>
-                <Select value={localRetirada} onValueChange={setLocalRetirada}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o local" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lojas.filter(l => l.ativa).map(loja => (
-                      <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
           </CardContent>
         </Card>
 
