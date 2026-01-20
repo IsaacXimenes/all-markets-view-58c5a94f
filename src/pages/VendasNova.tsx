@@ -2077,7 +2077,7 @@ export default function VendasNova() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">{formatCurrency(produto.valorVendaSugerido)}</TableCell>
-                      <TableCell>{produto.loja}</TableCell>
+                      <TableCell>{obterNomeLoja(produto.loja)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button 
@@ -2133,7 +2133,7 @@ export default function VendasNova() {
                       <TableCell>
                         <Badge variant="destructive">Bloqueado</Badge>
                       </TableCell>
-                      <TableCell>{produto.loja}</TableCell>
+                      <TableCell>{obterNomeLoja(produto.loja)}</TableCell>
                       <TableCell>
                         <Button 
                           variant="ghost" 
