@@ -36,6 +36,7 @@ import { useFluxoVendas } from '@/hooks/useFluxoVendas';
 import { 
   aprovarGestor, 
   recusarGestor,
+  enviarParaPagamentoDowngrade,
   getCorBadgeStatus,
   exportFluxoToCSV,
   VendaComFluxo,
@@ -67,7 +68,7 @@ export default function VendasConferenciaGestor() {
   const navigate = useNavigate();
   const { obterLojasAtivas, obterColaboradoresAtivos, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   const { vendas, recarregar } = useFluxoVendas({
-    status: ['Conferência Gestor', 'Devolvido pelo Financeiro', 'Conferência Financeiro', 'Finalizado']
+    status: ['Conferência Gestor', 'Devolvido pelo Financeiro', 'Conferência Financeiro', 'Pagamento Downgrade', 'Finalizado']
   });
   
   const lojas = obterLojasAtivas();
@@ -237,18 +238,24 @@ export default function VendasConferenciaGestor() {
   const handleFinalizarAprovacao = () => {
     if (!vendaSelecionada) return;
 
-    // Validar se todos os checkboxes estão marcados
-    const naoValidados = validacoesPagamento.filter(v => !v.validadoGestor);
-    if (naoValidados.length > 0) {
-      toast.error('Todos os métodos de pagamento devem ser validados antes de finalizar.');
-      return;
-    }
+    // Para vendas Downgrade, não há validação de pagamentos
+    const isDowngrade = (vendaSelecionada as any).tipoOperacao === 'Downgrade' && 
+                        (vendaSelecionada as any).saldoDevolver > 0;
+    
+    // Validar se todos os checkboxes estão marcados (apenas para vendas normais)
+    if (!isDowngrade) {
+      const naoValidados = validacoesPagamento.filter(v => !v.validadoGestor);
+      if (naoValidados.length > 0) {
+        toast.error('Todos os métodos de pagamento devem ser validados antes de finalizar.');
+        return;
+      }
 
-    // Salvar validações de pagamento
-    localStorage.setItem(
-      `validacao_pagamentos_${vendaSelecionada.id}`,
-      JSON.stringify(validacoesPagamento)
-    );
+      // Salvar validações de pagamento
+      localStorage.setItem(
+        `validacao_pagamentos_${vendaSelecionada.id}`,
+        JSON.stringify(validacoesPagamento)
+      );
+    }
 
     // Salvar observação do gestor
     if (observacaoGestor.trim()) {
@@ -264,18 +271,37 @@ export default function VendasConferenciaGestor() {
       );
     }
 
-    const resultado = aprovarGestor(
-      vendaSelecionada.id,
-      usuarioLogado.id,
-      usuarioLogado.nome
-    );
+    // Se for Downgrade, enviar para Pagamento Downgrade
+    if (isDowngrade) {
+      const resultado = enviarParaPagamentoDowngrade(
+        vendaSelecionada.id,
+        usuarioLogado.id,
+        usuarioLogado.nome,
+        (vendaSelecionada as any).saldoDevolver
+      );
 
-    if (resultado) {
-      toast.success(`Venda ${vendaSelecionada.id} aprovada! Enviada para Conferência Financeira.`);
-      handleFecharPainelLateral();
-      recarregar();
+      if (resultado) {
+        toast.success(`Venda DOWNGRADE ${vendaSelecionada.id} aprovada! Enviada para Pagamento Downgrade.`);
+        handleFecharPainelLateral();
+        recarregar();
+      } else {
+        toast.error('Erro ao aprovar venda. Verifique o status.');
+      }
     } else {
-      toast.error('Erro ao aprovar venda. Verifique o status.');
+      // Fluxo normal: enviar para Conferência Financeiro
+      const resultado = aprovarGestor(
+        vendaSelecionada.id,
+        usuarioLogado.id,
+        usuarioLogado.nome
+      );
+
+      if (resultado) {
+        toast.success(`Venda ${vendaSelecionada.id} aprovada! Enviada para Conferência Financeira.`);
+        handleFecharPainelLateral();
+        recarregar();
+      } else {
+        toast.error('Erro ao aprovar venda. Verifique o status.');
+      }
     }
   };
 
@@ -556,7 +582,14 @@ export default function VendasConferenciaGestor() {
                           className={`${getRowClassName(venda.statusFluxo as StatusVenda)} ${vendaSelecionada?.id === venda.id ? 'ring-2 ring-primary' : ''} cursor-pointer`}
                           onClick={() => handleAbrirPainelLateral(venda)}
                         >
-                          <TableCell className="font-medium">{venda.id}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {venda.id}
+                              {(venda as any).tipoOperacao === 'Downgrade' && (venda as any).saldoDevolver > 0 && (
+                                <Badge variant="destructive" className="text-xs">DOWNGRADE</Badge>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell className="whitespace-nowrap">
                             {new Date(venda.dataHora).toLocaleDateString('pt-BR')}
                             <span className="text-muted-foreground ml-1">

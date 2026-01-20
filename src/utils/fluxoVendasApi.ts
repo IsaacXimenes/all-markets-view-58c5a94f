@@ -500,6 +500,8 @@ export const getCorBadgeStatus = (status: StatusVenda): { bg: string; text: stri
       return { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' };
     case 'Devolvido pelo Financeiro':
       return { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' };
+    case 'Pagamento Downgrade':
+      return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' };
     case 'Finalizado':
       return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200' };
     case 'Cancelada':

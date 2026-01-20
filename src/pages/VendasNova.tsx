@@ -110,6 +110,7 @@ export default function VendasNova() {
   const [tradeIns, setTradeIns] = useState<ItemTradeIn[]>([]);
   const [showTradeInModal, setShowTradeInModal] = useState(false);
   const [novoTradeIn, setNovoTradeIn] = useState<Partial<ItemTradeIn>>({});
+  const [tipoOperacaoTroca, setTipoOperacaoTroca] = useState<'Upgrade' | 'Downgrade'>('Upgrade');
   
   // Pagamentos
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
@@ -285,7 +286,24 @@ export default function VendasNova() {
   const totalPagamentos = useMemo(() => pagamentos.reduce((acc, p) => acc + p.valor, 0), [pagamentos]);
   const valorGarantiaExtendida = garantiaExtendida?.valor || 0;
   const valorProdutos = subtotal + totalAcessorios;
-  const total = useMemo(() => subtotal + totalAcessorios - totalTradeIn + taxaEntrega + valorGarantiaExtendida, [subtotal, totalAcessorios, totalTradeIn, taxaEntrega, valorGarantiaExtendida]);
+  
+  // Cálculos para Downgrade
+  const isDowngrade = tipoOperacaoTroca === 'Downgrade';
+  const saldoDevolver = useMemo(() => {
+    if (!isDowngrade) return 0;
+    const saldo = totalTradeIn - valorProdutos - taxaEntrega;
+    return saldo > 0 ? saldo : 0;
+  }, [isDowngrade, totalTradeIn, valorProdutos, taxaEntrega]);
+  const hasValidDowngrade = isDowngrade && saldoDevolver > 0;
+  
+  // Total considera Downgrade
+  const total = useMemo(() => {
+    if (isDowngrade) {
+      // Em downgrade, o total é o valor dos produtos menos o trade-in (pode ser negativo)
+      return subtotal + totalAcessorios - totalTradeIn + taxaEntrega + valorGarantiaExtendida;
+    }
+    return subtotal + totalAcessorios - totalTradeIn + taxaEntrega + valorGarantiaExtendida;
+  }, [subtotal, totalAcessorios, totalTradeIn, taxaEntrega, valorGarantiaExtendida, isDowngrade]);
   const valorPendente = useMemo(() => total - totalPagamentos, [total, totalPagamentos]);
   
   // Planos de garantia extendida disponíveis
@@ -803,7 +821,7 @@ export default function VendasNova() {
     }];
 
     // Registrar venda com status "Aguardando Conferência"
-    const venda = addVenda({
+    const vendaData: any = {
       dataHora: new Date().toISOString(),
       lojaVenda: confirmLoja,
       vendedor: confirmVendedor,
@@ -820,7 +838,7 @@ export default function VendasNova() {
       motoboyId: tipoRetirada === 'Entrega' ? motoboyId : undefined,
       itens,
       tradeIns,
-      pagamentos,
+      pagamentos: hasValidDowngrade ? [] : pagamentos, // Sem pagamentos em Downgrade
       subtotal,
       totalTradeIn,
       total,
@@ -830,8 +848,13 @@ export default function VendasNova() {
       status: 'Concluída',
       statusAtual: 'Aguardando Conferência',
       timeline: timelineInicial,
-      bloqueadoParaEdicao: false
-    });
+      bloqueadoParaEdicao: false,
+      // Campos de Downgrade
+      tipoOperacao: tipoOperacaoTroca,
+      saldoDevolver: hasValidDowngrade ? saldoDevolver : 0
+    };
+    
+    const venda = addVenda(vendaData);
 
     // Inicializar venda no fluxo de conferência (registra no localStorage)
     inicializarVendaNoFluxo(venda.id, confirmVendedor, vendedorNome);
@@ -1248,12 +1271,15 @@ export default function VendasNova() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={hasValidDowngrade ? 'border-2 border-destructive' : ''}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <ArrowLeftRight className="h-5 w-5" />
                 Base de Troca (Aparelhos de Troca)
+                {hasValidDowngrade && (
+                  <Badge variant="destructive" className="ml-2">DOWNGRADE</Badge>
+                )}
               </span>
               <Button variant="outline" onClick={() => setShowTradeInModal(true)}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -1262,6 +1288,34 @@ export default function VendasNova() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Abas UPGRADE / DOWNGRADE */}
+            {tradeIns.length > 0 && (
+              <div className="mb-4 border-b">
+                <div className="flex gap-1">
+                  <button
+                    className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                      tipoOperacaoTroca === 'Upgrade'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                    onClick={() => setTipoOperacaoTroca('Upgrade')}
+                  >
+                    UPGRADE
+                  </button>
+                  <button
+                    className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                      tipoOperacaoTroca === 'Downgrade'
+                        ? 'border-destructive text-destructive'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                    onClick={() => setTipoOperacaoTroca('Downgrade')}
+                  >
+                    DOWNGRADE
+                  </button>
+                </div>
+              </div>
+            )}
+            
             {tradeIns.length === 0 ? (
               <div className="text-center py-4 text-muted-foreground">
                 Nenhum item de troca adicionado.
@@ -1315,6 +1369,33 @@ export default function VendasNova() {
               <div className="mt-4 p-3 bg-destructive/10 rounded-lg flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
                 <span className="font-medium">Há item de troca com IMEI NÃO validado! Registrar venda desabilitado.</span>
+              </div>
+            )}
+            
+            {/* Card de Saldo a Devolver - Downgrade */}
+            {hasValidDowngrade && (
+              <div className="mt-4 p-4 bg-destructive/10 rounded-lg border-2 border-destructive">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                  <span className="font-bold text-destructive text-lg">OPERAÇÃO DOWNGRADE</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Valor Base de Troca</p>
+                    <p className="text-lg font-bold text-green-600">{formatCurrency(totalTradeIn)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Valor Produtos</p>
+                    <p className="text-lg font-bold">{formatCurrency(valorProdutos)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">PIX a Devolver</p>
+                    <p className="text-2xl font-bold text-destructive">{formatCurrency(saldoDevolver)}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-destructive/80 mt-2">
+                  * Em operações de Downgrade, o cliente recebe a diferença via PIX após aprovação do Financeiro.
+                </p>
               </div>
             )}
           </CardContent>
@@ -1544,14 +1625,37 @@ export default function VendasNova() {
           </CardContent>
         </Card>
 
-        {/* Pagamentos - Usando PagamentoQuadro */}
-        <PagamentoQuadro
-          valorTotalProdutos={total}
-          custoTotalProdutos={valorCustoTotal}
-          lojaVendaId={lojaVenda}
-          onPagamentosChange={setPagamentos}
-          pagamentosIniciais={pagamentos}
-        />
+        {/* Pagamentos - Bloqueado em Downgrade */}
+        {hasValidDowngrade ? (
+          <Card className="border-2 border-muted opacity-60">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                <CreditCard className="h-5 w-5" />
+                Pagamentos
+                <Badge variant="outline" className="ml-2">Bloqueado - Downgrade</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">Quadro de pagamentos bloqueado</p>
+                <p className="text-sm mt-2">
+                  Em operações de Downgrade, não há pagamento do cliente. 
+                  O valor de <span className="font-bold text-destructive">{formatCurrency(saldoDevolver)}</span> será 
+                  devolvido ao cliente via PIX após aprovação do Financeiro.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <PagamentoQuadro
+            valorTotalProdutos={total}
+            custoTotalProdutos={valorCustoTotal}
+            lojaVendaId={lojaVenda}
+            onPagamentosChange={setPagamentos}
+            pagamentosIniciais={pagamentos}
+          />
+        )}
 
         {/* Retirada e Logística */}
         <Card>
@@ -1761,6 +1865,22 @@ export default function VendasNova() {
               </div>
             )}
             
+            {/* Card de PIX a Devolver - Downgrade */}
+            {hasValidDowngrade && (
+              <div className="mt-4 p-4 bg-destructive/10 rounded-lg border-2 border-destructive">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    <span className="font-bold text-destructive">PIX a Devolver</span>
+                  </div>
+                  <span className="text-2xl font-bold text-destructive">{formatCurrency(saldoDevolver)}</span>
+                </div>
+                <p className="text-xs text-destructive/80 mt-2">
+                  Valor será pago ao cliente via PIX após aprovação do Gestor e execução pelo Financeiro.
+                </p>
+              </div>
+            )}
+            
             <Button 
               className="w-full mt-4" 
               variant="outline"
@@ -1780,7 +1900,7 @@ export default function VendasNova() {
           </Button>
           
           {/* Botão Salvar com Sinal - aparece quando tem pagamento Sinal */}
-          {temPagamentoSinal && (
+          {temPagamentoSinal && !hasValidDowngrade && (
             <Button 
               onClick={handleSalvarComSinal}
               disabled={!canSubmitSinal}
@@ -1791,8 +1911,20 @@ export default function VendasNova() {
             </Button>
           )}
           
-          {/* Botão Registrar Venda normal - só aparece se não tem sinal */}
-          {!temPagamentoSinal && (
+          {/* Botão Registrar Venda Downgrade */}
+          {hasValidDowngrade && (
+            <Button 
+              onClick={handleRegistrarVenda}
+              disabled={!canSubmit || tradeInNaoValidado}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              <ArrowLeftRight className="h-4 w-4 mr-2" />
+              Registrar Downgrade
+            </Button>
+          )}
+          
+          {/* Botão Registrar Venda normal - só aparece se não tem sinal e não é downgrade */}
+          {!temPagamentoSinal && !hasValidDowngrade && (
             <Button 
               onClick={handleRegistrarVenda}
               disabled={!canSubmit}
