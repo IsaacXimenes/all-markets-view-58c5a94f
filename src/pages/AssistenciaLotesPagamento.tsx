@@ -44,6 +44,7 @@ import { formatCurrency } from '@/utils/formatUtils';
 
 export default function AssistenciaLotesPagamento() {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useUrlTabs('atual');
   const [lotes, setLotes] = useState<LotePagamento[]>([]);
   const [loteAtual, setLoteAtual] = useState<LotePagamento | null>(null);
   const [solicitacoesAprovadas, setSolicitacoesAprovadas] = useState<SolicitacaoPeca[]>([]);
@@ -181,7 +182,7 @@ export default function AssistenciaLotesPagamento() {
         </Card>
       </div>
 
-      <Tabs defaultValue="atual" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="atual">Lote Atual</TabsTrigger>
           <TabsTrigger value="historico">Histórico de Lotes</TabsTrigger>

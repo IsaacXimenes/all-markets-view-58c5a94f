@@ -26,6 +26,7 @@ import { getLojas, getCargos, getLojaById, getCargoNome } from '@/utils/cadastro
 import { exportToCSV } from '@/utils/formatUtils';
 
 export default function RHComissaoPorLoja() {
+  const [activeTab, setActiveTab] = useUrlTabs('tabela');
   const [comissoes, setComissoes] = useState<ComissaoPorLoja[]>([]);
   const [lojas] = useState(() => getLojas().filter(l => l.status === 'Ativo'));
   const [cargos] = useState(() => getCargos());
@@ -302,7 +303,7 @@ export default function RHComissaoPorLoja() {
       </Card>
 
       {/* Tabs para visualização */}
-      <Tabs defaultValue="tabela" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="tabela">Visão Tabela</TabsTrigger>
           <TabsTrigger value="cargo">Agrupado por Cargo</TabsTrigger>
