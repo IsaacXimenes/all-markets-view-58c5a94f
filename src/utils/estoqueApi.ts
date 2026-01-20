@@ -94,8 +94,16 @@ export interface Movimentacao {
   responsavelRecebimento?: string; // Quem confirmou
 }
 
-// Dados mockados
-const lojas = ['LOJA-001', 'LOJA-002', 'LOJA-003', 'LOJA-004', 'LOJA-005'];
+// Dados mockados - IDs das lojas do useCadastroStore (JSON mockado)
+// Lojas tipo "Loja" para vincular produtos disponíveis para venda
+const LOJAS_IDS = {
+  JK_SHOPPING: 'db894e7d',      // Loja - JK Shopping
+  MATRIZ: '3ac7e00c',            // Loja - Matriz
+  ONLINE: 'fcc78c1a',            // Loja - Online
+  SHOPPING_SUL: '5b9446d5',      // Loja - Shopping Sul
+  AGUAS_LINDAS: '0d06e7db',      // Loja - Águas Lindas Shopping
+  ACESSORIOS: '11a1d7d3',        // Loja - Acessórios
+};
 
 const fornecedores = [
   'Apple Distribuidor BR',
@@ -123,7 +131,7 @@ let produtos: Produto[] = [
     valorVendaSugerido: 15120.00,
     vendaRecomendada: 12999.00,
     saudeBateria: 100,
-    loja: 'LOJA-001',
+    loja: LOJAS_IDS.JK_SHOPPING,
     estoqueConferido: true,
     assistenciaConferida: true,
     condicao: 'Lacrado',
@@ -150,7 +158,7 @@ let produtos: Produto[] = [
     valorVendaSugerido: 13440.00,
     vendaRecomendada: 10999.00,
     saudeBateria: 100,
-    loja: 'LOJA-004',
+    loja: LOJAS_IDS.SHOPPING_SUL,
     estoqueConferido: true,
     assistenciaConferida: true,
     condicao: 'Lacrado',
@@ -176,7 +184,7 @@ let produtos: Produto[] = [
     valorVendaSugerido: 6840.00,
     vendaRecomendada: 5499.00,
     saudeBateria: 92,
-    loja: 'LOJA-002',
+    loja: LOJAS_IDS.MATRIZ,
     estoqueConferido: true,
     assistenciaConferida: true,
     condicao: 'Excelente estado',
@@ -207,7 +215,7 @@ let produtos: Produto[] = [
     valorVendaSugerido: 4320.00,
     vendaRecomendada: 3599.00,
     saudeBateria: 78,
-    loja: 'LOJA-003',
+    loja: LOJAS_IDS.ONLINE,
     estoqueConferido: true,
     assistenciaConferida: false,
     condicao: 'Bom estado',
@@ -239,7 +247,7 @@ let produtos: Produto[] = [
     valorVendaSugerido: 10920.00,
     vendaRecomendada: 8999.00,
     saudeBateria: 100,
-    loja: 'LOJA-005',
+    loja: LOJAS_IDS.AGUAS_LINDAS,
     estoqueConferido: true,
     assistenciaConferida: true,
     condicao: 'Lacrado',
@@ -263,7 +271,7 @@ let produtos: Produto[] = [
     valorCusto: 1900.00,
     valorVendaSugerido: 3420.00,
     saudeBateria: 68,
-    loja: 'LOJA-001',
+    loja: LOJAS_IDS.JK_SHOPPING,
     estoqueConferido: false,
     assistenciaConferida: false,
     condicao: 'Estado regular',
@@ -290,7 +298,7 @@ let produtos: Produto[] = [
     valorVendaSugerido: 12180.00,
     vendaRecomendada: 9499.00,
     saudeBateria: 100,
-    loja: 'LOJA-004',
+    loja: LOJAS_IDS.SHOPPING_SUL,
     estoqueConferido: true,
     assistenciaConferida: true,
     condicao: 'Lacrado',
@@ -315,7 +323,7 @@ let produtos: Produto[] = [
     valorVendaSugerido: 2520.00,
     vendaRecomendada: 2199.00,
     saudeBateria: 85,
-    loja: 'LOJA-002',
+    loja: LOJAS_IDS.MATRIZ,
     estoqueConferido: true,
     assistenciaConferida: true,
     condicao: 'Bom estado',
@@ -345,7 +353,7 @@ let produtos: Produto[] = [
     valorVendaSugerido: 5760.00,
     vendaRecomendada: 4799.00,
     saudeBateria: 88,
-    loja: 'LOJA-003',
+    loja: LOJAS_IDS.ONLINE,
     estoqueConferido: true,
     assistenciaConferida: true,
     condicao: 'Excelente estado',
@@ -374,7 +382,7 @@ let produtos: Produto[] = [
     valorCusto: 6400.00,
     valorVendaSugerido: 13440.00,
     saudeBateria: 100,
-    loja: 'LOJA-005',
+    loja: LOJAS_IDS.AGUAS_LINDAS,
     estoqueConferido: false,
     assistenciaConferida: false,
     condicao: 'Lacrado',
@@ -396,7 +404,7 @@ let produtos: Produto[] = [
     valorCusto: 3400.00,
     valorVendaSugerido: 6120.00,
     saudeBateria: 82,
-    loja: 'LOJA-001',
+    loja: LOJAS_IDS.JK_SHOPPING,
     estoqueConferido: true,
     assistenciaConferida: false,
     condicao: 'Bom estado',
@@ -422,7 +430,7 @@ let produtos: Produto[] = [
     valorCusto: 1600.00,
     valorVendaSugerido: 2880.00,
     saudeBateria: 72,
-    loja: 'LOJA-004',
+    loja: LOJAS_IDS.SHOPPING_SUL,
     estoqueConferido: false,
     assistenciaConferida: false,
     condicao: 'Estado regular',
@@ -438,6 +446,9 @@ let produtos: Produto[] = [
     ]
   }
 ];
+
+// Exportar IDs de lojas para uso em outros módulos
+export const ESTOQUE_LOJAS_IDS = LOJAS_IDS;
 
 // Inicializa IDs existentes no sistema
 const initializeExistingIds = () => {
@@ -784,7 +795,7 @@ export const confirmarRecebimentoMovimentacao = (
 };
 
 export const getLojas = (): string[] => {
-  return [...lojas];
+  return Object.values(LOJAS_IDS);
 };
 
 export const getFornecedores = (): string[] => {
