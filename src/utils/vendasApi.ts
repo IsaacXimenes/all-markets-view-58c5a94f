@@ -150,14 +150,30 @@ export interface HistoricoCompraCliente {
   valor: number;
 }
 
+// IDs reais das lojas e colaboradores do useCadastroStore (JSON mockado)
+const LOJAS_VENDA = {
+  JK_SHOPPING: 'db894e7d',
+  MATRIZ: '3ac7e00c', 
+  ONLINE: 'fcc78c1a',
+  SHOPPING_SUL: '5b9446d5',
+  AGUAS_LINDAS: '0d06e7db',
+};
+
+const VENDEDORES = {
+  CAUA_VICTOR: '6dcbc817',      // Vendedor - JK Shopping
+  ANTONIO_SOUSA: '143ac0c2',    // Vendedor - Online  
+  ERICK_GUTHEMBERG: 'b106080f', // Vendedor - Águas Lindas
+  ELIDA_FRANCA: '4bfe3508',     // Vendedor - Assistência SIA
+};
+
 // Dados mockados - IDs PROD-XXXX únicos e consistentes com estoqueApi
 let vendas: Venda[] = [
   {
     id: 'VEN-2025-0001',
     numero: 1,
     dataHora: '2025-01-15T10:30:00',
-    lojaVenda: 'LOJA-001',
-    vendedor: 'COL-004',
+    lojaVenda: LOJAS_VENDA.JK_SHOPPING,
+    vendedor: VENDEDORES.CAUA_VICTOR,
     clienteId: 'CLI-001',
     clienteNome: 'João Silva',
     clienteCpf: '123.456.789-00',
@@ -165,7 +181,7 @@ let vendas: Venda[] = [
     clienteEmail: 'joao@email.com',
     clienteCidade: 'São Paulo',
     origemVenda: 'Loja Física',
-    localRetirada: 'LOJA-001',
+    localRetirada: LOJAS_VENDA.JK_SHOPPING,
     tipoRetirada: 'Retirada Balcão',
     taxaEntrega: 0,
     itens: [
@@ -179,7 +195,7 @@ let vendas: Venda[] = [
         valorRecomendado: 15120.00,
         valorVenda: 14500.00,
         valorCusto: 7200.00,
-        loja: 'Loja Centro'
+        loja: LOJAS_VENDA.JK_SHOPPING
       }
     ],
     tradeIns: [],
@@ -198,8 +214,8 @@ let vendas: Venda[] = [
     id: 'VEN-2025-0002',
     numero: 2,
     dataHora: '2025-01-16T14:15:00',
-    lojaVenda: 'LOJA-002',
-    vendedor: 'COL-004',
+    lojaVenda: LOJAS_VENDA.MATRIZ,
+    vendedor: VENDEDORES.ANTONIO_SOUSA,
     clienteId: 'CLI-002',
     clienteNome: 'Maria Santos',
     clienteCpf: '234.567.890-11',
@@ -207,7 +223,7 @@ let vendas: Venda[] = [
     clienteEmail: 'maria@email.com',
     clienteCidade: 'São Paulo',
     origemVenda: 'WhatsApp',
-    localRetirada: 'LOJA-002',
+    localRetirada: LOJAS_VENDA.MATRIZ,
     tipoRetirada: 'Entrega',
     taxaEntrega: 50.00,
     itens: [
@@ -221,7 +237,7 @@ let vendas: Venda[] = [
         valorRecomendado: 13440.00,
         valorVenda: 12800.00,
         valorCusto: 6400.00,
-        loja: 'Loja Norte'
+        loja: LOJAS_VENDA.MATRIZ
       }
     ],
     tradeIns: [
@@ -252,8 +268,8 @@ let vendas: Venda[] = [
     id: 'VEN-2025-0003',
     numero: 3,
     dataHora: '2025-01-17T09:45:00',
-    lojaVenda: 'LOJA-004',
-    vendedor: 'COL-004',
+    lojaVenda: LOJAS_VENDA.SHOPPING_SUL,
+    vendedor: VENDEDORES.ERICK_GUTHEMBERG,
     clienteId: 'CLI-003',
     clienteNome: 'Pedro Oliveira',
     clienteCpf: '345.678.901-22',
@@ -261,7 +277,7 @@ let vendas: Venda[] = [
     clienteEmail: 'pedro@email.com',
     clienteCidade: 'São Paulo',
     origemVenda: 'Mercado Livre',
-    localRetirada: 'LOJA-001',
+    localRetirada: LOJAS_VENDA.JK_SHOPPING,
     tipoRetirada: 'Retirada em Outra Loja',
     taxaEntrega: 0,
     itens: [
@@ -275,7 +291,7 @@ let vendas: Venda[] = [
         valorRecomendado: 6840.00,
         valorVenda: 6500.00,
         valorCusto: 3800.00,
-        loja: 'Loja Shopping'
+        loja: LOJAS_VENDA.SHOPPING_SUL
       }
     ],
     tradeIns: [],
@@ -294,8 +310,8 @@ let vendas: Venda[] = [
     id: 'VEN-2025-0004',
     numero: 4,
     dataHora: '2025-01-18T16:20:00',
-    lojaVenda: 'LOJA-003',
-    vendedor: 'COL-004',
+    lojaVenda: LOJAS_VENDA.ONLINE,
+    vendedor: VENDEDORES.ANTONIO_SOUSA,
     clienteId: 'CLI-004',
     clienteNome: 'Ana Costa',
     clienteCpf: '456.789.012-33',
@@ -303,7 +319,7 @@ let vendas: Venda[] = [
     clienteEmail: 'ana@email.com',
     clienteCidade: 'São Paulo',
     origemVenda: 'Online',
-    localRetirada: 'LOJA-003',
+    localRetirada: LOJAS_VENDA.ONLINE,
     tipoRetirada: 'Retirada Balcão',
     taxaEntrega: 0,
     itens: [
@@ -317,7 +333,7 @@ let vendas: Venda[] = [
         valorRecomendado: 10920.00,
         valorVenda: 10500.00,
         valorCusto: 5200.00,
-        loja: 'Loja Sul'
+        loja: LOJAS_VENDA.ONLINE
       }
     ],
     tradeIns: [],
@@ -336,8 +352,8 @@ let vendas: Venda[] = [
     id: 'VEN-2025-0005',
     numero: 5,
     dataHora: '2025-01-19T11:00:00',
-    lojaVenda: 'LOJA-005',
-    vendedor: 'COL-004',
+    lojaVenda: LOJAS_VENDA.AGUAS_LINDAS,
+    vendedor: VENDEDORES.ERICK_GUTHEMBERG,
     clienteId: 'CLI-001',
     clienteNome: 'João Silva',
     clienteCpf: '123.456.789-00',
@@ -345,7 +361,7 @@ let vendas: Venda[] = [
     clienteEmail: 'joao@email.com',
     clienteCidade: 'São Paulo',
     origemVenda: 'Indicação',
-    localRetirada: 'LOJA-005',
+    localRetirada: LOJAS_VENDA.AGUAS_LINDAS,
     tipoRetirada: 'Retirada Balcão',
     taxaEntrega: 0,
     itens: [
@@ -359,7 +375,7 @@ let vendas: Venda[] = [
         valorRecomendado: 12180.00,
         valorVenda: 11500.00,
         valorCusto: 5800.00,
-        loja: 'Loja Oeste'
+        loja: LOJAS_VENDA.AGUAS_LINDAS
       }
     ],
     tradeIns: [
@@ -390,8 +406,8 @@ let vendas: Venda[] = [
     id: 'VEN-2025-0006',
     numero: 6,
     dataHora: '2025-01-20T14:00:00',
-    lojaVenda: 'LOJA-002',
-    vendedor: 'COL-004',
+    lojaVenda: LOJAS_VENDA.MATRIZ,
+    vendedor: VENDEDORES.CAUA_VICTOR,
     clienteId: 'CLI-003',
     clienteNome: 'Pedro Oliveira',
     clienteCpf: '345.678.901-22',
@@ -399,7 +415,7 @@ let vendas: Venda[] = [
     clienteEmail: 'pedro@email.com',
     clienteCidade: 'São Paulo',
     origemVenda: 'WhatsApp',
-    localRetirada: 'LOJA-002',
+    localRetirada: LOJAS_VENDA.MATRIZ,
     tipoRetirada: 'Retirada Balcão',
     taxaEntrega: 0,
     itens: [
@@ -413,7 +429,7 @@ let vendas: Venda[] = [
         valorRecomendado: 8500.00,
         valorVenda: 5800.00,
         valorCusto: 6200.00,
-        loja: 'Loja Norte'
+        loja: LOJAS_VENDA.MATRIZ
       }
     ],
     tradeIns: [],
@@ -432,8 +448,8 @@ let vendas: Venda[] = [
     id: 'VEN-2025-0007',
     numero: 7,
     dataHora: '2025-01-21T09:15:00',
-    lojaVenda: 'LOJA-003',
-    vendedor: 'COL-004',
+    lojaVenda: LOJAS_VENDA.ONLINE,
+    vendedor: VENDEDORES.ANTONIO_SOUSA,
     clienteId: 'CLI-004',
     clienteNome: 'Ana Costa',
     clienteCpf: '456.789.012-33',
@@ -441,7 +457,7 @@ let vendas: Venda[] = [
     clienteEmail: 'ana@email.com',
     clienteCidade: 'São Paulo',
     origemVenda: 'Mercado Livre',
-    localRetirada: 'LOJA-003',
+    localRetirada: LOJAS_VENDA.ONLINE,
     tipoRetirada: 'Entrega',
     taxaEntrega: 50.00,
     itens: [
@@ -455,7 +471,7 @@ let vendas: Venda[] = [
         valorRecomendado: 5200.00,
         valorVenda: 3900.00,
         valorCusto: 4100.00,
-        loja: 'Loja Sul'
+        loja: LOJAS_VENDA.ONLINE
       }
     ],
     tradeIns: [],
@@ -475,8 +491,8 @@ let vendas: Venda[] = [
     id: 'VEN-2025-0050',
     numero: 50,
     dataHora: '2024-12-01T14:30:00',
-    lojaVenda: 'LOJA-001',
-    vendedor: 'COL-004',
+    lojaVenda: LOJAS_VENDA.JK_SHOPPING,
+    vendedor: VENDEDORES.CAUA_VICTOR,
     clienteId: 'CLI-001',
     clienteNome: 'João Silva',
     clienteCpf: '123.456.789-00',
@@ -484,7 +500,7 @@ let vendas: Venda[] = [
     clienteEmail: 'joao@email.com',
     clienteCidade: 'São Paulo',
     origemVenda: 'Loja Física',
-    localRetirada: 'LOJA-001',
+    localRetirada: LOJAS_VENDA.JK_SHOPPING,
     tipoRetirada: 'Retirada Balcão',
     taxaEntrega: 0,
     itens: [
@@ -498,7 +514,7 @@ let vendas: Venda[] = [
         valorRecomendado: 5500.00,
         valorVenda: 5000.00,
         valorCusto: 2800.00,
-        loja: 'Loja Centro'
+        loja: LOJAS_VENDA.JK_SHOPPING
       }
     ],
     tradeIns: [],
@@ -525,8 +541,8 @@ let vendas: Venda[] = [
     id: 'VEN-2025-0055',
     numero: 55,
     dataHora: '2024-12-15T10:00:00',
-    lojaVenda: 'LOJA-002',
-    vendedor: 'COL-004',
+    lojaVenda: LOJAS_VENDA.MATRIZ,
+    vendedor: VENDEDORES.ANTONIO_SOUSA,
     clienteId: 'CLI-005',
     clienteNome: 'Carlos Oliveira',
     clienteCpf: '567.890.123-44',
@@ -534,7 +550,7 @@ let vendas: Venda[] = [
     clienteEmail: 'carlos@email.com',
     clienteCidade: 'São Paulo',
     origemVenda: 'WhatsApp',
-    localRetirada: 'LOJA-002',
+    localRetirada: LOJAS_VENDA.MATRIZ,
     tipoRetirada: 'Retirada Balcão',
     taxaEntrega: 0,
     itens: [
@@ -548,7 +564,7 @@ let vendas: Venda[] = [
         valorRecomendado: 7500.00,
         valorVenda: 7000.00,
         valorCusto: 4200.00,
-        loja: 'Loja Norte'
+        loja: LOJAS_VENDA.MATRIZ
       }
     ],
     tradeIns: [],
@@ -575,8 +591,8 @@ let vendas: Venda[] = [
     id: 'VEN-2025-0060',
     numero: 60,
     dataHora: '2025-01-02T16:45:00',
-    lojaVenda: 'LOJA-003',
-    vendedor: 'COL-004',
+    lojaVenda: LOJAS_VENDA.ONLINE,
+    vendedor: VENDEDORES.ANTONIO_SOUSA,
     clienteId: 'CLI-006',
     clienteNome: 'Ana Paula Ferreira',
     clienteCpf: '678.901.234-55',
@@ -584,7 +600,7 @@ let vendas: Venda[] = [
     clienteEmail: 'anapaula@email.com',
     clienteCidade: 'São Paulo',
     origemVenda: 'Indicação',
-    localRetirada: 'LOJA-003',
+    localRetirada: LOJAS_VENDA.ONLINE,
     tipoRetirada: 'Retirada Balcão',
     taxaEntrega: 0,
     itens: [
@@ -598,7 +614,7 @@ let vendas: Venda[] = [
         valorRecomendado: 5200.00,
         valorVenda: 4800.00,
         valorCusto: 2600.00,
-        loja: 'Loja Sul'
+        loja: LOJAS_VENDA.ONLINE
       }
     ],
     tradeIns: [],
@@ -625,8 +641,8 @@ let vendas: Venda[] = [
     id: 'VEN-2025-0062',
     numero: 62,
     dataHora: '2025-01-05T11:20:00',
-    lojaVenda: 'LOJA-001',
-    vendedor: 'COL-004',
+    lojaVenda: LOJAS_VENDA.JK_SHOPPING,
+    vendedor: VENDEDORES.CAUA_VICTOR,
     clienteId: 'CLI-007',
     clienteNome: 'Roberto Mendes',
     clienteCpf: '789.012.345-66',
@@ -634,7 +650,7 @@ let vendas: Venda[] = [
     clienteEmail: 'roberto@email.com',
     clienteCidade: 'São Paulo',
     origemVenda: 'Loja Física',
-    localRetirada: 'LOJA-001',
+    localRetirada: LOJAS_VENDA.JK_SHOPPING,
     tipoRetirada: 'Retirada Balcão',
     taxaEntrega: 0,
     itens: [
@@ -648,7 +664,7 @@ let vendas: Venda[] = [
         valorRecomendado: 4500.00,
         valorVenda: 4200.00,
         valorCusto: 2100.00,
-        loja: 'Loja Centro'
+        loja: LOJAS_VENDA.JK_SHOPPING
       }
     ],
     tradeIns: [],
