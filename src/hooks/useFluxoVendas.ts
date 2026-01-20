@@ -68,6 +68,7 @@ export const useFluxoVendas = (options: UseFluxoVendasOptions = {}) => {
     recusadaGestor: vendas.filter(v => v.statusFluxo === 'Recusada - Gestor').length,
     conferenciaFinanceiro: vendas.filter(v => v.statusFluxo === 'Conferência Financeiro').length,
     devolvidoFinanceiro: vendas.filter(v => v.statusFluxo === 'Devolvido pelo Financeiro').length,
+    pagamentoDowngrade: vendas.filter(v => v.statusFluxo === 'Pagamento Downgrade').length,
     finalizado: vendas.filter(v => v.statusFluxo === 'Finalizado').length,
     total: vendas.length
   };

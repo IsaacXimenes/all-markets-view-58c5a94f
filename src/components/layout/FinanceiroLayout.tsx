@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { FileCheck, MinusCircle, Wrench, Receipt, Wallet, Package, CreditCard } from 'lucide-react';
+import { FileCheck, MinusCircle, Wrench, Receipt, Wallet, Package, CreditCard, ArrowDownCircle } from 'lucide-react';
 
 interface FinanceiroLayoutProps {
   children: React.ReactNode;
@@ -20,6 +20,7 @@ export function FinanceiroLayout({ children, title }: FinanceiroLayoutProps) {
     { name: 'Notas Pendentes - Assistência', href: '/financeiro/notas-assistencia', icon: Wrench },
     { name: 'Lotes de Pagamento', href: '/financeiro/lotes-pagamento', icon: Package },
     { name: 'Execução de Lotes', href: '/financeiro/execucao-lotes', icon: CreditCard },
+    { name: 'Pagamentos Downgrade', href: '/financeiro/pagamentos-downgrade', icon: ArrowDownCircle },
     { name: 'Extrato', href: '/financeiro/extrato', icon: Receipt }
   ];
 

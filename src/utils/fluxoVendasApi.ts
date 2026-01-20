@@ -11,6 +11,7 @@ export type StatusVenda =
   | 'Recusada - Gestor'         // Se gestor recusar
   | 'Conferência Financeiro'    // Após gestor aprovar
   | 'Devolvido pelo Financeiro' // Se financeiro devolver
+  | 'Pagamento Downgrade'       // Venda com saldo a devolver (troca > produtos)
   | 'Finalizado'                // Após financeiro finalizar
   | 'Cancelada';                // Se cancelada
 
@@ -47,8 +48,11 @@ export interface VendaComFluxo extends Venda {
   recusaGestor?: RegistroAprovacao;
   devolucaoFinanceiro?: RegistroAprovacao;
   aprovacaoFinanceiro?: RegistroAprovacao;
+  pagamentoDowngrade?: RegistroAprovacao & { contaOrigem?: string }; // Para pagamento downgrade
   timelineFluxo?: TimelineVenda[];
   bloqueadoParaEdicao?: boolean;
+  tipoOperacao?: 'Upgrade' | 'Downgrade'; // Tipo de operação de troca
+  saldoDevolver?: number; // Valor a devolver ao cliente em downgrade
 }
 
 // Armazena o estado do fluxo no localStorage
@@ -505,6 +509,98 @@ export const getCorBadgeStatus = (status: StatusVenda): { bg: string; text: stri
   }
 };
 
+// Finalizar venda Downgrade (Financeiro executa PIX e finaliza)
+export const finalizarVendaDowngrade = (
+  vendaId: string,
+  usuarioId: string,
+  usuarioNome: string,
+  contaOrigem: string,
+  observacoes?: string
+): VendaComFluxo | null => {
+  const fluxoData = getFluxoData();
+  const dadosFluxo = fluxoData[vendaId];
+  
+  if (!dadosFluxo || dadosFluxo.statusFluxo !== 'Pagamento Downgrade') {
+    console.log(`[Fluxo Vendas] Venda ${vendaId} não está em Pagamento Downgrade`);
+    return null;
+  }
+
+  // Buscar a venda para obter trade-ins
+  const venda = getVendaById(vendaId);
+  
+  const novaTimeline: TimelineVenda = {
+    id: `TL-${Date.now()}`,
+    dataHora: new Date().toISOString(),
+    tipo: 'finalizacao',
+    usuarioId,
+    usuarioNome,
+    descricao: `Pagamento PIX Downgrade executado por ${usuarioNome}. Conta: ${contaOrigem}${observacoes ? `. Obs: ${observacoes}` : ''}`
+  };
+
+  fluxoData[vendaId] = {
+    ...dadosFluxo,
+    statusFluxo: 'Finalizado',
+    pagamentoDowngrade: {
+      usuarioId,
+      usuarioNome,
+      dataHora: new Date().toISOString(),
+      contaOrigem,
+      motivo: observacoes
+    },
+    timelineFluxo: [...(dadosFluxo.timelineFluxo || []), novaTimeline],
+    bloqueadoParaEdicao: true
+  };
+
+  saveFluxoData(fluxoData);
+  
+  // MIGRAÇÃO AUTOMÁTICA: Após pagamento PIX, trade-ins vão para Aparelhos Pendentes - Estoque
+  if (venda && venda.tradeIns && venda.tradeIns.length > 0) {
+    migrarTradeInsParaPendentes(venda.tradeIns, vendaId, venda.lojaVenda, usuarioNome);
+    console.log(`[Fluxo Vendas - Downgrade] ${venda.tradeIns.length} trade-in(s) migrado(s) para Aparelhos Pendentes - Estoque`);
+  }
+  
+  return getVendaComFluxo(vendaId);
+};
+
+// Enviar venda para Pagamento Downgrade (após gestor aprovar venda com saldo a devolver)
+export const enviarParaPagamentoDowngrade = (
+  vendaId: string,
+  usuarioId: string,
+  usuarioNome: string,
+  saldoDevolver: number
+): VendaComFluxo | null => {
+  const fluxoData = getFluxoData();
+  const dadosFluxo = fluxoData[vendaId];
+  
+  if (!dadosFluxo || (dadosFluxo.statusFluxo !== 'Conferência Gestor' && dadosFluxo.statusFluxo !== 'Devolvido pelo Financeiro')) {
+    return null;
+  }
+
+  const novaTimeline: TimelineVenda = {
+    id: `TL-${Date.now()}`,
+    dataHora: new Date().toISOString(),
+    tipo: 'aprovacao_gestor',
+    usuarioId,
+    usuarioNome,
+    descricao: `Aprovado pelo gestor ${usuarioNome}. Enviado para Pagamento Downgrade. Valor a devolver: R$ ${saldoDevolver.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+  };
+
+  fluxoData[vendaId] = {
+    ...dadosFluxo,
+    statusFluxo: 'Pagamento Downgrade',
+    saldoDevolver,
+    aprovacaoGestor: {
+      usuarioId,
+      usuarioNome,
+      dataHora: new Date().toISOString()
+    },
+    timelineFluxo: [...(dadosFluxo.timelineFluxo || []), novaTimeline]
+  };
+
+  saveFluxoData(fluxoData);
+  return getVendaComFluxo(vendaId);
+};
+
 // Exportar para CSV
 export const exportFluxoToCSV = (data: VendaComFluxo[], filename: string) => {
   if (data.length === 0) return;
@@ -515,6 +611,8 @@ export const exportFluxoToCSV = (data: VendaComFluxo[], filename: string) => {
     'Cliente': v.clienteNome,
     'Valor Total': v.total,
     'Status Fluxo': v.statusFluxo || 'N/A',
+    'Tipo Operação': v.tipoOperacao || 'Upgrade',
+    'Saldo Devolver': v.saldoDevolver || 0,
     'Lançador': v.aprovacaoLancamento?.usuarioNome || '-',
     'Data Lançamento': v.aprovacaoLancamento?.dataHora ? new Date(v.aprovacaoLancamento.dataHora).toLocaleString('pt-BR') : '-',
     'Gestor': v.aprovacaoGestor?.usuarioNome || '-',
