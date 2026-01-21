@@ -168,14 +168,33 @@ export default function CadastrosColaboradores() {
     });
   };
 
-  const colaboradoresFiltrados = colaboradores.filter(col => {
-    if (filtroStatus === 'ativos' && !col.ativo) return false;
-    if (filtroStatus === 'inativos' && col.ativo) return false;
-    if (filtroLoja !== 'todos' && col.loja_id !== filtroLoja) return false;
-    if (filtroCargo !== 'todos' && col.cargo !== filtroCargo) return false;
-    if (filtroNome && !col.nome.toLowerCase().includes(filtroNome.toLowerCase())) return false;
-    return true;
-  });
+  // Ordem de hierarquia dos cargos
+  const ordemHierarquia: Record<string, number> = {
+    'Socio Administrador': 1,
+    'Gestor (a) Geral': 2,
+    'Gestor (a)': 3,
+    'Assistente Administrativo': 4,
+    'Vendedor (a)': 5,
+    'Estoquista': 6,
+    'Técnico': 7,
+    'Motoboy': 8
+  };
+
+  const colaboradoresFiltrados = colaboradores
+    .filter(col => {
+      if (filtroStatus === 'ativos' && !col.ativo) return false;
+      if (filtroStatus === 'inativos' && col.ativo) return false;
+      if (filtroLoja !== 'todos' && col.loja_id !== filtroLoja) return false;
+      if (filtroCargo !== 'todos' && col.cargo !== filtroCargo) return false;
+      if (filtroNome && !col.nome.toLowerCase().includes(filtroNome.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const ordemA = ordemHierarquia[a.cargo] || 99;
+      const ordemB = ordemHierarquia[b.cargo] || 99;
+      if (ordemA !== ordemB) return ordemA - ordemB;
+      return a.nome.localeCompare(b.nome);
+    });
 
   const getCargoBadgeClass = (cargo: string) => {
     const cargoLower = cargo.toLowerCase();

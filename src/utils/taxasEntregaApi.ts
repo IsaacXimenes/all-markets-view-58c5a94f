@@ -23,232 +23,33 @@ export interface TaxaEntrega {
 const STORAGE_KEY = 'taxas_entrega';
 
 // Dados mockados iniciais
+// Dados mockados iniciais - ordenados alfabeticamente com IDs sequenciais
 const taxasIniciais: TaxaEntrega[] = [
-  {
-    id: 'TX-001',
-    local: 'Asa Sul',
-    valor: 30.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-002',
-    local: 'Asa Norte',
-    valor: 30.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-003',
-    local: 'Sudoeste',
-    valor: 25.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-004',
-    local: 'Noroeste',
-    valor: 30.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-005',
-    local: 'Lago Sul',
-    valor: 40.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-006',
-    local: 'Lago Norte',
-    valor: 40.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-007',
-    local: 'Park Sul',
-    valor: 35.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-008',
-    local: 'Taguatinga',
-    valor: 45.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-009',
-    local: 'Ceilândia',
-    valor: 50.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-010',
-    local: 'Águas Claras',
-    valor: 40.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-011',
-    local: 'Vicente Pires',
-    valor: 45.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-012',
-    local: 'Samambaia',
-    valor: 55.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-013',
-    local: 'Sobradinho',
-    valor: 50.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-014',
-    local: 'Planaltina',
-    valor: 60.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-015',
-    local: 'Gama',
-    valor: 55.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-016',
-    local: 'Santa Maria',
-    valor: 60.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-017',
-    local: 'Recanto das Emas',
-    valor: 60.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-018',
-    local: 'Riacho Fundo I',
-    valor: 50.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-019',
-    local: 'Riacho Fundo II',
-    valor: 55.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-020',
-    local: 'Núcleo Bandeirante',
-    valor: 45.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-021',
-    local: 'Guará I',
-    valor: 35.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-022',
-    local: 'Guará II',
-    valor: 35.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-023',
-    local: 'Cruzeiro',
-    valor: 25.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-024',
-    local: 'Octogonal',
-    valor: 30.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  },
-  {
-    id: 'TX-025',
-    local: 'SIA',
-    valor: 35.00,
-    status: 'Ativo',
-    dataCriacao: '2024-01-01',
-    dataAtualizacao: '2024-01-01',
-    logs: []
-  }
+  { id: 'TX-001', local: 'Águas Claras', valor: 40.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-002', local: 'Asa Norte', valor: 30.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-003', local: 'Asa Sul', valor: 30.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-004', local: 'Ceilândia', valor: 50.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-005', local: 'Cruzeiro', valor: 25.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-006', local: 'Gama', valor: 55.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-007', local: 'Guará I', valor: 35.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-008', local: 'Guará II', valor: 35.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-009', local: 'Lago Norte', valor: 40.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-010', local: 'Lago Sul', valor: 40.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-011', local: 'Noroeste', valor: 30.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-012', local: 'Núcleo Bandeirante', valor: 45.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-013', local: 'Octogonal', valor: 30.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-014', local: 'Park Sul', valor: 35.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-015', local: 'Planaltina', valor: 60.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-016', local: 'Recanto das Emas', valor: 60.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-017', local: 'Riacho Fundo I', valor: 50.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-018', local: 'Riacho Fundo II', valor: 55.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-019', local: 'Samambaia', valor: 55.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-020', local: 'Santa Maria', valor: 60.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-021', local: 'SIA', valor: 35.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-022', local: 'Sobradinho', valor: 50.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-023', local: 'Sudoeste', valor: 25.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-024', local: 'Taguatinga', valor: 45.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] },
+  { id: 'TX-025', local: 'Vicente Pires', valor: 45.00, status: 'Ativo', dataCriacao: '2024-01-01', dataAtualizacao: '2024-01-01', logs: [] }
 ];
 
 // Inicializar storage
