@@ -692,40 +692,24 @@ export default function VendasNova() {
       vendedor &&
       clienteId &&
       origemVenda &&
-      localRetirada &&
       (itens.length > 0 || acessoriosVenda.length > 0) &&
       valorPendente <= 0 &&
       !tradeInNaoValidado &&
       motoboyValido &&
       !temPagamentoSinal // Não permite registrar venda normal se tem sinal
     );
-  }, [lojaVenda, vendedor, clienteId, origemVenda, localRetirada, itens.length, acessoriosVenda.length, valorPendente, tradeInNaoValidado, tipoRetirada, motoboyId, temPagamentoSinal]);
+  }, [lojaVenda, vendedor, clienteId, origemVenda, itens.length, acessoriosVenda.length, valorPendente, tradeInNaoValidado, tipoRetirada, motoboyId, temPagamentoSinal]);
 
   // Validar se pode salvar com sinal
   const canSubmitSinal = useMemo(() => {
+    // Se for entrega, motoboy é obrigatório
     const motoboyValido = tipoRetirada !== 'Entrega' || !!motoboyId;
-    
-    // Debug: verificar cada condição
-    console.log('=== DEBUG canSubmitSinal ===');
-    console.log('lojaVenda:', lojaVenda);
-    console.log('vendedor:', vendedor);
-    console.log('clienteId:', clienteId);
-    console.log('origemVenda:', origemVenda);
-    console.log('localRetirada:', localRetirada);
-    console.log('itens.length:', itens.length, 'acessoriosVenda.length:', acessoriosVenda.length);
-    console.log('temPagamentoSinal:', temPagamentoSinal);
-    console.log('valorSinal:', valorSinal);
-    console.log('total:', total);
-    console.log('valorSinal < total:', valorSinal < total);
-    console.log('tradeInNaoValidado:', tradeInNaoValidado);
-    console.log('motoboyValido:', motoboyValido);
     
     return (
       lojaVenda &&
       vendedor &&
       clienteId &&
       origemVenda &&
-      localRetirada &&
       (itens.length > 0 || acessoriosVenda.length > 0) &&
       temPagamentoSinal &&
       valorSinal > 0 &&
@@ -733,7 +717,7 @@ export default function VendasNova() {
       !tradeInNaoValidado &&
       motoboyValido
     );
-  }, [lojaVenda, vendedor, clienteId, origemVenda, localRetirada, itens.length, acessoriosVenda.length, temPagamentoSinal, valorSinal, total, tradeInNaoValidado, tipoRetirada, motoboyId]);
+  }, [lojaVenda, vendedor, clienteId, origemVenda, itens.length, acessoriosVenda.length, temPagamentoSinal, valorSinal, total, tradeInNaoValidado, tipoRetirada, motoboyId]);
 
   // Registrar venda
   const handleRegistrarVenda = () => {
@@ -2003,20 +1987,6 @@ export default function VendasNova() {
 
         {/* Botões Finais */}
         <div className="flex flex-col gap-4">
-          {/* Debug info - remover depois */}
-          <div className="text-xs text-muted-foreground bg-muted p-2 rounded space-y-1">
-            <div>
-              DEBUG: temPagamentoSinal={String(temPagamentoSinal)} | canSubmitSinal={String(canSubmitSinal)} | 
-              pagamentos={pagamentos.length} | valorSinal={valorSinal} | total={total} | 
-              hasValidDowngrade={String(hasValidDowngrade)}
-            </div>
-            <div>
-              lojaVenda={lojaVenda ? '✓' : '✗'} | vendedor={vendedor ? '✓' : '✗'} | 
-              clienteId={clienteId ? '✓' : '✗'} | origemVenda={origemVenda ? '✓' : '✗'} | 
-              localRetirada={localRetirada ? '✓' : '✗'} | itens={itens.length} | acessorios={acessoriosVenda.length} |
-              tradeInNaoValidado={String(tradeInNaoValidado)} | tipoRetirada={tipoRetirada} | motoboyId={motoboyId ? '✓' : '✗'}
-            </div>
-          </div>
           
           <div className="flex gap-4 justify-end">
             <Button variant="outline" onClick={() => navigate('/vendas')}>
