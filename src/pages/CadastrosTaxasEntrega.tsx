@@ -492,26 +492,40 @@ export default function CadastrosTaxasEntrega() {
                            log.acao === 'edicao' ? 'Edição' : 'Status'}
                         </Badge>
                       </div>
-                      {log.acao === 'edicao' && (
-                        <div className="mt-2 text-xs">
-                          <span className="text-muted-foreground">Valor: </span>
-                          <span className="line-through text-destructive">
-                            {formatCurrency(log.valorAnterior)}
-                          </span>
-                          <span className="mx-2">→</span>
-                          <span className="text-green-600 font-medium">
-                            {formatCurrency(log.valorNovo)}
-                          </span>
-                        </div>
-                      )}
-                      {log.acao === 'criacao' && (
-                        <div className="mt-2 text-xs">
-                          <span className="text-muted-foreground">Valor inicial: </span>
-                          <span className="text-green-600 font-medium">
-                            {formatCurrency(log.valorNovo)}
-                          </span>
-                        </div>
-                      )}
+                      <div className="mt-2 text-xs bg-muted/50 p-2 rounded">
+                        {log.acao === 'criacao' && (
+                          <>
+                            <span className="text-muted-foreground">Valor inicial: </span>
+                            <span className="text-green-600 font-semibold">
+                              {formatCurrency(log.valorNovo)}
+                            </span>
+                          </>
+                        )}
+                        {log.acao === 'edicao' && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-muted-foreground">De:</span>
+                            <span className="line-through text-destructive font-medium">
+                              {formatCurrency(log.valorAnterior)}
+                            </span>
+                            <span className="text-muted-foreground">→</span>
+                            <span className="text-muted-foreground">Para:</span>
+                            <span className="text-green-600 font-semibold">
+                              {formatCurrency(log.valorNovo)}
+                            </span>
+                          </div>
+                        )}
+                        {log.acao === 'status' && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-muted-foreground">Status alterado</span>
+                            {log.valorAnterior !== log.valorNovo && (
+                              <>
+                                <span className="text-muted-foreground">• Valor:</span>
+                                <span className="font-medium">{formatCurrency(log.valorNovo)}</span>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
