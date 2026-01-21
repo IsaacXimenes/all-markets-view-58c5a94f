@@ -37,6 +37,7 @@ interface NovoPagamentoState extends Partial<Pagamento> {
   // Campos específicos para Boleto/Crediário
   boletoValorFinalCliente?: number;
   boletoValorVenda?: number;
+  boletoNumeroParcelas?: number;
 }
 
 // Função para obter parcelamentos da máquina ou usar valores padrão
@@ -202,7 +203,8 @@ export function PagamentoQuadro({
         taxaCartao: 0, 
         valorLiquido: undefined,
         boletoValorFinalCliente: undefined,
-        boletoValorVenda: undefined
+        boletoValorVenda: undefined,
+        boletoNumeroParcelas: 1
       });
     } else {
       // Pix, Dinheiro, Transferência - sem taxa
@@ -733,8 +735,26 @@ export function PagamentoQuadro({
                   </div>
                 </div>
                 
+                {/* Seleção de número de parcelas para Boleto */}
+                <div>
+                  <label className="text-sm font-medium">Quantidade de Parcelas *</label>
+                  <Select 
+                    value={String(novoPagamento.boletoNumeroParcelas || 1)} 
+                    onValueChange={(v) => setNovoPagamento({ ...novoPagamento, boletoNumeroParcelas: Number(v) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 36 }, (_, i) => i + 1).map(num => (
+                        <SelectItem key={num} value={String(num)}>{num}x</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
                 {/* Card de resumo do Boleto */}
-                {novoPagamento.boletoValorFinalCliente && novoPagamento.boletoValorVenda && (
+                {novoPagamento.boletoValorFinalCliente && novoPagamento.boletoValorVenda && novoPagamento.boletoNumeroParcelas && (
                   <div className="p-4 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg border border-indigo-200 dark:border-indigo-800">
                     <h4 className="font-semibold text-indigo-700 dark:text-indigo-300 mb-3">Resumo Boleto/Crediário</h4>
                     <div className="space-y-2 text-sm">
@@ -746,19 +766,18 @@ export function PagamentoQuadro({
                         <span>Valor da Venda:</span>
                         <span className="font-medium text-green-600">{formatarMoeda(novoPagamento.boletoValorVenda)}</span>
                       </div>
+                      <div className="flex justify-between">
+                        <span>Valor Para o Crediário:</span>
+                        <span className="font-medium">{formatarMoeda(novoPagamento.boletoValorFinalCliente - novoPagamento.boletoValorVenda)}</span>
+                      </div>
                       <Separator />
                       <div className="flex justify-between font-bold text-indigo-700 dark:text-indigo-300">
-                        <span>Valor Para o Crediário:</span>
-                        <span>{formatarMoeda(novoPagamento.boletoValorFinalCliente - novoPagamento.boletoValorVenda)}</span>
+                        <span>Valor das Parcelas pro Cliente:</span>
+                        <span>{formatarMoeda(novoPagamento.boletoValorFinalCliente / novoPagamento.boletoNumeroParcelas)} mensais ({novoPagamento.boletoNumeroParcelas}x)</span>
                       </div>
                     </div>
                   </div>
                 )}
-                
-                <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg text-sm text-indigo-700 dark:text-indigo-300 flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  Boleto/Crediário: O cliente pagará parcelado diretamente ao parceiro de crédito.
-                </div>
               </>
             )}
 

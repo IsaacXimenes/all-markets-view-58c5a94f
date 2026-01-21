@@ -14,11 +14,15 @@ import { getStatusConferenciaByVendaId, StatusConferencia } from '@/utils/confer
 import { getGarantiasByVendaId, calcularStatusExpiracao } from '@/utils/garantiasApi';
 import { format, addMonths } from 'date-fns';
 
+// Mock do usuário logado
+const usuarioLogado = { id: 'COL-007', nome: 'Carlos Vendedor' };
+
 export default function Vendas() {
   const navigate = useNavigate();
-  const { obterLojasAtivas, obterColaboradoresAtivos, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
+  const { obterLojasAtivas, obterColaboradoresAtivos, obterNomeLoja, obterNomeColaborador, obterLojasTipoLoja } = useCadastroStore();
   const [vendas] = useState<Venda[]>(getVendas());
   const lojas = obterLojasAtivas();
+  const lojasTipoLoja = obterLojasTipoLoja();
   const colaboradores = obterColaboradoresAtivos();
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
@@ -28,6 +32,13 @@ export default function Vendas() {
   const [vendedorFiltro, setVendedorFiltro] = useState('');
   const [filtroGarantia, setFiltroGarantia] = useState('');
   const [tipoPagamentoFiltro, setTipoPagamentoFiltro] = useState('');
+  
+  // Identificar permissões do usuário logado
+  const colaboradorLogado = useMemo(() => {
+    return colaboradores.find(c => c.id === usuarioLogado.id);
+  }, [colaboradores]);
+  
+  const isGestor = colaboradorLogado?.eh_gestor || false;
 
   // Verifica se uma venda é Fiado
   const isFiadoVenda = (venda: Venda) => {
@@ -87,8 +98,21 @@ export default function Vendas() {
     return null;
   };
 
+  // Aplicar filtragem por permissão: vendedor vê apenas suas vendas, gestor vê apenas da sua loja
+  const vendasVisiveis = useMemo(() => {
+    if (isGestor && colaboradorLogado) {
+      // Gestor vê apenas vendas da sua loja
+      return vendas.filter(v => v.lojaVenda === colaboradorLogado.loja_id);
+    } else if (colaboradorLogado?.eh_vendedor && colaboradorLogado) {
+      // Vendedor vê apenas suas próprias vendas
+      return vendas.filter(v => v.vendedor === colaboradorLogado.id);
+    }
+    // Fallback: admin vê tudo
+    return vendas;
+  }, [vendas, colaboradorLogado, isGestor]);
+
   const vendasFiltradas = useMemo(() => {
-    return vendas.filter(v => {
+    return vendasVisiveis.filter(v => {
       const dataVenda = new Date(v.dataHora);
       
       if (dataInicio) {
@@ -145,7 +169,7 @@ export default function Vendas() {
       
       return true;
     });
-  }, [vendas, dataInicio, dataFim, lojaFiltro, vendedorFiltro, modeloFiltro, imeiFiltro, filtroGarantia, tipoPagamentoFiltro]);
+  }, [vendasVisiveis, dataInicio, dataFim, lojaFiltro, vendedorFiltro, modeloFiltro, imeiFiltro, filtroGarantia, tipoPagamentoFiltro]);
 
   const totais = useMemo(() => {
     let totalVendas = 0;
@@ -271,7 +295,7 @@ export default function Vendas() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as Lojas</SelectItem>
-                  {lojas.map(loja => (
+                  {lojasTipoLoja.map(loja => (
                     <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
                   ))}
                 </SelectContent>

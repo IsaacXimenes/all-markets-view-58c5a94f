@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { User, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type FiltroTipo = 'todos' | 'gestores' | 'vendedores' | 'estoquistas' | 'tecnicos' | 'motoboys';
+type FiltroTipo = 'todos' | 'gestores' | 'vendedores' | 'vendedoresEGestores' | 'estoquistas' | 'tecnicos' | 'motoboys';
 
 interface AutocompleteColaboradorProps {
   value: string;
@@ -60,6 +60,10 @@ export function AutocompleteColaborador({
         break;
       case 'vendedores':
         resultado = obterVendedores();
+        break;
+      case 'vendedoresEGestores':
+        // Inclui vendedores E gestores
+        resultado = colaboradores.filter(col => (col.eh_vendedor || col.eh_gestor) && col.ativo);
         break;
       case 'estoquistas':
         resultado = obterEstoquistas();
