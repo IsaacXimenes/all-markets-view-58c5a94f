@@ -705,6 +705,21 @@ export default function VendasNova() {
   const canSubmitSinal = useMemo(() => {
     const motoboyValido = tipoRetirada !== 'Entrega' || !!motoboyId;
     
+    // Debug: verificar cada condição
+    console.log('=== DEBUG canSubmitSinal ===');
+    console.log('lojaVenda:', lojaVenda);
+    console.log('vendedor:', vendedor);
+    console.log('clienteId:', clienteId);
+    console.log('origemVenda:', origemVenda);
+    console.log('localRetirada:', localRetirada);
+    console.log('itens.length:', itens.length, 'acessoriosVenda.length:', acessoriosVenda.length);
+    console.log('temPagamentoSinal:', temPagamentoSinal);
+    console.log('valorSinal:', valorSinal);
+    console.log('total:', total);
+    console.log('valorSinal < total:', valorSinal < total);
+    console.log('tradeInNaoValidado:', tradeInNaoValidado);
+    console.log('motoboyValido:', motoboyValido);
+    
     return (
       lojaVenda &&
       vendedor &&
