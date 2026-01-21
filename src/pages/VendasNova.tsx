@@ -1093,8 +1093,8 @@ export default function VendasNova() {
                   {itens.map(item => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.produto}</TableCell>
-                      <TableCell className="font-mono text-sm">{item.imei}</TableCell>
-                      <TableCell>{item.loja}</TableCell>
+                      <TableCell className="font-mono text-sm">{displayIMEI(item.imei)}</TableCell>
+                      <TableCell>{obterNomeLoja(item.loja)}</TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {formatCurrency(item.valorCusto)}
                       </TableCell>
@@ -2231,7 +2231,7 @@ export default function VendasNova() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as Lojas</SelectItem>
-                  {lojas.map(loja => (
+                  {lojasTipoLoja.map(loja => (
                     <SelectItem key={loja.id} value={loja.nome}>{loja.nome}</SelectItem>
                   ))}
                 </SelectContent>
@@ -2263,7 +2263,7 @@ export default function VendasNova() {
                           {produto.tipo || 'Semi-novo'}
                         </Badge>
                       </TableCell>
-                      <TableCell>{produto.imei}</TableCell>
+                      <TableCell className="font-mono text-sm">{displayIMEI(produto.imei)}</TableCell>
                       <TableCell>
                         {produto.quantidade === 0 ? (
                           <Badge variant="destructive">Indisponível</Badge>
@@ -2317,7 +2317,7 @@ export default function VendasNova() {
                               {produto.tipo || 'Semi-novo'}
                             </Badge>
                           </TableCell>
-                          <TableCell>{produto.imei}</TableCell>
+                          <TableCell className="font-mono text-sm">{displayIMEI(produto.imei)}</TableCell>
                           <TableCell>{produto.quantidade}</TableCell>
                           <TableCell className="text-right">{formatCurrency(produto.valorVendaSugerido)}</TableCell>
                           <TableCell>
@@ -2374,7 +2374,7 @@ export default function VendasNova() {
                     <TableRow key={produto.id}>
                       <TableCell className="font-mono text-xs">{produto.id}</TableCell>
                       <TableCell className="font-medium">{produto.modelo}</TableCell>
-                      <TableCell>{produto.imei}</TableCell>
+                      <TableCell className="font-mono text-sm">{displayIMEI(produto.imei)}</TableCell>
                       <TableCell>
                         <Badge variant={produto.origemEntrada === 'Base de Troca' ? 'secondary' : 'outline'}>
                           {produto.origemEntrada}
