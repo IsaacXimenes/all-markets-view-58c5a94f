@@ -87,7 +87,9 @@ export default function EstoqueProdutos() {
       return;
     }
 
-    const valor = parseFloat(novoValorRecomendado.replace(/[^\d,]/g, '').replace(',', '.'));
+    // Usar parseMoeda para converter valor com máscara brasileira
+    const { parseMoeda } = require('@/utils/formatUtils');
+    const valor = parseMoeda(novoValorRecomendado);
     if (isNaN(valor) || valor <= 0) {
       toast.error('Valor inválido');
       return;

@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   getSolicitacoes, 
@@ -55,6 +56,11 @@ export default function OSSolicitacoesPecas() {
   const [fornecedoresPorPeca, setFornecedoresPorPeca] = useState<{[key: string]: { fornecedorId: string; valorPeca: string; formaPagamento: string; origemPeca: string; observacao: string }}>({});
   const [responsavelCompraGlobal, setResponsavelCompraGlobal] = useState('');
   const [dataRecebimentoGlobal, setDataRecebimentoGlobal] = useState('');
+  
+  // Modal de rejeição com motivo obrigatório
+  const [rejeitarOpen, setRejeitarOpen] = useState(false);
+  const [solicitacaoParaRejeitar, setSolicitacaoParaRejeitar] = useState<SolicitacaoPeca | null>(null);
+  const [motivoRejeicao, setMotivoRejeicao] = useState('');
   const [dataEnvioGlobal, setDataEnvioGlobal] = useState('');
 
   // Modal ver/editar lote
@@ -212,11 +218,27 @@ export default function OSSolicitacoesPecas() {
     toast({ title: 'Sucesso', description: `${solicitacoesSelecionadasAprovar.length} solicitação(ões) aprovada(s)!` });
   };
 
-  const handleRejeitar = (solicitacao: SolicitacaoPeca) => {
-    const resultado = rejeitarSolicitacao(solicitacao.id);
+  const handleAbrirRejeitar = (solicitacao: SolicitacaoPeca) => {
+    setSolicitacaoParaRejeitar(solicitacao);
+    setMotivoRejeicao('');
+    setRejeitarOpen(true);
+  };
+  
+  const handleConfirmarRejeicao = () => {
+    if (!solicitacaoParaRejeitar) return;
+    
+    if (!motivoRejeicao.trim()) {
+      toast({ title: 'Erro', description: 'Informe o motivo da rejeição', variant: 'destructive' });
+      return;
+    }
+    
+    const resultado = rejeitarSolicitacao(solicitacaoParaRejeitar.id, motivoRejeicao);
     if (resultado) {
       setSolicitacoes(getSolicitacoes());
-      toast({ title: 'Solicitação rejeitada', description: `${solicitacao.peca} foi rejeitada.` });
+      setRejeitarOpen(false);
+      setSolicitacaoParaRejeitar(null);
+      setMotivoRejeicao('');
+      toast({ title: 'Solicitação rejeitada', description: `${solicitacaoParaRejeitar.peca} foi rejeitada. A OS foi atualizada.` });
     }
   };
 
@@ -504,7 +526,7 @@ export default function OSSolicitacoesPecas() {
                               variant="ghost" 
                               size="sm"
                               className="text-red-600"
-                              onClick={() => handleRejeitar(sol)}
+                              onClick={() => handleAbrirRejeitar(sol)}
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -750,6 +772,44 @@ export default function OSSolicitacoesPecas() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setNovoFornecedorOpen(false)}>Cancelar</Button>
             <Button onClick={handleAdicionarFornecedor}>Adicionar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Rejeição */}
+      <Dialog open={rejeitarOpen} onOpenChange={setRejeitarOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600">Rejeitar Solicitação</DialogTitle>
+            <DialogDescription>
+              {solicitacaoParaRejeitar && (
+                <>Você está rejeitando a solicitação de <strong>{solicitacaoParaRejeitar.peca}</strong> (OS: {solicitacaoParaRejeitar.osId})</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Motivo da Rejeição *</Label>
+              <Textarea
+                value={motivoRejeicao}
+                onChange={(e) => setMotivoRejeicao(e.target.value)}
+                placeholder="Informe o motivo da rejeição..."
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">Esta informação será registrada na timeline da OS.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRejeitarOpen(false); setSolicitacaoParaRejeitar(null); }}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleConfirmarRejeicao}
+              disabled={!motivoRejeicao.trim()}
+            >
+              Confirmar Rejeição
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

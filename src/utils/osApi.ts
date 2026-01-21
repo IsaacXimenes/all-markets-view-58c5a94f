@@ -313,6 +313,7 @@ const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque
   };
 
   // Usar valor original, NÃO somar custo assistência
+  // Produtos validados diretamente pelo estoque ficam com vendaRecomendada pendente (null) e statusNota: 'Pendente'
   const novoProduto: Produto = {
     id: produto.id, // ID PERSISTENTE - nunca muda
     imei: produto.imei,
@@ -324,6 +325,7 @@ const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque
     quantidade: 1,
     valorCusto: produto.valorCustoOriginal, // VALOR ORIGINAL PRESERVADO
     valorVendaSugerido: produto.valorCustoOriginal * 1.8, // Baseado no original
+    vendaRecomendada: null, // Pendente - habilita botão "Informar Valor" na tela de Estoque > Produtos
     saudeBateria: produto.saudeBateria,
     loja: produto.loja,
     estoqueConferido: true,
@@ -337,7 +339,7 @@ const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque
       }
     ],
     historicoValorRecomendado: [],
-    statusNota: 'Concluído',
+    statusNota: 'Pendente', // Pendente para habilitar informar valor recomendado
     origemEntrada: produto.origemEntrada,
     // PRESERVA A TIMELINE COMPLETA DO PRODUTO PENDENTE + LIBERAÇÃO
     timeline: [...produto.timeline, timelineLiberacao]

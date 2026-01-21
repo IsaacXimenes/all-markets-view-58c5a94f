@@ -373,14 +373,31 @@ export const aprovarSolicitacao = (id: string, dados: {
   return solicitacoes[index];
 };
 
-export const rejeitarSolicitacao = (id: string): SolicitacaoPeca | null => {
+export const rejeitarSolicitacao = (id: string, motivoRejeicao?: string): SolicitacaoPeca | null => {
   const index = solicitacoes.findIndex(s => s.id === id);
   if (index === -1) return null;
   
+  const solicitacao = solicitacoes[index];
   solicitacoes[index] = {
-    ...solicitacoes[index],
-    status: 'Rejeitada'
+    ...solicitacao,
+    status: 'Rejeitada',
+    motivoRejeicao
   };
+  
+  // Atualizar timeline da OS informando que a solicitação foi rejeitada
+  const osId = solicitacao.osId;
+  const os = getOrdemServicoById(osId);
+  if (os) {
+    updateOrdemServico(osId, {
+      timeline: [...os.timeline, {
+        data: new Date().toISOString(),
+        tipo: 'peca',
+        descricao: `Solicitação ${id} REJEITADA – ${solicitacao.peca} x ${solicitacao.quantidade} | Motivo: ${motivoRejeicao || 'Não informado'}`,
+        responsavel: 'Gestora Matriz'
+      }]
+    });
+  }
+  
   return solicitacoes[index];
 };
 

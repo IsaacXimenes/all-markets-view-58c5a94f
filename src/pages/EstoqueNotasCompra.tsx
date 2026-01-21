@@ -189,7 +189,16 @@ export default function EstoqueNotasCompra() {
             </TableHeader>
             <TableBody>
               {notasFiltradas.map(nota => (
-                <TableRow key={nota.id}>
+                <TableRow 
+                  key={nota.id}
+                  className={
+                    nota.status === 'Pendente' 
+                      ? 'bg-red-500/10' 
+                      : nota.status === 'Concluído' 
+                        ? 'bg-green-500/10' 
+                        : 'bg-blue-500/10'
+                  }
+                >
                   <TableCell>{new Date(nota.data).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell className="font-mono text-xs">{nota.numeroNota}</TableCell>
                   <TableCell>{nota.fornecedor}</TableCell>

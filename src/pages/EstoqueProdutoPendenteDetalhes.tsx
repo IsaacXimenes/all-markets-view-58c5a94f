@@ -79,7 +79,16 @@ export default function EstoqueProdutoPendenteDetalhes() {
   // Modal de confirmação dupla
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmResponsavel, setConfirmResponsavel] = useState('');
-  const [confirmData, setConfirmData] = useState(new Date().toISOString().split('T')[0]);
+  
+  // Corrigir data D+1: usar data local ao invés de toISOString que considera fuso horário
+  const getDataLocal = () => {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  };
+  const [confirmData, setConfirmData] = useState(getDataLocal());
 
   useEffect(() => {
     if (id) {
@@ -117,7 +126,7 @@ export default function EstoqueProdutoPendenteDetalhes() {
     }
     
     setConfirmResponsavel('');
-    setConfirmData(new Date().toISOString().split('T')[0]);
+    setConfirmData(getDataLocal());
     setConfirmDialogOpen(true);
   };
 

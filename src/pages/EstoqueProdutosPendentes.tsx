@@ -23,7 +23,8 @@ import {
 } from '@/components/ui/table';
 import { Eye, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, Wrench, RotateCcw, Undo2, DollarSign } from 'lucide-react';
 import { getProdutosPendentes, ProdutoPendente, calcularSLA } from '@/utils/osApi';
-import { getLojas, getLojaById, getFornecedores } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
+import { getFornecedores } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 import { InputComMascara } from '@/components/ui/InputComMascara';
@@ -40,13 +41,17 @@ type StatusAparelhosPendentes =
 
 export default function EstoqueProdutosPendentes() {
   const navigate = useNavigate();
+  const { obterLojasTipoLoja, obterLojaById, obterNomeLoja } = useCadastroStore();
   const [produtosPendentes, setProdutosPendentes] = useState<ProdutoPendente[]>([]);
-  const lojas = getLojas();
+  
+  // Usar lojas do store centralizado (apenas tipo 'Loja')
+  const lojas = obterLojasTipoLoja();
   const fornecedores = getFornecedores();
 
   const getLojaNome = (lojaId: string) => {
-    const loja = getLojaById(lojaId);
-    return loja?.nome || lojaId;
+    const loja = obterLojaById(lojaId);
+    if (loja) return loja.nome;
+    return obterNomeLoja(lojaId);
   };
 
   // Filtros - igual à aba Produtos + filtro de status + filtro de fornecedor + filtro de parecer estoque
@@ -480,15 +485,6 @@ export default function EstoqueProdutosPendentes() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-1 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/os/assistencia/nova?produtoId=${produto.id}`)}
-                            title="Encaminhar para Assistência"
-                            disabled={produto.statusGeral === 'Devolvido para Fornecedor'}
-                          >
-                            <Wrench className="h-4 w-4" />
-                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"

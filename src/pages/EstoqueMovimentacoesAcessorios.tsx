@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { getAcessorios, Acessorio } from '@/utils/acessoriosApi';
-import { getLojas, getLojaById } from '@/utils/cadastrosApi';
-import { Download, Plus } from 'lucide-react';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { getAcessorios, Acessorio } from '@/utils/acessoriosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
+import { Download, Plus, CheckCircle, Clock } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface MovimentacaoAcessorio {
   id: string;
@@ -21,6 +23,7 @@ interface MovimentacaoAcessorio {
   destino: string;
   responsavel: string;
   motivo: string;
+  status: 'Pendente' | 'Recebido';
 }
 
 // Mock data
@@ -34,7 +37,8 @@ const mockMovimentacoes: MovimentacaoAcessorio[] = [
     origem: 'Loja Centro',
     destino: 'Loja Shopping',
     responsavel: 'Maria Souza',
-    motivo: 'Reposição de estoque'
+    motivo: 'Reposição de estoque',
+    status: 'Recebido'
   },
   {
     id: 'MOV-ACESS-002',
@@ -45,7 +49,8 @@ const mockMovimentacoes: MovimentacaoAcessorio[] = [
     origem: 'Matriz',
     destino: 'Loja Centro',
     responsavel: 'João Silva',
-    motivo: 'Transferência'
+    motivo: 'Transferência',
+    status: 'Pendente'
   },
   {
     id: 'MOV-ACESS-003',
@@ -56,30 +61,34 @@ const mockMovimentacoes: MovimentacaoAcessorio[] = [
     origem: 'Loja Shopping',
     destino: 'Loja Centro',
     responsavel: 'Ana Costa',
-    motivo: 'Devolução'
+    motivo: 'Devolução',
+    status: 'Recebido'
   }
 ];
 
 let movimentacoesData = [...mockMovimentacoes];
 
 export default function EstoqueMovimentacoesAcessorios() {
+  const { obterLojasTipoLoja, obterColaboradoresAtivos, obterLojaById, obterNomeLoja } = useCadastroStore();
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoAcessorio[]>(movimentacoesData);
   const [origemFilter, setOrigemFilter] = useState<string>('todas');
   const [destinoFilter, setDestinoFilter] = useState<string>('todas');
   const [dialogOpen, setDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const lojas = getLojas().filter(l => l.status === 'Ativo');
+  // Apenas lojas do tipo 'Loja' para movimentações
+  const lojas = obterLojasTipoLoja();
   const acessorios = getAcessorios();
+  
+  // Colaboradores com permissão de estoque ou gestor
+  const colaboradoresComPermissao = obterColaboradoresAtivos().filter(
+    col => col.eh_estoquista || col.eh_gestor
+  );
 
   const getLojaNome = (lojaIdOuNome: string) => {
-    // Primeiro tenta buscar por ID
-    const lojaPorId = getLojaById(lojaIdOuNome);
-    if (lojaPorId) return lojaPorId.nome;
-    // Fallback para dados legados com nome
-    const lojaPorNome = lojas.find(l => l.nome.toLowerCase().includes(lojaIdOuNome.toLowerCase()));
-    if (lojaPorNome) return lojaPorNome.nome;
-    return lojaIdOuNome;
+    const loja = obterLojaById(lojaIdOuNome);
+    if (loja) return loja.nome;
+    return obterNomeLoja(lojaIdOuNome);
   };
 
   const movimentacoesFiltradas = useMemo(() => {
@@ -118,6 +127,9 @@ export default function EstoqueMovimentacoesAcessorios() {
     const acessorioId = formData.get('acessorioId') as string;
     const acessorio = acessorios.find(a => a.id === acessorioId);
     
+    const responsavelId = formData.get('responsavel') as string;
+    const responsavelNome = colaboradoresComPermissao.find(c => c.id === responsavelId)?.nome || responsavelId;
+    
     const novaMovimentacao: MovimentacaoAcessorio = {
       id: `MOV-ACESS-${Date.now()}`,
       data: formData.get('data') as string,
@@ -126,8 +138,9 @@ export default function EstoqueMovimentacoesAcessorios() {
       quantidade: parseInt(formData.get('quantidade') as string),
       origem: formData.get('origem') as string,
       destino: formData.get('destino') as string,
-      responsavel: formData.get('responsavel') as string,
-      motivo: formData.get('motivo') as string
+      responsavel: responsavelNome,
+      motivo: formData.get('motivo') as string,
+      status: 'Pendente'
     };
 
     movimentacoesData = [...movimentacoesData, novaMovimentacao];
@@ -237,8 +250,17 @@ export default function EstoqueMovimentacoesAcessorios() {
                   </div>
 
                   <div>
-                    <Label htmlFor="responsavel">Responsável</Label>
-                    <Input id="responsavel" name="responsavel" required />
+                    <Label htmlFor="responsavel">Responsável *</Label>
+                    <Select name="responsavel" required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o colaborador" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {colaboradoresComPermissao.map(col => (
+                          <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div>
@@ -274,12 +296,19 @@ export default function EstoqueMovimentacoesAcessorios() {
                 <TableHead>Origem</TableHead>
                 <TableHead>Destino</TableHead>
                 <TableHead>Responsável</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Motivo</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {movimentacoesFiltradas.map(mov => (
-                <TableRow key={mov.id}>
+                <TableRow 
+                  key={mov.id}
+                  className={cn(
+                    mov.status === 'Pendente' && 'bg-yellow-500/10',
+                    mov.status === 'Recebido' && 'bg-green-500/10'
+                  )}
+                >
                   <TableCell className="font-mono text-xs">{mov.id}</TableCell>
                   <TableCell>{new Date(mov.data).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell>{mov.acessorio}</TableCell>
@@ -287,6 +316,19 @@ export default function EstoqueMovimentacoesAcessorios() {
                   <TableCell>{getLojaNome(mov.origem)}</TableCell>
                   <TableCell>{getLojaNome(mov.destino)}</TableCell>
                   <TableCell>{mov.responsavel}</TableCell>
+                  <TableCell>
+                    {mov.status === 'Recebido' ? (
+                      <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Recebido
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                        <Clock className="h-3 w-3 mr-1" />
+                        Pendente
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell>{mov.motivo}</TableCell>
                 </TableRow>
               ))}

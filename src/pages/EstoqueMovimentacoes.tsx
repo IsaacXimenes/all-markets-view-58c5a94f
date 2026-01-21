@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 export default function EstoqueMovimentacoes() {
-  const { obterLojasAtivas, obterColaboradoresAtivos, obterLojaById, obterNomeLoja } = useCadastroStore();
+  const { obterLojasTipoLoja, obterColaboradoresAtivos, obterLojaById, obterNomeLoja } = useCadastroStore();
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>(getMovimentacoes());
   const [origemFilter, setOrigemFilter] = useState<string>('todas');
   const [destinoFilter, setDestinoFilter] = useState<string>('todas');
@@ -29,8 +29,15 @@ export default function EstoqueMovimentacoes() {
   const [responsavelConfirmacao, setResponsavelConfirmacao] = useState<string>('');
   const { toast } = useToast();
 
-  const lojas = obterLojasAtivas();
+  // Apenas lojas do tipo 'Loja' para movimentações
+  const lojas = obterLojasTipoLoja();
   const colaboradores = obterColaboradoresAtivos();
+  
+  // Colaboradores com permissão de estoque ou gestor
+  const colaboradoresComPermissao = colaboradores.filter(
+    col => col.eh_estoquista || col.eh_gestor
+  );
+  
   const [produtos] = useState<Produto[]>(getProdutos());
 
   // Form state
@@ -353,7 +360,7 @@ export default function EstoqueMovimentacoes() {
                         <SelectValue placeholder="Selecione o colaborador" />
                       </SelectTrigger>
                       <SelectContent>
-                        {colaboradores.map(col => (
+                        {colaboradoresComPermissao.map(col => (
                           <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
                         ))}
                       </SelectContent>
@@ -560,7 +567,7 @@ export default function EstoqueMovimentacoes() {
                   <SelectValue placeholder="Selecione o colaborador" />
                 </SelectTrigger>
                 <SelectContent>
-                  {colaboradores.map(col => (
+                  {colaboradoresComPermissao.map(col => (
                     <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
                   ))}
                 </SelectContent>
