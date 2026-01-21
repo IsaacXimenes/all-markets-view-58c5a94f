@@ -39,6 +39,7 @@ import { formatarMoeda, moedaMask, parseMoeda } from '@/utils/formatUtils';
 import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+import { getTaxasEntregaAtivas, TaxaEntrega } from '@/utils/taxasEntregaApi';
 
 // Alias para compatibilidade
 const formatCurrency = formatarMoeda;
@@ -86,6 +87,12 @@ export default function VendasNova() {
   const [localRetirada, setLocalRetirada] = useState('');
   const [tipoRetirada, setTipoRetirada] = useState<'Retirada Balcão' | 'Entrega' | 'Retirada em Outra Loja'>('Retirada Balcão');
   const [taxaEntrega, setTaxaEntrega] = useState(0);
+  const [valorRecomendadoEntrega, setValorRecomendadoEntrega] = useState(0);
+  const [localEntregaId, setLocalEntregaId] = useState('');
+  const [localEntregaNome, setLocalEntregaNome] = useState('');
+  const [buscaLocalEntrega, setBuscaLocalEntrega] = useState('');
+  const [taxasEntrega] = useState<TaxaEntrega[]>(getTaxasEntregaAtivas());
+  const [showLocaisEntrega, setShowLocaisEntrega] = useState(false);
   const [motoboyId, setMotoboyId] = useState('');
   const [observacoes, setObservacoes] = useState('');
   
@@ -1686,8 +1693,64 @@ export default function VendasNova() {
               
               {tipoRetirada === 'Entrega' && (
                 <>
+                  {/* Autocomplete de Local de Entrega */}
+                  <div className="relative">
+                    <label className="text-sm font-medium">Local de Entrega *</label>
+                    <Input
+                      value={localEntregaNome || buscaLocalEntrega}
+                      onChange={(e) => {
+                        setBuscaLocalEntrega(e.target.value);
+                        setLocalEntregaNome('');
+                        setLocalEntregaId('');
+                        setValorRecomendadoEntrega(0);
+                        setShowLocaisEntrega(true);
+                      }}
+                      onFocus={() => setShowLocaisEntrega(true)}
+                      placeholder="Digite para buscar local..."
+                    />
+                    {showLocaisEntrega && (buscaLocalEntrega || !localEntregaNome) && (
+                      <div className="absolute z-50 w-full mt-1 bg-card border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        {taxasEntrega
+                          .filter(t => t.local.toLowerCase().includes((buscaLocalEntrega || '').toLowerCase()))
+                          .map(taxa => (
+                            <div
+                              key={taxa.id}
+                              className="px-3 py-2 hover:bg-muted cursor-pointer flex justify-between items-center"
+                              onClick={() => {
+                                setLocalEntregaId(taxa.id);
+                                setLocalEntregaNome(taxa.local);
+                                setValorRecomendadoEntrega(taxa.valor);
+                                setTaxaEntrega(taxa.valor);
+                                setBuscaLocalEntrega('');
+                                setShowLocaisEntrega(false);
+                              }}
+                            >
+                              <span>{taxa.local}</span>
+                              <span className="text-sm text-muted-foreground">{formatCurrency(taxa.valor)}</span>
+                            </div>
+                          ))}
+                        {taxasEntrega.filter(t => t.local.toLowerCase().includes((buscaLocalEntrega || '').toLowerCase())).length === 0 && (
+                          <div className="px-3 py-2 text-muted-foreground text-sm">
+                            Nenhum local encontrado
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Valor Recomendado (read-only) */}
+                  {valorRecomendadoEntrega > 0 && (
+                    <div>
+                      <label className="text-sm font-medium">Valor Recomendado</label>
+                      <div className="h-10 flex items-center px-3 bg-muted rounded-md text-sm font-medium text-muted-foreground">
+                        {formatCurrency(valorRecomendadoEntrega)}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Valor da Entrega (editável) */}
                   <div>
-                    <label className="text-sm font-medium">Taxa de Entrega</label>
+                    <label className="text-sm font-medium">Valor da Entrega *</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
                       <Input 
@@ -1697,13 +1760,22 @@ export default function VendasNova() {
                           const value = e.target.value.replace(/\D/g, '');
                           setTaxaEntrega(Number(value) / 100);
                         }}
-                        className="pl-10"
+                        className={`pl-10 ${taxaEntrega < valorRecomendadoEntrega && valorRecomendadoEntrega > 0 ? 'border-destructive text-destructive' : ''}`}
                         placeholder="0,00"
                       />
                     </div>
+                    {/* Alerta de Margem */}
+                    {taxaEntrega < valorRecomendadoEntrega && valorRecomendadoEntrega > 0 && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-destructive">
+                        <AlertTriangle className="h-3 w-3" />
+                        <span>Valor abaixo do recomendado! Margem perdida: {formatCurrency(valorRecomendadoEntrega - taxaEntrega)}</span>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Motoboy (obrigatório) */}
                   <div>
-                    <label className="text-sm font-medium">Nome do Motoboy *</label>
+                    <label className="text-sm font-medium">Motoboy *</label>
                     <Select value={motoboyId} onValueChange={setMotoboyId}>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o motoboy" />

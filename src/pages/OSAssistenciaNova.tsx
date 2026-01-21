@@ -657,7 +657,7 @@ export default function OSAssistenciaNova() {
   };
 
   return (
-    <PageLayout title="Novo Registro de Garantia">
+    <PageLayout title="Nova Assistência">
       {/* Timer */}
       {timer !== null && (
         <div className={`fixed top-20 right-6 z-50 p-4 rounded-lg shadow-lg flex items-center gap-3 ${
@@ -978,14 +978,18 @@ export default function OSAssistenciaNova() {
                     </div>
                     <div className="space-y-2">
                       <Label>Desconto (%)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={peca.percentual}
-                        onChange={e => handlePecaChange(index, 'percentual', e.target.value)}
-                        placeholder="0"
-                      />
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={peca.percentual}
+                          onChange={e => handlePecaChange(index, 'percentual', e.target.value)}
+                          placeholder="0"
+                          className="pr-8"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                      </div>
                     </div>
                   </div>
 
