@@ -259,72 +259,72 @@ export default function VendasConferenciaLancamento() {
       {/* Cards de somatório por método de pagamento - DINÂMICO */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <CreditCard className="h-8 w-8 text-blue-600 opacity-70" />
+          <CardContent className="pt-3 pb-3">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-blue-600 opacity-70" />
               <div>
-                <p className="text-sm text-blue-700 dark:text-blue-300">Cartão de Crédito</p>
-                <p className="text-2xl font-bold text-blue-800 dark:text-blue-200">{formatCurrency(somatorioPagamentos.cartaoCredito)}</p>
+                <p className="text-xs text-blue-700 dark:text-blue-300">Crédito</p>
+                <p className="text-sm font-bold text-blue-800 dark:text-blue-200">{formatCurrency(somatorioPagamentos.cartaoCredito)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
         <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <Wallet className="h-8 w-8 text-green-600 opacity-70" />
+          <CardContent className="pt-3 pb-3">
+            <div className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-green-600 opacity-70" />
               <div>
-                <p className="text-sm text-green-700 dark:text-green-300">Cartão de Débito</p>
-                <p className="text-2xl font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.cartaoDebito)}</p>
+                <p className="text-xs text-green-700 dark:text-green-300">Débito</p>
+                <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.cartaoDebito)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-950/50 dark:to-teal-900/30 border-teal-200 dark:border-teal-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <Smartphone className="h-8 w-8 text-teal-600 opacity-70" />
+          <CardContent className="pt-3 pb-3">
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-teal-600 opacity-70" />
               <div>
-                <p className="text-sm text-teal-700 dark:text-teal-300">Pix</p>
-                <p className="text-2xl font-bold text-teal-800 dark:text-teal-200">{formatCurrency(somatorioPagamentos.pix)}</p>
+                <p className="text-xs text-teal-700 dark:text-teal-300">Pix</p>
+                <p className="text-sm font-bold text-teal-800 dark:text-teal-200">{formatCurrency(somatorioPagamentos.pix)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/50 dark:to-amber-900/30 border-amber-200 dark:border-amber-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <Banknote className="h-8 w-8 text-amber-600 opacity-70" />
+          <CardContent className="pt-3 pb-3">
+            <div className="flex items-center gap-2">
+              <Banknote className="h-5 w-5 text-amber-600 opacity-70" />
               <div>
-                <p className="text-sm text-amber-700 dark:text-amber-300">Dinheiro</p>
-                <p className="text-2xl font-bold text-amber-800 dark:text-amber-200">{formatCurrency(somatorioPagamentos.dinheiro)}</p>
+                <p className="text-xs text-amber-700 dark:text-amber-300">Dinheiro</p>
+                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">{formatCurrency(somatorioPagamentos.dinheiro)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950/50 dark:to-indigo-900/30 border-indigo-200 dark:border-indigo-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <CreditCard className="h-8 w-8 text-indigo-600 opacity-70" />
+          <CardContent className="pt-3 pb-3">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-indigo-600 opacity-70" />
               <div>
-                <p className="text-sm text-indigo-700 dark:text-indigo-300">Boleto/Crediário</p>
-                <p className="text-2xl font-bold text-indigo-800 dark:text-indigo-200">{formatCurrency(somatorioPagamentos.boleto)}</p>
+                <p className="text-xs text-indigo-700 dark:text-indigo-300">Boleto/Crediário</p>
+                <p className="text-sm font-bold text-indigo-800 dark:text-indigo-200">{formatCurrency(somatorioPagamentos.boleto)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-8 w-8 text-red-600 opacity-70" />
+          <CardContent className="pt-3 pb-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600 opacity-70" />
               <div>
-                <p className="text-sm text-red-700 dark:text-red-300">Sinal</p>
-                <p className="text-2xl font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.sinal)}</p>
+                <p className="text-xs text-red-700 dark:text-red-300">Sinal</p>
+                <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.sinal)}</p>
               </div>
             </div>
           </CardContent>
