@@ -34,8 +34,8 @@ export function CadastrosLayout({ children, title }: CadastrosLayoutProps) {
   return (
     <PageLayout title={title}>
       <div className="mb-6 border-b border-border">
-        <ScrollArea className="w-full whitespace-nowrap">
-          <nav className="flex gap-1 pb-3">
+        <ScrollArea className="w-full whitespace-nowrap" type="always">
+          <nav className="flex gap-1 pb-4">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = location.pathname === tab.href;
@@ -56,7 +56,7 @@ export function CadastrosLayout({ children, title }: CadastrosLayoutProps) {
               );
             })}
           </nav>
-          <ScrollBar orientation="horizontal" className="h-2" />
+          <ScrollBar orientation="horizontal" className="h-2.5 bg-muted/50" />
         </ScrollArea>
       </div>
       {children}
