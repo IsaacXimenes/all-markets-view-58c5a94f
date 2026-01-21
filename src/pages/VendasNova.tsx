@@ -1641,7 +1641,7 @@ export default function VendasNova() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className={`grid gap-4 ${tipoRetirada === 'Entrega' ? 'grid-cols-1 md:grid-cols-5' : 'grid-cols-1 md:grid-cols-2'}`}>
               <div>
                 <label className="text-sm font-medium">Tipo de Retirada</label>
                 <Select 
@@ -1707,18 +1707,16 @@ export default function VendasNova() {
                   </div>
 
                   {/* Valor Recomendado (read-only) */}
-                  {valorRecomendadoEntrega > 0 && (
-                    <div>
-                      <label className="text-sm font-medium">Valor Recomendado</label>
-                      <div className="h-10 flex items-center px-3 bg-muted rounded-md text-sm font-medium text-muted-foreground">
-                        {formatCurrency(valorRecomendadoEntrega)}
-                      </div>
+                  <div>
+                    <label className="text-sm font-medium">Valor Recom.</label>
+                    <div className="h-10 flex items-center px-3 bg-muted rounded-md text-sm font-medium text-muted-foreground">
+                      {valorRecomendadoEntrega > 0 ? formatCurrency(valorRecomendadoEntrega) : '-'}
                     </div>
-                  )}
+                  </div>
 
                   {/* Valor da Entrega (editável) */}
                   <div>
-                    <label className="text-sm font-medium">Valor da Entrega *</label>
+                    <label className="text-sm font-medium">Valor Entrega *</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
                       <Input 
@@ -1732,11 +1730,10 @@ export default function VendasNova() {
                         placeholder="0,00"
                       />
                     </div>
-                    {/* Alerta de Margem */}
                     {taxaEntrega < valorRecomendadoEntrega && valorRecomendadoEntrega > 0 && (
                       <div className="flex items-center gap-1 mt-1 text-xs text-destructive">
                         <AlertTriangle className="h-3 w-3" />
-                        <span>Valor abaixo do recomendado! Margem perdida: {formatCurrency(valorRecomendadoEntrega - taxaEntrega)}</span>
+                        <span>-{formatCurrency(valorRecomendadoEntrega - taxaEntrega)}</span>
                       </div>
                     )}
                   </div>
