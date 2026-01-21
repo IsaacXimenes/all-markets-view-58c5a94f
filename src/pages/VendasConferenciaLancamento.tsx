@@ -28,7 +28,7 @@ import {
   DialogFooter,
   DialogDescription
 } from '@/components/ui/dialog';
-import { Eye, Download, Filter, X, Pencil, Check, Clock, AlertTriangle, CreditCard, Wallet, Smartphone, Banknote, AlertCircle } from 'lucide-react';
+import { Eye, Download, Filter, X, Pencil, Check, Clock, AlertTriangle, CreditCard, Wallet, Smartphone, Banknote, AlertCircle, ArrowLeftRight } from 'lucide-react';
 import { useFluxoVendas } from '@/hooks/useFluxoVendas';
 import { 
   aprovarLancamento, 
@@ -480,7 +480,17 @@ export default function VendasConferenciaLancamento() {
                         key={venda.id}
                         className={getRowClassName(venda.statusFluxo as StatusVenda, venda)}
                       >
-                        <TableCell className="font-medium">{venda.id}</TableCell>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            {venda.id}
+                            {(venda as any).tipoOperacao === 'Downgrade' && (venda as any).saldoDevolver > 0 && (
+                              <Badge className="bg-orange-500 text-white text-xs">
+                                <ArrowLeftRight className="h-3 w-3 mr-1" />
+                                DOWNGRADE
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell className="whitespace-nowrap">
                           {new Date(venda.dataHora).toLocaleDateString('pt-BR')}
                           <span className="text-muted-foreground ml-1">

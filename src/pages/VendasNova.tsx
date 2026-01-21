@@ -719,6 +719,25 @@ export default function VendasNova() {
     );
   }, [lojaVenda, vendedor, clienteId, origemVenda, itens.length, acessoriosVenda.length, temPagamentoSinal, valorSinal, total, tradeInNaoValidado, tipoRetirada, motoboyId]);
 
+  // Validar se pode registrar Downgrade
+  const canSubmitDowngrade = useMemo(() => {
+    // Se for entrega, motoboy é obrigatório
+    const motoboyValido = tipoRetirada !== 'Entrega' || !!motoboyId;
+    
+    return (
+      hasValidDowngrade && // Deve ser operação de downgrade válida
+      lojaVenda &&
+      vendedor &&
+      clienteId &&
+      origemVenda &&
+      itens.length > 0 && // Downgrade exige pelo menos um produto
+      tradeIns.length > 0 && // Downgrade exige trade-in
+      !tradeInNaoValidado &&
+      motoboyValido &&
+      saldoDevolver > 0 // Deve ter saldo positivo a devolver
+    );
+  }, [hasValidDowngrade, lojaVenda, vendedor, clienteId, origemVenda, itens.length, tradeIns.length, tradeInNaoValidado, tipoRetirada, motoboyId, saldoDevolver]);
+
   // Registrar venda
   const handleRegistrarVenda = () => {
     if (!canSubmit) return;
@@ -1860,14 +1879,20 @@ export default function VendasNova() {
         )}
 
         {/* Resumo */}
-        <Card className={`border-2 ${isPrejuizo ? 'border-destructive' : 'border-primary'}`}>
+        <Card className={`border-2 ${hasValidDowngrade ? 'border-orange-500' : isPrejuizo ? 'border-destructive' : 'border-primary'}`}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
                 Resumo
+                {hasValidDowngrade && (
+                  <Badge className="bg-orange-500 text-white ml-2">
+                    <ArrowLeftRight className="h-3 w-3 mr-1" />
+                    DOWNGRADE
+                  </Badge>
+                )}
               </span>
-              {isPrejuizo && (
+              {isPrejuizo && !hasValidDowngrade && (
                 <Badge variant="destructive" className="text-lg px-4 py-1">
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   PREJUÍZO
@@ -2027,6 +2052,12 @@ export default function VendasNova() {
               if (valorSinal >= total && valorSinal > 0) camposFaltando.push('Sinal deve ser menor que o total');
             }
             
+            if (isDowngradeMode) {
+              if (tradeIns.length === 0) camposFaltando.push('Trade-in obrigatório para Downgrade');
+              if (itens.length === 0) camposFaltando.push('Produto obrigatório para Downgrade');
+              if (saldoDevolver <= 0) camposFaltando.push('Saldo a devolver deve ser positivo');
+            }
+            
             if (camposFaltando.length > 0) {
               return (
                 <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2">
@@ -2066,8 +2097,8 @@ export default function VendasNova() {
             {hasValidDowngrade && (
               <Button 
                 onClick={handleRegistrarVenda}
-                disabled={!canSubmit || tradeInNaoValidado}
-                className="bg-destructive hover:bg-destructive/90"
+                disabled={!canSubmitDowngrade}
+                className="bg-orange-600 hover:bg-orange-700"
               >
                 <ArrowLeftRight className="h-4 w-4 mr-2" />
                 Registrar Downgrade

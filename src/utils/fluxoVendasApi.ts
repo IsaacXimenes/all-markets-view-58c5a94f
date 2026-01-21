@@ -95,8 +95,11 @@ export const getVendaComFluxo = (vendaId: string): VendaComFluxo | null => {
     recusaGestor: dadosFluxo.recusaGestor,
     devolucaoFinanceiro: dadosFluxo.devolucaoFinanceiro,
     aprovacaoFinanceiro: dadosFluxo.aprovacaoFinanceiro,
+    pagamentoDowngrade: dadosFluxo.pagamentoDowngrade,
     timelineFluxo: dadosFluxo.timelineFluxo || (venda as any).timeline || [],
-    bloqueadoParaEdicao: dadosFluxo.bloqueadoParaEdicao || (venda as any).bloqueadoParaEdicao || false
+    bloqueadoParaEdicao: dadosFluxo.bloqueadoParaEdicao || (venda as any).bloqueadoParaEdicao || false,
+    tipoOperacao: dadosFluxo.tipoOperacao || (venda as any).tipoOperacao,
+    saldoDevolver: dadosFluxo.saldoDevolver || (venda as any).saldoDevolver || 0
   };
 };
 
@@ -164,10 +167,15 @@ export const inicializarVendaNoFluxo = (
       : `Venda criada por ${vendedorNome}. Aguardando conferência do lançador.`
   };
 
+  // Preservar tipo de operação e saldo a devolver da venda
+  const vendaAny = venda as any;
+  
   fluxoData[vendaId] = {
     statusFluxo: status,
     timelineFluxo: [timelineInicial],
-    bloqueadoParaEdicao: false
+    bloqueadoParaEdicao: false,
+    tipoOperacao: vendaAny.tipoOperacao, // Persistir tipo de operação (Upgrade/Downgrade)
+    saldoDevolver: vendaAny.saldoDevolver || 0 // Persistir saldo a devolver
   };
 
   saveFluxoData(fluxoData);
