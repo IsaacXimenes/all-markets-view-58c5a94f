@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { cn } from '@/lib/utils';
+import { useSidebarState } from '@/hooks/useSidebarState';
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -9,11 +10,7 @@ interface PageLayoutProps {
 }
 
 export function PageLayout({ children, title }: PageLayoutProps) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  
-  const toggleSidebar = () => {
-    setIsSidebarCollapsed(prev => !prev);
-  };
+  const [isSidebarCollapsed, toggleSidebar] = useSidebarState(false);
   
   return (
     <div className="min-h-screen flex">
