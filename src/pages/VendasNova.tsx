@@ -2004,10 +2004,18 @@ export default function VendasNova() {
         {/* Botões Finais */}
         <div className="flex flex-col gap-4">
           {/* Debug info - remover depois */}
-          <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
-            DEBUG: temPagamentoSinal={String(temPagamentoSinal)} | canSubmitSinal={String(canSubmitSinal)} | 
-            pagamentos={pagamentos.length} | valorSinal={valorSinal} | total={total} | 
-            hasValidDowngrade={String(hasValidDowngrade)}
+          <div className="text-xs text-muted-foreground bg-muted p-2 rounded space-y-1">
+            <div>
+              DEBUG: temPagamentoSinal={String(temPagamentoSinal)} | canSubmitSinal={String(canSubmitSinal)} | 
+              pagamentos={pagamentos.length} | valorSinal={valorSinal} | total={total} | 
+              hasValidDowngrade={String(hasValidDowngrade)}
+            </div>
+            <div>
+              lojaVenda={lojaVenda ? '✓' : '✗'} | vendedor={vendedor ? '✓' : '✗'} | 
+              clienteId={clienteId ? '✓' : '✗'} | origemVenda={origemVenda ? '✓' : '✗'} | 
+              localRetirada={localRetirada ? '✓' : '✗'} | itens={itens.length} | acessorios={acessoriosVenda.length} |
+              tradeInNaoValidado={String(tradeInNaoValidado)} | tipoRetirada={tipoRetirada} | motoboyId={motoboyId ? '✓' : '✗'}
+            </div>
           </div>
           
           <div className="flex gap-4 justify-end">
