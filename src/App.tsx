@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { NotificationSystem } from "@/components/notifications/NotificationSystem";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useCadastroStore } from "@/store/cadastroStore";
@@ -115,7 +115,7 @@ const App = () => (
       <AppInitializer>
         <Toaster />
         <Sonner />
-        <NotificationSystem />
+        
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
