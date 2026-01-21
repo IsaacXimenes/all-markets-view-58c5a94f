@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
 import { 
-  Dialog, DialogContent, DialogHeader, DialogTitle 
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from '@/components/ui/dialog';
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
@@ -20,25 +20,35 @@ import {
 import { 
   ArrowLeft, Shield, User, Package, Phone, Mail, Clock, 
   FileText, CheckCircle, AlertCircle, Smartphone, Wrench, ArrowRightLeft,
-  Plus, Search
+  Plus, Search, RotateCcw
 } from 'lucide-react';
 import { 
   getGarantiaById, getTratativasByGarantiaId, getTimelineByGarantiaId,
-  calcularStatusExpiracao, addTratativa, addTimelineEntry, updateGarantia
+  calcularStatusExpiracao, addTratativa, addTimelineEntry, updateGarantia, updateTratativa
 } from '@/utils/garantiasApi';
 import { getProdutos, updateProduto, addMovimentacao, Produto } from '@/utils/estoqueApi';
-import { getLojas } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
 export default function GarantiaDetalhes() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const lojas = getLojas();
+  const [searchParams] = useSearchParams();
+  const { obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   
   const garantia = id ? getGarantiaById(id) : null;
   const tratativas = id ? getTratativasByGarantiaId(id) : [];
   const timeline = id ? getTimelineByGarantiaId(id) : [];
+  
+  // Modal de devolução de emprestado
+  const [showDevolucaoModal, setShowDevolucaoModal] = useState(false);
+  const [tratativaEmprestimo, setTratativaEmprestimo] = useState<typeof tratativas[0] | null>(null);
+  
+  // Verificar se há aparelho emprestado ativo
+  const tratativaComEmprestimo = tratativas.find(t => 
+    t.aparelhoEmprestadoId && t.status === 'Em Andamento'
+  );
   
   // Estados do formulário de tratativa
   const [tipoTratativa, setTipoTratativa] = useState<string>('');
@@ -63,7 +73,7 @@ export default function GarantiaDetalhes() {
     );
   }, [buscaAparelho]);
   
-  const getLojaName = (lojaId: string) => lojas.find(l => l.id === lojaId)?.nome || lojaId;
+  const getLojaName = (lojaId: string) => obterNomeLoja(lojaId);
   
   const getTipoTimeline = (tipo: string) => {
     switch (tipo) {
@@ -226,17 +236,41 @@ export default function GarantiaDetalhes() {
     <PageLayout title={`Detalhes da Garantia ${garantia.id}`}>
       {/* Botão Voltar e Ações */}
       <div className="mb-6 flex justify-between items-center">
-        <Button variant="outline" onClick={() => navigate('/garantias/historico')}>
+        <Button variant="outline" onClick={() => {
+          // Retornar para a aba correta baseado no parâmetro de origem
+          const from = searchParams.get('from');
+          if (from === 'em-andamento') {
+            navigate('/garantias/em-andamento');
+          } else {
+            navigate('/garantias/historico');
+          }
+        }}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Voltar
         </Button>
-        <Button 
-          variant="outline"
-          onClick={() => navigate(`/os/assistencia/nova?garantiaId=${garantia.id}`)}
-        >
-          <Wrench className="h-4 w-4 mr-2" />
-          Encaminhar para Assistência
-        </Button>
+        <div className="flex gap-2">
+          {/* Botão de devolução - só aparece se houver aparelho emprestado ativo */}
+          {tratativaComEmprestimo && (
+            <Button 
+              variant="outline"
+              className="border-amber-500 text-amber-600 hover:bg-amber-50"
+              onClick={() => {
+                setTratativaEmprestimo(tratativaComEmprestimo);
+                setShowDevolucaoModal(true);
+              }}
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Registrar Devolução de Emprestado
+            </Button>
+          )}
+          <Button 
+            variant="outline"
+            onClick={() => navigate(`/os/assistencia/nova?garantiaId=${garantia.id}`)}
+          >
+            <Wrench className="h-4 w-4 mr-2" />
+            Encaminhar para Assistência
+          </Button>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -623,6 +657,86 @@ export default function GarantiaDetalhes() {
               </Table>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Modal de Devolução de Aparelho Emprestado */}
+      <Dialog open={showDevolucaoModal} onOpenChange={setShowDevolucaoModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="h-5 w-5" />
+              Registrar Devolução de Aparelho
+            </DialogTitle>
+            <DialogDescription>
+              Confirme a devolução do aparelho emprestado ao cliente
+            </DialogDescription>
+          </DialogHeader>
+          
+          {tratativaEmprestimo && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">Aparelho Emprestado</p>
+                <p className="font-medium">{tratativaEmprestimo.aparelhoEmprestadoModelo}</p>
+                <p className="text-sm font-mono text-muted-foreground">{tratativaEmprestimo.aparelhoEmprestadoImei}</p>
+              </div>
+              
+              <p className="text-sm text-muted-foreground">
+                Ao confirmar, o aparelho será movido para <strong>"Aparelho Pendente - Conferência"</strong> no estoque e a ação será registrada na timeline.
+              </p>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDevolucaoModal(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={() => {
+              if (!tratativaEmprestimo || !garantia) return;
+              
+              // Atualizar produto no estoque - volta como Base de Troca para conferência
+              if (tratativaEmprestimo.aparelhoEmprestadoId) {
+                updateProduto(tratativaEmprestimo.aparelhoEmprestadoId, { 
+                  quantidade: 1,
+                  origemEntrada: 'Base de Troca'
+                });
+                
+                // Adicionar movimentação
+                addMovimentacao({
+                  data: new Date().toISOString(),
+                  produto: tratativaEmprestimo.aparelhoEmprestadoModelo || '',
+                  imei: tratativaEmprestimo.aparelhoEmprestadoImei || '',
+                  quantidade: 1,
+                  origem: 'Empréstimo - Garantia',
+                  destino: 'Conferência',
+                  responsavel: 'Usuário Sistema',
+                  motivo: `Devolução empréstimo garantia ${garantia.id}`
+                });
+              }
+              
+              // Atualizar tratativa
+              updateTratativa(tratativaEmprestimo.id, { status: 'Concluído' });
+              
+              // Adicionar timeline
+              addTimelineEntry({
+                garantiaId: garantia.id,
+                dataHora: new Date().toISOString(),
+                tipo: 'devolucao',
+                titulo: 'Aparelho Emprestado Devolvido',
+                descricao: `Aparelho ${tratativaEmprestimo.aparelhoEmprestadoModelo} (IMEI: ${tratativaEmprestimo.aparelhoEmprestadoImei}) devolvido e encaminhado para conferência`,
+                usuarioId: 'COL-001',
+                usuarioNome: 'Usuário Sistema'
+              });
+              
+              toast.success('Devolução registrada! Aparelho encaminhado para conferência.');
+              setShowDevolucaoModal(false);
+              
+              // Recarregar página para atualizar dados
+              window.location.reload();
+            }}>
+              Confirmar Devolução
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </PageLayout>
