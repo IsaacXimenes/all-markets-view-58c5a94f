@@ -2366,7 +2366,8 @@ export default function VendasNova() {
                 </TableHeader>
                 <TableBody>
                   {produtosPendentes.filter(p => {
-                    if (filtroLojaProduto && p.loja !== filtroLojaProduto) return false;
+                    // Comparar pelo nome da loja (filtroLojaProduto contém nome)
+                    if (filtroLojaProduto && obterNomeLoja(p.loja) !== filtroLojaProduto) return false;
                     if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
                     if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
                     return true;
