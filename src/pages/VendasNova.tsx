@@ -920,27 +920,35 @@ export default function VendasNova() {
                 <Input value={vendaInfo.numero} disabled className="bg-muted" />
               </div>
               <div>
-                <label className="text-sm font-medium">Loja de Venda *</label>
+                <label className={`text-sm font-medium ${!lojaVenda ? 'text-destructive' : ''}`}>
+                  Loja de Venda *
+                </label>
                 <AutocompleteLoja
                   value={lojaVenda}
                   onChange={setLojaVenda}
                   placeholder="Selecione a loja"
                   apenasLojasTipoLoja={true}
+                  className={!lojaVenda ? 'border-destructive' : ''}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Responsável pela Venda *</label>
+                <label className={`text-sm font-medium ${!vendedor ? 'text-destructive' : ''}`}>
+                  Responsável pela Venda *
+                </label>
                 <AutocompleteColaborador
                   value={vendedor}
                   onChange={setVendedor}
                   placeholder="Selecione o responsável"
                   filtrarPorTipo="vendedores"
+                  className={!vendedor ? 'border-destructive' : ''}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Origem da Venda *</label>
+                <label className={`text-sm font-medium ${!origemVenda ? 'text-destructive' : ''}`}>
+                  Origem da Venda *
+                </label>
                 <Select value={origemVenda} onValueChange={setOrigemVenda}>
-                  <SelectTrigger>
+                  <SelectTrigger className={!origemVenda ? 'border-destructive' : ''}>
                     <SelectValue placeholder="Selecione a origem" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1023,18 +1031,23 @@ export default function VendasNova() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <div className="flex gap-2">
-                  <Input 
-                    value={clienteNome} 
-                    placeholder="Nome do Cliente"
-                    onChange={(e) => setClienteNome(e.target.value)}
-                    className="flex-1"
-                    readOnly
-                  />
-                  <Button onClick={() => setShowClienteModal(true)}>
-                    <Search className="h-4 w-4 mr-2" />
-                    Buscar
-                  </Button>
+                <div>
+                  <label className={`text-sm font-medium ${!clienteId ? 'text-destructive' : ''}`}>
+                    Cliente *
+                  </label>
+                  <div className="flex gap-2 mt-1">
+                    <Input 
+                      value={clienteNome} 
+                      placeholder="Nome do Cliente"
+                      onChange={(e) => setClienteNome(e.target.value)}
+                      className={`flex-1 ${!clienteId ? 'border-destructive' : ''}`}
+                      readOnly
+                    />
+                    <Button onClick={() => setShowClienteModal(true)}>
+                      <Search className="h-4 w-4 mr-2" />
+                      Buscar
+                    </Button>
+                  </div>
                 </div>
                 
                 {clienteId && (
@@ -1763,9 +1776,11 @@ export default function VendasNova() {
 
                   {/* Motoboy (obrigatório) */}
                   <div>
-                    <label className="text-sm font-medium">Motoboy *</label>
+                    <label className={`text-sm font-medium ${!motoboyId ? 'text-destructive' : ''}`}>
+                      Motoboy *
+                    </label>
                     <Select value={motoboyId} onValueChange={setMotoboyId}>
-                      <SelectTrigger>
+                      <SelectTrigger className={!motoboyId ? 'border-destructive' : ''}>
                         <SelectValue placeholder="Selecione o motoboy" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1987,6 +2002,48 @@ export default function VendasNova() {
 
         {/* Botões Finais */}
         <div className="flex flex-col gap-4">
+          {/* Alerta de campos obrigatórios faltando */}
+          {(() => {
+            const camposFaltando: string[] = [];
+            if (!lojaVenda) camposFaltando.push('Loja de Venda');
+            if (!vendedor) camposFaltando.push('Responsável pela Venda');
+            if (!clienteId) camposFaltando.push('Cliente');
+            if (!origemVenda) camposFaltando.push('Origem da Venda');
+            if (itens.length === 0 && acessoriosVenda.length === 0) camposFaltando.push('Produtos ou Acessórios');
+            if (tipoRetirada === 'Entrega' && !motoboyId) camposFaltando.push('Motoboy');
+            if (tradeInNaoValidado) camposFaltando.push('Trade-in com IMEI não validado');
+            
+            // Validações específicas para cada tipo de botão
+            const isSinalMode = temPagamentoSinal && !hasValidDowngrade;
+            const isDowngradeMode = hasValidDowngrade;
+            const isNormalMode = !temPagamentoSinal && !hasValidDowngrade;
+            
+            if (isNormalMode && valorPendente > 0) {
+              camposFaltando.push('Pagamento (valor pendente: ' + formatCurrency(valorPendente) + ')');
+            }
+            
+            if (isSinalMode) {
+              if (valorSinal <= 0) camposFaltando.push('Adicionar pagamento Sinal');
+              if (valorSinal >= total && valorSinal > 0) camposFaltando.push('Sinal deve ser menor que o total');
+            }
+            
+            if (camposFaltando.length > 0) {
+              return (
+                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-destructive">Campos obrigatórios não preenchidos:</p>
+                    <ul className="mt-1 text-muted-foreground list-disc list-inside">
+                      {camposFaltando.map((campo, i) => (
+                        <li key={i}>{campo}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
           
           <div className="flex gap-4 justify-end">
             <Button variant="outline" onClick={() => navigate('/vendas')}>

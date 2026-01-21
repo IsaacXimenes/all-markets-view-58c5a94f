@@ -146,7 +146,7 @@ export function AutocompleteColaborador({
   }
 
   return (
-    <div className={cn("relative", className)}>
+    <div className="relative">
       <Input
         type="text"
         placeholder={placeholder}
@@ -155,6 +155,7 @@ export function AutocompleteColaborador({
         onFocus={() => setAberto(true)}
         onBlur={() => setTimeout(() => setAberto(false), 200)}
         disabled={disabled}
+        className={className}
       />
       
       {aberto && colaboradoresFiltrados.length > 0 && (
