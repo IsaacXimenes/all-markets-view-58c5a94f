@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 export default function EstoqueMovimentacoes() {
   const { obterLojasAtivas, obterColaboradoresAtivos, obterLojaById, obterNomeLoja } = useCadastroStore();
@@ -652,89 +653,115 @@ export default function EstoqueMovimentacoes() {
           </DialogContent>
         </Dialog>
 
-        {/* Modal de Detalhes da Movimentação */}
+        {/* Modal de Detalhes da Movimentação (Timeline) */}
         <Dialog open={showDetalhesModal} onOpenChange={setShowDetalhesModal}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Detalhes da Movimentação</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Timeline da Movimentação
+              </DialogTitle>
             </DialogHeader>
             {movimentacaoDetalhe && (
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">ID</p>
-                    <p className="font-mono">{movimentacaoDetalhe.id}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Status</p>
-                    <Badge variant={movimentacaoDetalhe.status === 'Recebido' ? 'default' : 'secondary'}>
-                      {movimentacaoDetalhe.status || 'Pendente'}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div>
+                {/* Produto */}
+                <div className="bg-muted/50 p-3 rounded-md">
                   <p className="text-sm text-muted-foreground">Produto</p>
                   <p className="font-medium">{movimentacaoDetalhe.produto}</p>
                   <p className="text-sm text-muted-foreground font-mono">{formatIMEI(movimentacaoDetalhe.imei)}</p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Origem</p>
-                    <p>{getLojaNome(movimentacaoDetalhe.origem)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Destino</p>
-                    <p>{getLojaNome(movimentacaoDetalhe.destino)}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Responsável pela Movimentação</p>
-                    <p>{movimentacaoDetalhe.responsavel}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Data de Registro</p>
-                    <p>{new Date(movimentacaoDetalhe.data).toLocaleDateString('pt-BR')}</p>
-                  </div>
-                </div>
-
-                {movimentacaoDetalhe.motivo && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Observações</p>
-                    <p className="text-sm">{movimentacaoDetalhe.motivo}</p>
-                  </div>
-                )}
-
-                {/* Informações de Confirmação */}
-                {movimentacaoDetalhe.status === 'Recebido' && (
-                  <div className="border-t pt-4 mt-4">
-                    <p className="text-sm font-medium text-green-600 mb-2">✓ Recebimento Confirmado</p>
-                    <div className="grid grid-cols-2 gap-4 bg-green-50 dark:bg-green-950/20 p-3 rounded-md">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Confirmado por</p>
-                        <p className="font-medium">{movimentacaoDetalhe.responsavelRecebimento || '-'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Data/Hora</p>
-                        <p className="font-medium">
-                          {movimentacaoDetalhe.dataRecebimento 
-                            ? new Date(movimentacaoDetalhe.dataRecebimento).toLocaleString('pt-BR')
-                            : '-'}
-                        </p>
+                {/* Timeline Visual */}
+                <div className="relative">
+                  {/* Linha de conexão */}
+                  <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-border" />
+                  
+                  {/* Etapa 1 - Envio */}
+                  <div className="relative flex gap-4 pb-6">
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center z-10">
+                      <Package className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">Envio Registrado</p>
+                      <div className="bg-muted/30 p-3 rounded-md mt-2 space-y-2">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <p className="text-muted-foreground text-xs">Loja de Origem</p>
+                            <p className="font-medium">{getLojaNome(movimentacaoDetalhe.origem)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Data de Envio</p>
+                            <p className="font-medium">{new Date(movimentacaoDetalhe.data).toLocaleString('pt-BR')}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Usuário que Enviou</p>
+                          <p className="font-medium">{movimentacaoDetalhe.responsavel}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
+
+                  {/* Etapa 2 - Destino */}
+                  <div className="relative flex gap-4 pb-6">
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center z-10",
+                      movimentacaoDetalhe.status === 'Recebido' 
+                        ? "bg-green-500" 
+                        : "bg-yellow-500"
+                    )}>
+                      {movimentacaoDetalhe.status === 'Recebido' 
+                        ? <CheckCircle className="h-4 w-4 text-white" />
+                        : <Clock className="h-4 w-4 text-white" />
+                      }
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">
+                        {movimentacaoDetalhe.status === 'Recebido' 
+                          ? 'Recebimento Confirmado' 
+                          : 'Aguardando Recebimento'}
+                      </p>
+                      <div className="bg-muted/30 p-3 rounded-md mt-2 space-y-2">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <p className="text-muted-foreground text-xs">Loja de Destino</p>
+                            <p className="font-medium">{getLojaNome(movimentacaoDetalhe.destino)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Data de Recebimento</p>
+                            <p className="font-medium">
+                              {movimentacaoDetalhe.dataRecebimento 
+                                ? new Date(movimentacaoDetalhe.dataRecebimento).toLocaleString('pt-BR')
+                                : <span className="text-yellow-600">Pendente</span>}
+                            </p>
+                          </div>
+                        </div>
+                        {movimentacaoDetalhe.status === 'Recebido' && (
+                          <div>
+                            <p className="text-muted-foreground text-xs">Usuário que Recebeu</p>
+                            <p className="font-medium">{movimentacaoDetalhe.responsavelRecebimento || '-'}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Observações */}
+                {movimentacaoDetalhe.motivo && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Observações</p>
+                    <p className="text-sm bg-muted/30 p-2 rounded">{movimentacaoDetalhe.motivo}</p>
+                  </div>
                 )}
 
+                {/* Status Final */}
                 {movimentacaoDetalhe.status === 'Pendente' && (
-                  <div className="border-t pt-4 mt-4">
-                    <p className="text-sm font-medium text-yellow-600">⏳ Aguardando Confirmação de Recebimento</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      O produto está "Em movimentação" e não pode ser vendido até a confirmação.
-                    </p>
+                  <div className="border-t pt-4">
+                    <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Produto em trânsito - bloqueado para venda
+                    </Badge>
                   </div>
                 )}
               </div>

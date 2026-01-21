@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { Wrench, ClipboardList, Package } from 'lucide-react';
+import { Wrench, ClipboardList, Package, ShoppingCart } from 'lucide-react';
 
 interface OSLayoutProps {
   children: React.ReactNode;
@@ -15,6 +15,7 @@ export function OSLayout({ children, title }: OSLayoutProps) {
     { name: 'Histórico de Assistência', href: '/os/historico-assistencia', icon: ClipboardList },
     { name: 'Assistência', href: '/os/assistencia', icon: Wrench },
     { name: 'Estoque - Assistência', href: '/os/pecas', icon: Package },
+    { name: 'Solicitações de Peças', href: '/os/solicitacoes-pecas', icon: ShoppingCart },
     { name: 'Análise de Tratativas', href: '/os/analise-garantia', icon: ClipboardList },
     { name: 'Histórico de Notas', href: '/os/historico-notas', icon: ClipboardList },
   ];

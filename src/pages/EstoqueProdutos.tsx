@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
+import { InputComMascara } from '@/components/ui/InputComMascara';
 
 import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 
@@ -418,17 +419,13 @@ export default function EstoqueProdutos() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="valorRecomendado">Valor Recomendado (R$)</Label>
-                <Input
+                <Label htmlFor="valorRecomendado">Valor Recomendado</Label>
+                <InputComMascara
                   id="valorRecomendado"
-                  type="text"
+                  mascara="moeda"
                   value={novoValorRecomendado}
-                  onChange={(e) => {
-                    // Permitir apenas números e vírgula
-                    const value = e.target.value.replace(/[^\d,]/g, '');
-                    setNovoValorRecomendado(value);
-                  }}
-                  placeholder="Ex: 5999,00"
+                  onChange={(formatted) => setNovoValorRecomendado(formatted)}
+                  placeholder="0,00"
                 />
               </div>
 
