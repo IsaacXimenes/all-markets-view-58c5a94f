@@ -2002,45 +2002,54 @@ export default function VendasNova() {
         </Card>
 
         {/* Botões Finais */}
-        <div className="flex gap-4 justify-end">
-          <Button variant="outline" onClick={() => navigate('/vendas')}>
-            Cancelar
-          </Button>
+        <div className="flex flex-col gap-4">
+          {/* Debug info - remover depois */}
+          <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+            DEBUG: temPagamentoSinal={String(temPagamentoSinal)} | canSubmitSinal={String(canSubmitSinal)} | 
+            pagamentos={pagamentos.length} | valorSinal={valorSinal} | total={total} | 
+            hasValidDowngrade={String(hasValidDowngrade)}
+          </div>
           
-          {/* Botão Salvar com Sinal - aparece quando tem pagamento Sinal */}
-          {temPagamentoSinal && !hasValidDowngrade && (
-            <Button 
-              onClick={handleSalvarComSinal}
-              disabled={!canSubmitSinal}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              Salvar Registro (Sinal)
+          <div className="flex gap-4 justify-end">
+            <Button variant="outline" onClick={() => navigate('/vendas')}>
+              Cancelar
             </Button>
-          )}
-          
-          {/* Botão Registrar Venda Downgrade */}
-          {hasValidDowngrade && (
-            <Button 
-              onClick={handleRegistrarVenda}
-              disabled={!canSubmit || tradeInNaoValidado}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              <ArrowLeftRight className="h-4 w-4 mr-2" />
-              Registrar Downgrade
-            </Button>
-          )}
-          
-          {/* Botão Registrar Venda normal - só aparece se não tem sinal e não é downgrade */}
-          {!temPagamentoSinal && !hasValidDowngrade && (
-            <Button 
-              onClick={handleRegistrarVenda}
-              disabled={!canSubmit}
-            >
-              <Check className="h-4 w-4 mr-2" />
-              Registrar Venda
-            </Button>
-          )}
+            
+            {/* Botão Salvar com Sinal - aparece quando tem pagamento Sinal */}
+            {temPagamentoSinal && !hasValidDowngrade && (
+              <Button 
+                onClick={handleSalvarComSinal}
+                disabled={!canSubmitSinal}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Salvar Registro (Sinal)
+              </Button>
+            )}
+            
+            {/* Botão Registrar Venda Downgrade */}
+            {hasValidDowngrade && (
+              <Button 
+                onClick={handleRegistrarVenda}
+                disabled={!canSubmit || tradeInNaoValidado}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                <ArrowLeftRight className="h-4 w-4 mr-2" />
+                Registrar Downgrade
+              </Button>
+            )}
+            
+            {/* Botão Registrar Venda normal - só aparece se não tem sinal e não é downgrade */}
+            {!temPagamentoSinal && !hasValidDowngrade && (
+              <Button 
+                onClick={handleRegistrarVenda}
+                disabled={!canSubmit}
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Registrar Venda
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
