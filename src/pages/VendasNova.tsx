@@ -958,7 +958,7 @@ export default function VendasNova() {
                   value={vendedor}
                   onChange={setVendedor}
                   placeholder="Selecione o responsável"
-                  filtrarPorTipo="vendedores"
+                  filtrarPorTipo="vendedoresEGestores"
                   className={!vendedor ? 'border-destructive' : ''}
                 />
               </div>

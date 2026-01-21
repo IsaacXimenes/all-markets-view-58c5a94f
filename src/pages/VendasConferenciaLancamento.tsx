@@ -133,7 +133,8 @@ export default function VendasConferenciaLancamento() {
       cartaoDebito: 0,
       pix: 0,
       dinheiro: 0,
-      sinal: 0
+      sinal: 0,
+      boleto: 0
     };
 
     vendasFiltradas.forEach(venda => {
@@ -149,6 +150,8 @@ export default function VendasConferenciaLancamento() {
           totais.dinheiro += pag.valor;
         } else if (meio.includes('sinal')) {
           totais.sinal += pag.valor;
+        } else if (meio.includes('boleto') || meio.includes('crediário') || meio.includes('crediario')) {
+          totais.boleto += pag.valor;
         }
       });
     });
@@ -254,7 +257,7 @@ export default function VendasConferenciaLancamento() {
   return (
     <VendasLayout title="Conferência - Lançamento de Vendas">
       {/* Cards de somatório por método de pagamento - DINÂMICO */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
@@ -298,6 +301,18 @@ export default function VendasConferenciaLancamento() {
               <div>
                 <p className="text-sm text-amber-700 dark:text-amber-300">Dinheiro</p>
                 <p className="text-2xl font-bold text-amber-800 dark:text-amber-200">{formatCurrency(somatorioPagamentos.dinheiro)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950/50 dark:to-indigo-900/30 border-indigo-200 dark:border-indigo-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <CreditCard className="h-8 w-8 text-indigo-600 opacity-70" />
+              <div>
+                <p className="text-sm text-indigo-700 dark:text-indigo-300">Boleto/Crediário</p>
+                <p className="text-2xl font-bold text-indigo-800 dark:text-indigo-200">{formatCurrency(somatorioPagamentos.boleto)}</p>
               </div>
             </div>
           </CardContent>
@@ -537,7 +552,7 @@ export default function VendasConferenciaLancamento() {
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            {venda.statusFluxo !== 'Feito Sinal' && (
+                            {venda.statusFluxo !== 'Feito Sinal' && venda.statusFluxo !== 'Conferência Gestor' && venda.statusFluxo !== 'Conferência Financeiro' && venda.statusFluxo !== 'Finalizado' && (
                               <Button 
                                 size="sm"
                                 onClick={() => handleAbrirModalAprovar(venda)}

@@ -679,7 +679,7 @@ export default function VendasEditar() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <label className="text-sm font-medium">ID da Venda</label>
                 <Input value={vendaId} disabled className="bg-muted" />
@@ -696,6 +696,19 @@ export default function VendasEditar() {
                 <label className="text-sm font-medium">Responsável pela Venda</label>
                 <Input value={getColaboradorNome(vendedor)} disabled className="bg-muted" />
               </div>
+              <div>
+                <label className="text-sm font-medium">Origem da Venda *</label>
+                <Select value={origemVenda} onValueChange={setOrigemVenda}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a origem" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {origensVenda.filter(o => o.status === 'Ativo').map(origem => (
+                      <SelectItem key={origem.id} value={origem.origem}>{origem.origem}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -710,7 +723,7 @@ export default function VendasEditar() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <label className="text-sm font-medium">Nome</label>
                 <Input value={clienteNome} disabled className="bg-muted" />
@@ -730,35 +743,6 @@ export default function VendasEditar() {
               <div>
                 <label className="text-sm font-medium">Cidade</label>
                 <Input value={clienteCidade} disabled className="bg-muted" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <label className="text-sm font-medium">Origem da Venda *</label>
-                <Select value={origemVenda} onValueChange={setOrigemVenda}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a origem" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {origensVenda.filter(o => o.status === 'Ativo').map(origem => (
-                      <SelectItem key={origem.id} value={origem.origem}>{origem.origem}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Local de Retirada *</label>
-                <Select value={localRetirada} onValueChange={setLocalRetirada}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o local" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lojas.filter(l => l.ativa).map(loja => (
-                      <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
           </CardContent>
@@ -1077,16 +1061,7 @@ export default function VendasEditar() {
           </CardContent>
         </Card>
 
-        {/* Pagamentos */}
-        <PagamentoQuadro
-          valorTotalProdutos={total}
-          custoTotalProdutos={valorCustoTotal}
-          lojaVendaId={lojaVenda}
-          onPagamentosChange={setPagamentos}
-          pagamentosIniciais={pagamentos}
-        />
-
-        {/* Retirada e Logística */}
+        {/* Retirada e Logística - ACIMA de Pagamentos */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1095,7 +1070,7 @@ export default function VendasEditar() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className={`grid gap-4 ${tipoRetirada === 'Entrega' ? 'grid-cols-1 md:grid-cols-4' : 'grid-cols-1 md:grid-cols-2'}`}>
               <div>
                 <label className="text-sm font-medium">Tipo de Retirada</label>
                 <Select 
@@ -1132,9 +1107,11 @@ export default function VendasEditar() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Nome do Motoboy *</label>
+                    <label className={`text-sm font-medium ${!motoboyId ? 'text-destructive' : ''}`}>
+                      Motoboy *
+                    </label>
                     <Select value={motoboyId} onValueChange={setMotoboyId}>
-                      <SelectTrigger>
+                      <SelectTrigger className={!motoboyId ? 'border-destructive' : ''}>
                         <SelectValue placeholder="Selecione o motoboy" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1151,6 +1128,22 @@ export default function VendasEditar() {
                   </div>
                 </>
               )}
+              
+              {tipoRetirada === 'Retirada em Outra Loja' && (
+                <div>
+                  <label className="text-sm font-medium">Loja de Retirada</label>
+                  <Select value={localRetirada} onValueChange={setLocalRetirada}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a loja" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lojas.filter(l => l.ativa).map(loja => (
+                        <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             
             <div className="mt-4">
@@ -1164,6 +1157,15 @@ export default function VendasEditar() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Pagamentos */}
+        <PagamentoQuadro
+          valorTotalProdutos={total}
+          custoTotalProdutos={valorCustoTotal}
+          lojaVendaId={lojaVenda}
+          onPagamentosChange={setPagamentos}
+          pagamentosIniciais={pagamentos}
+        />
 
         {/* Resumo */}
         <Card className={`border-2 ${isPrejuizo ? 'border-destructive' : 'border-primary'}`}>
