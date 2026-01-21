@@ -1632,38 +1632,6 @@ export default function VendasNova() {
           </CardContent>
         </Card>
 
-        {/* Pagamentos - Bloqueado em Downgrade */}
-        {hasValidDowngrade ? (
-          <Card className="border-2 border-muted opacity-60">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-muted-foreground">
-                <CreditCard className="h-5 w-5" />
-                Pagamentos
-                <Badge variant="outline" className="ml-2">Bloqueado - Downgrade</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="font-medium">Quadro de pagamentos bloqueado</p>
-                <p className="text-sm mt-2">
-                  Em operações de Downgrade, não há pagamento do cliente. 
-                  O valor de <span className="font-bold text-destructive">{formatCurrency(saldoDevolver)}</span> será 
-                  devolvido ao cliente via PIX após aprovação do Financeiro.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <PagamentoQuadro
-            valorTotalProdutos={total}
-            custoTotalProdutos={valorCustoTotal}
-            lojaVendaId={lojaVenda}
-            onPagamentosChange={setPagamentos}
-            pagamentosIniciais={pagamentos}
-          />
-        )}
-
         {/* Retirada e Logística */}
         <Card>
           <CardHeader>
@@ -1823,6 +1791,38 @@ export default function VendasNova() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Pagamentos - Bloqueado em Downgrade */}
+        {hasValidDowngrade ? (
+          <Card className="border-2 border-muted opacity-60">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                <CreditCard className="h-5 w-5" />
+                Pagamentos
+                <Badge variant="outline" className="ml-2">Bloqueado - Downgrade</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">Quadro de pagamentos bloqueado</p>
+                <p className="text-sm mt-2">
+                  Em operações de Downgrade, não há pagamento do cliente. 
+                  O valor de <span className="font-bold text-destructive">{formatCurrency(saldoDevolver)}</span> será 
+                  devolvido ao cliente via PIX após aprovação do Financeiro.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <PagamentoQuadro
+            valorTotalProdutos={total}
+            custoTotalProdutos={valorCustoTotal}
+            lojaVendaId={lojaVenda}
+            onPagamentosChange={setPagamentos}
+            pagamentosIniciais={pagamentos}
+          />
+        )}
 
         {/* Resumo */}
         <Card className={`border-2 ${isPrejuizo ? 'border-destructive' : 'border-primary'}`}>
