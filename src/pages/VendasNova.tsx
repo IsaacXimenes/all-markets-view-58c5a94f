@@ -975,8 +975,13 @@ export default function VendasNova() {
                 size="sm"
                 onClick={() => {
                   if (window.confirm('Limpar todos os campos? Esta ação não pode ser desfeita.')) {
+                    // Informações da Venda
                     setLojaVenda('');
                     setVendedor('');
+                    setOrigemVenda('');
+                    setObservacoes('');
+                    
+                    // Cliente
                     setClienteId('');
                     setClienteNome('');
                     setClienteCpf('');
@@ -984,15 +989,34 @@ export default function VendasNova() {
                     setClienteEmail('');
                     setClienteCidade('');
                     setHistoricoCliente([]);
-                    setOrigemVenda('');
-                    setLocalRetirada('');
+                    
+                    // Itens e Acessórios
                     setItens([]);
+                    setAcessoriosVenda([]);
+                    
+                    // Trade-In
                     setTradeIns([]);
-                    setPagamentos([]);
+                    setTipoOperacaoTroca('Upgrade');
+                    
+                    // Retirada/Logística
+                    setLocalRetirada('');
+                    setTipoRetirada('Retirada Balcão');
+                    setMotoboyId('');
                     setTaxaEntrega(0);
-                    setObservacoes('');
+                    
+                    // Pagamentos
+                    setPagamentos([]);
+                    
+                    // Garantias
+                    setGarantiaItens([]);
+                    setGarantiaExtendida(null);
+                    
+                    // Timer
                     setTimer(null);
                     setTimerStart(null);
+                    
+                    // Limpar rascunho salvo
+                    clearDraft();
                   }
                 }}
                 className="text-destructive border-destructive hover:bg-destructive/10"
