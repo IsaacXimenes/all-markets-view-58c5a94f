@@ -130,13 +130,24 @@ export default function FinanceiroContas() {
       ID: c.id,
       Loja: obterNomeLoja(c.lojaVinculada),
       'Nome da Conta': c.nome,
+      Tipo: c.tipo || '-',
       CNPJ: c.cnpj || '',
+      'Valor Inicial': new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c.saldoInicial || 0),
       'Status Máquina': c.statusMaquina,
       'Nota Fiscal': c.notaFiscal ? 'Sim' : 'Não',
       Status: c.status
     }));
     exportToCSV(data, `contas-financeiras-${new Date().toISOString().split('T')[0]}.csv`);
     toast.success('Contas exportadas com sucesso!');
+  };
+
+  const moedaMask = (value: number): string => {
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const parseMoeda = (value: string): number => {
+    const cleaned = value.replace(/[^\d,]/g, '').replace(',', '.');
+    return parseFloat(cleaned) || 0;
   };
 
   const formatCNPJ = (value: string) => {
@@ -208,8 +219,27 @@ export default function FinanceiroContas() {
                           <SelectItem value="Conta Digital">Conta Digital</SelectItem>
                           <SelectItem value="Caixa">Caixa</SelectItem>
                           <SelectItem value="Pix">Pix</SelectItem>
+                          <SelectItem value="Cartão">Cartão</SelectItem>
+                          <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                          <SelectItem value="Outros">Outros</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div>
+                      <Label>Valor Inicial</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                        <Input
+                          type="text"
+                          className="pl-10"
+                          value={form.saldoInicial ? moedaMask(parseFloat(form.saldoInicial) || 0) : ''}
+                          onChange={(e) => {
+                            const valor = parseMoeda(e.target.value);
+                            setForm({ ...form, saldoInicial: valor.toString() });
+                          }}
+                          placeholder="0,00"
+                        />
+                      </div>
                     </div>
                     <div>
                       <Label>Banco</Label>
@@ -288,7 +318,9 @@ export default function FinanceiroContas() {
                   <TableHead>ID</TableHead>
                   <TableHead>Loja</TableHead>
                   <TableHead>Nome da Conta</TableHead>
+                  <TableHead>Tipo</TableHead>
                   <TableHead>CNPJ</TableHead>
+                  <TableHead className="text-right">Valor Inicial</TableHead>
                   <TableHead>Status Máquina</TableHead>
                   <TableHead>Nota Fiscal</TableHead>
                   <TableHead>Status</TableHead>
@@ -301,7 +333,11 @@ export default function FinanceiroContas() {
                     <TableCell className="font-mono text-xs">{conta.id}</TableCell>
                     <TableCell>{obterNomeLoja(conta.lojaVinculada)}</TableCell>
                     <TableCell className="font-medium">{conta.nome}</TableCell>
+                    <TableCell className="text-sm">{conta.tipo || '-'}</TableCell>
                     <TableCell className="font-mono text-xs">{conta.cnpj || '-'}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(conta.saldoInicial || 0)}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={conta.statusMaquina === 'Própria' ? 'default' : 'secondary'}>
                         {conta.statusMaquina}
