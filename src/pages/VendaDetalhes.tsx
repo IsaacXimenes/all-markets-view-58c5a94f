@@ -79,9 +79,9 @@ export default function VendaDetalhes() {
       <PageLayout title="Venda não encontrada">
         <div className="text-center py-8">
           <p className="text-muted-foreground mb-4">A venda solicitada não foi encontrada.</p>
-          <Button onClick={() => navigate('/vendas')}>
+          <Button onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Voltar para Vendas
+            Voltar
           </Button>
         </div>
       </PageLayout>
@@ -99,7 +99,7 @@ export default function VendaDetalhes() {
       {/* Botões de ação */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => navigate('/vendas')}>
+          <Button variant="outline" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>
