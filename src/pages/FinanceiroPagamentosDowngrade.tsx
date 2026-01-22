@@ -380,9 +380,20 @@ export default function FinanceiroPagamentosDowngrade() {
                 </Select>
               </div>
               
+              {/* Chave PIX do cliente */}
+              {(vendaSelecionada as any).chavePix && (
+                <div className="p-3 bg-muted rounded-lg border">
+                  <p className="text-xs text-muted-foreground mb-1">Chave PIX do Cliente (registrado na venda)</p>
+                  <p className="font-mono font-bold text-lg">{(vendaSelecionada as any).chavePix}</p>
+                </div>
+              )}
+              
               {/* Comprovante */}
               <div>
-                <label className="text-sm font-medium">Comprovante PIX</label>
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Anexar Comprovante
+                </label>
                 <div className="flex items-center gap-2 mt-1">
                   <Input
                     type="file"

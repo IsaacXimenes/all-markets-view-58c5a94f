@@ -260,9 +260,17 @@ export default function FinanceiroConferencia() {
       
       return true;
     }).sort((a, b) => {
-      // Pendentes primeiro, depois por data
-      if (a.conferido !== b.conferido) return a.conferido ? 1 : -1;
-      return new Date(b.venda.dataHora).getTime() - new Date(a.venda.dataHora).getTime();
+      // Primeiro: agrupar por ID da venda para manter registros juntos
+      const idCompare = a.vendaId.localeCompare(b.vendaId);
+      if (idCompare !== 0) {
+        // Se vendas diferentes, ordenar por status (pendentes primeiro)
+        const aHasPendentes = !a.conferido;
+        const bHasPendentes = !b.conferido;
+        if (aHasPendentes !== bHasPendentes) return aHasPendentes ? -1 : 1;
+        return new Date(b.venda.dataHora).getTime() - new Date(a.venda.dataHora).getTime();
+      }
+      // Dentro da mesma venda, manter juntos
+      return 0;
     });
   }, [linhasConferencia, filters, contasFinanceiras]);
 
@@ -1092,6 +1100,22 @@ export default function FinanceiroConferencia() {
                         em {new Date(aprovacaoGestor.dataAprovacao).toLocaleString('pt-BR')}
                       </p>
                     )}
+                  </div>
+                )}
+
+                {/* Chave PIX para Downgrade - histórico */}
+                {(vendaSelecionada as any).tipoOperacao === 'Downgrade' && (vendaSelecionada as any).chavePix && (
+                  <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg border border-orange-300">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Smartphone className="h-4 w-4 text-orange-600" />
+                      <Label className="font-semibold text-sm text-orange-700 dark:text-orange-400">Chave PIX do Cliente</Label>
+                    </div>
+                    <p className="font-mono text-sm font-bold text-orange-800 dark:text-orange-200">
+                      {(vendaSelecionada as any).chavePix}
+                    </p>
+                    <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                      Registrado pelo responsável do lançamento
+                    </p>
                   </div>
                 )}
 

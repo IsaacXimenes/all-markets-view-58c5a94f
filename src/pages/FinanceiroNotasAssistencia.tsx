@@ -136,9 +136,65 @@ export default function FinanceiroNotasAssistencia() {
     });
   };
 
+  // Estatísticas para os cards
+  const estatisticas = useMemo(() => ({
+    qtdNotas: filteredNotas.length,
+    qtdPendentes: filteredNotas.filter(n => n.status === 'Pendente').length,
+    qtdConferidas: filteredNotas.filter(n => n.status === 'Concluído').length,
+    totalConferido: filteredNotas.filter(n => n.status === 'Concluído').reduce((acc, n) => acc + n.valorTotal, 0)
+  }), [filteredNotas]);
+
   return (
     <FinanceiroLayout title="Notas Pendentes - Assistência">
       <div className="space-y-6">
+        {/* Cards de Resumo */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Qtd de Notas</p>
+                  <p className="text-2xl font-bold">{estatisticas.qtdNotas}</p>
+                </div>
+                <Filter className="h-10 w-10 text-muted-foreground opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Pendentes</p>
+                  <p className="text-2xl font-bold text-destructive">{estatisticas.qtdPendentes}</p>
+                </div>
+                <X className="h-10 w-10 text-destructive opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Conferidas</p>
+                  <p className="text-2xl font-bold text-green-600">{estatisticas.qtdConferidas}</p>
+                </div>
+                <Check className="h-10 w-10 text-green-600 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Pendente</p>
+                  <p className="text-2xl font-bold text-destructive">{formatCurrency(totalPendente)}</p>
+                </div>
+                <Eye className="h-10 w-10 text-muted-foreground opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Filtros */}
         <Card>
           <CardHeader>

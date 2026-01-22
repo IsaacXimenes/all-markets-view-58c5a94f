@@ -782,6 +782,14 @@ export default function VendasConferenciaGestor() {
                         <span className="text-2xl font-bold text-destructive">{formatCurrency((vendaSelecionada as any).saldoDevolver)}</span>
                       </div>
                     </div>
+                    
+                    {/* Chave PIX - Histórico read-only */}
+                    {(vendaSelecionada as any).chavePix && (
+                      <div className="mt-3 p-3 bg-muted rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Chave PIX (registrado pelo lançador)</p>
+                        <p className="font-mono font-medium">{(vendaSelecionada as any).chavePix}</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
