@@ -53,6 +53,7 @@ export interface VendaComFluxo extends Venda {
   bloqueadoParaEdicao?: boolean;
   tipoOperacao?: 'Upgrade' | 'Downgrade'; // Tipo de operação de troca
   saldoDevolver?: number; // Valor a devolver ao cliente em downgrade
+  chavePix?: string; // Chave PIX para devolução em downgrade
 }
 
 // Armazena o estado do fluxo no localStorage

@@ -91,8 +91,11 @@ export default function FinanceiroConferenciaNotas() {
     const valorPendente = filteredNotas
       .filter(n => n.statusExtendido === 'Enviado para Financeiro')
       .reduce((acc, n) => acc + n.valorTotal, 0);
+    const qtdDistinta = filteredNotas.length;
+    const qtdPendente = filteredNotas.filter(n => n.statusExtendido === 'Enviado para Financeiro').length;
+    const qtdConferida = filteredNotas.filter(n => n.statusExtendido === 'Concluído').length;
     
-    return { valorTotal, valorConferido, valorPendente };
+    return { valorTotal, valorConferido, valorPendente, qtdDistinta, qtdPendente, qtdConferida };
   }, [filteredNotas]);
 
   const totalPendente = useMemo(() => {
@@ -277,13 +280,13 @@ export default function FinanceiroConferenciaNotas() {
     <FinanceiroLayout title="Conferência de Notas de Entrada">
       <div className="space-y-6">
         {/* Cards de Resumo Dinâmicos */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Valor Total das Notas</p>
-                  <p className="text-2xl font-bold">{formatCurrency(resumoNotas.valorTotal)}</p>
+                  <p className="text-sm text-muted-foreground">Qtd de Notas Distintas</p>
+                  <p className="text-2xl font-bold">{resumoNotas.qtdDistinta}</p>
                 </div>
                 <FileText className="h-10 w-10 text-muted-foreground opacity-50" />
               </div>
@@ -293,8 +296,19 @@ export default function FinanceiroConferenciaNotas() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Valor Conferido</p>
-                  <p className="text-2xl font-bold text-green-600">{formatCurrency(resumoNotas.valorConferido)}</p>
+                  <p className="text-sm text-muted-foreground">Pendentes</p>
+                  <p className="text-2xl font-bold text-yellow-600">{resumoNotas.qtdPendente}</p>
+                </div>
+                <Clock className="h-10 w-10 text-yellow-500 opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Conferidas</p>
+                  <p className="text-2xl font-bold text-green-600">{resumoNotas.qtdConferida}</p>
                 </div>
                 <CheckCircle2 className="h-10 w-10 text-green-500 opacity-50" />
               </div>
@@ -304,7 +318,7 @@ export default function FinanceiroConferenciaNotas() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Valor Pendente de Conferência</p>
+                  <p className="text-sm text-muted-foreground">Valor Pendente</p>
                   <p className="text-2xl font-bold text-yellow-600">{formatCurrency(resumoNotas.valorPendente)}</p>
                 </div>
                 <Clock className="h-10 w-10 text-yellow-500 opacity-50" />

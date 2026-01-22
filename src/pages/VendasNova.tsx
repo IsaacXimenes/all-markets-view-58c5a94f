@@ -118,6 +118,7 @@ export default function VendasNova() {
   const [showTradeInModal, setShowTradeInModal] = useState(false);
   const [novoTradeIn, setNovoTradeIn] = useState<Partial<ItemTradeIn>>({});
   const [tipoOperacaoTroca, setTipoOperacaoTroca] = useState<'Upgrade' | 'Downgrade'>('Upgrade');
+  const [chavePix, setChavePix] = useState('');
   
   // Pagamentos
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
@@ -742,9 +743,10 @@ export default function VendasNova() {
       tradeIns.length > 0 && // Downgrade exige trade-in
       !tradeInNaoValidado &&
       motoboyValido &&
-      saldoDevolver > 0 // Deve ter saldo positivo a devolver
+      saldoDevolver > 0 && // Deve ter saldo positivo a devolver
+      chavePix.trim() !== '' // Chave PIX obrigatória para Downgrade
     );
-  }, [hasValidDowngrade, lojaVenda, vendedor, clienteId, origemVenda, itens.length, tradeIns.length, tradeInNaoValidado, tipoRetirada, motoboyId, saldoDevolver]);
+  }, [hasValidDowngrade, lojaVenda, vendedor, clienteId, origemVenda, itens.length, tradeIns.length, tradeInNaoValidado, tipoRetirada, motoboyId, saldoDevolver, chavePix]);
 
   // Registrar venda
   const handleRegistrarVenda = () => {
@@ -884,7 +886,8 @@ export default function VendasNova() {
       bloqueadoParaEdicao: false,
       // Campos de Downgrade
       tipoOperacao: tipoOperacaoTroca,
-      saldoDevolver: hasValidDowngrade ? saldoDevolver : 0
+      saldoDevolver: hasValidDowngrade ? saldoDevolver : 0,
+      chavePix: hasValidDowngrade ? chavePix : undefined
     };
     
     const venda = addVenda(vendaData);
@@ -1476,7 +1479,26 @@ export default function VendasNova() {
                     <p className="text-2xl font-bold text-destructive">{formatCurrency(saldoDevolver)}</p>
                   </div>
                 </div>
-                <p className="text-xs text-destructive/80 mt-2">
+                
+                {/* Campo Chave PIX do Cliente - OBRIGATÓRIO */}
+                <div className="mt-4 pt-4 border-t border-destructive/30">
+                  <label className="text-sm font-medium text-destructive flex items-center gap-1">
+                    Chave PIX do Cliente *
+                  </label>
+                  <Input
+                    value={chavePix}
+                    onChange={(e) => setChavePix(e.target.value)}
+                    placeholder="CPF, e-mail, telefone ou chave aleatória"
+                    className="mt-1 border-destructive focus:ring-destructive"
+                  />
+                  {!chavePix.trim() && (
+                    <p className="text-xs text-destructive mt-1">
+                      * Obrigatório para operações de Downgrade
+                    </p>
+                  )}
+                </div>
+                
+                <p className="text-xs text-destructive/80 mt-3">
                   * Em operações de Downgrade, o cliente recebe a diferença via PIX após aprovação do Financeiro.
                 </p>
               </div>

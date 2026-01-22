@@ -711,6 +711,18 @@ export default function VendasConferenciaLancamento() {
                 </div>
               </div>
 
+              {/* Exibir chave PIX para Downgrade */}
+              {(vendaSelecionada as any).tipoOperacao === 'Downgrade' && (vendaSelecionada as any).chavePix && (
+                <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg border border-orange-300">
+                  <p className="text-xs font-medium text-orange-700 dark:text-orange-300 mb-1">
+                    Chave PIX para Devolução:
+                  </p>
+                  <p className="font-mono text-lg font-bold text-orange-800 dark:text-orange-200">
+                    {(vendaSelecionada as any).chavePix}
+                  </p>
+                </div>
+              )}
+
               {vendaSelecionada.statusFluxo === 'Recusada - Gestor' && vendaSelecionada.recusaGestor && (
                 <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800">
                   <p className="text-sm font-medium text-red-700 dark:text-red-400 mb-1">
