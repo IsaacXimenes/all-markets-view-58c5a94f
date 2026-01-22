@@ -168,6 +168,82 @@ const VENDEDORES = {
 
 // Dados mockados - IDs PROD-XXXX únicos e consistentes com estoqueApi
 let vendas: Venda[] = [
+  // VENDA DE TESTE - CONFERÊNCIA FINANCEIRO (para testar Teto Bancário)
+  {
+    id: 'VEN-2025-TEST-FINANCEIRO',
+    numero: 999,
+    dataHora: '2025-01-22T10:00:00',
+    lojaVenda: LOJAS_VENDA.MATRIZ,
+    vendedor: VENDEDORES.ANTONIO_SOUSA,
+    clienteId: 'CLI-001',
+    clienteNome: 'João Silva - Teste Teto Bancário',
+    clienteCpf: '123.456.789-00',
+    clienteTelefone: '(11) 99999-1111',
+    clienteEmail: 'joao@email.com',
+    clienteCidade: 'São Paulo',
+    origemVenda: 'Loja Física',
+    localRetirada: LOJAS_VENDA.MATRIZ,
+    tipoRetirada: 'Retirada Balcão',
+    taxaEntrega: 0,
+    itens: [
+      {
+        id: 'ITEM-TEST-001',
+        produtoId: 'PROD-TEST-001',
+        produto: 'iPhone 15 Pro Max 256GB - TESTE',
+        imei: '999888777666551',
+        categoria: 'iPhone',
+        quantidade: 1,
+        valorRecomendado: 15500.00,
+        valorVenda: 15000.00,
+        valorCusto: 7500.00,
+        loja: LOJAS_VENDA.MATRIZ
+      }
+    ],
+    tradeIns: [],
+    pagamentos: [
+      { 
+        id: 'PAG-TEST-001', 
+        meioPagamento: 'Pix', 
+        valor: 15000.00, 
+        contaDestino: 'CTA-002' // Bradesco Thiago Eduardo
+      }
+    ],
+    subtotal: 15000.00,
+    totalTradeIn: 0,
+    total: 15000.00,
+    lucro: 7500.00,
+    margem: 100.0,
+    observacoes: 'Venda teste para validar Teto Bancário - Pix para Bradesco Thiago Eduardo',
+    status: 'Concluída',
+    statusAtual: 'Conferência Financeiro',
+    timeline: [
+      {
+        id: 'TL-TEST-001',
+        dataHora: '2025-01-22T10:00:00',
+        tipo: 'criacao',
+        usuarioId: VENDEDORES.ANTONIO_SOUSA,
+        usuarioNome: 'Antonio Sousa',
+        descricao: 'Venda criada para teste de Teto Bancário.'
+      },
+      {
+        id: 'TL-TEST-002',
+        dataHora: '2025-01-22T10:05:00',
+        tipo: 'aprovacao_lancamento',
+        usuarioId: 'COL-001',
+        usuarioNome: 'Lucas Mendes',
+        descricao: 'Lançamento aprovado.'
+      },
+      {
+        id: 'TL-TEST-003',
+        dataHora: '2025-01-22T10:10:00',
+        tipo: 'aprovacao_gestor',
+        usuarioId: 'COL-001',
+        usuarioNome: 'Lucas Mendes',
+        descricao: 'Aprovado pelo gestor. Enviado para conferência financeira.'
+      }
+    ],
+    bloqueadoParaEdicao: false
+  } as Venda,
   {
     id: 'VEN-2025-0001',
     numero: 1,
