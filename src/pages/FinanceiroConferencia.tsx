@@ -694,88 +694,29 @@ export default function FinanceiroConferencia() {
       <div className="flex gap-6">
         {/* Painel Principal - Tabela (70%) */}
         <div className={`transition-all ${vendaSelecionada ? 'w-[70%]' : 'w-full'}`}>
-          {/* Cards Pendente vs Conferido por método - Dinâmicos */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-            {/* Pendentes */}
+          {/* Cards Pendente vs Conferido por método - Todos na mesma linha */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-10 gap-3 mb-6">
+            {/* Crédito */}
             {mostrarCardsPorFiltro.credito && (
               <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
                 <CardContent className="pt-3 pb-3">
                   <div className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-red-600 opacity-70" />
+                    <CreditCard className="h-4 w-4 text-red-600 opacity-70" />
                     <div>
-                      <p className="text-xs text-red-700 dark:text-red-300">Pendente - Crédito</p>
+                      <p className="text-xs text-red-700 dark:text-red-300">Pend. Crédito</p>
                       <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.cartaoCredito)}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             )}
-            
-            {mostrarCardsPorFiltro.debito && (
-              <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
-                <CardContent className="pt-3 pb-3">
-                  <div className="flex items-center gap-2">
-                    <Wallet className="h-5 w-5 text-red-600 opacity-70" />
-                    <div>
-                      <p className="text-xs text-red-700 dark:text-red-300">Pendente - Débito</p>
-                      <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.cartaoDebito)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {mostrarCardsPorFiltro.pix && (
-              <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
-                <CardContent className="pt-3 pb-3">
-                  <div className="flex items-center gap-2">
-                    <Smartphone className="h-5 w-5 text-red-600 opacity-70" />
-                    <div>
-                      <p className="text-xs text-red-700 dark:text-red-300">Pendente - Pix</p>
-                      <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.pix)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {mostrarCardsPorFiltro.dinheiro && (
-              <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
-                <CardContent className="pt-3 pb-3">
-                  <div className="flex items-center gap-2">
-                    <Banknote className="h-5 w-5 text-red-600 opacity-70" />
-                    <div>
-                      <p className="text-xs text-red-700 dark:text-red-300">Pendente - Dinheiro</p>
-                      <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.dinheiro)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {mostrarCardsPorFiltro.boleto && (
-              <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
-                <CardContent className="pt-3 pb-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-red-600 opacity-70" />
-                    <div>
-                      <p className="text-xs text-red-700 dark:text-red-300">Pendente - Boleto</p>
-                      <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.boleto)}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             {mostrarCardsPorFiltro.credito && (
               <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
                 <CardContent className="pt-3 pb-3">
                   <div className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5 text-green-600 opacity-70" />
+                    <CreditCard className="h-4 w-4 text-green-600 opacity-70" />
                     <div>
-                      <p className="text-xs text-green-700 dark:text-green-300">Conferido - Crédito</p>
+                      <p className="text-xs text-green-700 dark:text-green-300">Conf. Crédito</p>
                       <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.cartaoCredito)}</p>
                     </div>
                   </div>
@@ -783,13 +724,27 @@ export default function FinanceiroConferencia() {
               </Card>
             )}
             
+            {/* Débito */}
+            {mostrarCardsPorFiltro.debito && (
+              <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+                <CardContent className="pt-3 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-red-600 opacity-70" />
+                    <div>
+                      <p className="text-xs text-red-700 dark:text-red-300">Pend. Débito</p>
+                      <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.cartaoDebito)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             {mostrarCardsPorFiltro.debito && (
               <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
                 <CardContent className="pt-3 pb-3">
                   <div className="flex items-center gap-2">
-                    <Wallet className="h-5 w-5 text-green-600 opacity-70" />
+                    <Wallet className="h-4 w-4 text-green-600 opacity-70" />
                     <div>
-                      <p className="text-xs text-green-700 dark:text-green-300">Conferido - Débito</p>
+                      <p className="text-xs text-green-700 dark:text-green-300">Conf. Débito</p>
                       <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.cartaoDebito)}</p>
                     </div>
                   </div>
@@ -797,13 +752,27 @@ export default function FinanceiroConferencia() {
               </Card>
             )}
 
+            {/* Pix */}
+            {mostrarCardsPorFiltro.pix && (
+              <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+                <CardContent className="pt-3 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="h-4 w-4 text-red-600 opacity-70" />
+                    <div>
+                      <p className="text-xs text-red-700 dark:text-red-300">Pend. Pix</p>
+                      <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.pix)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             {mostrarCardsPorFiltro.pix && (
               <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
                 <CardContent className="pt-3 pb-3">
                   <div className="flex items-center gap-2">
-                    <Smartphone className="h-5 w-5 text-green-600 opacity-70" />
+                    <Smartphone className="h-4 w-4 text-green-600 opacity-70" />
                     <div>
-                      <p className="text-xs text-green-700 dark:text-green-300">Conferido - Pix</p>
+                      <p className="text-xs text-green-700 dark:text-green-300">Conf. Pix</p>
                       <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.pix)}</p>
                     </div>
                   </div>
@@ -811,13 +780,27 @@ export default function FinanceiroConferencia() {
               </Card>
             )}
 
+            {/* Dinheiro */}
+            {mostrarCardsPorFiltro.dinheiro && (
+              <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+                <CardContent className="pt-3 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Banknote className="h-4 w-4 text-red-600 opacity-70" />
+                    <div>
+                      <p className="text-xs text-red-700 dark:text-red-300">Pend. Dinheiro</p>
+                      <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.dinheiro)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             {mostrarCardsPorFiltro.dinheiro && (
               <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
                 <CardContent className="pt-3 pb-3">
                   <div className="flex items-center gap-2">
-                    <Banknote className="h-5 w-5 text-green-600 opacity-70" />
+                    <Banknote className="h-4 w-4 text-green-600 opacity-70" />
                     <div>
-                      <p className="text-xs text-green-700 dark:text-green-300">Conferido - Dinheiro</p>
+                      <p className="text-xs text-green-700 dark:text-green-300">Conf. Dinheiro</p>
                       <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.dinheiro)}</p>
                     </div>
                   </div>
@@ -825,13 +808,27 @@ export default function FinanceiroConferencia() {
               </Card>
             )}
 
+            {/* Boleto */}
+            {mostrarCardsPorFiltro.boleto && (
+              <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+                <CardContent className="pt-3 pb-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-red-600 opacity-70" />
+                    <div>
+                      <p className="text-xs text-red-700 dark:text-red-300">Pend. Boleto</p>
+                      <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.boleto)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             {mostrarCardsPorFiltro.boleto && (
               <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
                 <CardContent className="pt-3 pb-3">
                   <div className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-green-600 opacity-70" />
+                    <FileText className="h-4 w-4 text-green-600 opacity-70" />
                     <div>
-                      <p className="text-xs text-green-700 dark:text-green-300">Conferido - Boleto</p>
+                      <p className="text-xs text-green-700 dark:text-green-300">Conf. Boleto</p>
                       <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.boleto)}</p>
                     </div>
                   </div>
