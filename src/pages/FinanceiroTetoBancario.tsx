@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Building2, Lock, AlertTriangle, AlertCircle, 
-  DollarSign, TrendingUp
+  DollarSign, TrendingUp, Calendar, Landmark
 } from 'lucide-react';
 
 import { getContasFinanceiras, ContaFinanceira } from '@/utils/cadastrosApi';
@@ -19,30 +20,181 @@ const formatCurrency = formatarMoeda;
 const TETO_BANCARIO = 120000; // R$ 120.000
 const ALERTA_LIMITE = 100000; // R$ 100.000
 
+// Dados mockados de vendas finalizadas por conta e período
+const vendasFinalizadasMock = [
+  // Janeiro 2026
+  { contaDestinoId: 'CTA-001', valor: 35000, data: '2026-01-05', vendaId: 'V001' },
+  { contaDestinoId: 'CTA-001', valor: 42000, data: '2026-01-12', vendaId: 'V002' },
+  { contaDestinoId: 'CTA-001', valor: 28000, data: '2026-01-18', vendaId: 'V003' },
+  { contaDestinoId: 'CTA-002', valor: 55000, data: '2026-01-08', vendaId: 'V004' },
+  { contaDestinoId: 'CTA-002', valor: 32000, data: '2026-01-20', vendaId: 'V005' },
+  { contaDestinoId: 'CTA-003', valor: 18000, data: '2026-01-15', vendaId: 'V006' },
+  { contaDestinoId: 'CTA-003', valor: 45000, data: '2026-01-25', vendaId: 'V007' },
+  { contaDestinoId: 'CTA-004', valor: 22000, data: '2026-01-10', vendaId: 'V008' },
+  { contaDestinoId: 'CTA-005', valor: 67000, data: '2026-01-22', vendaId: 'V009' },
+  { contaDestinoId: 'CTA-006', valor: 38000, data: '2026-01-14', vendaId: 'V010' },
+  { contaDestinoId: 'CTA-007', valor: 29000, data: '2026-01-28', vendaId: 'V011' },
+  { contaDestinoId: 'CTA-008', valor: 41000, data: '2026-01-16', vendaId: 'V012' },
+  
+  // Fevereiro 2026
+  { contaDestinoId: 'CTA-001', valor: 48000, data: '2026-02-03', vendaId: 'V013' },
+  { contaDestinoId: 'CTA-001', valor: 52000, data: '2026-02-15', vendaId: 'V014' },
+  { contaDestinoId: 'CTA-002', valor: 95000, data: '2026-02-10', vendaId: 'V015' },
+  { contaDestinoId: 'CTA-002', valor: 28000, data: '2026-02-22', vendaId: 'V016' },
+  { contaDestinoId: 'CTA-003', valor: 62000, data: '2026-02-18', vendaId: 'V017' },
+  { contaDestinoId: 'CTA-003', valor: 55000, data: '2026-02-25', vendaId: 'V018' },
+  { contaDestinoId: 'CTA-004', valor: 15000, data: '2026-02-28', vendaId: 'V019' },
+  { contaDestinoId: 'CTA-005', valor: 88000, data: '2026-02-12', vendaId: 'V020' },
+  { contaDestinoId: 'CTA-005', valor: 35000, data: '2026-02-20', vendaId: 'V021' },
+  { contaDestinoId: 'CTA-006', valor: 42000, data: '2026-02-08', vendaId: 'V022' },
+  { contaDestinoId: 'CTA-007', valor: 33000, data: '2026-02-14', vendaId: 'V023' },
+  { contaDestinoId: 'CTA-008', valor: 27000, data: '2026-02-26', vendaId: 'V024' },
+  
+  // Março 2026
+  { contaDestinoId: 'CTA-001', valor: 22000, data: '2026-03-01', vendaId: 'V025' },
+  { contaDestinoId: 'CTA-001', valor: 38000, data: '2026-03-08', vendaId: 'V026' },
+  { contaDestinoId: 'CTA-002', valor: 115000, data: '2026-03-05', vendaId: 'V027' }, // Acima do alerta!
+  { contaDestinoId: 'CTA-003', valor: 72000, data: '2026-03-10', vendaId: 'V028' },
+  { contaDestinoId: 'CTA-004', valor: 125000, data: '2026-03-12', vendaId: 'V029' }, // Atingiu teto!
+  { contaDestinoId: 'CTA-005', valor: 45000, data: '2026-03-15', vendaId: 'V030' },
+  { contaDestinoId: 'CTA-006', valor: 58000, data: '2026-03-18', vendaId: 'V031' },
+  { contaDestinoId: 'CTA-007', valor: 102000, data: '2026-03-20', vendaId: 'V032' }, // Acima do alerta!
+  { contaDestinoId: 'CTA-008', valor: 35000, data: '2026-03-22', vendaId: 'V033' },
+
+  // Abril 2026
+  { contaDestinoId: 'CTA-001', valor: 65000, data: '2026-04-02', vendaId: 'V034' },
+  { contaDestinoId: 'CTA-002', valor: 48000, data: '2026-04-05', vendaId: 'V035' },
+  { contaDestinoId: 'CTA-003', valor: 92000, data: '2026-04-08', vendaId: 'V036' },
+  { contaDestinoId: 'CTA-004', valor: 38000, data: '2026-04-12', vendaId: 'V037' },
+  { contaDestinoId: 'CTA-005', valor: 55000, data: '2026-04-15', vendaId: 'V038' },
+];
+
+// Meses do ano
+const meses = [
+  { valor: 0, nome: 'Janeiro' },
+  { valor: 1, nome: 'Fevereiro' },
+  { valor: 2, nome: 'Março' },
+  { valor: 3, nome: 'Abril' },
+  { valor: 4, nome: 'Maio' },
+  { valor: 5, nome: 'Junho' },
+  { valor: 6, nome: 'Julho' },
+  { valor: 7, nome: 'Agosto' },
+  { valor: 8, nome: 'Setembro' },
+  { valor: 9, nome: 'Outubro' },
+  { valor: 10, nome: 'Novembro' },
+  { valor: 11, nome: 'Dezembro' },
+];
+
+const anos = [2025, 2026, 2027];
+
 export default function FinanceiroTetoBancario() {
   const { obterNomeLoja } = useCadastroStore();
   const [contasFinanceiras] = useState<ContaFinanceira[]>(getContasFinanceiras());
   
+  // Estados para filtro de período
+  const [mesSelecionado, setMesSelecionado] = useState<number>(0); // Janeiro
+  const [anoSelecionado, setAnoSelecionado] = useState<number>(2026);
+
+  // Calcular saldos filtrados por período (APENAS vendas, sem saldo inicial)
+  const saldosPorConta = useMemo(() => {
+    const saldos: Record<string, number> = {};
+    
+    // Filtrar vendas pelo período selecionado
+    const vendasFiltradas = vendasFinalizadasMock.filter(venda => {
+      const dataVenda = new Date(venda.data);
+      return dataVenda.getMonth() === mesSelecionado && 
+             dataVenda.getFullYear() === anoSelecionado;
+    });
+    
+    // Agrupar por conta
+    vendasFiltradas.forEach(venda => {
+      saldos[venda.contaDestinoId] = (saldos[venda.contaDestinoId] || 0) + venda.valor;
+    });
+    
+    return saldos;
+  }, [mesSelecionado, anoSelecionado]);
+
+  // Contar quantidade de vendas por conta no período
+  const qtdVendasPorConta = useMemo(() => {
+    const qtd: Record<string, number> = {};
+    
+    const vendasFiltradas = vendasFinalizadasMock.filter(venda => {
+      const dataVenda = new Date(venda.data);
+      return dataVenda.getMonth() === mesSelecionado && 
+             dataVenda.getFullYear() === anoSelecionado;
+    });
+    
+    vendasFiltradas.forEach(venda => {
+      qtd[venda.contaDestinoId] = (qtd[venda.contaDestinoId] || 0) + 1;
+    });
+    
+    return qtd;
+  }, [mesSelecionado, anoSelecionado]);
+
   // Separar contas por tipo de máquina
   const { contasProprias, contasTerceirizadas, totais } = useMemo(() => {
     const proprias = contasFinanceiras.filter(c => c.statusMaquina === 'Própria' && c.status === 'Ativo');
     const terceirizadas = contasFinanceiras.filter(c => c.statusMaquina === 'Terceirizada' && c.status === 'Ativo');
     
-    const totalProprias = proprias.reduce((acc, c) => acc + (c.saldoInicial || 0), 0);
-    const totalTerceirizadas = terceirizadas.reduce((acc, c) => acc + (c.saldoInicial || 0), 0);
-    const contasEmAlerta = proprias.filter(c => (c.saldoInicial || 0) >= ALERTA_LIMITE).length;
-    const contasNoTeto = proprias.filter(c => (c.saldoInicial || 0) >= TETO_BANCARIO).length;
+    const totalProprias = proprias.reduce((acc, c) => acc + (saldosPorConta[c.id] || 0), 0);
+    const totalTerceirizadas = terceirizadas.reduce((acc, c) => acc + (saldosPorConta[c.id] || 0), 0);
+    const contasEmAlerta = proprias.filter(c => {
+      const saldo = saldosPorConta[c.id] || 0;
+      return saldo >= ALERTA_LIMITE && saldo < TETO_BANCARIO;
+    }).length;
+    const contasNoTeto = proprias.filter(c => (saldosPorConta[c.id] || 0) >= TETO_BANCARIO).length;
     
     return {
       contasProprias: proprias,
       contasTerceirizadas: terceirizadas,
       totais: { totalProprias, totalTerceirizadas, contasEmAlerta, contasNoTeto }
     };
-  }, [contasFinanceiras]);
+  }, [contasFinanceiras, saldosPorConta]);
+
+  const mesNome = meses.find(m => m.valor === mesSelecionado)?.nome || '';
 
   return (
     <FinanceiroLayout title="Teto Bancário">
       <div className="space-y-6">
+        {/* Filtros de Período */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm font-medium">Período:</span>
+              </div>
+              
+              <Select value={mesSelecionado.toString()} onValueChange={(v) => setMesSelecionado(parseInt(v))}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Mês" />
+                </SelectTrigger>
+                <SelectContent>
+                  {meses.map(m => (
+                    <SelectItem key={m.valor} value={m.valor.toString()}>{m.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={anoSelecionado.toString()} onValueChange={(v) => setAnoSelecionado(parseInt(v))}>
+                <SelectTrigger className="w-24">
+                  <SelectValue placeholder="Ano" />
+                </SelectTrigger>
+                <SelectContent>
+                  {anos.map(a => (
+                    <SelectItem key={a} value={a.toString()}>{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+                <TrendingUp className="h-4 w-4" />
+                <span>Exibindo vendas finalizadas de <strong>{mesNome}/{anoSelecionado}</strong></span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Cards de Resumo */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
@@ -54,6 +206,9 @@ export default function FinanceiroTetoBancario() {
                 <div>
                   <p className="text-sm text-muted-foreground">Contas Próprias</p>
                   <p className="text-2xl font-bold">{contasProprias.length}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Total: {formatCurrency(totais.totalProprias)}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -63,39 +218,52 @@ export default function FinanceiroTetoBancario() {
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                  <Building2 className="h-6 w-6 text-purple-600" />
+                  <Landmark className="h-6 w-6 text-purple-600" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Contas Terceirizadas</p>
                   <p className="text-2xl font-bold">{contasTerceirizadas.length}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Total: {formatCurrency(totais.totalTerceirizadas)}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className={totais.contasEmAlerta > 0 ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20' : ''}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                  <AlertTriangle className="h-6 w-6 text-orange-600" />
+                  <AlertTriangle className={`h-6 w-6 ${totais.contasEmAlerta > 0 ? 'text-orange-600' : 'text-orange-400'}`} />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Em Alerta (&ge;100k)</p>
-                  <p className="text-2xl font-bold text-orange-600">{totais.contasEmAlerta}</p>
+                  <p className={`text-2xl font-bold ${totais.contasEmAlerta > 0 ? 'text-orange-600' : ''}`}>
+                    {totais.contasEmAlerta}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Acima de {formatCurrency(ALERTA_LIMITE)}
+                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className={totais.contasNoTeto > 0 ? 'border-red-500 bg-red-50 dark:bg-red-950/20' : ''}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                  <AlertCircle className="h-6 w-6 text-red-600" />
+                  <AlertCircle className={`h-6 w-6 ${totais.contasNoTeto > 0 ? 'text-red-600' : 'text-red-400'}`} />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">No Teto (&ge;120k)</p>
-                  <p className="text-2xl font-bold text-red-600">{totais.contasNoTeto}</p>
+                  <p className={`text-2xl font-bold ${totais.contasNoTeto > 0 ? 'text-red-600' : ''}`}>
+                    {totais.contasNoTeto}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Atingiram {formatCurrency(TETO_BANCARIO)}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -104,13 +272,16 @@ export default function FinanceiroTetoBancario() {
 
         {/* Seção: Contas Próprias */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Lock className="h-5 w-5 text-blue-600" />
-            <h2 className="text-lg font-bold">Contas Próprias</h2>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-blue-600" />
+              <h2 className="text-lg font-bold">Contas Próprias</h2>
+              <Badge variant="secondary">{contasProprias.length}</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Teto: {formatCurrency(TETO_BANCARIO)} | Alerta: {formatCurrency(ALERTA_LIMITE)}
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Monitoramento de limite bancário (teto: {formatCurrency(TETO_BANCARIO)})
-          </p>
           
           {contasProprias.length === 0 ? (
             <Card>
@@ -119,41 +290,51 @@ export default function FinanceiroTetoBancario() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {contasProprias.map(conta => {
-                const saldoAtual = conta.saldoInicial || 0;
+                const saldoAtual = saldosPorConta[conta.id] || 0;
+                const qtdVendas = qtdVendasPorConta[conta.id] || 0;
                 const percentual = Math.min(100, (saldoAtual / TETO_BANCARIO) * 100);
-                const emAlerta = saldoAtual >= ALERTA_LIMITE;
+                const emAlerta = saldoAtual >= ALERTA_LIMITE && saldoAtual < TETO_BANCARIO;
                 const atingiuTeto = saldoAtual >= TETO_BANCARIO;
                 
                 return (
                   <Card 
                     key={conta.id} 
-                    className={
+                    className={`transition-all ${
                       atingiuTeto 
-                        ? 'border-2 border-red-500' 
+                        ? 'border-2 border-red-500 bg-red-50 dark:bg-red-950/20' 
                         : emAlerta 
-                          ? 'border-2 border-orange-500' 
+                          ? 'border-2 border-orange-500 bg-orange-50 dark:bg-orange-950/20' 
                           : ''
-                    }
+                    }`}
                   >
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base flex items-center justify-between">
                         <span className="truncate">{conta.nome}</span>
                         <div className="flex items-center gap-1">
-                          {atingiuTeto && <AlertCircle className="h-5 w-5 text-red-500" />}
-                          {emAlerta && !atingiuTeto && <AlertTriangle className="h-5 w-5 text-orange-500" />}
+                          {atingiuTeto && <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />}
+                          {emAlerta && <AlertTriangle className="h-5 w-5 text-orange-500 flex-shrink-0" />}
                         </div>
                       </CardTitle>
                       <p className="text-xs text-muted-foreground">{obterNomeLoja(conta.lojaVinculada)}</p>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        <div className="flex justify-between text-sm">
-                          <span>Saldo Atual</span>
-                          <span className={`font-bold ${atingiuTeto ? 'text-red-600' : emAlerta ? 'text-orange-600' : 'text-green-600'}`}>
+                        {/* Valor das vendas no período */}
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Vendas no Período</span>
+                          <span className={`text-lg font-bold ${
+                            atingiuTeto ? 'text-red-600' : emAlerta ? 'text-orange-600' : 'text-green-600'
+                          }`}>
                             {formatCurrency(saldoAtual)}
                           </span>
+                        </div>
+
+                        {/* Quantidade de vendas */}
+                        <div className="flex justify-between items-center text-xs text-muted-foreground">
+                          <span>Qtd. Vendas</span>
+                          <Badge variant="outline">{qtdVendas}</Badge>
                         </div>
                         
                         {/* Barra de progresso */}
@@ -163,13 +344,13 @@ export default function FinanceiroTetoBancario() {
                             className={`h-3 ${atingiuTeto ? '[&>div]:bg-red-500' : emAlerta ? '[&>div]:bg-orange-500' : '[&>div]:bg-green-500'}`}
                           />
                           <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>{percentual.toFixed(1)}%</span>
+                            <span>{percentual.toFixed(1)}% do teto</span>
                             <span>Teto: {formatCurrency(TETO_BANCARIO)}</span>
                           </div>
                         </div>
                         
                         {/* Alertas visuais */}
-                        {emAlerta && !atingiuTeto && (
+                        {emAlerta && (
                           <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded text-xs text-orange-700 dark:text-orange-300 flex items-center gap-2">
                             <AlertTriangle className="h-4 w-4 flex-shrink-0" />
                             <span>Atenção: Próximo do limite!</span>
@@ -181,18 +362,6 @@ export default function FinanceiroTetoBancario() {
                             <span>Teto bancário atingido!</span>
                           </div>
                         )}
-                        
-                        {/* Info adicional */}
-                        <div className="pt-2 border-t text-xs text-muted-foreground">
-                          <div className="flex justify-between">
-                            <span>Banco:</span>
-                            <span>{conta.banco || '-'}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Tipo:</span>
-                            <span>{conta.tipo || '-'}</span>
-                          </div>
-                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -203,17 +372,14 @@ export default function FinanceiroTetoBancario() {
           
           {/* Total das contas próprias */}
           {contasProprias.length > 0 && (
-            <div className="flex justify-end">
-              <Card className="inline-block">
-                <CardContent className="py-3 px-6 flex items-center gap-3">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Contas Próprias</p>
-                    <p className="text-lg font-bold">{formatCurrency(totais.totalProprias)}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="bg-muted/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Total Contas Próprias ({mesNome}/{anoSelecionado})</span>
+                  <span className="text-xl font-bold">{formatCurrency(totais.totalProprias)}</span>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
 
@@ -222,12 +388,11 @@ export default function FinanceiroTetoBancario() {
         {/* Seção: Contas Terceirizadas */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-purple-600" />
+            <Landmark className="h-5 w-5 text-purple-600" />
             <h2 className="text-lg font-bold">Contas Terceirizadas</h2>
+            <Badge variant="secondary">{contasTerceirizadas.length}</Badge>
+            <span className="text-xs text-muted-foreground">(Sem limite de teto)</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Visualização de montante (sem limite de teto)
-          </p>
           
           {contasTerceirizadas.length === 0 ? (
             <Card>
@@ -236,51 +401,45 @@ export default function FinanceiroTetoBancario() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {contasTerceirizadas.map(conta => (
-                <Card key={conta.id}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base truncate">{conta.nome}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{obterNomeLoja(conta.lojaVinculada)}</p>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-muted-foreground">Montante</span>
-                        <span className="text-xl font-bold">{formatCurrency(conta.saldoInicial || 0)}</span>
-                      </div>
-                      
-                      {/* Info adicional */}
-                      <div className="pt-2 border-t text-xs text-muted-foreground">
-                        <div className="flex justify-between">
-                          <span>Banco:</span>
-                          <span>{conta.banco || '-'}</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {contasTerceirizadas.map(conta => {
+                const montanteTotal = saldosPorConta[conta.id] || 0;
+                const qtdVendas = qtdVendasPorConta[conta.id] || 0;
+
+                return (
+                  <Card key={conta.id}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base truncate">{conta.nome}</CardTitle>
+                      <p className="text-xs text-muted-foreground">{obterNomeLoja(conta.lojaVinculada)}</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-muted-foreground">Vendas no Período</span>
+                          <span className="text-xl font-bold">{formatCurrency(montanteTotal)}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Tipo:</span>
-                          <span>{conta.tipo || '-'}</span>
+                        <div className="flex justify-between items-center text-xs text-muted-foreground">
+                          <span>Qtd. Vendas</span>
+                          <Badge variant="outline">{qtdVendas}</Badge>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
           
           {/* Total das contas terceirizadas */}
           {contasTerceirizadas.length > 0 && (
-            <div className="flex justify-end">
-              <Card className="inline-block">
-                <CardContent className="py-3 px-6 flex items-center gap-3">
-                  <DollarSign className="h-5 w-5 text-purple-600" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Total Contas Terceirizadas</p>
-                    <p className="text-lg font-bold">{formatCurrency(totais.totalTerceirizadas)}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="bg-muted/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Total Contas Terceirizadas ({mesNome}/{anoSelecionado})</span>
+                  <span className="text-xl font-bold">{formatCurrency(totais.totalTerceirizadas)}</span>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
