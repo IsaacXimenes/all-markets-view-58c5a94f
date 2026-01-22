@@ -65,7 +65,7 @@ export const useCadastroStore = create<CadastroStore>((set, get) => ({
     
     // Versão dos dados mockados - incrementar quando houver alterações no JSON
     const DATA_VERSION_KEY = 'cadastros_data_version';
-    const CURRENT_VERSION = '2.0'; // Incrementado para forçar reinicialização
+    const CURRENT_VERSION = '2.1'; // Removido Loja - Acessórios
     
     const storedVersion = localStorage.getItem(DATA_VERSION_KEY);
     const lojasStorage = localStorage.getItem(LOJAS_KEY);
