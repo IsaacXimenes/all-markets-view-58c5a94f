@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { getContasFinanceiras, addContaFinanceira, updateContaFinanceira, deleteContaFinanceira, ContaFinanceira } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { exportToCSV } from '@/utils/formatUtils';
+import { InputComMascara } from '@/components/ui/InputComMascara';
 import { Plus, Pencil, Trash2, Download, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -123,15 +124,6 @@ export default function CadastrosContasFinanceiras() {
     exportToCSV(dataToExport, 'contas-financeiras.csv');
   };
 
-  const moedaMask = (value: number): string => {
-    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
-  const parseMoeda = (value: string): number => {
-    const cleaned = value.replace(/[^\d,]/g, '').replace(',', '.');
-    return parseFloat(cleaned) || 0;
-  };
-
   const getLojaName = (lojaId: string) => {
     const loja = lojas.find(l => l.id === lojaId);
     return loja?.nome || lojaId;
@@ -241,19 +233,14 @@ export default function CadastrosContasFinanceiras() {
             </div>
             <div className="space-y-2">
               <Label>Valor Inicial</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                <Input 
-                  type="text"
-                  className="pl-10"
-                  value={form.saldoInicial ? moedaMask(form.saldoInicial) : ''}
-                  onChange={(e) => {
-                    const valor = parseMoeda(e.target.value);
-                    setForm({ ...form, saldoInicial: valor });
-                  }}
-                  placeholder="0,00"
-                />
-              </div>
+              <InputComMascara
+                mascara="moeda"
+                value={form.saldoInicial}
+                onChange={(_, rawValue) => {
+                  setForm({ ...form, saldoInicial: rawValue as number });
+                }}
+                placeholder="0,00"
+              />
             </div>
             <div className="space-y-2">
               <Label>Status da Máquina *</Label>
