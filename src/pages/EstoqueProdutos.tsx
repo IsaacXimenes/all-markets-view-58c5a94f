@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getProdutos, getEstoqueStats, updateValorRecomendado, updateProdutoLoja, Produto } from '@/utils/estoqueApi';
 import { useCadastroStore } from '@/store/cadastroStore';
-import { Download, Eye, CheckCircle, XCircle, Package, DollarSign, AlertTriangle, FileWarning, AlertCircle, Edit, Wrench, Truck } from 'lucide-react';
+import { Download, Eye, CheckCircle, XCircle, Package, DollarSign, AlertTriangle, FileWarning, AlertCircle, Edit, Wrench, ArrowRightLeft, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -248,10 +248,26 @@ export default function EstoqueProdutos() {
             </label>
           </div>
 
-          <Button onClick={handleExport} variant="outline" className="ml-auto">
-            <Download className="mr-2 h-4 w-4" />
-            Exportar CSV
-          </Button>
+          <div className="ml-auto flex gap-2">
+            <Button 
+              onClick={() => {
+                setLojaFilter('todas');
+                setModeloFilter('');
+                setImeiFilter('');
+                setTipoFilter('todos');
+                setOrigemFilter('todas');
+                setSomenteNaoConferidos(false);
+              }} 
+              variant="ghost"
+            >
+              <X className="mr-2 h-4 w-4" />
+              Limpar Filtros
+            </Button>
+            <Button onClick={handleExport} variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Exportar CSV
+            </Button>
+          </div>
         </div>
 
         <div className="rounded-md border overflow-x-auto">
@@ -291,7 +307,7 @@ export default function EstoqueProdutos() {
                         <span className="font-medium">{produto.modelo}</span>
                         {produto.statusMovimentacao === 'Em movimentação' && (
                           <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
-                            <Truck className="h-3 w-3 mr-1" />
+                            <ArrowRightLeft className="h-3 w-3 mr-1" />
                             Em movimentação
                           </Badge>
                         )}

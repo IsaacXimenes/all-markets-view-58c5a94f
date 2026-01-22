@@ -359,7 +359,7 @@ export default function EstoqueProdutosPendentes() {
                 <SelectContent>
                   <SelectItem value="todas">Todas</SelectItem>
                   {lojas.map(l => (
-                    <SelectItem key={l.id} value={l.nome}>{l.nome}</SelectItem>
+                    <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
