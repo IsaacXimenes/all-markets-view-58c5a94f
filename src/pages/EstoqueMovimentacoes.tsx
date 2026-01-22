@@ -53,6 +53,7 @@ export default function EstoqueMovimentacoes() {
   // Modal de busca de produto
   const [showProdutoModal, setShowProdutoModal] = useState(false);
   const [buscaProduto, setBuscaProduto] = useState('');
+  const [buscaLojaModal, setBuscaLojaModal] = useState<string>('todas');
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null);
 
   // Modal de detalhes
@@ -78,14 +79,25 @@ export default function EstoqueMovimentacoes() {
 
   // Filtro de produtos na busca
   const produtosFiltrados = useMemo(() => {
-    if (!buscaProduto) return produtosDisponiveis;
-    const busca = buscaProduto.toLowerCase();
-    return produtosDisponiveis.filter(p => 
-      p.modelo.toLowerCase().includes(busca) ||
-      p.imei.includes(busca) ||
-      p.marca.toLowerCase().includes(busca)
-    );
-  }, [produtosDisponiveis, buscaProduto]);
+    let resultado = produtosDisponiveis;
+    
+    // Filtrar por loja
+    if (buscaLojaModal !== 'todas') {
+      resultado = resultado.filter(p => p.loja === buscaLojaModal);
+    }
+    
+    // Filtrar por texto
+    if (buscaProduto) {
+      const busca = buscaProduto.toLowerCase();
+      resultado = resultado.filter(p => 
+        p.modelo.toLowerCase().includes(busca) ||
+        p.imei.includes(busca) ||
+        p.marca.toLowerCase().includes(busca)
+      );
+    }
+    
+    return resultado;
+  }, [produtosDisponiveis, buscaProduto, buscaLojaModal]);
 
   const getLojaNome = (lojaIdOuNome: string) => {
     const loja = obterLojaById(lojaIdOuNome);
@@ -218,6 +230,15 @@ export default function EstoqueMovimentacoes() {
       toast({
         title: 'Campo obrigatório',
         description: 'Selecione o destino',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!formData.motivo || !formData.motivo.trim()) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'Informe o motivo da movimentação',
         variant: 'destructive'
       });
       return;
@@ -415,15 +436,16 @@ export default function EstoqueMovimentacoes() {
                     </div>
                   </div>
 
-                  {/* 4. Observações (opcional) */}
+                  {/* 4. Motivo (obrigatório) */}
                   <div>
-                    <Label htmlFor="motivo">Observações</Label>
+                    <Label htmlFor="motivo">Motivo *</Label>
                     <Textarea 
                       id="motivo"
                       value={formData.motivo}
                       onChange={(e) => setFormData(prev => ({ ...prev, motivo: e.target.value }))}
-                      placeholder="Observações adicionais (opcional)"
+                      placeholder="Informe o motivo da movimentação"
                       rows={3}
+                      required
                     />
                   </div>
 
@@ -468,7 +490,7 @@ export default function EstoqueMovimentacoes() {
                 <TableHead>Origem</TableHead>
                 <TableHead>Destino</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Observações</TableHead>
+                <TableHead>Motivo</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -595,12 +617,25 @@ export default function EstoqueMovimentacoes() {
               <DialogTitle>Buscar Produto no Estoque</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <Input
-                placeholder="Buscar por modelo, marca ou IMEI..."
-                value={buscaProduto}
-                onChange={(e) => setBuscaProduto(e.target.value)}
-                className="w-full"
-              />
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Buscar por modelo, marca ou IMEI..."
+                  value={buscaProduto}
+                  onChange={(e) => setBuscaProduto(e.target.value)}
+                  className="flex-1"
+                />
+                <Select value={buscaLojaModal} onValueChange={setBuscaLojaModal}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filtrar por loja" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas as lojas</SelectItem>
+                    {lojas.map(loja => (
+                      <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               
               <div className="rounded-md border max-h-[400px] overflow-auto">
                 <Table>
@@ -754,10 +789,10 @@ export default function EstoqueMovimentacoes() {
                   </div>
                 </div>
 
-                {/* Observações */}
+                {/* Motivo */}
                 {movimentacaoDetalhe.motivo && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Observações</p>
+                    <p className="text-sm text-muted-foreground">Motivo</p>
                     <p className="text-sm bg-muted/30 p-2 rounded">{movimentacaoDetalhe.motivo}</p>
                   </div>
                 )}
@@ -815,12 +850,12 @@ export default function EstoqueMovimentacoes() {
                 </div>
 
                 <div>
-                  <Label htmlFor="editMotivo">Observações</Label>
+                  <Label htmlFor="editMotivo">Motivo *</Label>
                   <Textarea 
                     id="editMotivo"
                     value={editFormData.motivo}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, motivo: e.target.value }))}
-                    placeholder="Observações adicionais (opcional)"
+                    placeholder="Informe o motivo da movimentação"
                     rows={3}
                   />
                 </div>

@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { getAcessorios, Acessorio } from '@/utils/acessoriosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
-import { Download, Plus, CheckCircle, Clock } from 'lucide-react';
+import { Download, Plus, CheckCircle, Clock, Eye, Edit, Package } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -24,6 +26,8 @@ interface MovimentacaoAcessorio {
   responsavel: string;
   motivo: string;
   status: 'Pendente' | 'Recebido';
+  dataRecebimento?: string;
+  responsavelRecebimento?: string;
 }
 
 // Mock data
@@ -38,7 +42,9 @@ const mockMovimentacoes: MovimentacaoAcessorio[] = [
     destino: 'Loja Shopping',
     responsavel: 'Maria Souza',
     motivo: 'Reposição de estoque',
-    status: 'Recebido'
+    status: 'Recebido',
+    dataRecebimento: '2024-01-16T10:30:00',
+    responsavelRecebimento: 'João Silva'
   },
   {
     id: 'MOV-ACESS-002',
@@ -62,7 +68,9 @@ const mockMovimentacoes: MovimentacaoAcessorio[] = [
     destino: 'Loja Centro',
     responsavel: 'Ana Costa',
     motivo: 'Devolução',
-    status: 'Recebido'
+    status: 'Recebido',
+    dataRecebimento: '2024-01-19T14:00:00',
+    responsavelRecebimento: 'Pedro Santos'
   }
 ];
 
@@ -79,11 +87,27 @@ export default function EstoqueMovimentacoesAcessorios() {
   // Apenas lojas do tipo 'Loja' para movimentações
   const lojas = obterLojasTipoLoja();
   const acessorios = getAcessorios();
+  const colaboradores = obterColaboradoresAtivos();
   
   // Colaboradores com permissão de estoque ou gestor
-  const colaboradoresComPermissao = obterColaboradoresAtivos().filter(
+  const colaboradoresComPermissao = colaboradores.filter(
     col => col.eh_estoquista || col.eh_gestor
   );
+
+  // Estados para modais de ações
+  const [showDetalhesModal, setShowDetalhesModal] = useState(false);
+  const [movimentacaoDetalhe, setMovimentacaoDetalhe] = useState<MovimentacaoAcessorio | null>(null);
+  
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [movimentacaoParaEditar, setMovimentacaoParaEditar] = useState<MovimentacaoAcessorio | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    destino: '',
+    motivo: '',
+  });
+  
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [movimentacaoParaConfirmar, setMovimentacaoParaConfirmar] = useState<string | null>(null);
+  const [responsavelConfirmacao, setResponsavelConfirmacao] = useState<string>('');
 
   const getLojaNome = (lojaIdOuNome: string) => {
     const loja = obterLojaById(lojaIdOuNome);
@@ -99,8 +123,94 @@ export default function EstoqueMovimentacoesAcessorios() {
     });
   }, [movimentacoes, origemFilter, destinoFilter]);
 
+  // Abrir diálogo de confirmação
+  const handleAbrirConfirmacao = (movId: string) => {
+    setMovimentacaoParaConfirmar(movId);
+    setResponsavelConfirmacao('');
+    setConfirmDialogOpen(true);
+  };
+
+  // Confirmar recebimento
+  const handleConfirmarRecebimento = () => {
+    if (!movimentacaoParaConfirmar || !responsavelConfirmacao) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'Selecione o responsável pela confirmação',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const nomeResponsavel = colaboradores.find(c => c.id === responsavelConfirmacao)?.nome || responsavelConfirmacao;
+    
+    const movIndex = movimentacoes.findIndex(m => m.id === movimentacaoParaConfirmar);
+    if (movIndex !== -1) {
+      const updatedMov = {
+        ...movimentacoes[movIndex],
+        status: 'Recebido' as const,
+        dataRecebimento: new Date().toISOString(),
+        responsavelRecebimento: nomeResponsavel
+      };
+      const newMovimentacoes = [...movimentacoes];
+      newMovimentacoes[movIndex] = updatedMov;
+      setMovimentacoes(newMovimentacoes);
+      movimentacoesData = newMovimentacoes;
+    }
+    
+    setConfirmDialogOpen(false);
+    setMovimentacaoParaConfirmar(null);
+    setResponsavelConfirmacao('');
+    toast({
+      title: 'Recebimento confirmado',
+      description: `Movimentação ${movimentacaoParaConfirmar} confirmada por ${nomeResponsavel}`,
+    });
+  };
+
+  // Salvar edição
+  const handleSalvarEdicao = () => {
+    if (!movimentacaoParaEditar) return;
+
+    if (!editFormData.destino) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'Selecione o destino',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!editFormData.motivo || !editFormData.motivo.trim()) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'Informe o motivo',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const movIndex = movimentacoes.findIndex(m => m.id === movimentacaoParaEditar.id);
+    if (movIndex !== -1) {
+      const updatedMov = {
+        ...movimentacoes[movIndex],
+        destino: editFormData.destino,
+        motivo: editFormData.motivo,
+      };
+      const newMovimentacoes = [...movimentacoes];
+      newMovimentacoes[movIndex] = updatedMov;
+      setMovimentacoes(newMovimentacoes);
+      movimentacoesData = newMovimentacoes;
+    }
+
+    setEditDialogOpen(false);
+    setMovimentacaoParaEditar(null);
+    toast({
+      title: 'Movimentação atualizada',
+      description: 'Os dados da movimentação foram atualizados com sucesso',
+    });
+  };
+
   const handleExport = () => {
-    const headers = ['ID', 'Data', 'Acessório', 'Quantidade', 'Origem', 'Destino', 'Responsável', 'Motivo'];
+    const headers = ['ID', 'Data', 'Acessório', 'Quantidade', 'Origem', 'Destino', 'Responsável', 'Motivo', 'Status'];
     const rows = movimentacoesFiltradas.map(m => [
       m.id,
       new Date(m.data).toLocaleDateString('pt-BR'),
@@ -109,7 +219,8 @@ export default function EstoqueMovimentacoesAcessorios() {
       m.origem,
       m.destino,
       m.responsavel,
-      m.motivo
+      m.motivo,
+      m.status
     ]);
     
     const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
@@ -130,6 +241,17 @@ export default function EstoqueMovimentacoesAcessorios() {
     const responsavelId = formData.get('responsavel') as string;
     const responsavelNome = colaboradoresComPermissao.find(c => c.id === responsavelId)?.nome || responsavelId;
     
+    const motivo = formData.get('motivo') as string;
+    
+    if (!motivo || !motivo.trim()) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'Informe o motivo da movimentação',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     const novaMovimentacao: MovimentacaoAcessorio = {
       id: `MOV-ACESS-${Date.now()}`,
       data: formData.get('data') as string,
@@ -139,7 +261,7 @@ export default function EstoqueMovimentacoesAcessorios() {
       origem: formData.get('origem') as string,
       destino: formData.get('destino') as string,
       responsavel: responsavelNome,
-      motivo: formData.get('motivo') as string,
+      motivo: motivo,
       status: 'Pendente'
     };
 
@@ -264,8 +386,8 @@ export default function EstoqueMovimentacoesAcessorios() {
                   </div>
 
                   <div>
-                    <Label htmlFor="motivo">Motivo</Label>
-                    <Input id="motivo" name="motivo" required />
+                    <Label htmlFor="motivo">Motivo *</Label>
+                    <Textarea id="motivo" name="motivo" required placeholder="Informe o motivo da movimentação" />
                   </div>
 
                   <div className="flex justify-end gap-2">
@@ -298,6 +420,7 @@ export default function EstoqueMovimentacoesAcessorios() {
                 <TableHead>Responsável</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Motivo</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -329,12 +452,281 @@ export default function EstoqueMovimentacoesAcessorios() {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell>{mov.motivo}</TableCell>
+                  <TableCell className="max-w-[150px] truncate" title={mov.motivo}>{mov.motivo}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {/* Botão Ver Detalhes */}
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => {
+                          setMovimentacaoDetalhe(mov);
+                          setShowDetalhesModal(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+
+                      {/* Botão Editar - só disponível enquanto pendente */}
+                      {mov.status === 'Pendente' && (
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => {
+                            setMovimentacaoParaEditar(mov);
+                            setEditFormData({
+                              destino: mov.destino,
+                              motivo: mov.motivo,
+                            });
+                            setEditDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+
+                      {/* Botão Confirmar - só disponível enquanto pendente */}
+                      {mov.status === 'Pendente' && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="text-green-600 border-green-600 hover:bg-green-50"
+                          onClick={() => handleAbrirConfirmacao(mov.id)}
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Confirmar
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
+
+        {/* Dialog de Confirmação de Recebimento */}
+        <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Recebimento</AlertDialogTitle>
+              <AlertDialogDescription>
+                Selecione o responsável que está confirmando o recebimento desta movimentação.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="py-4">
+              <Label htmlFor="responsavelConfirmacao">Responsável *</Label>
+              <Select 
+                value={responsavelConfirmacao}
+                onValueChange={setResponsavelConfirmacao}
+              >
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Selecione o colaborador" />
+                </SelectTrigger>
+                <SelectContent>
+                  {colaboradoresComPermissao.map(col => (
+                    <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {
+                setConfirmDialogOpen(false);
+                setMovimentacaoParaConfirmar(null);
+                setResponsavelConfirmacao('');
+              }}>
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmarRecebimento}>
+                Confirmar Recebimento
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Modal de Detalhes da Movimentação (Timeline) */}
+        <Dialog open={showDetalhesModal} onOpenChange={setShowDetalhesModal}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Timeline da Movimentação
+              </DialogTitle>
+            </DialogHeader>
+            {movimentacaoDetalhe && (
+              <div className="space-y-4">
+                {/* Acessório */}
+                <div className="bg-muted/50 p-3 rounded-md">
+                  <p className="text-sm text-muted-foreground">Acessório</p>
+                  <p className="font-medium">{movimentacaoDetalhe.acessorio}</p>
+                  <p className="text-sm text-muted-foreground">Quantidade: {movimentacaoDetalhe.quantidade}</p>
+                </div>
+
+                {/* Timeline Visual */}
+                <div className="relative">
+                  {/* Linha de conexão */}
+                  <div className="absolute left-4 top-8 bottom-8 w-0.5 bg-border" />
+                  
+                  {/* Etapa 1 - Envio */}
+                  <div className="relative flex gap-4 pb-6">
+                    <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center z-10">
+                      <Package className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">Envio Registrado</p>
+                      <div className="bg-muted/30 p-3 rounded-md mt-2 space-y-2">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <p className="text-muted-foreground text-xs">Loja de Origem</p>
+                            <p className="font-medium">{getLojaNome(movimentacaoDetalhe.origem)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Data de Envio</p>
+                            <p className="font-medium">{new Date(movimentacaoDetalhe.data).toLocaleString('pt-BR')}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Usuário que Enviou</p>
+                          <p className="font-medium">{movimentacaoDetalhe.responsavel}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Etapa 2 - Destino */}
+                  <div className="relative flex gap-4 pb-6">
+                    <div className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center z-10",
+                      movimentacaoDetalhe.status === 'Recebido' 
+                        ? "bg-green-500" 
+                        : "bg-yellow-500"
+                    )}>
+                      {movimentacaoDetalhe.status === 'Recebido' 
+                        ? <CheckCircle className="h-4 w-4 text-white" />
+                        : <Clock className="h-4 w-4 text-white" />
+                      }
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">
+                        {movimentacaoDetalhe.status === 'Recebido' 
+                          ? 'Recebimento Confirmado' 
+                          : 'Aguardando Recebimento'}
+                      </p>
+                      <div className="bg-muted/30 p-3 rounded-md mt-2 space-y-2">
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <p className="text-muted-foreground text-xs">Loja de Destino</p>
+                            <p className="font-medium">{getLojaNome(movimentacaoDetalhe.destino)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground text-xs">Data de Recebimento</p>
+                            <p className="font-medium">
+                              {movimentacaoDetalhe.dataRecebimento 
+                                ? new Date(movimentacaoDetalhe.dataRecebimento).toLocaleString('pt-BR')
+                                : <span className="text-yellow-600">Pendente</span>}
+                            </p>
+                          </div>
+                        </div>
+                        {movimentacaoDetalhe.status === 'Recebido' && (
+                          <div>
+                            <p className="text-muted-foreground text-xs">Usuário que Recebeu</p>
+                            <p className="font-medium">{movimentacaoDetalhe.responsavelRecebimento || '-'}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Motivo */}
+                {movimentacaoDetalhe.motivo && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Motivo</p>
+                    <p className="text-sm bg-muted/30 p-2 rounded">{movimentacaoDetalhe.motivo}</p>
+                  </div>
+                )}
+
+                {/* Status Final */}
+                {movimentacaoDetalhe.status === 'Pendente' && (
+                  <div className="border-t pt-4">
+                    <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Acessório em trânsito
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Edição da Movimentação */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Editar Movimentação</DialogTitle>
+            </DialogHeader>
+            {movimentacaoParaEditar && (
+              <div className="space-y-4">
+                <div className="bg-muted/50 p-3 rounded-md">
+                  <p className="text-sm text-muted-foreground">Acessório</p>
+                  <p className="font-medium">{movimentacaoParaEditar.acessorio}</p>
+                  <p className="text-sm text-muted-foreground">Quantidade: {movimentacaoParaEditar.quantidade}</p>
+                </div>
+
+                <div>
+                  <Label>Origem</Label>
+                  <Input value={getLojaNome(movimentacaoParaEditar.origem)} disabled />
+                </div>
+
+                <div>
+                  <Label htmlFor="editDestino">Destino *</Label>
+                  <Select 
+                    value={editFormData.destino}
+                    onValueChange={(v) => setEditFormData(prev => ({ ...prev, destino: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lojas
+                        .filter(loja => loja.nome !== movimentacaoParaEditar.origem)
+                        .map(loja => (
+                          <SelectItem key={loja.id} value={loja.nome}>{loja.nome}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="editMotivo">Motivo *</Label>
+                  <Textarea 
+                    id="editMotivo"
+                    value={editFormData.motivo}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, motivo: e.target.value }))}
+                    placeholder="Informe o motivo da movimentação"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => {
+                      setEditDialogOpen(false);
+                      setMovimentacaoParaEditar(null);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSalvarEdicao}>Salvar</Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </EstoqueLayout>
   );

@@ -10,10 +10,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { getNotasCompra, getFornecedores, addNotaCompra } from '@/utils/estoqueApi';
+import { getNotasCompra, addNotaCompra } from '@/utils/estoqueApi';
+import { getFornecedores } from '@/utils/cadastrosApi';
 import { exportToCSV, formatCurrency, moedaMask, parseMoeda } from '@/utils/formatUtils';
 import { Download, Plus, Eye, FileText, DollarSign, CheckCircle, Clock, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 
 // Função para gerar ID de urgência
 const gerarIdUrgencia = () => {
@@ -25,8 +27,9 @@ const gerarIdUrgencia = () => {
 export default function EstoqueNotasCompra() {
   const navigate = useNavigate();
   const [notas] = useState(getNotasCompra());
-  const [fornecedorFilter, setFornecedorFilter] = useState<string>('todos');
+  const [fornecedorFilter, setFornecedorFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('todos');
+  const fornecedores = getFornecedores();
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [showUrgenciaModal, setShowUrgenciaModal] = useState(false);
@@ -38,8 +41,19 @@ export default function EstoqueNotasCompra() {
     observacoes: ''
   });
 
+  // Helper para obter nome do fornecedor
+  const getFornecedorNome = (fornecedorIdOuNome: string) => {
+    const fornecedor = fornecedores.find(f => f.id === fornecedorIdOuNome);
+    return fornecedor?.nome || fornecedorIdOuNome;
+  };
+
   const notasFiltradas = notas.filter(n => {
-    if (fornecedorFilter !== 'todos' && n.fornecedor !== fornecedorFilter) return false;
+    if (fornecedorFilter) {
+      const fornecedorSelecionado = fornecedores.find(f => f.id === fornecedorFilter);
+      if (fornecedorSelecionado && n.fornecedor !== fornecedorSelecionado.nome && n.fornecedor !== fornecedorFilter) {
+        return false;
+      }
+    }
     if (statusFilter !== 'todos' && n.status !== statusFilter) return false;
     if (dataInicio && n.data < dataInicio) return false;
     if (dataFim && n.data > dataFim) return false;
@@ -131,17 +145,13 @@ export default function EstoqueNotasCompra() {
             />
           </div>
 
-          <Select value={fornecedorFilter} onValueChange={setFornecedorFilter}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Todos fornecedores" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos fornecedores</SelectItem>
-              {getFornecedores().map(fornecedor => (
-                <SelectItem key={fornecedor} value={fornecedor}>{fornecedor}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="w-[250px]">
+            <AutocompleteFornecedor
+              value={fornecedorFilter}
+              onChange={setFornecedorFilter}
+              placeholder="Todos fornecedores"
+            />
+          </div>
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[150px]">
@@ -250,16 +260,11 @@ export default function EstoqueNotasCompra() {
                 </div>
                 <div>
                   <Label>Fornecedor *</Label>
-                  <Select value={urgenciaForm.fornecedor} onValueChange={(v) => setUrgenciaForm(prev => ({ ...prev, fornecedor: v }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getFornecedores().map(f => (
-                        <SelectItem key={f} value={f}>{f}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <AutocompleteFornecedor
+                    value={urgenciaForm.fornecedor}
+                    onChange={(v) => setUrgenciaForm(prev => ({ ...prev, fornecedor: v }))}
+                    placeholder="Selecione o fornecedor"
+                  />
                 </div>
                 <div>
                   <Label>Valor Total (R$) *</Label>
