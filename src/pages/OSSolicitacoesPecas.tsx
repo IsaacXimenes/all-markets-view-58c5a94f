@@ -467,6 +467,7 @@ export default function OSSolicitacoesPecas() {
                   <TableHead>OS</TableHead>
                   <TableHead>Peça</TableHead>
                   <TableHead>Qtd</TableHead>
+                  <TableHead>Valor</TableHead>
                   <TableHead>Justificativa</TableHead>
                   <TableHead>SLA</TableHead>
                   <TableHead>Status</TableHead>
@@ -498,13 +499,16 @@ export default function OSSolicitacoesPecas() {
                       <Button 
                         variant="link" 
                         className="p-0 h-auto text-xs font-mono"
-                        onClick={() => navigate(`/os/assistencia/${sol.osId}`)}
+                        onClick={() => navigate(`/os/assistencia/${sol.osId}?from=solicitacoes`)}
                       >
                         {sol.osId}
                       </Button>
                     </TableCell>
                     <TableCell className="font-medium">{sol.peca}</TableCell>
                     <TableCell>{sol.quantidade}</TableCell>
+                    <TableCell className="text-sm">
+                      {sol.valorPeca ? formatCurrency(sol.valorPeca) : '-'}
+                    </TableCell>
                     <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
                       {sol.justificativa}
                     </TableCell>

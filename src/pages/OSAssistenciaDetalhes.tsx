@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 export default function OSAssistenciaDetalhes() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [os, setOS] = useState<OrdemServico | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -86,12 +87,21 @@ export default function OSAssistenciaDetalhes() {
     toast.success('Alterações salvas com sucesso!');
   };
 
+  const handleVoltar = () => {
+    const from = searchParams.get('from');
+    if (from === 'solicitacoes') {
+      navigate('/os/solicitacoes-pecas');
+    } else {
+      navigate('/os/assistencia');
+    }
+  };
+
   if (!os) {
     return (
       <PageLayout title="OS não encontrada">
         <div className="flex flex-col items-center justify-center py-12">
           <p className="text-muted-foreground mb-4">Ordem de serviço não encontrada.</p>
-          <Button onClick={() => navigate('/os/assistencia')}>
+          <Button onClick={handleVoltar}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>
@@ -209,7 +219,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate('/os/assistencia')}>
+            <Button variant="outline" onClick={handleVoltar}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar
             </Button>

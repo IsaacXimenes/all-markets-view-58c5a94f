@@ -19,10 +19,12 @@ import {
   addTimelineEntry, getContadoresGarantia, GarantiaItem, TratativaGarantia
 } from '@/utils/garantiasApi';
 import { getClientes, getLojas } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { format, differenceInDays } from 'date-fns';
 
 export default function GarantiasEmAndamento() {
   const navigate = useNavigate();
+  const { obterNomeLoja } = useCadastroStore();
   
   // Dados
   const garantiasEmAndamento = getGarantiasEmAndamento();
@@ -307,6 +309,7 @@ export default function GarantiasEmAndamento() {
                     <TableHead>ID</TableHead>
                     <TableHead>Data Abertura</TableHead>
                     <TableHead>Cliente</TableHead>
+                    <TableHead>Loja</TableHead>
                     <TableHead>Modelo</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>Tipo Tratativa</TableHead>
@@ -317,21 +320,22 @@ export default function GarantiasEmAndamento() {
                 <TableBody>
                   {dadosFiltrados.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         Nenhuma garantia em andamento
                       </TableCell>
                     </TableRow>
                   ) : (
-                    dadosFiltrados.map(({ garantia, tratativa, diasAberto }) => (
-                      <TableRow key={garantia.id} className={diasAberto > 7 ? 'bg-red-50 dark:bg-red-950/20' : ''}>
-                        <TableCell className="font-medium">{garantia.id}</TableCell>
-                        <TableCell>
-                          {tratativa ? format(new Date(tratativa.dataHora), 'dd/MM/yyyy') : '-'}
-                        </TableCell>
-                        <TableCell>{garantia.clienteNome}</TableCell>
-                        <TableCell>{garantia.modelo}</TableCell>
-                        <TableCell className="font-mono text-xs">{garantia.imei}</TableCell>
-                        <TableCell>
+                      dadosFiltrados.map(({ garantia, tratativa, diasAberto }) => (
+                        <TableRow key={garantia.id} className={diasAberto > 7 ? 'bg-red-50 dark:bg-red-950/20' : ''}>
+                          <TableCell className="font-medium">{garantia.id}</TableCell>
+                          <TableCell>
+                            {tratativa ? format(new Date(tratativa.dataHora), 'dd/MM/yyyy') : '-'}
+                          </TableCell>
+                          <TableCell>{garantia.clienteNome}</TableCell>
+                          <TableCell className="text-sm">{obterNomeLoja(garantia.lojaVenda)}</TableCell>
+                          <TableCell>{garantia.modelo}</TableCell>
+                          <TableCell className="font-mono text-xs">{garantia.imei}</TableCell>
+                          <TableCell>
                           <Badge variant="outline">{tratativa?.tipo || '-'}</Badge>
                         </TableCell>
                         <TableCell>

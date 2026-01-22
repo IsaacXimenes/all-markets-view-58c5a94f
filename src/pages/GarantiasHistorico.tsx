@@ -12,11 +12,13 @@ import { Eye, Download, X } from 'lucide-react';
 import { 
   getGarantias, getTratativasByGarantiaId, exportGarantiasToCSV
 } from '@/utils/garantiasApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { getLojas } from '@/utils/cadastrosApi';
 import { format } from 'date-fns';
 
 export default function GarantiasHistorico() {
   const navigate = useNavigate();
+  const { obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   const lojas = getLojas();
   const garantias = getGarantias();
   
@@ -26,9 +28,6 @@ export default function GarantiasHistorico() {
   const [lojaFiltro, setLojaFiltro] = useState('');
   const [tipoTratativaFiltro, setTipoTratativaFiltro] = useState('');
   const [statusFiltro, setStatusFiltro] = useState('');
-  
-  // Helpers
-  const getLojaName = (id: string) => lojas.find(l => l.id === id)?.nome || id;
   
   // Filtrar garantias
   const garantiasFiltradas = useMemo(() => {
@@ -172,6 +171,7 @@ export default function GarantiasHistorico() {
                     <TableHead>ID</TableHead>
                     <TableHead>Data Venda</TableHead>
                     <TableHead>Cliente</TableHead>
+                    <TableHead>Loja</TableHead>
                     <TableHead>Modelo</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>Resp. Garantia</TableHead>
@@ -184,7 +184,7 @@ export default function GarantiasHistorico() {
                 <TableBody>
                   {garantiasFiltradas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                         Nenhuma garantia encontrada
                       </TableCell>
                     </TableRow>
@@ -198,6 +198,7 @@ export default function GarantiasHistorico() {
                           <TableCell className="font-medium">{garantia.id}</TableCell>
                           <TableCell>{format(new Date(garantia.dataInicioGarantia), 'dd/MM/yyyy')}</TableCell>
                           <TableCell>{garantia.clienteNome}</TableCell>
+                          <TableCell className="text-sm">{obterNomeLoja(garantia.lojaVenda)}</TableCell>
                           <TableCell>{garantia.modelo}</TableCell>
                           <TableCell className="font-mono text-xs">{garantia.imei}</TableCell>
                           <TableCell>
