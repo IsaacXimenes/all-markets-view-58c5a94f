@@ -426,6 +426,12 @@ export const finalizarVenda = (
     bloqueadoParaEdicao: true
   };
 
+  // Manter a venda base consistente com o fluxo (ajuda telas que dependem de statusAtual)
+  updateVendaBase(vendaId, {
+    statusAtual: 'Finalizado',
+    bloqueadoParaEdicao: true
+  });
+
   saveFluxoData(fluxoData);
   
   // MIGRAÇÃO AUTOMÁTICA: Após pagamento financeiro, trade-ins vão para Aparelhos Pendentes - Estoque

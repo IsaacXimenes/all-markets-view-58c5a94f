@@ -347,6 +347,7 @@ export default function FinanceiroConferencia() {
     const validacoes = metodosUnicos.map(metodo => {
       const gestor = gestorData.find((v: any) => v.metodoPagamento === metodo);
       const financeiro = financeiroData.find(v => v.metodoPagamento === metodo);
+      const pagamentoMetodo = venda.pagamentos?.find(p => p.meioPagamento === metodo);
       return {
         metodoPagamento: metodo,
         validadoGestor: gestor?.validadoGestor || false,
@@ -354,7 +355,9 @@ export default function FinanceiroConferencia() {
         dataValidacaoGestor: gestor?.dataValidacao,
         dataValidacaoFinanceiro: financeiro?.dataValidacaoFinanceiro,
         conferidoPor: financeiro?.conferidoPor,
-        contaDestinoId: financeiro?.contaDestinoId
+        // Importante para o Teto Bancário: se não existir validação salva ainda,
+        // usar o destino já definido no pagamento da venda (ex.: Pix -> CTA-002)
+        contaDestinoId: financeiro?.contaDestinoId || pagamentoMetodo?.contaDestino
       };
     });
     
@@ -575,10 +578,23 @@ export default function FinanceiroConferencia() {
       return;
     }
 
+    // Normalizar validações antes de salvar/finalizar:
+    // garante contaDestinoId preenchido (Teto Bancário depende disso)
+    const validacoesNormalizadas: ValidacaoPagamento[] = validacoesPagamento.map(v => {
+      if (v.contaDestinoId) return v;
+      const pagamentoMetodo = vendaSelecionada.pagamentos?.find(p => p.meioPagamento === v.metodoPagamento);
+      return {
+        ...v,
+        contaDestinoId: pagamentoMetodo?.contaDestino || contaDestinoId || undefined
+      };
+    });
+
+    setValidacoesPagamento(validacoesNormalizadas);
+
     // Salvar validações antes de finalizar
     localStorage.setItem(
       `validacao_pagamentos_financeiro_${vendaSelecionada.id}`,
-      JSON.stringify(validacoesPagamento)
+      JSON.stringify(validacoesNormalizadas)
     );
 
     // Salvar observação do financeiro

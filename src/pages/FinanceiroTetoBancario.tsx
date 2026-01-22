@@ -189,20 +189,30 @@ export default function FinanceiroTetoBancario() {
           
           // Para cada validação confirmada pelo financeiro
           validacoes.forEach((validacao: any) => {
-            if (validacao.validadoFinanceiro && validacao.contaDestinoId) {
-              // Buscar o valor do histórico ou dos pagamentos da venda
-              const confHistorico = historico.find((h: any) => h.metodoPagamento === validacao.metodoPagamento);
-              const pagamentoVenda = venda.pagamentos?.find((p: any) => p.meioPagamento === validacao.metodoPagamento);
-              
-              const valor = confHistorico?.valor || pagamentoVenda?.valor || 0;
-              
-              console.log(`[TetoBancario] Venda ${venda.id} - Método: ${validacao.metodoPagamento}, Conta: ${validacao.contaDestinoId}, Valor: ${valor}`);
-              
-              if (valor > 0) {
-                saldos[validacao.contaDestinoId] = (saldos[validacao.contaDestinoId] || 0) + valor;
-                qtd[validacao.contaDestinoId] = (qtd[validacao.contaDestinoId] || 0) + 1;
-              }
+            if (!validacao.validadoFinanceiro) return;
+
+            // Buscar o valor do histórico ou dos pagamentos da venda
+            const confHistorico = historico.find((h: any) => h.metodoPagamento === validacao.metodoPagamento);
+            const pagamentoVenda = venda.pagamentos?.find((p: any) => p.meioPagamento === validacao.metodoPagamento);
+            const contaId = validacao.contaDestinoId || pagamentoVenda?.contaDestino;
+            const valor = confHistorico?.valor || pagamentoVenda?.valor || 0;
+
+            console.log(`[TetoBancario] Venda ${venda.id} - Método: ${validacao.metodoPagamento}, Conta: ${contaId}, Valor: ${valor}`);
+
+            if (contaId && valor > 0) {
+              saldos[contaId] = (saldos[contaId] || 0) + valor;
+              qtd[contaId] = (qtd[contaId] || 0) + 1;
             }
+          });
+        } else {
+          // Fallback de segurança: se a venda foi finalizada e tem data_finalizacao,
+          // mas não houver validação salva, usamos os pagamentos da própria venda.
+          venda.pagamentos?.forEach((p: any) => {
+            const contaId = p.contaDestino;
+            const valor = p.valor || 0;
+            if (!contaId || valor <= 0) return;
+            saldos[contaId] = (saldos[contaId] || 0) + valor;
+            qtd[contaId] = (qtd[contaId] || 0) + 1;
           });
         }
       });
