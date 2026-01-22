@@ -102,8 +102,8 @@ let tratativasComerciais: TratativaComercial[] = [
     statusAdesao: 'Pendente Financeiro',
     pagamento: {
       meioPagamento: 'Pix',
-      contaDestinoId: 'CONTA-001',
-      contaDestinoNome: 'Conta Principal',
+      contaDestinoId: 'CTA-002', // Bradesco Thiago Eduardo - Matriz
+      contaDestinoNome: 'Bradesco Thiago Eduardo',
       valor: 219.90
     },
     confirmacao1: {
@@ -138,9 +138,9 @@ let tratativasComerciais: TratativaComercial[] = [
     pagamento: {
       meioPagamento: 'Cartão Crédito',
       maquinaId: 'MAQ-001',
-      maquinaNome: 'Stone Loja Centro',
-      contaDestinoId: 'CONTA-001',
-      contaDestinoNome: 'Conta Principal',
+      maquinaNome: 'Stone Matriz',
+      contaDestinoId: 'CTA-002', // Bradesco Thiago Eduardo - Matriz
+      contaDestinoNome: 'Bradesco Thiago Eduardo',
       valor: 349.90,
       parcelas: 3
     },

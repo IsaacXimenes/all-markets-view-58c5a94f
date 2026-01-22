@@ -200,7 +200,7 @@ let vendas: Venda[] = [
     ],
     tradeIns: [],
     pagamentos: [
-      { id: 'PAG-001', meioPagamento: 'Pix', valor: 14500.00, contaDestino: 'CTA-001' }
+      { id: 'PAG-001', meioPagamento: 'Pix', valor: 14500.00, contaDestino: 'CTA-005' } // JK Shopping - Santander
     ],
     subtotal: 14500.00,
     totalTradeIn: 0,
@@ -253,8 +253,8 @@ let vendas: Venda[] = [
       }
     ],
     pagamentos: [
-      { id: 'PAG-002', meioPagamento: 'Cartão Crédito', valor: 8000.00, contaDestino: 'CTA-003' },
-      { id: 'PAG-003', meioPagamento: 'Pix', valor: 3350.00, contaDestino: 'CTA-002' }
+      { id: 'PAG-002', meioPagamento: 'Cartão Crédito', valor: 8000.00, contaDestino: 'CTA-001' }, // Matriz - Santander
+      { id: 'PAG-003', meioPagamento: 'Pix', valor: 3350.00, contaDestino: 'CTA-002' } // Matriz - Bradesco
     ],
     subtotal: 12800.00,
     totalTradeIn: 1500.00,
@@ -296,7 +296,7 @@ let vendas: Venda[] = [
     ],
     tradeIns: [],
     pagamentos: [
-      { id: 'PAG-004', meioPagamento: 'Transferência', valor: 6500.00, contaDestino: 'CTA-003' }
+      { id: 'PAG-004', meioPagamento: 'Transferência', valor: 6500.00, contaDestino: 'CTA-009' } // Shopping Sul - Santander
     ],
     subtotal: 6500.00,
     totalTradeIn: 0,
@@ -338,7 +338,7 @@ let vendas: Venda[] = [
     ],
     tradeIns: [],
     pagamentos: [
-      { id: 'PAG-005', meioPagamento: 'Cartão Débito', valor: 10500.00, contaDestino: 'CTA-005' }
+      { id: 'PAG-005', meioPagamento: 'Cartão Débito', valor: 10500.00, contaDestino: 'CTA-003' } // Online - Santander
     ],
     subtotal: 10500.00,
     totalTradeIn: 0,
@@ -391,7 +391,7 @@ let vendas: Venda[] = [
       }
     ],
     pagamentos: [
-      { id: 'PAG-006', meioPagamento: 'Dinheiro', valor: 10300.00, contaDestino: 'CTA-001' }
+      { id: 'PAG-006', meioPagamento: 'Dinheiro', valor: 10300.00, contaDestino: 'CTA-007' } // Águas Lindas - Santander
     ],
     subtotal: 11500.00,
     totalTradeIn: 1200.00,

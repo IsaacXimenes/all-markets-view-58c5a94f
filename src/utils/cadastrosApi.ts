@@ -337,9 +337,9 @@ let contasFinanceiras: ContaFinanceira[] = [
 let maquinasCartao: MaquinaCartao[] = [
   { 
     id: 'MAQ-001', 
-    nome: 'Máquina Stone Shopping', 
-    cnpjVinculado: 'LOJA-004', 
-    contaOrigem: 'CTA-005', 
+    nome: 'Stone Matriz', 
+    cnpjVinculado: '3ac7e00c', // Loja - Matriz
+    contaOrigem: 'CTA-002', // Bradesco Thiago Eduardo (Própria)
     status: 'Ativo',
     percentualMaquina: 2.5,
     taxas: {
@@ -349,9 +349,9 @@ let maquinasCartao: MaquinaCartao[] = [
   },
   { 
     id: 'MAQ-002', 
-    nome: 'Máquina PagSeguro Centro', 
-    cnpjVinculado: 'LOJA-003', 
-    contaOrigem: 'CTA-003', 
+    nome: 'PagSeguro Online', 
+    cnpjVinculado: 'fcc78c1a', // Loja - Online
+    contaOrigem: 'CTA-004', // Bradesco Thiago Imports (Própria)
     status: 'Ativo',
     percentualMaquina: 1.99,
     taxas: {
@@ -361,9 +361,9 @@ let maquinasCartao: MaquinaCartao[] = [
   },
   { 
     id: 'MAQ-003', 
-    nome: 'Máquina Cielo Leste', 
-    cnpjVinculado: 'LOJA-006', 
-    contaOrigem: 'CTA-004', 
+    nome: 'Stone JK Shopping', 
+    cnpjVinculado: 'db894e7d', // Loja - JK Shopping
+    contaOrigem: 'CTA-006', // Sicoob (Sicoob JK) (Própria)
     status: 'Ativo',
     percentualMaquina: 3,
     taxas: {
@@ -373,14 +373,26 @@ let maquinasCartao: MaquinaCartao[] = [
   },
   { 
     id: 'MAQ-004', 
-    nome: 'Máquina GetNet Sul', 
-    cnpjVinculado: 'LOJA-007', 
-    contaOrigem: 'CTA-002', 
+    nome: 'Cielo Águas Lindas', 
+    cnpjVinculado: '0d06e7db', // Loja - Águas Lindas Shopping
+    contaOrigem: 'CTA-008', // Pagbank (Pix Carol) (Própria)
     status: 'Ativo',
     percentualMaquina: 2.2,
     taxas: {
       credito: { 1: 2, 2: 4, 3: 6, 4: 8, 5: 10, 6: 12, 7: 14, 8: 16, 9: 18, 10: 20, 11: 22, 12: 24 },
       debito: 2
+    }
+  },
+  { 
+    id: 'MAQ-005', 
+    nome: 'GetNet Shopping Sul', 
+    cnpjVinculado: '5b9446d5', // Loja - Shopping Sul
+    contaOrigem: 'CTA-010', // Bradesco Acessórios (Própria)
+    status: 'Ativo',
+    percentualMaquina: 2.0,
+    taxas: {
+      credito: { 1: 2, 2: 4, 3: 6, 4: 8, 5: 10, 6: 12, 7: 14, 8: 16, 9: 18, 10: 20, 11: 22, 12: 24 },
+      debito: 1.5
     }
   },
 ];

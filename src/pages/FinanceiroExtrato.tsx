@@ -12,10 +12,11 @@ import { Download, TrendingUp, TrendingDown, DollarSign, Filter, Calendar } from
 import { format, subDays, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { getContas, getPagamentos, getDespesas, Pagamento, Despesa, Conta } from '@/utils/financeApi';
+import { getContas, getPagamentos, getDespesas, Pagamento, Despesa } from '@/utils/financeApi';
+import { ContaFinanceira } from '@/utils/cadastrosApi';
 
 export default function FinanceiroExtrato() {
-  const [contas] = useState<Conta[]>(getContas());
+  const [contas] = useState<ContaFinanceira[]>(getContas());
   const [pagamentos] = useState<Pagamento[]>(getPagamentos());
   const [despesas] = useState<Despesa[]>(getDespesas());
 
