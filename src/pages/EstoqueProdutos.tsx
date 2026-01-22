@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 import { InputComMascara } from '@/components/ui/InputComMascara';
 
-import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
+import { formatCurrency, exportToCSV, parseMoeda } from '@/utils/formatUtils';
 
 export default function EstoqueProdutos() {
   const navigate = useNavigate();
@@ -87,8 +87,6 @@ export default function EstoqueProdutos() {
       return;
     }
 
-    // Usar parseMoeda para converter valor com máscara brasileira
-    const { parseMoeda } = require('@/utils/formatUtils');
     const valor = parseMoeda(novoValorRecomendado);
     if (isNaN(valor) || valor <= 0) {
       toast.error('Valor inválido');
