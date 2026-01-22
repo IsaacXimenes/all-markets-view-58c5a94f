@@ -2121,7 +2121,7 @@ export default function VendasNova() {
 
       {/* Modal Buscar Cliente */}
       <Dialog open={showClienteModal} onOpenChange={setShowClienteModal}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Selecionar Cliente</DialogTitle>
           </DialogHeader>
