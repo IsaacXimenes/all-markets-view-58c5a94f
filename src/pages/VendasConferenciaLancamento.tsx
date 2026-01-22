@@ -127,31 +127,47 @@ export default function VendasConferenciaLancamento() {
   }, [vendas, filtroDataInicio, filtroDataFim, filtroCliente, filtroStatus, filtroVendedor, isGestorOuFinanceiro]);
 
   // Calcular somatórios por método de pagamento - DINÂMICO baseado nas vendas filtradas
+  // Separado por Pendente (Aguardando Conferência, Recusada - Gestor, Feito Sinal) e Conferido (aprovado/enviado para gestor)
   const somatorioPagamentos = useMemo(() => {
     const totais = {
-      cartaoCredito: 0,
-      cartaoDebito: 0,
-      pix: 0,
-      dinheiro: 0,
-      sinal: 0,
-      boleto: 0
+      pendente: {
+        cartaoCredito: 0,
+        cartaoDebito: 0,
+        pix: 0,
+        dinheiro: 0,
+        sinal: 0,
+        boleto: 0
+      },
+      conferido: {
+        cartaoCredito: 0,
+        cartaoDebito: 0,
+        pix: 0,
+        dinheiro: 0,
+        sinal: 0,
+        boleto: 0
+      }
     };
 
     vendasFiltradas.forEach(venda => {
+      const isPendente = venda.statusFluxo === 'Aguardando Conferência' || 
+                         venda.statusFluxo === 'Recusada - Gestor' || 
+                         venda.statusFluxo === 'Feito Sinal';
+      const target = isPendente ? totais.pendente : totais.conferido;
+      
       venda.pagamentos?.forEach(pag => {
         const meio = pag.meioPagamento.toLowerCase();
         if (meio.includes('crédito') || meio.includes('credito')) {
-          totais.cartaoCredito += pag.valor;
+          target.cartaoCredito += pag.valor;
         } else if (meio.includes('débito') || meio.includes('debito')) {
-          totais.cartaoDebito += pag.valor;
+          target.cartaoDebito += pag.valor;
         } else if (meio.includes('pix')) {
-          totais.pix += pag.valor;
+          target.pix += pag.valor;
         } else if (meio.includes('dinheiro')) {
-          totais.dinheiro += pag.valor;
+          target.dinheiro += pag.valor;
         } else if (meio.includes('sinal')) {
-          totais.sinal += pag.valor;
+          target.sinal += pag.valor;
         } else if (meio.includes('boleto') || meio.includes('crediário') || meio.includes('crediario')) {
-          totais.boleto += pag.valor;
+          target.boleto += pag.valor;
         }
       });
     });
@@ -256,63 +272,63 @@ export default function VendasConferenciaLancamento() {
 
   return (
     <VendasLayout title="Conferência - Lançamento de Vendas">
-      {/* Cards de somatório por método de pagamento - DINÂMICO */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
+      {/* Cards Pendente - vermelho */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-4">
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
           <CardContent className="pt-3 pb-3">
             <div className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-blue-600 opacity-70" />
+              <CreditCard className="h-5 w-5 text-red-600 opacity-70" />
               <div>
-                <p className="text-xs text-blue-700 dark:text-blue-300">Crédito</p>
-                <p className="text-sm font-bold text-blue-800 dark:text-blue-200">{formatCurrency(somatorioPagamentos.cartaoCredito)}</p>
+                <p className="text-xs text-red-700 dark:text-red-300">Pendente - Crédito</p>
+                <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.cartaoCredito)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
           <CardContent className="pt-3 pb-3">
             <div className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-green-600 opacity-70" />
+              <Wallet className="h-5 w-5 text-red-600 opacity-70" />
               <div>
-                <p className="text-xs text-green-700 dark:text-green-300">Débito</p>
-                <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.cartaoDebito)}</p>
+                <p className="text-xs text-red-700 dark:text-red-300">Pendente - Débito</p>
+                <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.cartaoDebito)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-950/50 dark:to-teal-900/30 border-teal-200 dark:border-teal-800">
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
           <CardContent className="pt-3 pb-3">
             <div className="flex items-center gap-2">
-              <Smartphone className="h-5 w-5 text-teal-600 opacity-70" />
+              <Smartphone className="h-5 w-5 text-red-600 opacity-70" />
               <div>
-                <p className="text-xs text-teal-700 dark:text-teal-300">Pix</p>
-                <p className="text-sm font-bold text-teal-800 dark:text-teal-200">{formatCurrency(somatorioPagamentos.pix)}</p>
+                <p className="text-xs text-red-700 dark:text-red-300">Pendente - Pix</p>
+                <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.pix)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/50 dark:to-amber-900/30 border-amber-200 dark:border-amber-800">
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
           <CardContent className="pt-3 pb-3">
             <div className="flex items-center gap-2">
-              <Banknote className="h-5 w-5 text-amber-600 opacity-70" />
+              <Banknote className="h-5 w-5 text-red-600 opacity-70" />
               <div>
-                <p className="text-xs text-amber-700 dark:text-amber-300">Dinheiro</p>
-                <p className="text-sm font-bold text-amber-800 dark:text-amber-200">{formatCurrency(somatorioPagamentos.dinheiro)}</p>
+                <p className="text-xs text-red-700 dark:text-red-300">Pendente - Dinheiro</p>
+                <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.dinheiro)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-950/50 dark:to-indigo-900/30 border-indigo-200 dark:border-indigo-800">
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
           <CardContent className="pt-3 pb-3">
             <div className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-indigo-600 opacity-70" />
+              <CreditCard className="h-5 w-5 text-red-600 opacity-70" />
               <div>
-                <p className="text-xs text-indigo-700 dark:text-indigo-300">Boleto/Crediário</p>
-                <p className="text-sm font-bold text-indigo-800 dark:text-indigo-200">{formatCurrency(somatorioPagamentos.boleto)}</p>
+                <p className="text-xs text-red-700 dark:text-red-300">Pendente - Boleto</p>
+                <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.boleto)}</p>
               </div>
             </div>
           </CardContent>
@@ -323,8 +339,83 @@ export default function VendasConferenciaLancamento() {
             <div className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-red-600 opacity-70" />
               <div>
-                <p className="text-xs text-red-700 dark:text-red-300">Sinal</p>
-                <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.sinal)}</p>
+                <p className="text-xs text-red-700 dark:text-red-300">Pendente - Sinal</p>
+                <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.sinal)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Cards Conferido - verde */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+          <CardContent className="pt-3 pb-3">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-green-600 opacity-70" />
+              <div>
+                <p className="text-xs text-green-700 dark:text-green-300">Conferido - Crédito</p>
+                <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.cartaoCredito)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+          <CardContent className="pt-3 pb-3">
+            <div className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-green-600 opacity-70" />
+              <div>
+                <p className="text-xs text-green-700 dark:text-green-300">Conferido - Débito</p>
+                <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.cartaoDebito)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+          <CardContent className="pt-3 pb-3">
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-green-600 opacity-70" />
+              <div>
+                <p className="text-xs text-green-700 dark:text-green-300">Conferido - Pix</p>
+                <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.pix)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+          <CardContent className="pt-3 pb-3">
+            <div className="flex items-center gap-2">
+              <Banknote className="h-5 w-5 text-green-600 opacity-70" />
+              <div>
+                <p className="text-xs text-green-700 dark:text-green-300">Conferido - Dinheiro</p>
+                <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.dinheiro)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+          <CardContent className="pt-3 pb-3">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-green-600 opacity-70" />
+              <div>
+                <p className="text-xs text-green-700 dark:text-green-300">Conferido - Boleto</p>
+                <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.boleto)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+          <CardContent className="pt-3 pb-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-green-600 opacity-70" />
+              <div>
+                <p className="text-xs text-green-700 dark:text-green-300">Conferido - Sinal</p>
+                <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.sinal)}</p>
               </div>
             </div>
           </CardContent>
