@@ -67,7 +67,7 @@ export interface Pagamento {
 
 export interface TimelineOS {
   data: string;
-  tipo: 'registro' | 'status' | 'peca' | 'pagamento' | 'aprovacao' | 'rejeicao' | 'financeiro';
+  tipo: 'registro' | 'status' | 'peca' | 'pagamento' | 'aprovacao' | 'rejeicao' | 'financeiro' | 'baixa_estoque';
   descricao: string;
   responsavel: string;
   motivo?: string;

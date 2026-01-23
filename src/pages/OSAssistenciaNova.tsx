@@ -37,7 +37,7 @@ import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { getVendaById } from '@/utils/vendasApi';
 import { getGarantiaById } from '@/utils/garantiasApi';
 import { getProdutoPendenteById } from '@/utils/osApi';
-import { getPecas, Peca } from '@/utils/pecasApi';
+import { getPecas, Peca, darBaixaPeca } from '@/utils/pecasApi';
 import { Plus, Trash2, Search, AlertTriangle, Clock, User, History, ArrowLeft, Smartphone, Save, Package, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -634,13 +634,45 @@ export default function OSAssistenciaNova() {
       custoTotal: 0
     });
 
+    // Dar baixa automática nas peças do estoque
+    const pecasComBaixa = pecas.filter(p => p.pecaNoEstoque && p.pecaEstoqueId);
+    const resultadosBaixa: string[] = [];
+    
+    for (const peca of pecasComBaixa) {
+      const resultado = darBaixaPeca(peca.pecaEstoqueId, 1);
+      if (resultado.sucesso) {
+        resultadosBaixa.push(resultado.mensagem);
+        // Adicionar registro na timeline
+        timeline.push({
+          data: new Date().toISOString(),
+          tipo: 'baixa_estoque',
+          descricao: `Baixa de peça: ${peca.peca}`,
+          responsavel: tecnicoObj?.nome || ''
+        });
+      } else {
+        toast({
+          title: 'Aviso - Baixa de Peça',
+          description: resultado.mensagem,
+          variant: 'destructive'
+        });
+      }
+    }
+
     // Limpar rascunho
     clearDraft();
 
-    toast({
-      title: 'Sucesso!',
-      description: `OS ${novaOS.id} registrada com sucesso!`
-    });
+    // Mostrar toast de sucesso
+    if (resultadosBaixa.length > 0) {
+      toast({
+        title: 'Sucesso!',
+        description: `OS ${novaOS.id} registrada. ${resultadosBaixa.length} peça(s) baixada(s) do estoque.`
+      });
+    } else {
+      toast({
+        title: 'Sucesso!',
+        description: `OS ${novaOS.id} registrada com sucesso!`
+      });
+    }
 
     setConfirmarOpen(false);
     navigate('/os/assistencia');

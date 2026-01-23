@@ -120,6 +120,49 @@ export const deletePeca = (id: string): boolean => {
   return true;
 };
 
+// Dar baixa em peça do estoque (decrementar quantidade ou marcar como utilizada)
+export const darBaixaPeca = (id: string, quantidade: number = 1): { sucesso: boolean; mensagem: string } => {
+  const peca = pecas.find(p => p.id === id);
+  
+  if (!peca) {
+    return { sucesso: false, mensagem: `Peça ${id} não encontrada no estoque` };
+  }
+  
+  if (peca.status !== 'Disponível') {
+    return { sucesso: false, mensagem: `Peça ${peca.descricao} não está disponível (status: ${peca.status})` };
+  }
+  
+  if (peca.quantidade < quantidade) {
+    return { sucesso: false, mensagem: `Quantidade insuficiente de ${peca.descricao}. Disponível: ${peca.quantidade}, Solicitado: ${quantidade}` };
+  }
+  
+  // Decrementar quantidade
+  peca.quantidade -= quantidade;
+  
+  // Se zerou, marcar como utilizada
+  if (peca.quantidade === 0) {
+    peca.status = 'Utilizada';
+  }
+  
+  return { sucesso: true, mensagem: `Baixa de ${quantidade} unidade(s) de ${peca.descricao} realizada com sucesso` };
+};
+
+// Reservar peça (para uso futuro se necessário)
+export const reservarPeca = (id: string): boolean => {
+  const peca = pecas.find(p => p.id === id);
+  if (!peca || peca.status !== 'Disponível') return false;
+  peca.status = 'Reservada';
+  return true;
+};
+
+// Liberar reserva de peça
+export const liberarReservaPeca = (id: string): boolean => {
+  const peca = pecas.find(p => p.id === id);
+  if (!peca || peca.status !== 'Reservada') return false;
+  peca.status = 'Disponível';
+  return true;
+};
+
 export const exportPecasToCSV = (data: Peca[], filename: string): void => {
   const headers = ['ID', 'Descrição', 'Loja', 'Modelo', 'Valor Custo', 'Valor Recomendado', 'Quantidade', 'Data Entrada', 'Origem', 'Status'];
   const rows = data.map(p => [
