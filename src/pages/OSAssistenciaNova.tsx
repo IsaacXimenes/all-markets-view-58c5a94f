@@ -23,8 +23,6 @@ import {
 } from '@/utils/assistenciaApi';
 import { 
   getClientes, 
-  getLojas, 
-  getColaboradoresByPermissao, 
   getFornecedores,
   addCliente,
   Cliente,
@@ -32,6 +30,10 @@ import {
   getProdutosCadastro,
   ProdutoCadastro
 } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { getVendaById } from '@/utils/vendasApi';
 import { getGarantiaById } from '@/utils/garantiasApi';
 import { getProdutoPendenteById } from '@/utils/osApi';
@@ -88,8 +90,9 @@ export default function OSAssistenciaNova() {
   const [dataHora] = useState(new Date().toISOString());
   
   const clientes = getClientes();
-  const lojas = getLojas();
-  const tecnicos = getColaboradoresByPermissao('Assistência');
+  const { obterLojasTipoLoja, obterNomeLoja, obterTecnicos, obterNomeColaborador } = useCadastroStore();
+  const lojas = obterLojasTipoLoja();
+  const tecnicos = obterTecnicos();
   const fornecedores = getFornecedores().filter(f => f.status === 'Ativo');
   const produtosCadastro = getProdutosCadastro();
 
@@ -818,31 +821,29 @@ export default function OSAssistenciaNova() {
                 <Input value={new Date(dataHora).toLocaleString('pt-BR')} disabled className="bg-muted" />
               </div>
               <div className="space-y-2">
-                <Label>Loja *</Label>
-                <Select value={lojaId} onValueChange={setLojaId}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {lojas.filter(l => l.status === 'Ativo').map(l => (
-                      <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className={!lojaId ? 'text-destructive' : ''}>Loja *</Label>
+                <AutocompleteLoja
+                  value={lojaId}
+                  onChange={setLojaId}
+                  apenasLojasTipoLoja={true}
+                  className={!lojaId ? 'border-destructive' : ''}
+                  placeholder="Selecione a loja..."
+                />
               </div>
               <div className="space-y-2">
-                <Label>Técnico *</Label>
-                <Select value={tecnicoId} onValueChange={setTecnicoId}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {tecnicos.map(t => (
-                      <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label className={!tecnicoId ? 'text-destructive' : ''}>Técnico *</Label>
+                <AutocompleteColaborador
+                  value={tecnicoId}
+                  onChange={setTecnicoId}
+                  filtrarPorTipo="tecnicos"
+                  className={!tecnicoId ? 'border-destructive' : ''}
+                  placeholder="Selecione o técnico..."
+                />
               </div>
               <div className="space-y-2">
-                <Label>Setor *</Label>
+                <Label className={!setor ? 'text-destructive' : ''}>Setor *</Label>
                 <Select value={setor} onValueChange={(v) => setSetor(v as any)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectTrigger className={!setor ? 'border-destructive' : ''}><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="GARANTIA">Garantia</SelectItem>
                     <SelectItem value="ASSISTÊNCIA">Assistência</SelectItem>
@@ -851,9 +852,9 @@ export default function OSAssistenciaNova() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Status *</Label>
+                <Label className={!status ? 'text-destructive' : ''}>Status *</Label>
                 <Select value={status} onValueChange={(v) => setStatus(v as any)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectTrigger className={!status ? 'border-destructive' : ''}><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Serviço concluído">Serviço concluído</SelectItem>
                     <SelectItem value="Em serviço">Em serviço</SelectItem>
@@ -880,7 +881,7 @@ export default function OSAssistenciaNova() {
                   value={clienteSelecionado?.nome || ''} 
                   placeholder="Nenhum cliente selecionado" 
                   disabled 
-                  className="flex-1"
+                  className={cn("flex-1", !clienteId && "border-destructive")}
                 />
                 <Button onClick={() => setBuscarClienteOpen(true)}>
                   <Search className="mr-2 h-4 w-4" />
@@ -996,14 +997,12 @@ export default function OSAssistenciaNova() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label>Unidade de Serviço</Label>
-                      <Select value={peca.unidadeServico} onValueChange={v => handlePecaChange(index, 'unidadeServico', v)}>
-                        <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                        <SelectContent>
-                          {lojas.filter(l => l.status === 'Ativo').map(l => (
-                            <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <AutocompleteLoja
+                        value={peca.unidadeServico}
+                        onChange={v => handlePecaChange(index, 'unidadeServico', v)}
+                        apenasLojasTipoLoja={true}
+                        placeholder="Selecione..."
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Valor Total</Label>
@@ -1047,14 +1046,11 @@ export default function OSAssistenciaNova() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
                       <div className="space-y-2">
                         <Label>Fornecedor</Label>
-                        <Select value={peca.fornecedorId} onValueChange={v => handlePecaChange(index, 'fornecedorId', v)}>
-                          <SelectTrigger><SelectValue placeholder="Selecione o fornecedor..." /></SelectTrigger>
-                          <SelectContent>
-                            {fornecedores.map(f => (
-                              <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <AutocompleteFornecedor
+                          value={peca.fornecedorId}
+                          onChange={v => handlePecaChange(index, 'fornecedorId', v)}
+                          placeholder="Selecione o fornecedor..."
+                        />
                       </div>
                     </div>
                   )}
@@ -1071,14 +1067,11 @@ export default function OSAssistenciaNova() {
                       </div>
                       <div className="space-y-2">
                         <Label>Fornecedor do Serviço</Label>
-                        <Select value={peca.fornecedorId} onValueChange={v => handlePecaChange(index, 'fornecedorId', v)}>
-                          <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                          <SelectContent>
-                            {fornecedores.map(f => (
-                              <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <AutocompleteFornecedor
+                          value={peca.fornecedorId}
+                          onChange={v => handlePecaChange(index, 'fornecedorId', v)}
+                          placeholder="Selecione..."
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Nome Resp. Fornecedor *</Label>
@@ -1334,12 +1327,40 @@ export default function OSAssistenciaNova() {
           </CardContent>
         </Card>
 
+        {/* Alerta de Campos Obrigatórios */}
+        {(() => {
+          const camposFaltando: string[] = [];
+          if (!lojaId) camposFaltando.push('Loja');
+          if (!tecnicoId) camposFaltando.push('Técnico');
+          if (!setor) camposFaltando.push('Setor');
+          if (!clienteId) camposFaltando.push('Cliente');
+          if (!status) camposFaltando.push('Status');
+          
+          if (camposFaltando.length > 0) {
+            return (
+              <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-destructive">Campos obrigatórios não preenchidos:</p>
+                  <ul className="mt-1 text-muted-foreground list-disc list-inside">
+                    {camposFaltando.map((campo, i) => <li key={i}>{campo}</li>)}
+                  </ul>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
+
         {/* Botão Registrar */}
         <div className="flex justify-end gap-4">
           <Button variant="outline" onClick={() => navigate('/os/assistencia')}>
             Cancelar
           </Button>
-          <Button onClick={handleAbrirConfirmacao}>
+          <Button 
+            onClick={handleAbrirConfirmacao}
+            disabled={!lojaId || !tecnicoId || !setor || !clienteId || !status}
+          >
             Registrar Assistência
           </Button>
         </div>
@@ -1347,7 +1368,7 @@ export default function OSAssistenciaNova() {
 
       {/* Dialog Buscar Cliente - Layout idêntico ao de Vendas */}
       <Dialog open={buscarClienteOpen} onOpenChange={setBuscarClienteOpen}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Search className="h-5 w-5" />
@@ -1596,25 +1617,19 @@ export default function OSAssistenciaNova() {
             </p>
             <div className="space-y-2">
               <Label>Técnico</Label>
-              <Select value={confirmTecnico} onValueChange={setConfirmTecnico}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {tecnicos.map(t => (
-                    <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AutocompleteColaborador
+                value={confirmTecnico}
+                onChange={setConfirmTecnico}
+                filtrarPorTipo="tecnicos"
+              />
             </div>
             <div className="space-y-2">
               <Label>Loja</Label>
-              <Select value={confirmLoja} onValueChange={setConfirmLoja}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {lojas.filter(l => l.status === 'Ativo').map(l => (
-                    <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AutocompleteLoja
+                value={confirmLoja}
+                onChange={setConfirmLoja}
+                apenasLojasTipoLoja={true}
+              />
             </div>
             <div className="space-y-2">
               <Label>Data</Label>

@@ -27,7 +27,11 @@ import {
   editarLote,
   getLoteById
 } from '@/utils/solicitacaoPecasApi';
-import { getLojas, getFornecedores, getColaboradoresByPermissao, addFornecedor } from '@/utils/cadastrosApi';
+import { getFornecedores, addFornecedor } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { getOrdemServicoById, updateOrdemServico } from '@/utils/assistenciaApi';
 import { Eye, Check, X, Package, Clock, AlertTriangle, Layers, Send, Plus, Edit, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -40,9 +44,10 @@ export default function OSSolicitacoesPecas() {
   const [activeTab, setActiveTab] = useUrlTabs('solicitacoes');
   const [solicitacoes, setSolicitacoes] = useState(getSolicitacoes());
   const [lotes, setLotes] = useState(getLotes());
-  const lojas = getLojas();
+  const { obterLojasTipoLoja, obterNomeLoja, obterColaboradoresAtivos } = useCadastroStore();
+  const lojas = obterLojasTipoLoja();
   const fornecedores = getFornecedores().filter(f => f.status === 'Ativo');
-  const colaboradores = getColaboradoresByPermissao('Assistência');
+  const colaboradores = obterColaboradoresAtivos();
 
   // Filtros
   const [filtroLoja, setFiltroLoja] = useState('todos');
@@ -87,7 +92,7 @@ export default function OSSolicitacoesPecas() {
     }).sort((a, b) => new Date(b.dataSolicitacao).getTime() - new Date(a.dataSolicitacao).getTime());
   }, [solicitacoes, filtroLoja, filtroPeca, filtroStatus, filtroNumeroOS]);
 
-  const getLojaNome = (lojaId: string) => lojas.find(l => l.id === lojaId)?.nome || lojaId;
+  const getLojaNome = (lojaId: string) => obterNomeLoja(lojaId);
   const getFornecedorNome = (fornId: string) => fornecedores.find(f => f.id === fornId)?.nome || fornId;
 
   const getStatusBadge = (status: string) => {
@@ -389,15 +394,12 @@ export default function OSSolicitacoesPecas() {
               <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
                 <div className="space-y-2">
                   <Label>Loja Solicitante</Label>
-                  <Select value={filtroLoja} onValueChange={setFiltroLoja}>
-                    <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todas</SelectItem>
-                      {lojas.map(l => (
-                        <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <AutocompleteLoja
+                    value={filtroLoja === 'todos' ? '' : filtroLoja}
+                    onChange={(v) => setFiltroLoja(v || 'todos')}
+                    apenasLojasTipoLoja={true}
+                    placeholder="Todas"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Número da OS</Label>
@@ -539,7 +541,7 @@ export default function OSSolicitacoesPecas() {
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => navigate(`/os/assistencia/${sol.osId}`)}
+                          onClick={() => navigate(`/os/assistencia/${sol.osId}?from=solicitacoes`)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -634,20 +636,14 @@ export default function OSSolicitacoesPecas() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Fornecedor *</Label>
-                    <Select 
-                      value={fornecedoresPorPeca[sol.id]?.fornecedorId || ''} 
-                      onValueChange={v => setFornecedoresPorPeca({
+                    <AutocompleteFornecedor
+                      value={fornecedoresPorPeca[sol.id]?.fornecedorId || ''}
+                      onChange={v => setFornecedoresPorPeca({
                         ...fornecedoresPorPeca, 
                         [sol.id]: { ...fornecedoresPorPeca[sol.id], fornecedorId: v }
                       })}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                      <SelectContent>
-                        {fornecedores.map(f => (
-                          <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="Selecione..."
+                    />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Valor (R$) *</Label>
@@ -716,14 +712,11 @@ export default function OSSolicitacoesPecas() {
             <div className="border-t pt-4 space-y-4">
               <div className="space-y-2">
                 <Label>Responsável pela Compra *</Label>
-                <Select value={responsavelCompraGlobal} onValueChange={setResponsavelCompraGlobal}>
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    {colaboradores.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <AutocompleteColaborador
+                  value={responsavelCompraGlobal}
+                  onChange={setResponsavelCompraGlobal}
+                  placeholder="Selecione..."
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

@@ -4,13 +4,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getPecas, Peca, exportPecasToCSV, addPeca } from '@/utils/pecasApi';
 import { formatCurrency } from '@/utils/formatUtils';
-import { getLojas, getProdutosCadastro } from '@/utils/cadastrosApi';
+import { getProdutosCadastro } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { getPecasCadastro } from '@/pages/CadastrosPecas';
 import { Download, Eye, Plus, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -18,7 +20,8 @@ import { useToast } from '@/hooks/use-toast';
 export default function OSPecas() {
   const { toast } = useToast();
   const [pecas, setPecas] = useState<Peca[]>(getPecas());
-  const lojas = getLojas();
+  const { obterLojasTipoLoja, obterNomeLoja } = useCadastroStore();
+  const lojas = obterLojasTipoLoja();
   const pecasCadastradas = getPecasCadastro();
   const produtosCadastrados = getProdutosCadastro();
 
@@ -53,7 +56,7 @@ export default function OSPecas() {
   }, [pecas, filtroData, filtroLoja, filtroDescricao]);
 
   const getLojaNome = (lojaId: string) => {
-    return lojas.find(l => l.id === lojaId)?.nome || lojaId;
+    return obterNomeLoja(lojaId);
   };
 
   const getStatusBadge = (status: string) => {
@@ -173,15 +176,12 @@ export default function OSPecas() {
             </div>
             <div className="space-y-2">
               <Label>Loja</Label>
-              <Select value={filtroLoja} onValueChange={setFiltroLoja}>
-                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todas</SelectItem>
-                  {lojas.map(l => (
-                    <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AutocompleteLoja
+                value={filtroLoja === 'todos' ? '' : filtroLoja}
+                onChange={(v) => setFiltroLoja(v || 'todos')}
+                apenasLojasTipoLoja={true}
+                placeholder="Todas"
+              />
             </div>
             <div className="space-y-2">
               <Label>Descrição</Label>
@@ -363,14 +363,12 @@ export default function OSPecas() {
             </div>
             <div className="space-y-2">
               <Label>Loja *</Label>
-              <Select value={novaPeca.lojaId} onValueChange={v => setNovaPeca({...novaPeca, lojaId: v})}>
-                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                <SelectContent>
-                  {lojas.map(l => (
-                    <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AutocompleteLoja
+                value={novaPeca.lojaId}
+                onChange={v => setNovaPeca({...novaPeca, lojaId: v})}
+                apenasLojasTipoLoja={true}
+                placeholder="Selecione..."
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

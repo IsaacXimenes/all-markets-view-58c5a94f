@@ -16,7 +16,10 @@ import {
   OrdemServico,
   updateOrdemServico
 } from '@/utils/assistenciaApi';
-import { getClientes, getLojas, getColaboradoresByPermissao, getFornecedores } from '@/utils/cadastrosApi';
+import { getClientes, getFornecedores } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { ArrowLeft, FileText, Clock, AlertTriangle, User, Wrench, MapPin, Calendar, CreditCard, Save, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import QRCode from 'qrcode';
@@ -39,8 +42,9 @@ export default function OSAssistenciaDetalhes() {
   const [editDescricao, setEditDescricao] = useState('');
 
   const clientes = getClientes();
-  const lojas = getLojas();
-  const tecnicos = getColaboradoresByPermissao('Assistência');
+  const { obterLojasTipoLoja, obterTecnicos, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
+  const lojas = obterLojasTipoLoja();
+  const tecnicos = obterTecnicos();
   const fornecedores = getFornecedores();
 
   useEffect(() => {
@@ -114,6 +118,9 @@ export default function OSAssistenciaDetalhes() {
   const loja = lojas.find(l => l.id === (isEditing ? editLojaId : os.lojaId));
   const tecnico = tecnicos.find(t => t.id === (isEditing ? editTecnicoId : os.tecnicoId));
   const slaDias = calcularSLADias(os.dataHora);
+
+  const getLojaNome = (lojaId: string) => obterNomeLoja(lojaId);
+  const getTecnicoNome = (tecnicoId: string) => obterNomeColaborador(tecnicoId);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -361,7 +368,15 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                         <TableCell>{peca.percentual}%</TableCell>
                         <TableCell className="font-medium">{formatCurrency(peca.valorTotal)}</TableCell>
                         <TableCell>
-                          {peca.pecaNoEstoque && <Badge variant="outline" className="mr-1">Estoque</Badge>}
+                          {peca.pecaNoEstoque && (
+                            <Badge 
+                              variant="outline" 
+                              className="mr-1 cursor-pointer hover:bg-primary/10"
+                              onClick={() => navigate('/os/pecas')}
+                            >
+                              Estoque
+                            </Badge>
+                          )}
                           {peca.pecaDeFornecedor && (
                             <Badge variant="outline">
                               {fornecedores.find(f => f.id === peca.fornecedorId)?.nome || 'Fornecedor'}

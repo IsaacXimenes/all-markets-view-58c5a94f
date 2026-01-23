@@ -9,7 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getOrdensServico, calcularSLADias, formatCurrency, exportOSToCSV, OrdemServico } from '@/utils/assistenciaApi';
-import { getClientes, getLojas, getColaboradoresByPermissao } from '@/utils/cadastrosApi';
+import { getClientes } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
+import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
 import { Plus, Eye, FileText, Download, AlertTriangle, Clock, Edit, RefreshCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -19,8 +21,9 @@ export default function OSAssistencia() {
   const navigate = useNavigate();
   const [ordensServico, setOrdensServico] = useState(getOrdensServico());
   const clientes = getClientes();
-  const lojas = getLojas();
-  const tecnicos = getColaboradoresByPermissao('Assistência');
+  const { obterLojasTipoLoja, obterNomeLoja, obterTecnicos, obterNomeColaborador } = useCadastroStore();
+  const lojas = obterLojasTipoLoja();
+  const tecnicos = obterTecnicos();
 
   // Filtros
   const [filtroDataInicio, setFiltroDataInicio] = useState('');
@@ -74,11 +77,11 @@ export default function OSAssistencia() {
   };
 
   const getLojaNome = (lojaId: string) => {
-    return lojas.find(l => l.id === lojaId)?.nome || '-';
+    return obterNomeLoja(lojaId);
   };
 
   const getTecnicoNome = (tecnicoId: string) => {
-    return tecnicos.find(t => t.id === tecnicoId)?.nome || '-';
+    return obterNomeColaborador(tecnicoId);
   };
 
   const getStatusBadge = (status: string) => {
@@ -293,15 +296,12 @@ export default function OSAssistencia() {
             </div>
             <div className="space-y-2">
               <Label>Técnico</Label>
-              <Select value={filtroTecnico} onValueChange={setFiltroTecnico}>
-                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  {tecnicos.map(t => (
-                    <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <AutocompleteColaborador
+                value={filtroTecnico === 'todos' ? '' : filtroTecnico}
+                onChange={(v) => setFiltroTecnico(v || 'todos')}
+                filtrarPorTipo="tecnicos"
+                placeholder="Todos"
+              />
             </div>
             <div className="space-y-2">
               <Label>Status</Label>

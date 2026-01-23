@@ -20,10 +20,12 @@ import {
 } from '@/utils/assistenciaApi';
 import { 
   getClientes, 
-  getLojas, 
-  getColaboradoresByPermissao, 
   getFornecedores
 } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { Plus, Trash2, Save, ArrowLeft, History, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -59,8 +61,9 @@ export default function OSAssistenciaEditar() {
   const { toast } = useToast();
   
   const clientes = getClientes();
-  const lojas = getLojas();
-  const tecnicos = getColaboradoresByPermissao('Assistência');
+  const { obterLojasTipoLoja, obterTecnicos, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
+  const lojas = obterLojasTipoLoja();
+  const tecnicos = obterTecnicos();
   const fornecedores = getFornecedores().filter(f => f.status === 'Ativo');
 
   // State
@@ -176,7 +179,7 @@ export default function OSAssistenciaEditar() {
   };
 
   const getTecnicoNome = (tecnicoId: string) => {
-    return tecnicos.find(t => t.id === tecnicoId)?.nome || '-';
+    return obterNomeColaborador(tecnicoId);
   };
 
   // Peças handlers
@@ -382,29 +385,21 @@ export default function OSAssistenciaEditar() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Loja *</Label>
-                  <Select value={lojaId} onValueChange={setLojaId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {lojas.map(l => (
-                        <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <AutocompleteLoja
+                    value={lojaId}
+                    onChange={setLojaId}
+                    apenasLojasTipoLoja={true}
+                    placeholder="Selecione a loja..."
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Técnico *</Label>
-                  <Select value={tecnicoId} onValueChange={setTecnicoId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tecnicos.map(t => (
-                        <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <AutocompleteColaborador
+                    value={tecnicoId}
+                    onChange={setTecnicoId}
+                    filtrarPorTipo="tecnicos"
+                    placeholder="Selecione o técnico..."
+                  />
                 </div>
               </div>
 
