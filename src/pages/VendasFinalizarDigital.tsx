@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import QRCode from 'qrcode';
 import { 
@@ -21,30 +22,35 @@ import { format, addMonths } from 'date-fns';
 import { 
   getVendaDigitalById, 
   finalizarVendaDigital, 
-  formatCurrency,
   VendaDigital 
 } from '@/utils/vendasDigitalApi';
 import { 
   getClientes, getOrigensVenda, 
   getContasFinanceiras, Cliente, OrigemVenda, ContaFinanceira,
-  addCliente
+  addCliente, calcularTipoPessoa
 } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
 import { getProdutos, Produto, updateProduto } from '@/utils/estoqueApi';
-import { addVenda, getHistoricoComprasCliente, ItemVenda, ItemTradeIn, Pagamento, formatCurrency as formatCurrencyVendas } from '@/utils/vendasApi';
+import { addVenda, getHistoricoComprasCliente, ItemVenda, ItemTradeIn, Pagamento } from '@/utils/vendasApi';
 import { inicializarVendaNoFluxo } from '@/utils/fluxoVendasApi';
 import { getProdutosCadastro, ProdutoCadastro } from '@/utils/cadastrosApi';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
 import { getAcessorios, Acessorio, VendaAcessorio } from '@/utils/acessoriosApi';
 import { useDraftVenda } from '@/hooks/useDraftVenda';
+import { formatarMoeda } from '@/utils/formatUtils';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+
+// Alias para compatibilidade
+const formatCurrency = formatarMoeda;
 
 const TIMER_DURATION = 1800; // 30 minutos em segundos
 
 export default function VendasFinalizarDigital() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { obterLojasAtivas, obterVendedores, obterLojaById, obterNomeLoja, obterNomeColaborador, obterColaboradorById } = useCadastroStore();
+  const { obterLojasAtivas, obterLojasTipoLoja, obterVendedores, obterLojaById, obterNomeLoja, obterNomeColaborador, obterColaboradorById } = useCadastroStore();
   
   // Dados do pré-cadastro
   const [venda, setVenda] = useState<VendaDigital | null>(null);
@@ -673,34 +679,32 @@ export default function VendasFinalizarDigital() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="text-sm font-medium">Loja de Venda *</label>
-                <Select value={lojaVenda} onValueChange={setLojaVenda}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a loja" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lojas.filter(l => l.ativa).map(loja => (
-                      <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className={`text-sm font-medium ${!lojaVenda ? 'text-destructive' : ''}`}>
+                  Loja de Venda *
+                </label>
+                <AutocompleteLoja
+                  value={lojaVenda}
+                  onChange={setLojaVenda}
+                  placeholder="Selecione a loja"
+                  apenasLojasTipoLoja={true}
+                  className={!lojaVenda ? 'border-destructive' : ''}
+                />
               </div>
               <div>
                 <label className="text-sm font-medium">Origem da Venda</label>
                 <Input value="Digital" disabled className="bg-muted" />
               </div>
               <div>
-                <label className="text-sm font-medium">Local de Retirada *</label>
-                <Select value={localRetirada} onValueChange={setLocalRetirada}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o local" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lojas.filter(l => l.ativa).map(loja => (
-                      <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className={`text-sm font-medium ${!localRetirada ? 'text-destructive' : ''}`}>
+                  Local de Retirada *
+                </label>
+                <AutocompleteLoja
+                  value={localRetirada}
+                  onChange={setLocalRetirada}
+                  placeholder="Selecione o local"
+                  apenasLojasTipoLoja={true}
+                  className={!localRetirada ? 'border-destructive' : ''}
+                />
               </div>
             </div>
           </CardContent>
@@ -718,16 +722,23 @@ export default function VendasFinalizarDigital() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div className="flex gap-2">
-                  <Input 
-                    value={clienteNome} 
-                    placeholder="Nome do Cliente"
-                    className="flex-1"
-                    readOnly
-                  />
-                  <Button onClick={() => setShowClienteModal(true)}>
-                    <Search className="h-4 w-4 mr-2" />
-                    Buscar
-                  </Button>
+                  <div className="flex-1">
+                    <label className={`text-sm font-medium ${!clienteId ? 'text-destructive' : ''}`}>
+                      Nome do Cliente *
+                    </label>
+                    <Input 
+                      value={clienteNome} 
+                      placeholder="Nome do Cliente"
+                      className={`${!clienteId ? 'border-destructive' : ''}`}
+                      readOnly
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button onClick={() => setShowClienteModal(true)}>
+                      <Search className="h-4 w-4 mr-2" />
+                      Buscar
+                    </Button>
+                  </div>
                 </div>
                 
                 {clienteId && (
@@ -1385,21 +1396,24 @@ export default function VendasFinalizarDigital() {
         </div>
       </div>
 
-      {/* Modal Buscar Cliente */}
+      {/* Modal Buscar Cliente - max-w-5xl igual Nova Venda */}
       <Dialog open={showClienteModal} onOpenChange={setShowClienteModal}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
-            <DialogTitle>Selecionar Cliente</DialogTitle>
+            <DialogTitle>Buscar Cliente</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 flex-1 overflow-hidden">
+          <div className="space-y-4">
             <div className="flex gap-2">
               <Input 
-                placeholder="Buscar por nome ou CPF..."
+                placeholder="Buscar por nome ou CPF/CNPJ..."
                 value={buscaCliente}
                 onChange={(e) => setBuscaCliente(e.target.value)}
                 className="flex-1"
               />
-              <Button onClick={() => setShowNovoClienteModal(true)}>
+              <Button variant="outline" onClick={() => {
+                setShowClienteModal(false);
+                setShowNovoClienteModal(true);
+              }}>
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Cliente
               </Button>
@@ -1409,52 +1423,50 @@ export default function VendasFinalizarDigital() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>CPF/CNPJ</TableHead>
                     <TableHead>Nome</TableHead>
-                    <TableHead>Tipo Pessoa</TableHead>
-                    <TableHead>Tipo Cliente</TableHead>
-                    <TableHead>Status</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>CPF/CNPJ</TableHead>
                     <TableHead>Telefone</TableHead>
+                    <TableHead>Cidade</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {clientesFiltrados.map(cliente => (
-                    <TableRow key={cliente.id} className={cliente.status === 'Inativo' ? 'bg-destructive/10' : ''}>
-                      <TableCell>{cliente.cpf}</TableCell>
+                    <TableRow key={cliente.id} className={cliente.status === 'Inativo' ? 'opacity-50' : ''}>
                       <TableCell className="font-medium">{cliente.nome}</TableCell>
                       <TableCell>
-                        <Badge className={cliente.tipoPessoa === 'Pessoa Jurídica' ? 'bg-blue-500' : 'bg-green-500'}>
-                          {cliente.tipoPessoa === 'Pessoa Jurídica' ? 'PJ' : 'PF'}
+                        <Badge variant={calcularTipoPessoa(cliente.cpf) === 'Pessoa Física' ? 'default' : 'secondary'}>
+                          {calcularTipoPessoa(cliente.cpf) === 'Pessoa Física' ? 'PF' : 'PJ'}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={cliente.tipoCliente === 'VIP' ? 'default' : 'secondary'}>
-                          {cliente.tipoCliente}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {cliente.status === 'Inativo' ? (
-                          <Badge variant="destructive">Bloqueado</Badge>
-                        ) : (
-                          <Badge variant="outline">Ativo</Badge>
-                        )}
-                      </TableCell>
+                      <TableCell>{cliente.cpf}</TableCell>
                       <TableCell>{cliente.telefone}</TableCell>
+                      <TableCell>{cliente.cidade || '-'}</TableCell>
                       <TableCell>
-                        {cliente.status === 'Inativo' ? (
-                          <span className="text-destructive text-sm font-medium">Bloqueado</span>
-                        ) : (
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleSelectCliente(cliente)}
-                          >
-                            Selecionar
-                          </Button>
-                        )}
+                        <Badge variant={cliente.status === 'Ativo' ? 'default' : 'destructive'}>
+                          {cliente.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleSelectCliente(cliente)}
+                          disabled={cliente.status === 'Inativo'}
+                        >
+                          Selecionar
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
+                  {clientesFiltrados.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        Nenhum cliente encontrado.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
