@@ -8,11 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { 
   ArrowDownCircle, Wallet, DollarSign, Eye, Check, Upload, 
-  AlertTriangle, Clock, User, Store, Calendar, FileText
+  AlertTriangle, Clock, User, Store, Calendar, FileText, History, CheckCircle
 } from 'lucide-react';
 
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -27,11 +28,23 @@ export default function FinanceiroPagamentosDowngrade() {
   const { obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   const [contasFinanceiras] = useState<ContaFinanceira[]>(getContasFinanceiras());
   
-  // Buscar vendas com status Pagamento Downgrade
+  // Buscar vendas com status Pagamento Downgrade E finalizadas que eram downgrade
   const { vendas, recarregar } = useFluxoVendas({ 
-    status: ['Pagamento Downgrade'],
-    incluirHistorico: false 
+    status: ['Pagamento Downgrade', 'Finalizado'],
+    incluirHistorico: true 
   });
+  
+  // Separar vendas pendentes e finalizadas
+  const vendasPendentes = useMemo(() => {
+    return vendas.filter(v => v.statusFluxo === 'Pagamento Downgrade');
+  }, [vendas]);
+  
+  const vendasFinalizadas = useMemo(() => {
+    return vendas.filter(v => 
+      v.statusFluxo === 'Finalizado' && 
+      ((v as any).tipoOperacao === 'Downgrade' || (v as any).saldoDevolver)
+    );
+  }, [vendas]);
   
   // Filtros
   const [filtroData, setFiltroData] = useState('');
@@ -55,22 +68,33 @@ export default function FinanceiroPagamentosDowngrade() {
     nome: 'Financeiro Admin'
   };
   
-  // Vendas filtradas
-  const vendasFiltradas = useMemo(() => {
-    return vendas.filter(venda => {
+  // Vendas filtradas (pendentes)
+  const vendasFiltradasPendentes = useMemo(() => {
+    return vendasPendentes.filter(venda => {
       if (filtroData && !venda.dataHora.startsWith(filtroData)) return false;
       if (filtroLoja && venda.lojaVenda !== filtroLoja) return false;
       if (filtroCliente && !venda.clienteNome.toLowerCase().includes(filtroCliente.toLowerCase())) return false;
       return true;
     });
-  }, [vendas, filtroData, filtroLoja, filtroCliente]);
+  }, [vendasPendentes, filtroData, filtroLoja, filtroCliente]);
+  
+  // Vendas filtradas (histórico)
+  const vendasFiltradasHistorico = useMemo(() => {
+    return vendasFinalizadas.filter(venda => {
+      if (filtroData && !venda.dataHora.startsWith(filtroData)) return false;
+      if (filtroLoja && venda.lojaVenda !== filtroLoja) return false;
+      if (filtroCliente && !venda.clienteNome.toLowerCase().includes(filtroCliente.toLowerCase())) return false;
+      return true;
+    });
+  }, [vendasFinalizadas, filtroData, filtroLoja, filtroCliente]);
   
   // Totais
   const totais = useMemo(() => {
-    const totalPendente = vendasFiltradas.reduce((acc, v) => acc + (v.saldoDevolver || 0), 0);
-    const quantidadePendente = vendasFiltradas.length;
-    return { totalPendente, quantidadePendente };
-  }, [vendasFiltradas]);
+    const totalPendente = vendasFiltradasPendentes.reduce((acc, v) => acc + (v.saldoDevolver || 0), 0);
+    const quantidadePendente = vendasFiltradasPendentes.length;
+    const quantidadeFinalizada = vendasFiltradasHistorico.length;
+    return { totalPendente, quantidadePendente, quantidadeFinalizada };
+  }, [vendasFiltradasPendentes, vendasFiltradasHistorico]);
   
   // Calcular saldo a devolver
   const calcularSaldoDevolver = (venda: VendaComFluxo): number => {
@@ -78,6 +102,14 @@ export default function FinanceiroPagamentosDowngrade() {
     const totalTradeIn = venda.tradeIns?.reduce((acc, t) => acc + t.valorCompraUsado, 0) || 0;
     const totalProdutos = venda.subtotal || 0;
     return totalTradeIn > totalProdutos ? totalTradeIn - totalProdutos : 0;
+  };
+  
+  // Helper para obter nome da conta com loja
+  const getContaNomeCompleto = (contaId: string): string => {
+    const conta = contasFinanceiras.find(c => c.id === contaId);
+    if (!conta) return 'Não informada';
+    const lojaNome = conta.lojaVinculada ? obterNomeLoja(conta.lojaVinculada) : '';
+    return lojaNome ? `${lojaNome} - ${conta.nome}` : conta.nome;
   };
   
   // Abrir modal de execução
@@ -139,11 +171,101 @@ export default function FinanceiroPagamentosDowngrade() {
       setComprovante(e.target.files[0]);
     }
   };
+  
+  // Visualizar anexo
+  const handleVisualizarAnexo = () => {
+    if (comprovante) {
+      const url = URL.createObjectURL(comprovante);
+      window.open(url, '_blank');
+    }
+  };
+
+  // Render tabela de vendas
+  const renderTabelaVendas = (listaVendas: VendaComFluxo[], isHistorico: boolean = false) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>ID Venda</TableHead>
+          <TableHead>Data</TableHead>
+          <TableHead>Cliente</TableHead>
+          <TableHead>Loja</TableHead>
+          <TableHead>Vendedor</TableHead>
+          <TableHead className="text-right">Valor Produtos</TableHead>
+          <TableHead className="text-right">Valor Trade-In</TableHead>
+          <TableHead className="text-right">PIX {isHistorico ? 'Devolvido' : 'a Devolver'}</TableHead>
+          {isHistorico && <TableHead>Conta Utilizada</TableHead>}
+          <TableHead>Ações</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {listaVendas.map(venda => {
+          const saldoDevolver = calcularSaldoDevolver(venda);
+          const totalTradeIn = venda.tradeIns?.reduce((acc, t) => acc + t.valorCompraUsado, 0) || 0;
+          const contaUsada = (venda as any).contaOrigemDowngrade;
+          
+          return (
+            <TableRow 
+              key={venda.id} 
+              className={isHistorico ? 'bg-green-50 dark:bg-green-900/10' : 'bg-red-50 dark:bg-red-900/10'}
+            >
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-medium">{venda.id}</span>
+                  <Badge variant={isHistorico ? 'default' : 'destructive'} className="text-xs">
+                    {isHistorico ? 'FINALIZADO' : 'DOWNGRADE'}
+                  </Badge>
+                </div>
+              </TableCell>
+              <TableCell>{format(new Date(venda.dataHora), 'dd/MM/yyyy HH:mm')}</TableCell>
+              <TableCell className="font-medium">{venda.clienteNome}</TableCell>
+              <TableCell>{obterNomeLoja(venda.lojaVenda)}</TableCell>
+              <TableCell>{obterNomeColaborador(venda.vendedor)}</TableCell>
+              <TableCell className="text-right">{formatCurrency(venda.subtotal || 0)}</TableCell>
+              <TableCell className="text-right text-green-600">
+                {formatCurrency(totalTradeIn)}
+              </TableCell>
+              <TableCell className="text-right">
+                <span className={`font-bold text-lg ${isHistorico ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(saldoDevolver)}
+                </span>
+              </TableCell>
+              {isHistorico && (
+                <TableCell>
+                  <span className="text-sm">{getContaNomeCompleto(contaUsada || '')}</span>
+                </TableCell>
+              )}
+              <TableCell>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    onClick={() => handleAbrirDetalhes(venda)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  {!isHistorico && (
+                    <Button 
+                      size="sm"
+                      className="bg-red-600 hover:bg-red-700"
+                      onClick={() => handleAbrirExecutar(venda)}
+                    >
+                      <DollarSign className="h-4 w-4 mr-1" />
+                      Executar PIX
+                    </Button>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
 
   return (
     <FinanceiroLayout title="Pagamentos Downgrade">
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -167,6 +289,20 @@ export default function FinanceiroPagamentosDowngrade() {
               <div>
                 <p className="text-sm text-muted-foreground">Total a Devolver</p>
                 <p className="text-2xl font-bold text-orange-600">{formatCurrency(totais.totalPendente)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Finalizados</p>
+                <p className="text-2xl font-bold text-green-600">{totais.quantidadeFinalizada}</p>
               </div>
             </div>
           </CardContent>
@@ -207,7 +343,6 @@ export default function FinanceiroPagamentosDowngrade() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  {/* Lojas seriam listadas aqui */}
                 </SelectContent>
               </Select>
             </div>
@@ -235,88 +370,61 @@ export default function FinanceiroPagamentosDowngrade() {
         </CardContent>
       </Card>
       
-      {/* Tabela de Vendas Downgrade */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ArrowDownCircle className="h-5 w-5" />
-            Vendas Aguardando Pagamento Downgrade
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {vendasFiltradas.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <ArrowDownCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhuma venda aguardando pagamento downgrade</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID Venda</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Loja</TableHead>
-                  <TableHead>Vendedor</TableHead>
-                  <TableHead className="text-right">Valor Produtos</TableHead>
-                  <TableHead className="text-right">Valor Trade-In</TableHead>
-                  <TableHead className="text-right">PIX a Devolver</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {vendasFiltradas.map(venda => {
-                  const saldoDevolver = calcularSaldoDevolver(venda);
-                  const totalTradeIn = venda.tradeIns?.reduce((acc, t) => acc + t.valorCompraUsado, 0) || 0;
-                  
-                  return (
-                    <TableRow key={venda.id} className="bg-red-50 dark:bg-red-900/10">
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-medium">{venda.id}</span>
-                          <Badge variant="destructive" className="text-xs">DOWNGRADE</Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>{format(new Date(venda.dataHora), 'dd/MM/yyyy HH:mm')}</TableCell>
-                      <TableCell className="font-medium">{venda.clienteNome}</TableCell>
-                      <TableCell>{obterNomeLoja(venda.lojaVenda)}</TableCell>
-                      <TableCell>{obterNomeColaborador(venda.vendedor)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(venda.subtotal || 0)}</TableCell>
-                      <TableCell className="text-right text-green-600">
-                        {formatCurrency(totalTradeIn)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <span className="font-bold text-red-600 text-lg">
-                          {formatCurrency(saldoDevolver)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleAbrirDetalhes(venda)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm"
-                            className="bg-red-600 hover:bg-red-700"
-                            onClick={() => handleAbrirExecutar(venda)}
-                          >
-                            <DollarSign className="h-4 w-4 mr-1" />
-                            Executar PIX
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {/* Tabs: Pendentes e Histórico */}
+      <Tabs defaultValue="pendentes" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="pendentes" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Pendentes ({vendasFiltradasPendentes.length})
+          </TabsTrigger>
+          <TabsTrigger value="historico" className="flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Histórico ({vendasFiltradasHistorico.length})
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="pendentes">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ArrowDownCircle className="h-5 w-5" />
+                Vendas Aguardando Pagamento Downgrade
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {vendasFiltradasPendentes.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <ArrowDownCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nenhuma venda aguardando pagamento downgrade</p>
+                </div>
+              ) : (
+                renderTabelaVendas(vendasFiltradasPendentes, false)
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="historico">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <History className="h-5 w-5" />
+                Histórico de Pagamentos Downgrade
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {vendasFiltradasHistorico.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nenhum pagamento downgrade finalizado</p>
+                </div>
+              ) : (
+                renderTabelaVendas(vendasFiltradasHistorico, true)
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
       
       {/* Modal Executar PIX */}
       <Dialog open={showExecutarModal} onOpenChange={setShowExecutarModal}>
@@ -363,7 +471,7 @@ export default function FinanceiroPagamentosDowngrade() {
                 ))}
               </div>
               
-              {/* Conta de Origem */}
+              {/* Conta de Origem - com Loja + Nome */}
               <div>
                 <label className="text-sm font-medium">Conta de Origem *</label>
                 <Select value={contaOrigem} onValueChange={setContaOrigem}>
@@ -371,11 +479,15 @@ export default function FinanceiroPagamentosDowngrade() {
                     <SelectValue placeholder="Selecione a conta para débito" />
                   </SelectTrigger>
                   <SelectContent>
-                    {contasFinanceiras.map(conta => (
-                      <SelectItem key={conta.id} value={conta.id}>
-                        {conta.nome} - {conta.banco} ({formatCurrency(conta.saldoAtual)})
-                      </SelectItem>
-                    ))}
+                    {contasFinanceiras.map(conta => {
+                      const lojaNome = conta.lojaVinculada ? obterNomeLoja(conta.lojaVinculada) : '';
+                      const nomeDisplay = lojaNome ? `${lojaNome} - ${conta.nome}` : conta.nome;
+                      return (
+                        <SelectItem key={conta.id} value={conta.id}>
+                          {nomeDisplay} ({formatCurrency(conta.saldoAtual)})
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
@@ -401,13 +513,24 @@ export default function FinanceiroPagamentosDowngrade() {
                     onChange={handleFileChange}
                     className="flex-1"
                   />
-                  {comprovante && (
+                </div>
+                {comprovante && (
+                  <div className="flex items-center gap-2 mt-2">
                     <Badge variant="outline" className="whitespace-nowrap">
                       <Upload className="h-3 w-3 mr-1" />
                       {comprovante.name}
                     </Badge>
-                  )}
-                </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={handleVisualizarAnexo}
+                      className="h-8"
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      Visualizar
+                    </Button>
+                  </div>
+                )}
               </div>
               
               {/* Observações */}
@@ -554,7 +677,7 @@ export default function FinanceiroPagamentosDowngrade() {
             <Button variant="outline" onClick={() => setShowDetalhesModal(false)}>
               Fechar
             </Button>
-            {vendaDetalhes && (
+            {vendaDetalhes && vendaDetalhes.statusFluxo === 'Pagamento Downgrade' && (
               <Button 
                 className="bg-red-600 hover:bg-red-700"
                 onClick={() => {

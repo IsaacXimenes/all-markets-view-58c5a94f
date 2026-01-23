@@ -7,7 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   Building2, Lock, AlertTriangle, AlertCircle, 
-  DollarSign, TrendingUp, Calendar, Landmark
+  DollarSign, TrendingUp, Calendar, Landmark, Banknote
 } from 'lucide-react';
 
 import { getContasFinanceiras, ContaFinanceira } from '@/utils/cadastrosApi';
@@ -226,8 +226,8 @@ export default function FinanceiroTetoBancario() {
     return { saldosPorConta: saldos, qtdVendasPorConta: qtd };
   }, [mesSelecionado, anoSelecionado]);
 
-  // Separar contas por tipo de máquina
-  const { contasProprias, contasTerceirizadas, totais } = useMemo(() => {
+  // Separar contas por tipo de máquina + calcular total em dinheiro
+  const { contasProprias, contasTerceirizadas, totais, totalDinheiro, qtdVendasDinheiro } = useMemo(() => {
     const proprias = contasFinanceiras.filter(c => c.statusMaquina === 'Própria' && c.status === 'Ativo');
     const terceirizadas = contasFinanceiras.filter(c => c.statusMaquina === 'Terceirizada' && c.status === 'Ativo');
     
@@ -239,12 +239,39 @@ export default function FinanceiroTetoBancario() {
     }).length;
     const contasNoTeto = proprias.filter(c => (saldosPorConta[c.id] || 0) >= TETO_BANCARIO).length;
     
+    // Calcular total em dinheiro
+    let totalDinheiro = 0;
+    let qtdVendasDinheiro = 0;
+    try {
+      const vendasFinalizadas = getVendasPorStatus('Finalizado');
+      vendasFinalizadas.forEach(venda => {
+        const dataFinalizacaoRaw = localStorage.getItem(`data_finalizacao_${venda.id}`);
+        if (!dataFinalizacaoRaw) return;
+        
+        const dataFinalizacao = new Date(dataFinalizacaoRaw);
+        if (dataFinalizacao.getMonth() !== mesSelecionado || dataFinalizacao.getFullYear() !== anoSelecionado) return;
+        
+        const pagsDinheiro = venda.pagamentos?.filter((p: any) => 
+          p.meioPagamento.toLowerCase().includes('dinheiro')
+        ) || [];
+        
+        if (pagsDinheiro.length > 0) {
+          qtdVendasDinheiro++;
+          totalDinheiro += pagsDinheiro.reduce((a: number, p: any) => a + (p.valor || 0), 0);
+        }
+      });
+    } catch (e) {
+      console.error('[TetoBancario] Erro ao calcular dinheiro:', e);
+    }
+    
     return {
       contasProprias: proprias,
       contasTerceirizadas: terceirizadas,
-      totais: { totalProprias, totalTerceirizadas, contasEmAlerta, contasNoTeto }
+      totais: { totalProprias, totalTerceirizadas, contasEmAlerta, contasNoTeto },
+      totalDinheiro,
+      qtdVendasDinheiro
     };
-  }, [contasFinanceiras, saldosPorConta]);
+  }, [contasFinanceiras, saldosPorConta, mesSelecionado, anoSelecionado]);
 
   const mesNome = meses.find(m => m.valor === mesSelecionado)?.nome || '';
 
@@ -291,7 +318,7 @@ export default function FinanceiroTetoBancario() {
         </Card>
 
         {/* Cards de Resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -358,6 +385,24 @@ export default function FinanceiroTetoBancario() {
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Atingiram {formatCurrency(TETO_BANCARIO)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Card de Dinheiro */}
+          <Card className="bg-green-50 dark:bg-green-950/20 border-green-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                  <Banknote className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Caixa Dinheiro</p>
+                  <p className="text-2xl font-bold text-green-600">{formatCurrency(totalDinheiro)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {qtdVendasDinheiro} vendas no período
                   </p>
                 </div>
               </div>

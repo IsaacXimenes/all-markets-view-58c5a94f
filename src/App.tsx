@@ -80,6 +80,7 @@ import FinanceiroLotesPagamento from "./pages/FinanceiroLotesPagamento";
 import FinanceiroExecucaoLotes from "./pages/FinanceiroExecucaoLotes";
 import FinanceiroPagamentosDowngrade from "./pages/FinanceiroPagamentosDowngrade";
 import FinanceiroTetoBancario from "./pages/FinanceiroTetoBancario";
+import FinanceiroExtratoContas from "./pages/FinanceiroExtratoContas";
 import AssistenciaLotesPagamento from "./pages/AssistenciaLotesPagamento";
 import Relatorios from "./pages/Relatorios";
 import GarantiasNova from "./pages/GarantiasNova";
@@ -168,6 +169,7 @@ const App = () => (
             <Route path="/financeiro/execucao-lotes" element={<FinanceiroExecucaoLotes />} />
             <Route path="/financeiro/pagamentos-downgrade" element={<FinanceiroPagamentosDowngrade />} />
             <Route path="/financeiro/teto-bancario" element={<FinanceiroTetoBancario />} />
+            <Route path="/financeiro/extrato-contas" element={<FinanceiroExtratoContas />} />
             <Route path="/assistencia/lotes-pagamento" element={<AssistenciaLotesPagamento />} />
             <Route path="/cadastros" element={<Cadastros />} />
             <Route path="/cadastros/planos-garantia" element={<CadastrosPlanosGarantia />} />

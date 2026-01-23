@@ -706,7 +706,15 @@ export default function FinanceiroConferencia() {
 
   const getLojaNome = (lojaId: string) => lojas.find(l => l.id === lojaId)?.nome || lojaId;
   const getVendedorNome = (vendedorId: string) => colaboradores.find(c => c.id === vendedorId)?.nome || vendedorId;
-  const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === contaId)?.nome || 'Não informada';
+const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === contaId)?.nome || 'Não informada';
+  
+  // Helper para obter nome completo da conta (Loja - Nome)
+  const getContaNomeCompleto = (contaId: string) => {
+    const conta = contasFinanceiras.find(c => c.id === contaId);
+    if (!conta) return 'Não informada';
+    const lojaNome = conta.lojaVinculada ? obterNomeLoja(conta.lojaVinculada) : '';
+    return lojaNome ? `${lojaNome} - ${conta.nome}` : conta.nome;
+  };
 
   // Calcular valor exibido baseado no filtro de método
   const getValorExibido = (linha: LinhaConferencia) => {
@@ -1047,7 +1055,7 @@ export default function FinanceiroConferencia() {
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <Building2 className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-sm">{linha.contaDestinoNome}</span>
+                            <span className="text-sm">{getContaNomeCompleto(linha.contaDestinoId)}</span>
                           </div>
                         </TableCell>
                         <TableCell>{getSituacaoBadge(linha.conferido)}</TableCell>
@@ -1387,18 +1395,13 @@ export default function FinanceiroConferencia() {
                   <p className="font-medium">{new Date().toLocaleString('pt-BR')}</p>
                 </div>
               </div>
-              <div>
-                <Label>Conta de Destino *</Label>
-                <Select value={contaDestinoConfirmacao} onValueChange={setContaDestinoConfirmacao}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a conta de destino" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contasFinanceiras.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {/* Conta de Destino - Somente leitura (vem da venda) */}
+              <div className="p-3 bg-muted rounded-lg border">
+                <p className="text-xs text-muted-foreground mb-1">Conta de Destino (registrada na venda)</p>
+                <p className="font-medium flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                  {getContaNomeCompleto(contaDestinoConfirmacao)}
+                </p>
               </div>
             </div>
           )}
