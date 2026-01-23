@@ -41,6 +41,7 @@ import { Plus, Trash2, Search, AlertTriangle, Clock, User, History, ArrowLeft, S
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { formatIMEI, applyIMEIMask } from '@/utils/imeiMask';
+import { InputComMascara } from '@/components/ui/InputComMascara';
 import { useDraftVenda } from '@/hooks/useDraftVenda';
 import { format } from 'date-fns';
 
@@ -979,18 +980,12 @@ export default function OSAssistenciaNova() {
                     </div>
                     <div className="space-y-2">
                       <Label>Desconto (%)</Label>
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={peca.percentual}
-                          onChange={e => handlePecaChange(index, 'percentual', e.target.value)}
-                          placeholder="0"
-                          className="pr-8"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
-                      </div>
+                      <InputComMascara
+                        mascara="percentual"
+                        value={peca.percentual}
+                        onChange={(formatted, raw) => handlePecaChange(index, 'percentual', String(raw))}
+                        placeholder="0%"
+                      />
                     </div>
                   </div>
 
