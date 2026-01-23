@@ -117,9 +117,9 @@ const App = () => (
       <AppInitializer>
         <Toaster />
         <Sonner />
-        <MobilePreviewContainer />
         
         <BrowserRouter>
+          <MobilePreviewContainer />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/performance" element={<Performance />} />
