@@ -75,6 +75,19 @@ export default function VendasEditarGestor() {
   const lucro = total - valorCustoTotal;
   const margem = valorCustoTotal > 0 ? ((lucro / valorCustoTotal) * 100) : 0;
   const valorPendente = total - totalPagamentos;
+  
+  // Detectar se é operação Downgrade
+  const isDowngrade = useMemo(() => {
+    if (!vendaOriginal) return false;
+    // Verificar pelo tipoOperacao salvo ou pelo cálculo
+    return (vendaOriginal as any).tipoOperacao === 'Downgrade' || 
+           (totalTradeIn > subtotal && tradeIns.length > 0);
+  }, [vendaOriginal, totalTradeIn, subtotal, tradeIns.length]);
+  
+  const saldoDevolver = useMemo(() => {
+    if (!isDowngrade) return 0;
+    return totalTradeIn - subtotal + (vendaOriginal?.taxaEntrega || 0);
+  }, [isDowngrade, totalTradeIn, subtotal, vendaOriginal?.taxaEntrega]);
 
   // Comissão
   const comissaoVendedor = vendaOriginal && lucro > 0 
@@ -429,59 +442,81 @@ export default function VendasEditarGestor() {
           </Card>
         )}
 
-        {/* Card Editável - Pagamentos */}
-        <Card className="border-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Pagamentos
-              <Badge variant="outline" className="ml-2 text-primary border-primary">Editável</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Meio de Pagamento</TableHead>
-                  <TableHead>Conta de Destino</TableHead>
-                  <TableHead className="text-right w-40">Valor</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pagamentos.map(pag => (
-                  <TableRow key={pag.id}>
-                    <TableCell className="font-medium">{pag.meioPagamento}</TableCell>
-                    <TableCell>{getContaNome(pag.contaDestino)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="relative w-32 ml-auto">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          value={moedaMask(pag.valor)}
-                          onChange={(e) => handleUpdatePagamento(pag.id, 'valor', parseMoeda(e.target.value))}
-                          className="pl-9 text-right"
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            
-            {Math.abs(valorPendente) > 0.01 && (
-              <div className="mt-4 p-3 bg-destructive/10 rounded-lg flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                <span className="font-medium">
-                  {valorPendente > 0 
-                    ? `Faltam ${formatCurrency(valorPendente)} para fechar o pagamento` 
-                    : `Pagamento excede em ${formatCurrency(Math.abs(valorPendente))}`
-                  }
-                </span>
+        {/* Card Editável - Pagamentos (Bloqueado em Downgrade) */}
+        {isDowngrade ? (
+          <Card className="bg-muted/30 border-dashed">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                <Lock className="h-5 w-5" />
+                <CreditCard className="h-5 w-5" />
+                Pagamentos (Bloqueado - Downgrade)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-orange-500 opacity-50" />
+                <p className="text-muted-foreground font-medium">Quadro de pagamentos bloqueado</p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Em vendas Downgrade, não há entrada de pagamentos. 
+                  O saldo de <span className="font-bold text-destructive">{formatCurrency(saldoDevolver)}</span> será devolvido ao cliente via PIX.
+                </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Pagamentos
+                <Badge variant="outline" className="ml-2 text-primary border-primary">Editável</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Meio de Pagamento</TableHead>
+                    <TableHead>Conta de Destino</TableHead>
+                    <TableHead className="text-right w-40">Valor</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pagamentos.map(pag => (
+                    <TableRow key={pag.id}>
+                      <TableCell className="font-medium">{pag.meioPagamento}</TableCell>
+                      <TableCell>{getContaNome(pag.contaDestino)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="relative w-32 ml-auto">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            value={moedaMask(pag.valor)}
+                            onChange={(e) => handleUpdatePagamento(pag.id, 'valor', parseMoeda(e.target.value))}
+                            className="pl-9 text-right"
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              {Math.abs(valorPendente) > 0.01 && (
+                <div className="mt-4 p-3 bg-destructive/10 rounded-lg flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  <span className="font-medium">
+                    {valorPendente > 0 
+                      ? `Faltam ${formatCurrency(valorPendente)} para fechar o pagamento` 
+                      : `Pagamento excede em ${formatCurrency(Math.abs(valorPendente))}`
+                    }
+                  </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Resumo Financeiro */}
         <Card className="border-2 border-primary">

@@ -629,14 +629,16 @@ export default function VendasConferenciaLancamento() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => navigate(`/vendas/editar/${venda.id}`)}
-                              title="Editar venda"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
+                            {venda.statusFluxo !== 'Finalizado' && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => navigate(`/vendas/editar/${venda.id}`)}
+                                title="Editar venda"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
                             {venda.statusFluxo !== 'Feito Sinal' && venda.statusFluxo !== 'Conferência Gestor' && venda.statusFluxo !== 'Conferência Financeiro' && venda.statusFluxo !== 'Finalizado' && (
                               <Button 
                                 size="sm"

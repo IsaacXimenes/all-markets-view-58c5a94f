@@ -161,6 +161,10 @@ export default function VendasNova() {
     dataFim: string;
   } | null>(null);
   const [showGarantiaExtendidaModal, setShowGarantiaExtendidaModal] = useState(false);
+  
+  // Upload de ficheiro para garantia extendida
+  const [arquivoGarantia, setArquivoGarantia] = useState<File | null>(null);
+  const [arquivoGarantiaUrl, setArquivoGarantiaUrl] = useState<string>('');
 
   // Draft (rascunho automático)
   const { saveDraft, loadDraft, clearDraft, hasDraft, getDraftAge, formatDraftAge } = useDraftVenda(DRAFT_KEY);
@@ -202,6 +206,23 @@ export default function VendasNova() {
       setPagamentos(draft.pagamentos || []);
       setGarantiaItens(draft.garantiaItens || []);
       setGarantiaExtendida(draft.garantiaExtendida || null);
+      
+      // Restaurar timer com tempo decorrido
+      if (draft.timerStart && draft.timerSavedAt && draft.itens?.length > 0) {
+        const tempoDecorrido = Date.now() - draft.timerSavedAt;
+        const novoTimerStart = draft.timerStart;
+        const remaining = TIMER_DURATION - Math.floor((Date.now() - novoTimerStart) / 1000);
+        
+        if (remaining > 0) {
+          setTimerStart(novoTimerStart);
+          setTimer(remaining);
+        } else {
+          // Tempo esgotou - limpar itens
+          setItens([]);
+          toast({ title: "Tempo esgotado", description: "Produtos foram liberados do rascunho.", variant: "destructive" });
+        }
+      }
+      
       toast({ title: "Rascunho carregado", description: "Dados da venda anterior foram restaurados" });
     }
     setShowDraftModal(false);
@@ -246,7 +267,9 @@ export default function VendasNova() {
         tradeIns,
         pagamentos,
         garantiaItens,
-        garantiaExtendida
+        garantiaExtendida,
+        timerStart,
+        timerSavedAt: Date.now()
       });
       lastSaveTime.current = Date.now();
     }, 2000);
@@ -303,6 +326,23 @@ export default function VendasNova() {
     return saldo > 0 ? saldo : 0;
   }, [isDowngrade, totalTradeIn, valorProdutos, taxaEntrega]);
   const hasValidDowngrade = isDowngrade && saldoDevolver > 0;
+  
+  // Detecção automática do tipo de operação baseado nos valores
+  useEffect(() => {
+    if (tradeIns.length === 0) return;
+    
+    if (totalTradeIn > valorProdutos) {
+      // Base de troca maior que produtos = DOWNGRADE
+      if (tipoOperacaoTroca !== 'Downgrade') {
+        setTipoOperacaoTroca('Downgrade');
+      }
+    } else {
+      // Base de troca menor ou igual aos produtos = UPGRADE
+      if (tipoOperacaoTroca !== 'Upgrade') {
+        setTipoOperacaoTroca('Upgrade');
+      }
+    }
+  }, [totalTradeIn, valorProdutos, tradeIns.length]);
   
   // Validação de Upgrade inválido (trade-in > produtos)
   const isUpgradeInvalido = useMemo(() => {
@@ -527,7 +567,7 @@ export default function VendasNova() {
       imei: produto.imei,
       categoria: produto.marca,
       quantidade: 1,
-      valorRecomendado: produto.valorVendaSugerido,
+      valorRecomendado: produto.vendaRecomendada || produto.valorVendaSugerido,
       valorVenda: produto.vendaRecomendada || produto.valorVendaSugerido,
       valorCusto: produto.valorCusto,
       loja: produto.loja
@@ -1450,11 +1490,37 @@ export default function VendasNova() {
               <div className="mt-4 p-4 bg-destructive/10 rounded-lg border-2 border-destructive flex items-center gap-3">
                 <AlertTriangle className="h-6 w-6 text-destructive flex-shrink-0" />
                 <div>
-                  <p className="font-bold text-destructive">Valor de Trade-in maior que produtos!</p>
+                  <p className="font-bold text-destructive">Valor da Base de Troca maior que produtos!</p>
                   <p className="text-sm text-muted-foreground">
                     Altere para a aba "DOWNGRADE" ou ajuste os valores. Registrar venda desabilitado.
                   </p>
                 </div>
+              </div>
+            )}
+            
+            {/* Card de Conformidade - UPGRADE */}
+            {tipoOperacaoTroca === 'Upgrade' && tradeIns.length > 0 && !isUpgradeInvalido && (
+              <div className="mt-4 p-4 bg-green-500/10 rounded-lg border-2 border-green-500">
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-600" />
+                  <span className="font-bold text-green-600">UPGRADE em Conformidade</span>
+                </div>
+                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                  Valor da Base de Troca ({formatCurrency(totalTradeIn)}) menor ou igual aos produtos ({formatCurrency(valorProdutos)}).
+                </p>
+              </div>
+            )}
+            
+            {/* Card de Conformidade - DOWNGRADE */}
+            {tipoOperacaoTroca === 'Downgrade' && tradeIns.length > 0 && saldoDevolver > 0 && chavePix.trim() !== '' && (
+              <div className="mt-4 p-4 bg-green-500/10 rounded-lg border-2 border-green-500">
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-600" />
+                  <span className="font-bold text-green-600">DOWNGRADE em Conformidade</span>
+                </div>
+                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                  Chave PIX informada. Saldo de {formatCurrency(saldoDevolver)} será devolvido ao cliente.
+                </p>
               </div>
             )}
             
@@ -1705,21 +1771,79 @@ export default function VendasNova() {
           </CardHeader>
           <CardContent>
             {garantiaExtendida ? (
-              <div className="p-4 bg-purple-100 dark:bg-purple-950/30 rounded-lg flex justify-between items-center">
-                <div>
-                  <p className="font-medium text-purple-900 dark:text-purple-100">Plano {garantiaExtendida.planoNome}</p>
-                  <p className="text-sm text-purple-700 dark:text-purple-300">
-                    {garantiaExtendida.meses} meses - Vigência: {format(new Date(garantiaExtendida.dataInicio), 'dd/MM/yyyy')} a {format(new Date(garantiaExtendida.dataFim), 'dd/MM/yyyy')}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    * Inicia após o término da garantia padrão de 12 meses
-                  </p>
+              <div className="p-4 bg-purple-100 dark:bg-purple-950/30 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-purple-900 dark:text-purple-100">Plano {garantiaExtendida.planoNome}</p>
+                    <p className="text-sm text-purple-700 dark:text-purple-300">
+                      {garantiaExtendida.meses} meses - Vigência: {format(new Date(garantiaExtendida.dataInicio), 'dd/MM/yyyy')} a {format(new Date(garantiaExtendida.dataFim), 'dd/MM/yyyy')}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      * Inicia após o término da garantia padrão de 12 meses
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-xl font-bold text-purple-600">{formatCurrency(garantiaExtendida.valor)}</span>
+                    <Button variant="ghost" size="icon" onClick={() => setGarantiaExtendida(null)}>
+                      <X className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-xl font-bold text-purple-600">{formatCurrency(garantiaExtendida.valor)}</span>
-                  <Button variant="ghost" size="icon" onClick={() => setGarantiaExtendida(null)}>
-                    <X className="h-4 w-4 text-destructive" />
-                  </Button>
+                
+                {/* Seção de Documento Físico */}
+                <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800">
+                  <p className="text-sm font-medium text-purple-900 dark:text-purple-100 mb-2">
+                    Documento Físico
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <input
+                      type="file"
+                      id="arquivo-garantia"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setArquivoGarantia(file);
+                          const url = URL.createObjectURL(file);
+                          setArquivoGarantiaUrl(url);
+                          toast({ title: "Arquivo anexado", description: file.name });
+                        }
+                      }}
+                      className="hidden"
+                    />
+                    <label 
+                      htmlFor="arquivo-garantia"
+                      className="cursor-pointer inline-flex items-center px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-md"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Adicionar Ficheiro
+                    </label>
+                    
+                    {arquivoGarantia && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-purple-700 dark:text-purple-300">{arquivoGarantia.name}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => window.open(arquivoGarantiaUrl, '_blank')}
+                          title="Visualizar arquivo"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setArquivoGarantia(null);
+                            setArquivoGarantiaUrl('');
+                          }}
+                          title="Remover arquivo"
+                        >
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (
@@ -1976,16 +2100,26 @@ export default function VendasNova() {
                 <p className="text-sm text-muted-foreground">Custo Total</p>
                 <p className="text-lg font-medium">{formatCurrency(valorCustoTotal)}</p>
               </div>
-              <div className={`p-3 rounded-lg ${isPrejuizo ? 'bg-destructive/20' : 'bg-green-100 dark:bg-green-950/30'}`}>
-                <p className="text-sm text-muted-foreground">{isPrejuizo ? 'Prejuízo' : 'Lucro'} Projetado</p>
-                <p className={`text-lg font-bold ${isPrejuizo ? 'text-destructive' : 'text-green-600'}`}>
-                  {formatCurrency(lucroProjetado)}
+              <div className={`p-3 rounded-lg ${
+                hasValidDowngrade 
+                  ? 'bg-destructive/20' 
+                  : isPrejuizo 
+                    ? 'bg-destructive/20' 
+                    : 'bg-green-100 dark:bg-green-950/30'
+              }`}>
+                <p className="text-sm text-muted-foreground">
+                  {hasValidDowngrade ? 'Saldo a Devolver' : (isPrejuizo ? 'Prejuízo' : 'Lucro')} Projetado
+                </p>
+                <p className={`text-lg font-bold ${
+                  hasValidDowngrade || isPrejuizo ? 'text-destructive' : 'text-green-600'
+                }`}>
+                  {hasValidDowngrade ? formatCurrency(saldoDevolver) : formatCurrency(lucroProjetado)}
                 </p>
               </div>
-              <div className={`p-3 rounded-lg ${isPrejuizo ? 'bg-destructive/20' : 'bg-muted'}`}>
+              <div className={`p-3 rounded-lg ${hasValidDowngrade || isPrejuizo ? 'bg-destructive/20' : 'bg-muted'}`}>
                 <p className="text-sm text-muted-foreground">Margem</p>
-                <p className={`text-lg font-medium ${isPrejuizo ? 'text-destructive' : ''}`}>
-                  {margemProjetada.toFixed(1)}%
+                <p className={`text-lg font-medium ${hasValidDowngrade || isPrejuizo ? 'text-destructive' : ''}`}>
+                  {hasValidDowngrade ? '-' : `${margemProjetada.toFixed(1)}%`}
                 </p>
               </div>
               <div className="p-3 bg-blue-100 dark:bg-blue-950/30 rounded-lg">
@@ -2425,7 +2559,7 @@ export default function VendasNova() {
                           produto.quantidade
                         )}
                       </TableCell>
-                      <TableCell className="text-right">{formatCurrency(produto.valorVendaSugerido)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(produto.vendaRecomendada || produto.valorVendaSugerido)}</TableCell>
                       <TableCell>{obterNomeLoja(produto.loja)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
@@ -2473,7 +2607,7 @@ export default function VendasNova() {
                           </TableCell>
                           <TableCell className="font-mono text-sm">{displayIMEI(produto.imei)}</TableCell>
                           <TableCell>{produto.quantidade}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(produto.valorVendaSugerido)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(produto.vendaRecomendada || produto.valorVendaSugerido)}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
                               {obterNomeLoja(produto.loja)}
