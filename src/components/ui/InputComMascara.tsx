@@ -5,10 +5,29 @@ import { moedaMask, parseMoeda } from '@/utils/formatUtils';
 import { cn } from '@/lib/utils';
 
 interface InputComMascaraProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
-  mascara: 'imei' | 'moeda';
+  mascara: 'imei' | 'moeda' | 'percentual';
   value: string | number;
   onChange: (value: string, rawValue: string | number) => void;
 }
+
+// Função para formatar percentual
+const formatPercentual = (value: string | number): string => {
+  if (value === '' || value === null || value === undefined) return '';
+  
+  // Remove tudo que não é número ou vírgula/ponto
+  const cleanValue = String(value).replace(/[^\d.,]/g, '');
+  if (!cleanValue) return '';
+  
+  // Retorna o número com o símbolo de percentual
+  return `${cleanValue}%`;
+};
+
+// Função para extrair valor numérico do percentual
+const parsePercentual = (value: string): number => {
+  const cleanValue = String(value).replace(/[^\d.,]/g, '').replace(',', '.');
+  const num = parseFloat(cleanValue);
+  return isNaN(num) ? 0 : num;
+};
 
 const InputComMascara = forwardRef<HTMLInputElement, InputComMascaraProps>(
   ({ mascara, value, onChange, className, ...props }, ref) => {
@@ -23,6 +42,20 @@ const InputComMascara = forwardRef<HTMLInputElement, InputComMascaraProps>(
       } else if (mascara === 'moeda') {
         const formatted = moedaMask(inputValue);
         const raw = parseMoeda(inputValue);
+        onChange(formatted, raw);
+      } else if (mascara === 'percentual') {
+        // Remove o símbolo % para processar
+        const cleanInput = inputValue.replace('%', '').replace(/[^\d.,]/g, '');
+        
+        // Limita a 100%
+        const numValue = parseFloat(cleanInput.replace(',', '.')) || 0;
+        if (numValue > 100) {
+          onChange('100%', 100);
+          return;
+        }
+        
+        const formatted = cleanInput ? `${cleanInput}%` : '';
+        const raw = parsePercentual(cleanInput);
         onChange(formatted, raw);
       }
     }, [mascara, onChange]);
@@ -41,6 +74,18 @@ const InputComMascara = forwardRef<HTMLInputElement, InputComMascaraProps>(
           return value;
         }
         return '';
+      } else if (mascara === 'percentual') {
+        if (typeof value === 'number') {
+          return value > 0 ? `${value}%` : '';
+        }
+        if (typeof value === 'string') {
+          // Se já tem %, retorna como está
+          if (value.includes('%')) return value;
+          // Se tem valor, adiciona %
+          const cleanValue = value.replace(/[^\d.,]/g, '');
+          return cleanValue ? `${cleanValue}%` : '';
+        }
+        return '';
       }
       return String(value);
     }, [mascara, value]);
@@ -49,12 +94,14 @@ const InputComMascara = forwardRef<HTMLInputElement, InputComMascaraProps>(
       if (props.placeholder) return props.placeholder;
       if (mascara === 'imei') return '00-000000-000000-0';
       if (mascara === 'moeda') return '0,00';
+      if (mascara === 'percentual') return '0%';
       return '';
     };
 
     const getMaxLength = () => {
       if (props.maxLength) return props.maxLength;
       if (mascara === 'imei') return 18; // 15 dígitos + 3 hífens
+      if (mascara === 'percentual') return 5; // "100%" = 4 chars + margem
       return undefined;
     };
 
