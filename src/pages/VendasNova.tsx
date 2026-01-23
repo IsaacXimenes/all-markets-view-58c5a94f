@@ -15,7 +15,7 @@ import QRCode from 'qrcode';
 import { 
   ShoppingCart, Search, Plus, X, Eye, Clock, Trash2, 
   User, Package, CreditCard, Truck, FileText, AlertTriangle, Check, Shield, Save,
-  Headphones, ArrowLeftRight, Star
+  Headphones, ArrowLeftRight, Star, ChevronLeft
 } from 'lucide-react';
 import { format, addMonths, addDays } from 'date-fns';
 
@@ -40,6 +40,8 @@ import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { getTaxasEntregaAtivas, TaxaEntrega } from '@/utils/taxasEntregaApi';
+import { useIsMobilePreview } from '@/hooks/useMobilePreviewMode';
+import { cn } from '@/lib/utils';
 
 // Alias para compatibilidade
 const formatCurrency = formatarMoeda;
@@ -48,6 +50,7 @@ const TIMER_DURATION = 1800; // 30 minutos em segundos
 const DRAFT_KEY = 'draft_venda_nova';
 
 export default function VendasNova() {
+  const isMobilePreview = useIsMobilePreview();
   const navigate = useNavigate();
   const { obterLojasAtivas, obterLojasTipoLoja, obterVendedores, obterMotoboys, obterLojaById, obterNomeLoja, obterNomeColaborador, obterLojaMatriz, obterLojaOnline } = useCadastroStore();
   
@@ -951,17 +954,42 @@ export default function VendasNova() {
   const getLojaNome = (lojaId: string) => obterNomeLoja(lojaId);
 
 
-  return (
-    <VendasLayout title="Nova Venda">
-      {/* Botão Voltar */}
-      <div className="mb-4">
-        <Button variant="ghost" onClick={() => navigate('/vendas')} className="gap-2">
-          <span>←</span> Voltar
-        </Button>
-      </div>
+  // Conteúdo principal da página
+  const mainContent = (
+    <>
+      {/* Header Mobile */}
+      {isMobilePreview && (
+        <div className="sticky top-0 z-50 bg-background border-b px-3 py-2 flex items-center justify-between">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/vendas')} className="gap-1 px-2">
+            <ChevronLeft className="h-4 w-4" />
+            Voltar
+          </Button>
+          <h1 className="font-semibold text-sm">Nova Venda</h1>
+          {timer !== null ? (
+            <div className={cn(
+              "px-2 py-1 rounded text-xs font-mono font-bold flex items-center gap-1",
+              timer <= 30 ? 'bg-destructive text-destructive-foreground animate-pulse' : 'bg-primary text-primary-foreground'
+            )}>
+              <Clock className="h-3 w-3" />
+              {formatTimer(timer)}
+            </div>
+          ) : (
+            <div className="w-16" /> // Spacer para centralizar título
+          )}
+        </div>
+      )}
 
-      {/* Timer */}
-      {timer !== null && (
+      {/* Botão Voltar - Desktop */}
+      {!isMobilePreview && (
+        <div className="mb-4">
+          <Button variant="ghost" onClick={() => navigate('/vendas')} className="gap-2">
+            <span>←</span> Voltar
+          </Button>
+        </div>
+      )}
+
+      {/* Timer - Desktop */}
+      {!isMobilePreview && timer !== null && (
         <div className={`fixed top-20 right-6 z-50 p-4 rounded-lg shadow-lg flex items-center gap-3 ${
           timer <= 30 ? 'bg-destructive text-destructive-foreground animate-pulse' : 'bg-primary text-primary-foreground'
         }`}>
@@ -970,27 +998,38 @@ export default function VendasNova() {
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className={cn("space-y-4", isMobilePreview ? "px-3 pb-4" : "space-y-6")}>
         {/* Info da Venda */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" />
+          <CardHeader className={cn(isMobilePreview && "px-3 py-2")}>
+            <CardTitle className={cn("flex items-center gap-2", isMobilePreview && "text-sm")}>
+              <ShoppingCart className={cn(isMobilePreview ? "h-4 w-4" : "h-5 w-5")} />
               Informações da Venda
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div>
-                <label className="text-sm font-medium">ID da Venda</label>
-                <Input value={vendaInfo.id} disabled className="bg-muted" />
+          <CardContent className={cn(isMobilePreview && "px-3 py-2")}>
+            <div className={cn("grid gap-3", isMobilePreview ? "grid-cols-1" : "grid-cols-1 md:grid-cols-5 gap-4")}>
+              {/* ID e Número - mostrar lado a lado no mobile */}
+              <div className={cn(isMobilePreview && "grid grid-cols-2 gap-2")}>
+                <div>
+                  <label className={cn("font-medium", isMobilePreview ? "text-xs" : "text-sm")}>ID da Venda</label>
+                  <Input value={vendaInfo.id} disabled className={cn("bg-muted", isMobilePreview && "h-8 text-xs")} />
+                </div>
+                {isMobilePreview && (
+                  <div>
+                    <label className="text-xs font-medium">Nº da Venda</label>
+                    <Input value={vendaInfo.numero} disabled className="bg-muted h-8 text-xs" />
+                  </div>
+                )}
               </div>
+              {!isMobilePreview && (
+                <div>
+                  <label className="text-sm font-medium">Nº da Venda</label>
+                  <Input value={vendaInfo.numero} disabled className="bg-muted" />
+                </div>
+              )}
               <div>
-                <label className="text-sm font-medium">Nº da Venda</label>
-                <Input value={vendaInfo.numero} disabled className="bg-muted" />
-              </div>
-              <div>
-                <label className={`text-sm font-medium ${!lojaVenda ? 'text-destructive' : ''}`}>
+                <label className={cn("font-medium", isMobilePreview ? "text-xs" : "text-sm", !lojaVenda && 'text-destructive')}>
                   Loja de Venda *
                 </label>
                 <AutocompleteLoja
@@ -998,28 +1037,28 @@ export default function VendasNova() {
                   onChange={setLojaVenda}
                   placeholder="Selecione a loja"
                   apenasLojasTipoLoja={true}
-                  className={!lojaVenda ? 'border-destructive' : ''}
+                  className={cn(!lojaVenda && 'border-destructive', isMobilePreview && "h-8 text-xs")}
                 />
               </div>
               <div>
-                <label className={`text-sm font-medium ${!vendedor ? 'text-destructive' : ''}`}>
-                  Responsável pela Venda *
+                <label className={cn("font-medium", isMobilePreview ? "text-xs" : "text-sm", !vendedor && 'text-destructive')}>
+                  Responsável *
                 </label>
                 <AutocompleteColaborador
                   value={vendedor}
                   onChange={setVendedor}
-                  placeholder="Selecione o responsável"
+                  placeholder="Selecione"
                   filtrarPorTipo="vendedoresEGestores"
-                  className={!vendedor ? 'border-destructive' : ''}
+                  className={cn(!vendedor && 'border-destructive', isMobilePreview && "h-8 text-xs")}
                 />
               </div>
               <div>
-                <label className={`text-sm font-medium ${!origemVenda ? 'text-destructive' : ''}`}>
-                  Origem da Venda *
+                <label className={cn("font-medium", isMobilePreview ? "text-xs" : "text-sm", !origemVenda && 'text-destructive')}>
+                  Origem *
                 </label>
                 <Select value={origemVenda} onValueChange={setOrigemVenda}>
-                  <SelectTrigger className={!origemVenda ? 'border-destructive' : ''}>
-                    <SelectValue placeholder="Selecione a origem" />
+                  <SelectTrigger className={cn(!origemVenda && 'border-destructive', isMobilePreview && "h-8 text-xs")}>
+                    <SelectValue placeholder="Selecione" />
                   </SelectTrigger>
                   <SelectContent>
                     {origensVenda.filter(o => o.status === 'Ativo').map(origem => (
@@ -1092,17 +1131,17 @@ export default function VendasNova() {
 
         {/* Cliente */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
+          <CardHeader className={cn(isMobilePreview && "px-3 py-2")}>
+            <CardTitle className={cn("flex items-center gap-2", isMobilePreview && "text-sm")}>
+              <User className={cn(isMobilePreview ? "h-4 w-4" : "h-5 w-5")} />
               Cliente
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
+          <CardContent className={cn(isMobilePreview && "px-3 py-2")}>
+            <div className={cn("grid gap-4", !isMobilePreview && "grid-cols-1 md:grid-cols-2 gap-6")}>
+              <div className="space-y-3">
                 <div>
-                  <label className={`text-sm font-medium ${!clienteId ? 'text-destructive' : ''}`}>
+                  <label className={cn("font-medium", isMobilePreview ? "text-xs" : "text-sm", !clienteId && 'text-destructive')}>
                     Cliente *
                   </label>
                   <div className="flex gap-2 mt-1">
@@ -1110,40 +1149,44 @@ export default function VendasNova() {
                       value={clienteNome} 
                       placeholder="Nome do Cliente"
                       onChange={(e) => setClienteNome(e.target.value)}
-                      className={`flex-1 ${!clienteId ? 'border-destructive' : ''}`}
+                      className={cn("flex-1", !clienteId && 'border-destructive', isMobilePreview && "h-8 text-xs")}
                       readOnly
                     />
-                    <Button onClick={() => setShowClienteModal(true)}>
-                      <Search className="h-4 w-4 mr-2" />
-                      Buscar
+                    <Button 
+                      onClick={() => setShowClienteModal(true)}
+                      size={isMobilePreview ? "sm" : "default"}
+                      className={cn(isMobilePreview && "h-8 px-2 text-xs")}
+                    >
+                      <Search className={cn(isMobilePreview ? "h-3 w-3" : "h-4 w-4", !isMobilePreview && "mr-2")} />
+                      {!isMobilePreview && "Buscar"}
                     </Button>
                   </div>
                 </div>
                 
                 {clienteId && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-sm text-muted-foreground">CPF</label>
-                      <p className="font-medium">{clienteCpf}</p>
+                      <label className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>CPF</label>
+                      <p className={cn("font-medium", isMobilePreview && "text-xs")}>{clienteCpf}</p>
                     </div>
                     <div>
-                      <label className="text-sm text-muted-foreground">Telefone</label>
-                      <p className="font-medium">{clienteTelefone}</p>
+                      <label className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Telefone</label>
+                      <p className={cn("font-medium", isMobilePreview && "text-xs")}>{clienteTelefone}</p>
                     </div>
                     <div>
-                      <label className="text-sm text-muted-foreground">E-mail</label>
-                      <p className="font-medium">{clienteEmail}</p>
+                      <label className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>E-mail</label>
+                      <p className={cn("font-medium truncate", isMobilePreview && "text-xs")}>{clienteEmail}</p>
                     </div>
                     <div>
-                      <label className="text-sm text-muted-foreground">Cidade</label>
-                      <p className="font-medium">{clienteCidade}</p>
+                      <label className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Cidade</label>
+                      <p className={cn("font-medium", isMobilePreview && "text-xs")}>{clienteCidade}</p>
                     </div>
                   </div>
                 )}
               </div>
               
-              {/* Histórico do cliente */}
-              {clienteId && historicoCliente.length > 0 && (
+              {/* Histórico do cliente - escondido no mobile para economizar espaço */}
+              {!isMobilePreview && clienteId && historicoCliente.length > 0 && (
                 <Card className="bg-muted/50">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">Últimas 3 Compras</CardTitle>
@@ -1159,30 +1202,75 @@ export default function VendasNova() {
                 </Card>
               )}
             </div>
-
           </CardContent>
         </Card>
 
         {/* Itens da Venda */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+          <CardHeader className={cn(isMobilePreview && "px-3 py-2")}>
+            <CardTitle className={cn("flex items-center justify-between", isMobilePreview && "text-sm")}>
               <span className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Itens da Venda
+                <Package className={cn(isMobilePreview ? "h-4 w-4" : "h-5 w-5")} />
+                Itens
               </span>
-              <Button onClick={() => setShowProdutoModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Selecionar Produto
+              <Button 
+                onClick={() => setShowProdutoModal(true)}
+                size={isMobilePreview ? "sm" : "default"}
+                className={cn(isMobilePreview && "h-7 px-2 text-xs")}
+              >
+                <Plus className={cn(isMobilePreview ? "h-3 w-3" : "h-4 w-4", !isMobilePreview && "mr-2")} />
+                {!isMobilePreview && "Selecionar Produto"}
               </Button>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className={cn(isMobilePreview && "px-3 py-2")}>
             {itens.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Nenhum produto adicionado. Clique em "Selecionar Produto" para começar.
+              <div className={cn("text-center py-4 text-muted-foreground", isMobilePreview ? "text-xs" : "py-8")}>
+                Nenhum produto adicionado
+              </div>
+            ) : isMobilePreview ? (
+              // Mobile: Cards empilhados
+              <div className="space-y-2">
+                {itens.map(item => (
+                  <div key={item.id} className="p-2 border rounded-lg space-y-1">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-xs truncate">{item.produto}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{displayIMEI(item.imei)}</p>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="h-6 w-6 shrink-0"
+                        onClick={() => handleRemoveItem(item.id)}
+                      >
+                        <X className="h-3 w-3 text-destructive" />
+                      </Button>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">{obterNomeLoja(item.loja)}</span>
+                      <div className="relative">
+                        <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">R$</span>
+                        <Input 
+                          type="text"
+                          value={item.valorVenda.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '');
+                            const numValue = Number(value) / 100;
+                            const updated = itens.map(i => 
+                              i.id === item.id ? { ...i, valorVenda: numValue } : i
+                            );
+                            setItens(updated);
+                          }}
+                          className="w-24 h-7 text-right pl-6 text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
+              // Desktop: Tabela
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -2046,85 +2134,90 @@ export default function VendasNova() {
         )}
 
         {/* Resumo */}
-        <Card className={`border-2 ${hasValidDowngrade ? 'border-orange-500' : isPrejuizo ? 'border-destructive' : 'border-primary'}`}>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+        <Card className={cn(
+          "border-2",
+          hasValidDowngrade ? 'border-orange-500' : isPrejuizo ? 'border-destructive' : 'border-primary'
+        )}>
+          <CardHeader className={cn(isMobilePreview && "px-3 py-2")}>
+            <CardTitle className={cn("flex items-center justify-between", isMobilePreview && "text-sm")}>
               <span className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+                <FileText className={cn(isMobilePreview ? "h-4 w-4" : "h-5 w-5")} />
                 Resumo
                 {hasValidDowngrade && (
-                  <Badge className="bg-orange-500 text-white ml-2">
-                    <ArrowLeftRight className="h-3 w-3 mr-1" />
-                    DOWNGRADE
+                  <Badge className={cn("bg-orange-500 text-white", isMobilePreview ? "text-xs px-1.5 py-0.5" : "ml-2")}>
+                    {!isMobilePreview && <ArrowLeftRight className="h-3 w-3 mr-1" />}
+                    DOWN
                   </Badge>
                 )}
               </span>
               {isPrejuizo && !hasValidDowngrade && (
-                <Badge variant="destructive" className="text-lg px-4 py-1">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
+                <Badge variant="destructive" className={cn(isMobilePreview ? "text-xs px-2" : "text-lg px-4 py-1")}>
+                  <AlertTriangle className={cn(isMobilePreview ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2")} />
                   PREJUÍZO
                 </Badge>
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Valor dos Produtos</p>
-                <p className="text-xl font-bold">{formatCurrency(valorProdutos)}</p>
+          <CardContent className={cn(isMobilePreview && "px-3 py-2")}>
+            <div className={cn(
+              "grid gap-2 mb-3",
+              isMobilePreview ? "grid-cols-2" : "grid-cols-2 md:grid-cols-5 gap-4 mb-4"
+            )}>
+              <div className={cn("p-2 bg-muted rounded-lg", isMobilePreview && "p-2")}>
+                <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Produtos</p>
+                <p className={cn("font-bold", isMobilePreview ? "text-sm" : "text-xl")}>{formatCurrency(valorProdutos)}</p>
               </div>
               {valorGarantiaExtendida > 0 && (
-                <div className="p-3 bg-purple-100 dark:bg-purple-950/30 rounded-lg">
-                  <p className="text-sm text-muted-foreground">Valor Garantia Extendida</p>
-                  <p className="text-xl font-bold text-purple-600">{formatCurrency(valorGarantiaExtendida)}</p>
+                <div className={cn("p-2 bg-purple-100 dark:bg-purple-950/30 rounded-lg")}>
+                  <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Garantia Ext.</p>
+                  <p className={cn("font-bold text-purple-600", isMobilePreview ? "text-sm" : "text-xl")}>{formatCurrency(valorGarantiaExtendida)}</p>
                 </div>
               )}
-              <div className="p-3 bg-green-100 dark:bg-green-950/30 rounded-lg">
-                <p className="text-sm text-muted-foreground">Base de Troca</p>
-                <p className="text-xl font-bold text-green-600">-{formatCurrency(totalTradeIn)}</p>
+              <div className={cn("p-2 bg-green-100 dark:bg-green-950/30 rounded-lg")}>
+                <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Trade-in</p>
+                <p className={cn("font-bold text-green-600", isMobilePreview ? "text-sm" : "text-xl")}>-{formatCurrency(totalTradeIn)}</p>
               </div>
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Taxa Entrega</p>
-                <p className="text-xl font-bold">{formatCurrency(taxaEntrega)}</p>
+              <div className={cn("p-2 bg-muted rounded-lg")}>
+                <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Entrega</p>
+                <p className={cn("font-bold", isMobilePreview ? "text-sm" : "text-xl")}>{formatCurrency(taxaEntrega)}</p>
               </div>
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <p className="text-sm text-muted-foreground">Total da Venda</p>
-                <p className="text-2xl font-bold text-primary">{formatCurrency(total)}</p>
+              <div className={cn("p-2 bg-primary/10 rounded-lg", isMobilePreview && "col-span-2")}>
+                <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Total da Venda</p>
+                <p className={cn("font-bold text-primary", isMobilePreview ? "text-lg" : "text-2xl")}>{formatCurrency(total)}</p>
               </div>
             </div>
             
-            <Separator className="my-4" />
+            {!isMobilePreview && <Separator className="my-4" />}
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Custo Total</p>
-                <p className="text-lg font-medium">{formatCurrency(valorCustoTotal)}</p>
+            <div className={cn(
+              "grid gap-2",
+              isMobilePreview ? "grid-cols-2" : "grid-cols-2 md:grid-cols-4 gap-4"
+            )}>
+              <div className={cn("p-2 bg-muted rounded-lg")}>
+                <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Custo</p>
+                <p className={cn("font-medium", isMobilePreview ? "text-xs" : "text-lg")}>{formatCurrency(valorCustoTotal)}</p>
               </div>
-              <div className={`p-3 rounded-lg ${
-                hasValidDowngrade 
-                  ? 'bg-destructive/20' 
-                  : isPrejuizo 
-                    ? 'bg-destructive/20' 
-                    : 'bg-green-100 dark:bg-green-950/30'
-              }`}>
-                <p className="text-sm text-muted-foreground">
-                  {hasValidDowngrade ? 'Saldo a Devolver' : (isPrejuizo ? 'Prejuízo' : 'Lucro')} Projetado
+              <div className={cn("p-2 rounded-lg",
+                hasValidDowngrade ? 'bg-destructive/20' : isPrejuizo ? 'bg-destructive/20' : 'bg-green-100 dark:bg-green-950/30'
+              )}>
+                <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>
+                  {hasValidDowngrade ? 'Devolver' : (isPrejuizo ? 'Prejuízo' : 'Lucro')}
                 </p>
-                <p className={`text-lg font-bold ${
+                <p className={cn("font-bold", isMobilePreview ? "text-xs" : "text-lg",
                   hasValidDowngrade || isPrejuizo ? 'text-destructive' : 'text-green-600'
-                }`}>
+                )}>
                   {hasValidDowngrade ? formatCurrency(saldoDevolver) : formatCurrency(lucroProjetado)}
                 </p>
               </div>
-              <div className={`p-3 rounded-lg ${hasValidDowngrade || isPrejuizo ? 'bg-destructive/20' : 'bg-muted'}`}>
-                <p className="text-sm text-muted-foreground">Margem</p>
-                <p className={`text-lg font-medium ${hasValidDowngrade || isPrejuizo ? 'text-destructive' : ''}`}>
+              <div className={cn("p-2 rounded-lg", hasValidDowngrade || isPrejuizo ? 'bg-destructive/20' : 'bg-muted')}>
+                <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Margem</p>
+                <p className={cn("font-medium", isMobilePreview ? "text-xs" : "text-lg", (hasValidDowngrade || isPrejuizo) && 'text-destructive')}>
                   {hasValidDowngrade ? '-' : `${margemProjetada.toFixed(1)}%`}
                 </p>
               </div>
-              <div className="p-3 bg-blue-100 dark:bg-blue-950/30 rounded-lg">
-                <p className="text-sm text-muted-foreground">Total Pagamentos</p>
-                <p className="text-lg font-medium text-blue-600">{formatCurrency(totalPagamentos)}</p>
+              <div className={cn("p-2 bg-blue-100 dark:bg-blue-950/30 rounded-lg")}>
+                <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Pagos</p>
+                <p className={cn("font-medium text-blue-600", isMobilePreview ? "text-xs" : "text-lg")}>{formatCurrency(totalPagamentos)}</p>
               </div>
             </div>
             
@@ -2253,20 +2346,22 @@ export default function VendasNova() {
             return null;
           })()}
           
-          <div className="flex gap-4 justify-end">
-            <Button variant="outline" onClick={() => navigate('/vendas')}>
-              Cancelar
-            </Button>
+          <div className={cn("flex gap-2 justify-end", isMobilePreview && "flex-col")}>
+            {!isMobilePreview && (
+              <Button variant="outline" onClick={() => navigate('/vendas')}>
+                Cancelar
+              </Button>
+            )}
             
             {/* Botão Salvar com Sinal - aparece quando tem pagamento Sinal */}
             {temPagamentoSinal && !hasValidDowngrade && (
               <Button 
                 onClick={handleSalvarComSinal}
                 disabled={!canSubmitSinal}
-                className="bg-red-600 hover:bg-red-700"
+                className={cn("bg-red-600 hover:bg-red-700", isMobilePreview && "h-9 text-xs")}
               >
-                <Save className="h-4 w-4 mr-2" />
-                Salvar Registro (Sinal)
+                <Save className={cn(isMobilePreview ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2")} />
+                {isMobilePreview ? "Sinal" : "Salvar Registro (Sinal)"}
               </Button>
             )}
             
@@ -2275,10 +2370,10 @@ export default function VendasNova() {
               <Button 
                 onClick={handleRegistrarVenda}
                 disabled={!canSubmitDowngrade}
-                className="bg-orange-600 hover:bg-orange-700"
+                className={cn("bg-orange-600 hover:bg-orange-700", isMobilePreview && "h-9 text-xs")}
               >
-                <ArrowLeftRight className="h-4 w-4 mr-2" />
-                Registrar Downgrade
+                <ArrowLeftRight className={cn(isMobilePreview ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2")} />
+                {isMobilePreview ? "Downgrade" : "Registrar Downgrade"}
               </Button>
             )}
             
@@ -2287,9 +2382,10 @@ export default function VendasNova() {
               <Button 
                 onClick={handleRegistrarVenda}
                 disabled={!canSubmit}
+                className={cn(isMobilePreview && "h-9 text-xs")}
               >
-                <Check className="h-4 w-4 mr-2" />
-                Registrar Venda
+                <Check className={cn(isMobilePreview ? "h-3 w-3 mr-1" : "h-4 w-4 mr-2")} />
+                {isMobilePreview ? "Registrar" : "Registrar Venda"}
               </Button>
             )}
           </div>
@@ -3141,6 +3237,17 @@ export default function VendasNova() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </>
+  );
+
+  // Renderização condicional - Mobile sem VendasLayout
+  if (isMobilePreview) {
+    return mainContent;
+  }
+
+  return (
+    <VendasLayout title="Nova Venda">
+      {mainContent}
     </VendasLayout>
   );
 }
