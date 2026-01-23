@@ -1,7 +1,8 @@
 import React from 'react';
 import { 
-  Package, Settings, ChevronRight, ChevronLeft, Home, Banknote, Users, Database, ShoppingCart, Wrench, BarChart3, Shield
+  Package, Settings, ChevronRight, ChevronLeft, Home, Banknote, Users, Database, ShoppingCart, Wrench, BarChart3, Shield, Smartphone, Monitor
 } from 'lucide-react';
+import { useMobilePreviewMode } from '@/hooks/useMobilePreviewMode';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -21,6 +22,7 @@ interface NavItem {
 
 export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
   const location = useLocation();
+  const { isMobilePreview, toggleMobilePreview } = useMobilePreviewMode();
   
   const navItems: NavItem[] = [
     { title: 'Painel', icon: Home, href: '/' },
@@ -116,7 +118,30 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
         </nav>
       </ScrollArea>
       
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 border-t border-sidebar-border space-y-3">
+        {/* Botão Mobile Preview */}
+        <Button
+          variant={isMobilePreview ? "default" : "ghost"}
+          size={isCollapsed ? "icon" : "default"}
+          onClick={toggleMobilePreview}
+          className={cn(
+            "w-full justify-start",
+            isCollapsed && "justify-center"
+          )}
+          title={isMobilePreview ? "Voltar para Desktop" : "Modo Mobile Preview"}
+        >
+          {isMobilePreview ? (
+            <Monitor className="h-5 w-5" />
+          ) : (
+            <Smartphone className="h-5 w-5" />
+          )}
+          {!isCollapsed && (
+            <span className="ml-2 text-sm">
+              {isMobilePreview ? "Desktop" : "Mobile"}
+            </span>
+          )}
+        </Button>
+
         <div className={cn(
           "transition-opacity duration-200 rounded-md bg-sidebar-accent/50 p-2 text-xs text-sidebar-accent-foreground",
           isCollapsed ? "opacity-0" : "opacity-100"

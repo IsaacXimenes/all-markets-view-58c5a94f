@@ -95,6 +95,7 @@ import GarantiaContatosAtivosEditar from "./pages/GarantiaContatosAtivosEditar";
 import OSAnaliseGarantia from "./pages/OSAnaliseGarantia";
 import CadastrosPlanosGarantia from "./pages/CadastrosPlanosGarantia";
 import VendasEditar from "./pages/VendasEditar";
+import { MobilePreviewContainer } from "./components/layout/MobilePreviewContainer";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +117,7 @@ const App = () => (
       <AppInitializer>
         <Toaster />
         <Sonner />
+        <MobilePreviewContainer />
         
         <BrowserRouter>
           <Routes>
