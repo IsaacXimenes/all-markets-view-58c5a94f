@@ -121,8 +121,8 @@ export function AutocompleteLoja({
       />
       
       {aberto && lojasFiltradas.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md">
-          <ScrollArea className="max-h-60">
+        <div className="absolute z-[100] w-full mt-1 bg-popover border rounded-md shadow-lg overflow-hidden">
+          <div className="max-h-64 overflow-y-auto">
             {lojasFiltradas.map(loja => (
               <div
                 key={loja.id}
@@ -135,12 +135,12 @@ export function AutocompleteLoja({
                 </Badge>
               </div>
             ))}
-          </ScrollArea>
+          </div>
         </div>
       )}
       
       {aberto && lojasFiltradas.length === 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md p-3 text-sm text-muted-foreground">
+        <div className="absolute z-[100] w-full mt-1 bg-popover border rounded-md shadow-lg p-3 text-sm text-muted-foreground">
           Nenhuma loja encontrada
         </div>
       )}
