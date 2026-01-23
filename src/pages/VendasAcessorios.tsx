@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
 import { 
   ShoppingCart, Search, Plus, X, Clock, Trash2, 
@@ -18,10 +19,11 @@ import {
 import { 
   getClientes, getOrigensVenda, 
   getContasFinanceiras, Cliente, OrigemVenda, ContaFinanceira,
-  addCliente
+  addCliente, calcularTipoPessoa
 } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
-import { getNextVendaNumber, getHistoricoComprasCliente, formatCurrency, Pagamento } from '@/utils/vendasApi';
+import { getNextVendaNumber, getHistoricoComprasCliente, Pagamento } from '@/utils/vendasApi';
+import { formatarMoeda } from '@/utils/formatUtils';
 import { 
   getAcessorios, 
   subtrairEstoqueAcessorio, 
@@ -30,16 +32,22 @@ import {
 } from '@/utils/acessoriosApi';
 import { useDraftVenda } from '@/hooks/useDraftVenda';
 import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+
+// Alias para compatibilidade
+const formatCurrency = formatarMoeda;
 
 const TIMER_DURATION = 1800; // 30 minutos em segundos
 const DRAFT_KEY = 'draft_venda_acessorios';
 
 export default function VendasAcessorios() {
   const navigate = useNavigate();
-  const { obterLojasAtivas, obterVendedores, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
+  const { obterLojasAtivas, obterLojasTipoLoja, obterVendedores, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   
   // Dados do cadastros - usando Zustand store
   const lojas = obterLojasAtivas();
+  const lojasTipoLoja = obterLojasTipoLoja();
   const vendedoresDisponiveis = obterVendedores();
   const [clientes, setClientes] = useState<Cliente[]>(getClientes());
   const [origensVenda] = useState<OrigemVenda[]>(getOrigensVenda());
@@ -213,6 +221,14 @@ export default function VendasAcessorios() {
     return acc + (acessorio?.valorCusto || 0) * a.quantidade;
   }, 0), [acessorios, acessoriosEstoque]);
 
+  // Lucro e Margem - igual Nova Venda
+  const lucroProjetado = useMemo(() => total - custoTotalAcessorios, [total, custoTotalAcessorios]);
+  const margemProjetada = useMemo(() => {
+    if (custoTotalAcessorios === 0) return 0;
+    return ((lucroProjetado / custoTotalAcessorios) * 100);
+  }, [lucroProjetado, custoTotalAcessorios]);
+  const isPrejuizo = lucroProjetado < 0;
+
   // Buscar cliente
   const clientesFiltrados = useMemo(() => {
     if (!buscaCliente) return clientes;
@@ -349,6 +365,18 @@ export default function VendasAcessorios() {
     }
   };
 
+  // Lista de pendências para validação visual
+  const pendencias = useMemo(() => {
+    const lista: string[] = [];
+    if (!lojaVenda) lista.push('Loja de Venda');
+    if (!vendedor) lista.push('Responsável');
+    if (!clienteId) lista.push('Cliente');
+    if (!origemVenda) lista.push('Origem da Venda');
+    if (acessorios.length === 0) lista.push('Pelo menos 1 acessório');
+    if (valorPendente > 0) lista.push('Pagamento completo');
+    return lista;
+  }, [lojaVenda, vendedor, clienteId, origemVenda, acessorios.length, valorPendente]);
+
   // Validar venda - removido localRetirada
   const canSubmit = useMemo(() => {
     return (
@@ -421,7 +449,7 @@ export default function VendasAcessorios() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <label className="text-sm font-medium">ID da Venda</label>
                 <Input value={vendaInfo.id} disabled className="bg-muted" />
@@ -431,27 +459,40 @@ export default function VendasAcessorios() {
                 <Input value={vendaInfo.numero} disabled className="bg-muted" />
               </div>
               <div>
-                <label className="text-sm font-medium">Loja de Venda *</label>
-                <Select value={lojaVenda} onValueChange={setLojaVenda}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a loja" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {lojas.filter(l => l.ativa).map(loja => (
-                      <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className={`text-sm font-medium ${!lojaVenda ? 'text-destructive' : ''}`}>
+                  Loja de Venda *
+                </label>
+                <AutocompleteLoja
+                  value={lojaVenda}
+                  onChange={setLojaVenda}
+                  placeholder="Selecione a loja"
+                  apenasLojasTipoLoja={true}
+                  className={!lojaVenda ? 'border-destructive' : ''}
+                />
               </div>
               <div>
-                <label className="text-sm font-medium">Responsável *</label>
-                <Select value={vendedor} onValueChange={setVendedor}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
+                <label className={`text-sm font-medium ${!vendedor ? 'text-destructive' : ''}`}>
+                  Responsável *
+                </label>
+                <AutocompleteColaborador
+                  value={vendedor}
+                  onChange={setVendedor}
+                  placeholder="Selecione o responsável"
+                  filtrarPorTipo="vendedoresEGestores"
+                  className={!vendedor ? 'border-destructive' : ''}
+                />
+              </div>
+              <div>
+                <label className={`text-sm font-medium ${!origemVenda ? 'text-destructive' : ''}`}>
+                  Origem da Venda *
+                </label>
+                <Select value={origemVenda} onValueChange={setOrigemVenda}>
+                  <SelectTrigger className={!origemVenda ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Selecione a origem" />
                   </SelectTrigger>
                   <SelectContent>
-                    {vendedoresDisponiveis.map(col => (
-                      <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
+                    {origensVenda.filter(o => o.status === 'Ativo').map(origem => (
+                      <SelectItem key={origem.id} value={origem.origem}>{origem.origem}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -472,47 +513,64 @@ export default function VendasAcessorios() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div className="flex gap-2">
-                  <Input 
-                    value={clienteNome} 
-                    placeholder="Nome do Cliente"
-                    className="flex-1"
-                    readOnly
-                  />
-                  <Button onClick={() => setShowClienteModal(true)}>
-                    <Search className="h-4 w-4 mr-2" />
-                    Buscar
-                  </Button>
+                  <div className="flex-1">
+                    <label className={`text-sm font-medium ${!clienteId ? 'text-destructive' : ''}`}>
+                      Nome do Cliente *
+                    </label>
+                    <Input 
+                      value={clienteNome} 
+                      placeholder="Nome do Cliente"
+                      className={`${!clienteId ? 'border-destructive' : ''}`}
+                      readOnly
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button onClick={() => setShowClienteModal(true)}>
+                      <Search className="h-4 w-4 mr-2" />
+                      Buscar
+                    </Button>
+                  </div>
                 </div>
                 
                 {clienteId && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm text-muted-foreground">CPF</label>
+                      <label className="text-sm text-muted-foreground">CPF/CNPJ</label>
                       <p className="font-medium">{clienteCpf}</p>
                     </div>
                     <div>
                       <label className="text-sm text-muted-foreground">Telefone</label>
                       <p className="font-medium">{clienteTelefone}</p>
                     </div>
+                    <div>
+                      <label className="text-sm text-muted-foreground">E-mail</label>
+                      <p className="font-medium">{clienteEmail || '-'}</p>
+                    </div>
+                    <div>
+                      <label className="text-sm text-muted-foreground">Cidade</label>
+                      <p className="font-medium">{clienteCidade || '-'}</p>
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-              <div>
-                <label className="text-sm font-medium">Origem da Venda *</label>
-                <Select value={origemVenda} onValueChange={setOrigemVenda}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a origem" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {origensVenda.filter(o => o.status === 'Ativo').map(origem => (
-                      <SelectItem key={origem.id} value={origem.origem}>{origem.origem}</SelectItem>
+              {/* Histórico de Compras */}
+              {clienteId && historicoCliente.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Últimas Compras</label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {historicoCliente.slice(0, 3).map((compra, idx) => (
+                      <div key={idx} className="p-2 bg-muted rounded text-sm">
+                        <div className="flex justify-between">
+                          <span>{compra.produto}</span>
+                          <span className="font-medium">{formatCurrency(compra.valor)}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{compra.data}</span>
+                      </div>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -524,6 +582,9 @@ export default function VendasAcessorios() {
               <span className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
                 Acessórios
+                {acessorios.length > 0 && (
+                  <Badge variant="secondary">{acessorios.length} item(s)</Badge>
+                )}
               </span>
               <Button onClick={() => setShowAcessorioModal(true)}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -533,8 +594,9 @@ export default function VendasAcessorios() {
           </CardHeader>
           <CardContent>
             {acessorios.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                Nenhum acessório adicionado.
+              <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                Nenhum acessório adicionado. Clique em "Selecionar Acessórios" para começar.
               </div>
             ) : (
               <Table>
@@ -566,7 +628,7 @@ export default function VendasAcessorios() {
                         {formatCurrency(item.valorRecomendado)}
                       </TableCell>
                       <TableCell className="text-right">{formatCurrency(item.valorUnitario)}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.valorTotal)}</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(item.valorTotal)}</TableCell>
                       <TableCell className="text-right">
                         <span className={`font-bold ${lucroItem >= 0 ? 'text-green-600' : 'text-destructive'}`}>
                           {formatCurrency(lucroItem)}
@@ -611,12 +673,28 @@ export default function VendasAcessorios() {
               value={observacoes}
               onChange={(e) => setObservacoes(e.target.value)}
               placeholder="Observações da venda..."
+              rows={3}
             />
           </CardContent>
         </Card>
 
+        {/* Alerta de Pendências */}
+        {pendencias.length > 0 && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              <strong>Pendências para registrar a venda:</strong>
+              <ul className="list-disc list-inside mt-1">
+                {pendencias.map((p, idx) => (
+                  <li key={idx}>{p}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Resumo */}
-        <Card className="bg-muted/30">
+        <Card className={`${isPrejuizo ? 'border-destructive bg-destructive/5' : 'bg-muted/30'}`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -624,32 +702,57 @@ export default function VendasAcessorios() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span>Subtotal Acessórios</span>
-                <span className="font-medium">{formatCurrency(subtotal)}</span>
-              </div>
-              {taxaEntrega > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Valores */}
+              <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span>Taxa de Entrega</span>
-                  <span className="font-medium">{formatCurrency(taxaEntrega)}</span>
+                  <span>Subtotal Acessórios</span>
+                  <span className="font-medium">{formatCurrency(subtotal)}</span>
                 </div>
-              )}
-              <Separator />
-              <div className="flex justify-between text-lg font-bold">
-                <span>TOTAL</span>
-                <span>{formatCurrency(total)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Total Pago</span>
-                <span className="text-green-600">{formatCurrency(totalPagamentos)}</span>
-              </div>
-              {valorPendente > 0 && (
-                <div className="flex justify-between text-sm text-destructive">
-                  <span>Valor Pendente</span>
-                  <span>{formatCurrency(valorPendente)}</span>
+                {taxaEntrega > 0 && (
+                  <div className="flex justify-between">
+                    <span>Taxa de Entrega</span>
+                    <span className="font-medium">{formatCurrency(taxaEntrega)}</span>
+                  </div>
+                )}
+                <Separator />
+                <div className="flex justify-between text-lg font-bold">
+                  <span>TOTAL</span>
+                  <span>{formatCurrency(total)}</span>
                 </div>
-              )}
+                <div className="flex justify-between text-sm">
+                  <span>Total Pago</span>
+                  <span className="text-green-600 font-medium">{formatCurrency(totalPagamentos)}</span>
+                </div>
+                {valorPendente > 0 && (
+                  <div className="flex justify-between text-sm text-destructive font-medium">
+                    <span>Valor Pendente</span>
+                    <span>{formatCurrency(valorPendente)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Lucro e Margem */}
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Custo Total</span>
+                  <span className="text-muted-foreground">{formatCurrency(custoTotalAcessorios)}</span>
+                </div>
+                <div className={`flex justify-between ${isPrejuizo ? 'text-destructive' : 'text-green-600'}`}>
+                  <span>Lucro Projetado</span>
+                  <span className="font-bold">{formatCurrency(lucroProjetado)}</span>
+                </div>
+                <div className={`flex justify-between ${isPrejuizo ? 'text-destructive' : 'text-green-600'}`}>
+                  <span>Margem</span>
+                  <span className="font-bold">{margemProjetada.toFixed(2)}%</span>
+                </div>
+                {isPrejuizo && (
+                  <div className="mt-2 p-2 bg-destructive/10 rounded flex items-center gap-2 text-destructive text-sm">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>Venda com prejuízo!</span>
+                  </div>
+                )}
+              </div>
             </div>
             
             <div className="mt-6 flex justify-end gap-2">
@@ -669,9 +772,9 @@ export default function VendasAcessorios() {
         </Card>
       </div>
 
-      {/* Modal Buscar Cliente */}
+      {/* Modal Buscar Cliente - max-w-5xl igual Nova Venda */}
       <Dialog open={showClienteModal} onOpenChange={setShowClienteModal}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>Buscar Cliente</DialogTitle>
           </DialogHeader>
@@ -681,13 +784,14 @@ export default function VendasAcessorios() {
                 placeholder="Buscar por nome ou CPF..."
                 value={buscaCliente}
                 onChange={(e) => setBuscaCliente(e.target.value)}
+                className="flex-1"
               />
               <Button variant="outline" onClick={() => {
                 setShowClienteModal(false);
                 setShowNovoClienteModal(true);
               }}>
                 <Plus className="h-4 w-4 mr-2" />
-                Novo
+                Novo Cliente
               </Button>
             </div>
             <div className="max-h-96 overflow-y-auto">
@@ -695,17 +799,31 @@ export default function VendasAcessorios() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
-                    <TableHead>CPF</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>CPF/CNPJ</TableHead>
                     <TableHead>Telefone</TableHead>
+                    <TableHead>Cidade</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {clientesFiltrados.map(cliente => (
-                    <TableRow key={cliente.id}>
+                    <TableRow key={cliente.id} className={cliente.status === 'Inativo' ? 'opacity-50' : ''}>
                       <TableCell className="font-medium">{cliente.nome}</TableCell>
+                      <TableCell>
+                        <Badge variant={calcularTipoPessoa(cliente.cpf) === 'Pessoa Física' ? 'default' : 'secondary'}>
+                          {calcularTipoPessoa(cliente.cpf) === 'Pessoa Física' ? 'PF' : 'PJ'}
+                        </Badge>
+                      </TableCell>
                       <TableCell>{cliente.cpf}</TableCell>
                       <TableCell>{cliente.telefone}</TableCell>
+                      <TableCell>{cliente.cidade || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant={cliente.status === 'Ativo' ? 'default' : 'destructive'}>
+                          {cliente.status}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <Button 
                           size="sm"
@@ -717,6 +835,13 @@ export default function VendasAcessorios() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {clientesFiltrados.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                        Nenhum cliente encontrado.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -759,6 +884,13 @@ export default function VendasAcessorios() {
                 onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
               />
             </div>
+            <div>
+              <label className="text-sm font-medium">Cidade</label>
+              <Input 
+                value={novoCliente.cidade || ''}
+                onChange={(e) => setNovoCliente({ ...novoCliente, cidade: e.target.value })}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowNovoClienteModal(false)}>
@@ -773,7 +905,7 @@ export default function VendasAcessorios() {
 
       {/* Modal Selecionar Acessório */}
       <Dialog open={showAcessorioModal} onOpenChange={setShowAcessorioModal}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Selecionar Acessório</DialogTitle>
           </DialogHeader>
@@ -789,6 +921,7 @@ export default function VendasAcessorios() {
                   <TableRow>
                     <TableHead>ID</TableHead>
                     <TableHead>Descrição</TableHead>
+                    <TableHead>Categoria</TableHead>
                     <TableHead className="text-center">Qtd Disponível</TableHead>
                     <TableHead className="text-right">Valor Custo</TableHead>
                     <TableHead></TableHead>
@@ -798,10 +931,13 @@ export default function VendasAcessorios() {
                   {acessoriosFiltrados.map(acessorio => (
                     <TableRow 
                       key={acessorio.id}
-                      className={acessorioSelecionado?.id === acessorio.id ? 'bg-muted' : ''}
+                      className={`${acessorioSelecionado?.id === acessorio.id ? 'bg-muted' : ''} ${acessorio.quantidade < 10 ? 'bg-destructive/10' : ''}`}
                     >
-                      <TableCell className="font-mono">{acessorio.id}</TableCell>
+                      <TableCell className="font-mono text-sm">{acessorio.id}</TableCell>
                       <TableCell className="font-medium">{acessorio.descricao}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{acessorio.categoria}</Badge>
+                      </TableCell>
                       <TableCell className="text-center">
                         <Badge variant={acessorio.quantidade < 10 ? 'destructive' : 'secondary'}>
                           {acessorio.quantidade}
@@ -819,6 +955,13 @@ export default function VendasAcessorios() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {acessoriosFiltrados.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Nenhum acessório encontrado.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -826,7 +969,7 @@ export default function VendasAcessorios() {
             {acessorioSelecionado && (
               <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
                 <span className="font-medium">{acessorioSelecionado.descricao}</span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 ml-auto">
                   <label className="text-sm">Quantidade:</label>
                   <Input 
                     type="number"
@@ -848,6 +991,7 @@ export default function VendasAcessorios() {
               Cancelar
             </Button>
             <Button onClick={handleAddAcessorio} disabled={!acessorioSelecionado}>
+              <Plus className="h-4 w-4 mr-2" />
               Adicionar
             </Button>
           </DialogFooter>
@@ -858,7 +1002,10 @@ export default function VendasAcessorios() {
       <Dialog open={showConfirmacaoModal} onOpenChange={setShowConfirmacaoModal}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar Venda</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Check className="h-5 w-5" />
+              Confirmar Venda
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p>Confirme os dados para registrar a venda:</p>
@@ -880,17 +1027,34 @@ export default function VendasAcessorios() {
                 <p className="font-medium text-lg">{formatCurrency(total)}</p>
               </div>
             </div>
+            
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>Total da Venda:</span>
+                <span className="font-bold">{formatCurrency(total)}</span>
+              </div>
+              <div className={`flex justify-between ${isPrejuizo ? 'text-destructive' : 'text-green-600'}`}>
+                <span>Lucro:</span>
+                <span className="font-medium">{formatCurrency(lucroProjetado)}</span>
+              </div>
+              <div className={`flex justify-between ${isPrejuizo ? 'text-destructive' : 'text-green-600'}`}>
+                <span>Margem:</span>
+                <span className="font-medium">{margemProjetada.toFixed(2)}%</span>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowConfirmacaoModal(false)}>
               Cancelar
             </Button>
             <Button onClick={handleConfirmarVenda}>
+              <Check className="h-4 w-4 mr-2" />
               Confirmar Venda
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Modal Rascunho */}
       <Dialog open={showDraftModal} onOpenChange={setShowDraftModal}>
         <DialogContent>
