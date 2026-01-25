@@ -216,6 +216,13 @@ export default function CadastrosColaboradores() {
     return <Users className="h-4 w-4" />;
   };
 
+  const formatarCPF = (cpf: string): string => {
+    if (!cpf) return '-';
+    const cpfLimpo = cpf.replace(/\D/g, '');
+    if (cpfLimpo.length !== 11 || cpfLimpo === '00000000000') return '-';
+    return cpfLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  };
+
   // Contadores
   const contadores = {
     gestores: colaboradores.filter(c => c.eh_gestor && c.ativo).length,
@@ -311,6 +318,7 @@ export default function CadastrosColaboradores() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
+                <TableHead>CPF</TableHead>
                 <TableHead>Loja</TableHead>
                 <TableHead>Cargo</TableHead>
                 <TableHead>Telefone</TableHead>
@@ -329,6 +337,7 @@ export default function CadastrosColaboradores() {
                       {col.nome}
                     </div>
                   </TableCell>
+                  <TableCell className="text-sm font-mono">{formatarCPF(col.cpf)}</TableCell>
                   <TableCell className="text-sm">{obterNomeLoja(col.loja_id)}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className={getCargoBadgeClass(col.cargo)}>
@@ -359,7 +368,7 @@ export default function CadastrosColaboradores() {
               ))}
               {colaboradoresFiltrados.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                     Nenhum colaborador encontrado
                   </TableCell>
                 </TableRow>
