@@ -33,9 +33,12 @@ export function CadastrosLayout({ children, title }: CadastrosLayoutProps) {
 
   return (
     <PageLayout title={title}>
-      <div className="mb-6 border-b border-border">
+      <div className="relative mb-6 border-b border-border">
+        {/* Gradiente esquerdo para indicar mais conteúdo */}
+        <div className="absolute left-0 top-0 bottom-4 w-4 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />
+        
         <ScrollArea className="w-full whitespace-nowrap" type="always">
-          <nav className="flex gap-1 pb-4">
+          <nav className="flex gap-1 pb-2 px-1">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = location.pathname === tab.href;
@@ -56,8 +59,14 @@ export function CadastrosLayout({ children, title }: CadastrosLayoutProps) {
               );
             })}
           </nav>
-          <ScrollBar orientation="horizontal" className="h-2.5 bg-muted/50" />
+          <ScrollBar 
+            orientation="horizontal" 
+            className="h-3 bg-muted/40 rounded-full cursor-pointer" 
+          />
         </ScrollArea>
+        
+        {/* Gradiente direito para indicar mais conteúdo */}
+        <div className="absolute right-0 top-0 bottom-4 w-4 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />
       </div>
       {children}
     </PageLayout>
