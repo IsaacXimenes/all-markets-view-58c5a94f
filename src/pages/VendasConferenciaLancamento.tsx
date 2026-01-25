@@ -249,14 +249,14 @@ export default function VendasConferenciaLancamento() {
   };
 
   const getRowClassName = (status: StatusVenda, venda: VendaComFluxo) => {
-    // Linha vermelha para vendas com Sinal
+    // Linha âmbar para vendas com Sinal (Fiado)
     if (temPagamentoSinal(venda) || status === 'Feito Sinal') {
-      return 'bg-red-100 dark:bg-red-950/40 hover:bg-red-150 dark:hover:bg-red-950/60';
+      return 'bg-amber-500/10';
     }
     if (status === 'Recusada - Gestor') {
-      return 'bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50';
+      return 'bg-red-500/10';
     }
-    return 'bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50';
+    return 'bg-blue-500/10';
   };
 
   const getLojaNome = (lojaId: string) => {

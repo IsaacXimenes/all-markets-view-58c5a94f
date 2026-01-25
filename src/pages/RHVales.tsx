@@ -526,8 +526,15 @@ const RHVales: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                valesFiltrados.map(vale => (
-                  <TableRow key={vale.id}>
+                valesFiltrados.map(vale => {
+                  const situacao = calcularSituacaoParcelas(vale.inicioCompetencia, vale.quantidadeVezes);
+                  const getValeRowClass = () => {
+                    if (situacao.pagas === situacao.total) return 'bg-green-500/10';
+                    if (situacao.pagas > 0) return 'bg-yellow-500/10';
+                    return '';
+                  };
+                  return (
+                  <TableRow key={vale.id} className={getValeRowClass()}>
                     <TableCell>{formatDateTime(vale.dataLancamento)}</TableCell>
                     <TableCell>{vale.lancadoPorNome}</TableCell>
                     <TableCell>{getLojaNome(vale.lojaId)}</TableCell>
@@ -577,7 +584,8 @@ const RHVales: React.FC = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>

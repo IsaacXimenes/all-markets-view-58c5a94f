@@ -127,11 +127,11 @@ export default function GarantiasExtendida() {
     const tempo = calcularTempoRestante(dataFim);
     switch (tempo.status) {
       case 'expirada':
-        return 'bg-muted/50 text-muted-foreground';
+        return 'bg-gray-500/10 text-muted-foreground';
       case 'urgente':
-        return 'bg-red-50 dark:bg-red-950/30';
+        return 'bg-red-500/10';
       case 'atencao':
-        return 'bg-yellow-50 dark:bg-yellow-950/30';
+        return 'bg-yellow-500/10';
       default:
         return '';
     }

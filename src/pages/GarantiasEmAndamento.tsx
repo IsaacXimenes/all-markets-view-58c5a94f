@@ -327,7 +327,7 @@ export default function GarantiasEmAndamento() {
                     </TableRow>
                   ) : (
                       dadosFiltrados.map(({ garantia, tratativa, diasAberto }) => (
-                        <TableRow key={garantia.id} className={diasAberto > 7 ? 'bg-red-50 dark:bg-red-950/20' : ''}>
+                        <TableRow key={garantia.id} className={diasAberto > 7 ? 'bg-red-500/10' : ''}>
                           <TableCell className="font-medium">{garantia.id}</TableCell>
                           <TableCell>
                             {tratativa ? format(new Date(tratativa.dataHora), 'dd/MM/yyyy') : '-'}

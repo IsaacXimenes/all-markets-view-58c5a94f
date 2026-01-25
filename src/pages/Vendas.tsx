@@ -422,11 +422,11 @@ export default function Vendas() {
                   };
 
                   const getRowBgClass = () => {
-                    if (isPrejuizo) return 'bg-destructive/10';
-                    if (vendaIsFiado) return 'bg-amber-50 dark:bg-amber-950/20';
-                    if (statusConferencia === 'Conferência - Gestor') return 'bg-red-50 dark:bg-red-950/20';
-                    if (statusConferencia === 'Conferência - Financeiro') return 'bg-yellow-50 dark:bg-yellow-950/20';
-                    if (statusConferencia === 'Concluído') return 'bg-green-50 dark:bg-green-950/20';
+                    if (isPrejuizo) return 'bg-red-500/10';
+                    if (vendaIsFiado) return 'bg-amber-500/10';
+                    if (statusConferencia === 'Conferência - Gestor') return 'bg-red-500/10';
+                    if (statusConferencia === 'Conferência - Financeiro') return 'bg-yellow-500/10';
+                    if (statusConferencia === 'Concluído') return 'bg-green-500/10';
                     return '';
                   };
                   

@@ -56,6 +56,28 @@ const statusConfigs: Record<StatusColor, StatusConfig> = {
   }
 };
 
+// Configurações para linhas de tabela (padrão Movimentações)
+const rowConfigs: Record<StatusColor, string> = {
+  green: 'bg-green-500/10',
+  yellow: 'bg-yellow-500/10',
+  red: 'bg-red-500/10',
+  blue: 'bg-blue-500/10',
+  gray: 'bg-gray-500/10',
+  purple: 'bg-purple-500/10',
+  orange: 'bg-orange-500/10'
+};
+
+// Cor especial para Fiado/Sinal
+export const FIADO_ROW_CLASS = 'bg-amber-500/10';
+
+/**
+ * Retorna a classe CSS para colorir linha de tabela baseado no status
+ */
+export const getStatusRowClass = (status: string): string => {
+  const color = getStatusColor(status);
+  return rowConfigs[color];
+};
+
 // Mapeamento de status para cores
 const statusColorMap: Record<string, StatusColor> = {
   // Status positivos (verde)

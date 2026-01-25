@@ -520,8 +520,15 @@ const RHAdiantamentos: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                adiantamentosFiltrados.map(adiantamento => (
-                  <TableRow key={adiantamento.id}>
+                adiantamentosFiltrados.map(adiantamento => {
+                  const situacao = calcularSituacaoParcelas(adiantamento.inicioCompetencia, adiantamento.quantidadeVezes);
+                  const getAdiantamentoRowClass = () => {
+                    if (situacao.pagas === situacao.total) return 'bg-green-500/10';
+                    if (situacao.pagas > 0) return 'bg-yellow-500/10';
+                    return '';
+                  };
+                  return (
+                  <TableRow key={adiantamento.id} className={getAdiantamentoRowClass()}>
                     <TableCell>{formatDateTime(adiantamento.dataLancamento)}</TableCell>
                     <TableCell>{adiantamento.lancadoPorNome}</TableCell>
                     <TableCell>{getLojaNome(adiantamento.lojaId)}</TableCell>
@@ -571,7 +578,8 @@ const RHAdiantamentos: React.FC = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
