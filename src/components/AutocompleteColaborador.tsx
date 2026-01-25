@@ -3,7 +3,7 @@ import { useCadastroStore } from '@/store/cadastroStore';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { User, X } from 'lucide-react';
+import { User, X, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type FiltroTipo = 'todos' | 'gestores' | 'vendedores' | 'vendedoresEGestores' | 'estoquistas' | 'tecnicos' | 'motoboys';
@@ -39,7 +39,9 @@ export function AutocompleteColaborador({
     obterVendedores,
     obterEstoquistas,
     obterTecnicos,
-    obterMotoboys
+    obterMotoboys,
+    obterRodizioAtivoDoColaborador,
+    colaboradorEmRodizio
   } = useCadastroStore();
   
   const [filtro, setFiltro] = useState('');
@@ -87,7 +89,16 @@ export function AutocompleteColaborador({
     }
     
     if (filtrarPorLoja) {
-      resultado = resultado.filter(col => col.loja_id === filtrarPorLoja);
+      resultado = resultado.filter(col => {
+        // Verificar loja base
+        if (col.loja_id === filtrarPorLoja) return true;
+        
+        // Verificar se está em rodízio ativo para esta loja
+        const rodizio = obterRodizioAtivoDoColaborador(col.id);
+        if (rodizio && rodizio.loja_destino_id === filtrarPorLoja) return true;
+        
+        return false;
+      });
     }
     
     if (filtro) {
@@ -110,7 +121,7 @@ export function AutocompleteColaborador({
     });
     
     return resultado;
-  }, [colaboradores, filtro, filtrarPorCargo, filtrarPorTipo, filtrarPorLoja, apenasAtivos, obterGestores, obterVendedores, obterEstoquistas, obterTecnicos, obterMotoboys]);
+  }, [colaboradores, filtro, filtrarPorCargo, filtrarPorTipo, filtrarPorLoja, apenasAtivos, obterGestores, obterVendedores, obterEstoquistas, obterTecnicos, obterMotoboys, obterRodizioAtivoDoColaborador]);
 
   const handleSelect = (colaboradorId: string) => {
     onChange(colaboradorId);
@@ -134,6 +145,8 @@ export function AutocompleteColaborador({
     return 'bg-muted text-muted-foreground';
   };
 
+  const selecionadoEmRodizio = colaboradorSelecionado ? colaboradorEmRodizio(colaboradorSelecionado.id) : false;
+
   if (colaboradorSelecionado && !aberto) {
     return (
       <div 
@@ -150,6 +163,12 @@ export function AutocompleteColaborador({
           <Badge variant="outline" className={cn("text-xs", getCargoBadgeColor(colaboradorSelecionado.cargo))}>
             {colaboradorSelecionado.cargo}
           </Badge>
+          {selecionadoEmRodizio && (
+            <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Rodízio
+            </Badge>
+          )}
         </div>
         {!disabled && (
           <X 
@@ -177,21 +196,36 @@ export function AutocompleteColaborador({
       {aberto && colaboradoresFiltrados.length > 0 && (
         <div className="absolute z-[100] w-full mt-1 bg-popover border rounded-md shadow-lg overflow-hidden">
           <div className="max-h-64 overflow-y-auto">
-            {colaboradoresFiltrados.map(col => (
-              <div
-                key={col.id}
-                className="flex items-center justify-between px-3 py-2 hover:bg-accent cursor-pointer gap-2"
-                onMouseDown={() => handleSelect(col.id)}
-              >
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">{col.nome}</span>
-                  <span className="text-xs text-muted-foreground">{obterNomeLoja(col.loja_id)}</span>
+            {colaboradoresFiltrados.map(col => {
+              const emRodizio = colaboradorEmRodizio(col.id);
+              const rodizio = obterRodizioAtivoDoColaborador(col.id);
+              
+              return (
+                <div
+                  key={col.id}
+                  className="flex items-center justify-between px-3 py-2 hover:bg-accent cursor-pointer gap-2"
+                  onMouseDown={() => handleSelect(col.id)}
+                >
+                  <div className="flex flex-col">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{col.nome}</span>
+                      {emRodizio && (
+                        <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">
+                          <RefreshCw className="h-3 w-3" />
+                        </Badge>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {obterNomeLoja(col.loja_id)}
+                      {emRodizio && rodizio && ` → ${obterNomeLoja(rodizio.loja_destino_id)}`}
+                    </span>
+                  </div>
+                  <Badge variant="outline" className={cn("text-xs flex-shrink-0", getCargoBadgeColor(col.cargo))}>
+                    {col.cargo}
+                  </Badge>
                 </div>
-                <Badge variant="outline" className={cn("text-xs flex-shrink-0", getCargoBadgeColor(col.cargo))}>
-                  {col.cargo}
-                </Badge>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

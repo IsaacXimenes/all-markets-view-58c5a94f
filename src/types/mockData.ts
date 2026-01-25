@@ -40,6 +40,20 @@ export interface ResumoMockado {
   estoquistas: number;
 }
 
+export interface RodizioColaborador {
+  id: string;
+  colaborador_id: string;
+  loja_origem_id: string;
+  loja_destino_id: string;
+  data_inicio: string;
+  data_fim: string;
+  observacao: string;
+  ativo: boolean;
+  data_criacao: string;
+  criado_por_id: string;
+  criado_por_nome: string;
+}
+
 export interface DadosMockados {
   lojas: LojaMockada[];
   colaboradores: ColaboradorMockado[];

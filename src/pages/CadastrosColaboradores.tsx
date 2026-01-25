@@ -3,15 +3,20 @@ import { CadastrosLayout } from '@/components/layout/CadastrosLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useCadastroStore } from '@/store/cadastroStore';
-import { ColaboradorMockado } from '@/types/mockData';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { ColaboradorMockado, RodizioColaborador } from '@/types/mockData';
+import { TimelineEntry } from '@/utils/timelineApi';
 import { exportToCSV, formatCurrency } from '@/utils/formatUtils';
-import { Plus, Pencil, Trash2, Download, User, Users, Shield, Package, Wrench, Bike } from 'lucide-react';
+import { Plus, Pencil, Trash2, Download, User, Users, Shield, Package, Wrench, Bike, ArrowLeftRight, History, Clock, RefreshCw, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
@@ -35,7 +40,13 @@ export default function CadastrosColaboradores() {
     adicionarColaborador, 
     atualizarColaborador, 
     deletarColaborador,
-    obterNomeLoja
+    obterNomeLoja,
+    adicionarRodizio,
+    encerrarRodizio,
+    obterRodizioAtivoDoColaborador,
+    obterHistoricoRodiziosColaborador,
+    obterTimelineColaborador,
+    colaboradorEmRodizio
   } = useCadastroStore();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -44,6 +55,22 @@ export default function CadastrosColaboradores() {
   const [filtroCargo, setFiltroCargo] = useState<string>('todos');
   const [filtroNome, setFiltroNome] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<string>('ativos');
+  
+  // Modal de Rodízio
+  const [isRodizioModalOpen, setIsRodizioModalOpen] = useState(false);
+  const [colaboradorRodizio, setColaboradorRodizio] = useState<ColaboradorMockado | null>(null);
+  const [formRodizio, setFormRodizio] = useState({
+    loja_destino_id: '',
+    data_inicio: '',
+    data_fim: '',
+    observacao: ''
+  });
+  
+  // Modal de Histórico/Timeline
+  const [isHistoricoModalOpen, setIsHistoricoModalOpen] = useState(false);
+  const [colaboradorHistorico, setColaboradorHistorico] = useState<ColaboradorMockado | null>(null);
+  const [timelineColaborador, setTimelineColaborador] = useState<TimelineEntry[]>([]);
+  const [rodiziosColaborador, setRodiziosColaborador] = useState<RodizioColaborador[]>([]);
   
   const [form, setForm] = useState({
     nome: '',
@@ -87,6 +114,16 @@ export default function CadastrosColaboradores() {
     setEditingColaborador(null);
   };
 
+  const resetFormRodizio = () => {
+    setFormRodizio({
+      loja_destino_id: '',
+      data_inicio: '',
+      data_fim: '',
+      observacao: ''
+    });
+    setColaboradorRodizio(null);
+  };
+
   const handleOpenDialog = (colaborador?: ColaboradorMockado) => {
     if (colaborador) {
       setEditingColaborador(colaborador);
@@ -110,6 +147,71 @@ export default function CadastrosColaboradores() {
       resetForm();
     }
     setIsDialogOpen(true);
+  };
+
+  const handleOpenRodizio = (colaborador: ColaboradorMockado) => {
+    setColaboradorRodizio(colaborador);
+    setFormRodizio({
+      loja_destino_id: '',
+      data_inicio: new Date().toISOString().split('T')[0],
+      data_fim: '',
+      observacao: ''
+    });
+    setIsRodizioModalOpen(true);
+  };
+
+  const handleOpenHistorico = (colaborador: ColaboradorMockado) => {
+    setColaboradorHistorico(colaborador);
+    setTimelineColaborador(obterTimelineColaborador(colaborador.id));
+    setRodiziosColaborador(obterHistoricoRodiziosColaborador(colaborador.id));
+    setIsHistoricoModalOpen(true);
+  };
+
+  const handleSaveRodizio = () => {
+    if (!colaboradorRodizio) return;
+    
+    if (!formRodizio.loja_destino_id || !formRodizio.data_inicio || !formRodizio.data_fim) {
+      toast({ title: 'Erro', description: 'Loja destino e datas são obrigatórios', variant: 'destructive' });
+      return;
+    }
+    
+    if (formRodizio.data_fim < formRodizio.data_inicio) {
+      toast({ title: 'Erro', description: 'Data fim deve ser posterior à data início', variant: 'destructive' });
+      return;
+    }
+    
+    if (formRodizio.loja_destino_id === colaboradorRodizio.loja_id) {
+      toast({ title: 'Erro', description: 'A loja destino deve ser diferente da loja atual', variant: 'destructive' });
+      return;
+    }
+    
+    // Verificar se já existe rodízio ativo
+    const rodizioAtivo = obterRodizioAtivoDoColaborador(colaboradorRodizio.id);
+    if (rodizioAtivo) {
+      toast({ title: 'Erro', description: 'Este colaborador já possui um rodízio ativo', variant: 'destructive' });
+      return;
+    }
+    
+    adicionarRodizio({
+      colaborador_id: colaboradorRodizio.id,
+      loja_origem_id: colaboradorRodizio.loja_id,
+      loja_destino_id: formRodizio.loja_destino_id,
+      data_inicio: formRodizio.data_inicio,
+      data_fim: formRodizio.data_fim,
+      observacao: formRodizio.observacao,
+      ativo: true,
+      criado_por_id: 'admin',
+      criado_por_nome: 'Administrador'
+    });
+    
+    toast({ title: 'Sucesso', description: 'Rodízio configurado com sucesso' });
+    setIsRodizioModalOpen(false);
+    resetFormRodizio();
+  };
+
+  const handleEncerrarRodizio = (rodizioId: string) => {
+    encerrarRodizio(rodizioId, 'admin', 'Administrador');
+    toast({ title: 'Sucesso', description: 'Rodízio encerrado com sucesso' });
   };
 
   const handleSave = () => {
@@ -223,6 +325,19 @@ export default function CadastrosColaboradores() {
     return cpfLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
   };
 
+  const getTimelineIcon = (tipo: string) => {
+    switch (tipo) {
+      case 'rodizio_inicio':
+        return <ArrowLeftRight className="h-4 w-4 text-blue-500" />;
+      case 'rodizio_encerramento':
+        return <X className="h-4 w-4 text-red-500" />;
+      case 'rodizio_alteracao':
+        return <RefreshCw className="h-4 w-4 text-yellow-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
   // Contadores
   const contadores = {
     gestores: colaboradores.filter(c => c.eh_gestor && c.ativo).length,
@@ -329,43 +444,91 @@ export default function CadastrosColaboradores() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {colaboradoresFiltrados.map(col => (
-                <TableRow key={col.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
-                      {getCargoIcon(col.cargo)}
-                      {col.nome}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm font-mono">{formatarCPF(col.cpf)}</TableCell>
-                  <TableCell className="text-sm">{obterNomeLoja(col.loja_id)}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={getCargoBadgeClass(col.cargo)}>
-                      {col.cargo}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm">{col.telefone || '-'}</TableCell>
-                  <TableCell className="text-sm">
-                    {col.data_admissao ? format(new Date(col.data_admissao), 'dd/MM/yyyy') : '-'}
-                  </TableCell>
-                  <TableCell className="text-sm">{formatCurrency(col.salario_fixo)}</TableCell>
-                  <TableCell>
-                    <Badge variant={col.ativo ? 'default' : 'secondary'}>
-                      {col.ativo ? 'Ativo' : 'Inativo'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(col)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(col.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {colaboradoresFiltrados.map(col => {
+                const rodizioAtivo = obterRodizioAtivoDoColaborador(col.id);
+                const emRodizio = colaboradorEmRodizio(col.id);
+                
+                return (
+                  <TableRow key={col.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {getCargoIcon(col.cargo)}
+                        {col.nome}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm font-mono">{formatarCPF(col.cpf)}</TableCell>
+                    <TableCell className="text-sm">
+                      <div className="flex flex-col gap-1">
+                        <span>{obterNomeLoja(col.loja_id)}</span>
+                        {emRodizio && rodizioAtivo && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 text-xs w-fit cursor-help">
+                                  <RefreshCw className="h-3 w-3 mr-1" />
+                                  Em Rodízio
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <div className="space-y-1 text-xs">
+                                  <p><strong>Loja Destino:</strong> {obterNomeLoja(rodizioAtivo.loja_destino_id)}</p>
+                                  <p><strong>Período:</strong> {format(new Date(rodizioAtivo.data_inicio), 'dd/MM/yyyy')} a {format(new Date(rodizioAtivo.data_fim), 'dd/MM/yyyy')}</p>
+                                  {rodizioAtivo.observacao && <p><strong>Obs:</strong> {rodizioAtivo.observacao}</p>}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={getCargoBadgeClass(col.cargo)}>
+                        {col.cargo}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">{col.telefone || '-'}</TableCell>
+                    <TableCell className="text-sm">
+                      {col.data_admissao ? format(new Date(col.data_admissao), 'dd/MM/yyyy') : '-'}
+                    </TableCell>
+                    <TableCell className="text-sm">{formatCurrency(col.salario_fixo)}</TableCell>
+                    <TableCell>
+                      <Badge variant={col.ativo ? 'default' : 'secondary'}>
+                        {col.ativo ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="sm" onClick={() => handleOpenRodizio(col)}>
+                                <ArrowLeftRight className="h-4 w-4 text-blue-500" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Configurar Rodízio</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="sm" onClick={() => handleOpenHistorico(col)}>
+                                <History className="h-4 w-4 text-gray-500" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Ver Histórico</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(col)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(col.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {colaboradoresFiltrados.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
@@ -485,6 +648,167 @@ export default function CadastrosColaboradores() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Rodízio */}
+      <Dialog open={isRodizioModalOpen} onOpenChange={setIsRodizioModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowLeftRight className="h-5 w-5 text-blue-500" />
+              Configurar Rodízio Temporário
+            </DialogTitle>
+          </DialogHeader>
+          
+          {colaboradorRodizio && (
+            <div className="space-y-4 py-4">
+              <div className="bg-muted/50 p-3 rounded-lg space-y-1">
+                <p className="text-sm"><strong>Colaborador:</strong> {colaboradorRodizio.nome}</p>
+                <p className="text-sm"><strong>Loja Base:</strong> {obterNomeLoja(colaboradorRodizio.loja_id)}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Loja Destino *</Label>
+                <AutocompleteLoja
+                  value={formRodizio.loja_destino_id}
+                  onChange={(id) => setFormRodizio({ ...formRodizio, loja_destino_id: id })}
+                  placeholder="Selecione a loja destino"
+                  apenasLojasTipoLoja={true}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data Início *</Label>
+                  <Input 
+                    type="date" 
+                    value={formRodizio.data_inicio}
+                    onChange={e => setFormRodizio({ ...formRodizio, data_inicio: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data Fim *</Label>
+                  <Input 
+                    type="date" 
+                    value={formRodizio.data_fim}
+                    onChange={e => setFormRodizio({ ...formRodizio, data_fim: e.target.value })}
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Observação</Label>
+                <Textarea 
+                  placeholder="Justificativa ou detalhes do rodízio temporário..."
+                  value={formRodizio.observacao}
+                  onChange={e => setFormRodizio({ ...formRodizio, observacao: e.target.value })}
+                  rows={3}
+                />
+              </div>
+              
+              <div className="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-lg">
+                <p className="text-sm text-yellow-600">
+                  ⚠️ O colaborador aparecerá disponível na loja destino durante o período informado.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setIsRodizioModalOpen(false); resetFormRodizio(); }}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveRodizio}>
+              <ArrowLeftRight className="h-4 w-4 mr-2" />
+              Confirmar Rodízio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Histórico/Timeline */}
+      <Dialog open={isHistoricoModalOpen} onOpenChange={setIsHistoricoModalOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Histórico - {colaboradorHistorico?.nome}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-4">
+              {/* Rodízios ativos */}
+              {rodiziosColaborador.filter(r => r.ativo).length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-muted-foreground">Rodízio Ativo</h4>
+                  {rodiziosColaborador.filter(r => r.ativo).map(rodizio => (
+                    <div key={rodizio.id} className="bg-blue-500/10 border border-blue-500/30 p-3 rounded-lg">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">{obterNomeLoja(rodizio.loja_origem_id)} → {obterNomeLoja(rodizio.loja_destino_id)}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(rodizio.data_inicio), 'dd/MM/yyyy')} a {format(new Date(rodizio.data_fim), 'dd/MM/yyyy')}
+                          </p>
+                          {rodizio.observacao && (
+                            <p className="text-xs italic">"{rodizio.observacao}"</p>
+                          )}
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleEncerrarRodizio(rodizio.id)}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Timeline */}
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium text-muted-foreground">Timeline de Eventos</h4>
+                {timelineColaborador.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum evento registrado
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {timelineColaborador.map(entry => (
+                      <div key={entry.id} className="flex gap-3 pb-3 border-b last:border-0">
+                        <div className="flex-shrink-0 mt-0.5">
+                          {getTimelineIcon(entry.tipo)}
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <div className="flex justify-between items-start">
+                            <p className="text-sm font-medium">{entry.titulo}</p>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(entry.dataHora), 'dd/MM/yyyy HH:mm')}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">{entry.descricao}</p>
+                          {entry.metadata?.observacao && (
+                            <p className="text-xs italic text-muted-foreground">Obs: "{entry.metadata.observacao}"</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">Por: {entry.usuarioNome}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </ScrollArea>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsHistoricoModalOpen(false)}>
+              Fechar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

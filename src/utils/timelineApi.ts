@@ -2,8 +2,8 @@
 
 export interface TimelineEntry {
   id: string;
-  entidadeId: string; // ID da OS, Garantia, Solicitação, Lote
-  entidadeTipo: 'OS' | 'Garantia' | 'Solicitacao' | 'Lote' | 'Produto';
+  entidadeId: string; // ID da OS, Garantia, Solicitação, Lote, Colaborador
+  entidadeTipo: 'OS' | 'Garantia' | 'Solicitacao' | 'Lote' | 'Produto' | 'Colaborador';
   dataHora: string;
   tipo: string;
   titulo: string;
@@ -129,5 +129,69 @@ export const registrarPagamento = (
     usuarioId,
     usuarioNome,
     metadata: { fornecedorNome, formaPagamento, valor }
+  });
+};
+
+// ===== TIMELINE DE RODÍZIO DE COLABORADORES =====
+
+export const registrarInicioRodizio = (
+  colaboradorId: string,
+  colaboradorNome: string,
+  lojaOrigemNome: string,
+  lojaDestinoNome: string,
+  dataInicio: string,
+  dataFim: string,
+  observacao: string,
+  usuarioId: string,
+  usuarioNome: string
+): TimelineEntry => {
+  return addTimelineEntry({
+    entidadeId: colaboradorId,
+    entidadeTipo: 'Colaborador',
+    dataHora: new Date().toISOString(),
+    tipo: 'rodizio_inicio',
+    titulo: 'Rodízio Iniciado',
+    descricao: `Rodízio de ${lojaOrigemNome} para ${lojaDestinoNome} (${dataInicio} a ${dataFim})`,
+    usuarioId,
+    usuarioNome,
+    metadata: { lojaOrigemNome, lojaDestinoNome, dataInicio, dataFim, observacao, colaboradorNome }
+  });
+};
+
+export const registrarAlteracaoRodizio = (
+  colaboradorId: string,
+  alteracao: string,
+  observacao: string,
+  usuarioId: string,
+  usuarioNome: string
+): TimelineEntry => {
+  return addTimelineEntry({
+    entidadeId: colaboradorId,
+    entidadeTipo: 'Colaborador',
+    dataHora: new Date().toISOString(),
+    tipo: 'rodizio_alteracao',
+    titulo: 'Rodízio Alterado',
+    descricao: alteracao,
+    usuarioId,
+    usuarioNome,
+    metadata: { observacao }
+  });
+};
+
+export const registrarEncerramentoRodizio = (
+  colaboradorId: string,
+  motivo: string,
+  usuarioId: string,
+  usuarioNome: string
+): TimelineEntry => {
+  return addTimelineEntry({
+    entidadeId: colaboradorId,
+    entidadeTipo: 'Colaborador',
+    dataHora: new Date().toISOString(),
+    tipo: 'rodizio_encerramento',
+    titulo: 'Rodízio Encerrado',
+    descricao: motivo,
+    usuarioId,
+    usuarioNome
   });
 };
