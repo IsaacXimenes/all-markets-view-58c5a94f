@@ -235,13 +235,15 @@ export default function EstoqueProdutosPendentes() {
   return (
     <EstoqueLayout title="Produtos Pendentes">
       {/* Card de Somatório Valor Origem */}
-      <Card className="mb-4 bg-gradient-to-br from-red-50 to-rose-100 dark:from-red-950/50 dark:to-rose-900/30 border-red-200 dark:border-red-800">
-        <CardContent className="pt-6">
+      <Card className="mb-4 bg-red-500/10">
+        <CardContent className="p-4">
           <div className="flex items-center gap-3">
-            <DollarSign className="h-8 w-8 text-red-600 opacity-70" />
+            <div className="p-2 rounded-lg bg-red-500/10">
+              <DollarSign className="h-5 w-5 text-red-500" />
+            </div>
             <div>
-              <p className="text-sm text-red-700 dark:text-red-300">Valor Total de Origem (Pendentes)</p>
-              <p className="text-3xl font-bold text-red-800 dark:text-red-200">{formatCurrency(totalValorOrigem)}</p>
+              <p className="text-sm text-muted-foreground">Valor Total de Origem (Pendentes)</p>
+              <p className="text-2xl font-bold text-red-500">{formatCurrency(totalValorOrigem)}</p>
             </div>
           </div>
         </CardContent>
@@ -250,74 +252,86 @@ export default function EstoqueProdutosPendentes() {
       {/* Dashboard Cards - Sticky */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6 sticky top-0 z-10 bg-background py-2">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalPendentes}</div>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Package className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold">{stats.totalPendentes}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Clock className="h-4 w-4 text-yellow-500" />
-              Pendente Estoque
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.pendenteEstoque}</div>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-yellow-500/10">
+                <Clock className="h-5 w-5 text-yellow-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pendente Estoque</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.pendenteEstoque}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Wrench className="h-4 w-4 text-blue-500" />
-              Em Assistência
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.emAssistencia}</div>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <Wrench className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Em Assistência</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.emAssistencia}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-orange-500" />
-              Aguard. Peça
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.aguardandoPeca}</div>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-orange-500/10">
+                <AlertTriangle className="h-5 w-5 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Aguard. Peça</p>
+                <p className="text-2xl font-bold text-orange-600">{stats.aguardandoPeca}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <RotateCcw className="h-4 w-4 text-purple-500" />
-              Revisão Final
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{stats.retornados}</div>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-purple-500/10">
+                <RotateCcw className="h-5 w-5 text-purple-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Revisão Final</p>
+                <p className="text-2xl font-bold text-purple-600">{stats.retornados}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Undo2 className="h-4 w-4 text-gray-500" />
-              Devolvido
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{stats.devolvidos}</div>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gray-500/10">
+                <Undo2 className="h-5 w-5 text-gray-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Devolvido</p>
+                <p className="text-2xl font-bold text-gray-600">{stats.devolvidos}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

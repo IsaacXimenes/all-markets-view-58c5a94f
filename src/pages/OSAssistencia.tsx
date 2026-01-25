@@ -13,7 +13,7 @@ import { getClientes } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
-import { Plus, Eye, FileText, Download, AlertTriangle, Clock, Edit, RefreshCcw } from 'lucide-react';
+import { Plus, Eye, FileText, Download, AlertTriangle, Clock, Edit, RefreshCcw, Wrench, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatIMEI } from '@/utils/imeiMask';
 
@@ -201,32 +201,67 @@ export default function OSAssistencia() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold">{totalOS}</div>
-              <div className="text-xs text-muted-foreground">Total de OS</div>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total de OS</p>
+                  <p className="text-2xl font-bold">{totalOS}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">{osConcluidas}</div>
-              <div className="text-xs text-muted-foreground">Concluídas</div>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-500/10">
+                  <Clock className="h-5 w-5 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Concluídas</p>
+                  <p className="text-2xl font-bold text-green-600">{osConcluidas}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">{osEmAndamento}</div>
-              <div className="text-xs text-muted-foreground">Em Serviço</div>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-500/10">
+                  <Wrench className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Em Serviço</p>
+                  <p className="text-2xl font-bold text-blue-600">{osEmAndamento}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-yellow-600">{osAguardando}</div>
-              <div className="text-xs text-muted-foreground">Aguardando/Peças</div>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-yellow-500/10">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Aguardando/Peças</p>
+                  <p className="text-2xl font-bold text-yellow-600">{osAguardando}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold">{formatCurrency(valorTotal)}</div>
-              <div className="text-xs text-muted-foreground">Valor Total</div>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-500/10">
+                  <DollarSign className="h-5 w-5 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Valor Total</p>
+                  <p className="text-2xl font-bold">{formatCurrency(valorTotal)}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

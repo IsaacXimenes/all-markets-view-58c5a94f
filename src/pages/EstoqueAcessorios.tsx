@@ -179,48 +179,60 @@ export default function EstoqueAcessorios() {
     <EstoqueLayout title="Gerenciamento de Acessórios">
       <div className="space-y-6">
         {/* Cards de Estatísticas */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Acessórios Distintos</CardTitle>
-              <Layers className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{estatisticas.totalDistintos}</div>
-              <p className="text-xs text-muted-foreground">Tipos diferentes</p>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Layers className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Acessórios Distintos</p>
+                  <p className="text-2xl font-bold">{estatisticas.totalDistintos}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Quantidade Total</CardTitle>
-              <Hash className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{estatisticas.quantidadeTotal}</div>
-              <p className="text-xs text-muted-foreground">Unidades em estoque</p>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-blue-500/10">
+                  <Hash className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Quantidade Total</p>
+                  <p className="text-2xl font-bold">{estatisticas.quantidadeTotal}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Valor de Custo Total</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(estatisticas.valorCustoTotal)}</div>
-              <p className="text-xs text-muted-foreground">Base custo</p>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-500/10">
+                  <DollarSign className="h-5 w-5 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Valor de Custo Total</p>
+                  <p className="text-2xl font-bold">{formatCurrency(estatisticas.valorCustoTotal)}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Valor Recomendado Total</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{formatCurrency(estatisticas.valorRecomendadoTotal)}</div>
-              <p className="text-xs text-muted-foreground">Potencial de venda</p>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-500/10">
+                  <TrendingUp className="h-5 w-5 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Valor Recomendado Total</p>
+                  <p className="text-2xl font-bold text-purple-500">{formatCurrency(estatisticas.valorRecomendadoTotal)}</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

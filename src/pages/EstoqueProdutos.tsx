@@ -120,54 +120,60 @@ export default function EstoqueProdutos() {
       <div className="space-y-6">
         {/* Dashboard Cards - Sticky */}
         <div className="sticky top-0 z-10 bg-background pb-4">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total de Produtos</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{statsFiltrados.totalProdutos}</div>
-                <p className="text-xs text-muted-foreground">Unidades em estoque</p>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Package className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total de Produtos</p>
+                    <p className="text-2xl font-bold">{statsFiltrados.totalProdutos}</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Valor Total do Estoque</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatCurrency(statsFiltrados.valorTotalEstoque)}
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-green-500/10">
+                    <DollarSign className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Valor Total do Estoque</p>
+                    <p className="text-2xl font-bold">{formatCurrency(statsFiltrados.valorTotalEstoque)}</p>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Base custo</p>
               </CardContent>
             </Card>
 
-            <Card className={statsFiltrados.produtosBateriaFraca > 0 ? 'bg-destructive/10' : ''}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Saúde da Bateria &lt; 85%</CardTitle>
-                <AlertTriangle className={`h-4 w-4 ${statsFiltrados.produtosBateriaFraca > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${statsFiltrados.produtosBateriaFraca > 0 ? 'text-destructive' : ''}`}>
-                  {statsFiltrados.produtosBateriaFraca}
+            <Card className={statsFiltrados.produtosBateriaFraca > 0 ? 'bg-orange-500/10' : ''}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-orange-500/10">
+                    <AlertTriangle className={`h-5 w-5 ${statsFiltrados.produtosBateriaFraca > 0 ? 'text-orange-500' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Saúde Bateria &lt; 85%</p>
+                    <p className={`text-2xl font-bold ${statsFiltrados.produtosBateriaFraca > 0 ? 'text-orange-500' : ''}`}>{statsFiltrados.produtosBateriaFraca}</p>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Produtos com bateria degradada</p>
               </CardContent>
             </Card>
 
-            <Card className={statsFiltrados.notasPendentes > 0 ? 'bg-destructive/10' : ''}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Notas Pendentes</CardTitle>
-                <FileWarning className={`h-4 w-4 ${statsFiltrados.notasPendentes > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${statsFiltrados.notasPendentes > 0 ? 'text-destructive' : ''}`}>
-                  {statsFiltrados.notasPendentes}
+            <Card className={statsFiltrados.notasPendentes > 0 ? 'bg-red-500/10' : ''}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-red-500/10">
+                    <FileWarning className={`h-5 w-5 ${statsFiltrados.notasPendentes > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Notas Pendentes</p>
+                    <p className={`text-2xl font-bold ${statsFiltrados.notasPendentes > 0 ? 'text-red-500' : ''}`}>{statsFiltrados.notasPendentes}</p>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground">Aguardando financeiro</p>
               </CardContent>
             </Card>
           </div>

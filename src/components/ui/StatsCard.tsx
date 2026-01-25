@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react';
 
 interface StatsCardProps {
@@ -39,34 +38,38 @@ export function StatsCard({
       )}
       onClick={onClick}
     >
-      <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon && <div className="h-4 w-4 text-muted-foreground">{icon}</div>}
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold tracking-tight truncate" style={{ lineHeight: '1.5' }}>
-          <span className={valueClassName}>{value}</span>
-        </div>
-        
-        {(description || trend !== undefined) && (
-          <div className="flex items-center text-xs mt-1">
-            {trend !== undefined && (
-              <span className={cn(
-                "inline-flex items-center mr-1",
-                isTrendPositive ? "text-success" : "text-danger"
-              )}>
-                {isTrendPositive ? <ArrowUpIcon className="h-3 w-3 mr-1" /> : <ArrowDownIcon className="h-3 w-3 mr-1" />}
-                {formattedTrend}
-              </span>
-            )}
-            {trendLabel && <span className="text-muted-foreground ml-1">{trendLabel}</span>}
-            {description && (
-              <p className={cn("text-muted-foreground", trend !== undefined ? "ml-2" : "")}>
-                {description}
-              </p>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3">
+          {icon && (
+            <div className="p-2 rounded-lg bg-primary/10">
+              <div className="h-5 w-5 text-primary">{icon}</div>
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-muted-foreground">{title}</p>
+            <p className={cn("text-2xl font-bold truncate", valueClassName)}>{value}</p>
+            
+            {(description || trend !== undefined || trendLabel) && (
+              <div className="flex items-center text-xs mt-1">
+                {trend !== undefined && (
+                  <span className={cn(
+                    "inline-flex items-center mr-1",
+                    isTrendPositive ? "text-green-500" : "text-red-500"
+                  )}>
+                    {isTrendPositive ? <ArrowUpIcon className="h-3 w-3 mr-1" /> : <ArrowDownIcon className="h-3 w-3 mr-1" />}
+                    {formattedTrend}
+                  </span>
+                )}
+                {trendLabel && <span className="text-muted-foreground ml-1">{trendLabel}</span>}
+                {description && (
+                  <p className={cn("text-muted-foreground", trend !== undefined ? "ml-2" : "")}>
+                    {description}
+                  </p>
+                )}
+              </div>
             )}
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
   );

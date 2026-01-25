@@ -77,50 +77,58 @@ export default function EstoqueNotasCompra() {
     <EstoqueLayout title="Notas de Compra">
       <div className="space-y-4">
         {/* Cards de Dashboard */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 border-blue-200 dark:border-blue-800">
-            <CardContent className="pt-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <FileText className="h-8 w-8 text-blue-600 opacity-70" />
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
                 <div>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">Qtd de Notas</p>
-                  <p className="text-3xl font-bold text-blue-800 dark:text-blue-200">{stats.qtdNotas}</p>
+                  <p className="text-sm text-muted-foreground">Qtd de Notas</p>
+                  <p className="text-2xl font-bold">{stats.qtdNotas}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/30 border-purple-200 dark:border-purple-800">
-            <CardContent className="pt-6">
+          <Card>
+            <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <DollarSign className="h-8 w-8 text-purple-600 opacity-70" />
+                <div className="p-2 rounded-lg bg-purple-500/10">
+                  <DollarSign className="h-5 w-5 text-purple-500" />
+                </div>
                 <div>
-                  <p className="text-sm text-purple-700 dark:text-purple-300">Valor Total</p>
-                  <p className="text-2xl font-bold text-purple-800 dark:text-purple-200">{formatCurrency(stats.valorTotal)}</p>
+                  <p className="text-sm text-muted-foreground">Valor Total</p>
+                  <p className="text-2xl font-bold">{formatCurrency(stats.valorTotal)}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
-            <CardContent className="pt-6">
+          <Card>
+            <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <CheckCircle className="h-8 w-8 text-green-600 opacity-70" />
+                <div className="p-2 rounded-lg bg-green-500/10">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                </div>
                 <div>
-                  <p className="text-sm text-green-700 dark:text-green-300">Valor Concluído</p>
-                  <p className="text-2xl font-bold text-green-800 dark:text-green-200">{formatCurrency(stats.valorConcluido)}</p>
+                  <p className="text-sm text-muted-foreground">Valor Concluído</p>
+                  <p className="text-2xl font-bold text-green-500">{formatCurrency(stats.valorConcluido)}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/30 border-orange-200 dark:border-orange-800">
-            <CardContent className="pt-6">
+          <Card>
+            <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <Clock className="h-8 w-8 text-orange-600 opacity-70" />
+                <div className="p-2 rounded-lg bg-orange-500/10">
+                  <Clock className="h-5 w-5 text-orange-500" />
+                </div>
                 <div>
-                  <p className="text-sm text-orange-700 dark:text-orange-300">Valor Pendente</p>
-                  <p className="text-2xl font-bold text-orange-800 dark:text-orange-200">{formatCurrency(stats.valorPendente)}</p>
+                  <p className="text-sm text-muted-foreground">Valor Pendente</p>
+                  <p className="text-2xl font-bold text-orange-500">{formatCurrency(stats.valorPendente)}</p>
                 </div>
               </div>
             </CardContent>
