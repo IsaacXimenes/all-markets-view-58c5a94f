@@ -939,3 +939,140 @@ export const abaterProdutoDoEstoque = (produtoId: string, lojaVendaId: string): 
   
   return false;
 };
+
+// ============= VALIDAÇÃO PROGRESSIVA DE APARELHOS =============
+
+// Validar um aparelho individualmente e atualizar valorConferido da nota
+export const validarAparelhoNota = (
+  notaId: string,
+  aparelhoImei: string,
+  dados: {
+    responsavel: string;
+    observacoes?: string;
+  }
+): { sucesso: boolean; nota?: NotaCompra; percentualConferencia?: number; conferidoCompleto?: boolean; discrepancia?: boolean } => {
+  const nota = notasCompra.find(n => n.id === notaId);
+  if (!nota) return { sucesso: false };
+
+  // Encontrar o aparelho na nota
+  const aparelhoIndex = nota.produtos.findIndex(p => p.imei === aparelhoImei);
+  if (aparelhoIndex === -1) return { sucesso: false };
+
+  const aparelho = nota.produtos[aparelhoIndex];
+
+  // Verificar se já foi conferido
+  if (aparelho.statusConferencia === 'Conferido') {
+    return { sucesso: false };
+  }
+
+  // Atribuir ID ao produto se não tiver
+  if (!aparelho.id) {
+    aparelho.id = `PROD-${nota.id}-${String(aparelhoIndex + 1).padStart(3, '0')}`;
+  }
+
+  // Marcar como conferido
+  aparelho.statusConferencia = 'Conferido';
+  aparelho.dataConferencia = new Date().toISOString();
+  aparelho.responsavelConferencia = dados.responsavel;
+
+  // Atualizar nota
+  nota.produtos[aparelhoIndex] = aparelho;
+
+  // Recalcular valores conferidos
+  const aparelhosConferidos = nota.produtos.filter(p => p.statusConferencia === 'Conferido');
+  const valorConferido = aparelhosConferidos.reduce((acc, p) => acc + p.valorTotal, 0);
+  const totalAparelhos = nota.produtos.length;
+  const percentualConferencia = Math.round((aparelhosConferidos.length / totalAparelhos) * 100);
+
+  nota.valorConferido = valorConferido;
+  nota.valorPendente = nota.valorTotal - valorConferido;
+  nota.responsavelEstoque = dados.responsavel;
+
+  // Verificar se atingiu 100%
+  const conferidoCompleto = aparelhosConferidos.length === totalAparelhos;
+  
+  // Detectar discrepâncias (tolerância de 0.1%)
+  let discrepancia = false;
+  let statusConferencia: NotaCompra['statusConferencia'] = 'Em Conferência';
+
+  if (conferidoCompleto) {
+    const tolerancia = nota.valorTotal * 0.001;
+    if (Math.abs(valorConferido - nota.valorTotal) > tolerancia) {
+      discrepancia = true;
+      nota.discrepancia = true;
+      statusConferencia = 'Discrepância Detectada';
+      
+      if (valorConferido < nota.valorTotal) {
+        nota.motivoDiscrepancia = `Valor conferido (${formatCurrency(valorConferido)}) menor que valor da nota (${formatCurrency(nota.valorTotal)})`;
+        nota.acaoRecomendada = 'Cobrar Fornecedor';
+      } else {
+        nota.motivoDiscrepancia = `Valor conferido (${formatCurrency(valorConferido)}) maior que valor da nota (${formatCurrency(nota.valorTotal)})`;
+        nota.acaoRecomendada = 'Cobrar Estoque';
+      }
+    } else {
+      statusConferencia = 'Conferência Completa';
+      nota.dataConferenciaCompleta = new Date().toISOString();
+    }
+  }
+
+  nota.statusConferencia = statusConferencia;
+
+  // Adicionar entrada na timeline
+  if (!nota.timeline) {
+    nota.timeline = [];
+  }
+  
+  nota.timeline.unshift({
+    id: `TL-${nota.id}-${String(nota.timeline.length + 1).padStart(3, '0')}`,
+    data: new Date().toISOString(),
+    tipo: 'validacao',
+    titulo: `Aparelho Validado`,
+    descricao: `${aparelho.marca} ${aparelho.modelo} (IMEI: ${aparelhoImei}) conferido. Progresso: ${aparelhosConferidos.length}/${totalAparelhos} (${percentualConferencia}%)`,
+    responsavel: dados.responsavel,
+    aparelhoId: aparelho.id,
+    valor: aparelho.valorTotal
+  });
+
+  return {
+    sucesso: true,
+    nota,
+    percentualConferencia,
+    conferidoCompleto,
+    discrepancia
+  };
+};
+
+// Verificar conferência de uma nota
+export const verificarConferenciaNota = (notaId: string): {
+  conferido: boolean;
+  percentual: number;
+  discrepancia: boolean;
+  motivo?: string;
+  aparelhosConferidos: number;
+  aparelhosTotal: number;
+} => {
+  const nota = notasCompra.find(n => n.id === notaId);
+  if (!nota) return { conferido: false, percentual: 0, discrepancia: false, aparelhosConferidos: 0, aparelhosTotal: 0 };
+
+  const aparelhosConferidos = nota.produtos.filter(p => p.statusConferencia === 'Conferido').length;
+  const aparelhosTotal = nota.produtos.length;
+  const percentual = Math.round((aparelhosConferidos / aparelhosTotal) * 100);
+  const conferido = aparelhosConferidos === aparelhosTotal;
+  
+  return {
+    conferido,
+    percentual,
+    discrepancia: nota.discrepancia || false,
+    motivo: nota.motivoDiscrepancia,
+    aparelhosConferidos,
+    aparelhosTotal
+  };
+};
+
+// Helper para formatar moeda
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value);
+};
