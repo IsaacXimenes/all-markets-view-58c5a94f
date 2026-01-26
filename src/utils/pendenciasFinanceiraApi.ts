@@ -112,6 +112,7 @@ export const atualizarPendencia = (
     aparelhosConferidos?: number; 
     statusConferencia?: PendenciaFinanceira['statusConferencia'];
     responsavel?: string;
+    aparelhoInfo?: { modelo: string; imei: string; valor: number };
   }
 ): PendenciaFinanceira | null => {
   const index = pendenciasFinanceiras.findIndex(p => p.notaId === notaId);
@@ -161,17 +162,29 @@ export const atualizarPendencia = (
   pendencia.slaStatus = sla.status;
   pendencia.slaAlerta = sla.alerta;
   
-  // Adicionar timeline
+  // Adicionar timeline com detalhes do aparelho validado
   if (dados.responsavel) {
+    const descricao = dados.aparelhoInfo 
+      ? `${dados.aparelhoInfo.modelo} (IMEI: ${dados.aparelhoInfo.imei}) conferido - ${formatCurrency(dados.aparelhoInfo.valor)}. Progresso: ${pendencia.aparelhosConferidos}/${pendencia.aparelhosTotal} (${pendencia.percentualConferencia}%)`
+      : `${pendencia.aparelhosConferidos}/${pendencia.aparelhosTotal} aparelhos conferidos (${pendencia.percentualConferencia}%)`;
+    
     const newTimelineEntry: TimelineEntry = {
       id: `TL-${notaId}-${String(pendencia.timeline.length + 1).padStart(3, '0')}`,
       data: new Date().toISOString(),
       tipo: 'validacao',
-      titulo: 'Progresso de conferência',
-      descricao: `${pendencia.aparelhosConferidos}/${pendencia.aparelhosTotal} aparelhos conferidos (${pendencia.percentualConferencia}%)`,
+      titulo: 'Aparelho Validado',
+      descricao,
       responsavel: dados.responsavel
     };
     pendencia.timeline.unshift(newTimelineEntry);
+    
+    // Notificar Financeiro sobre progresso (a cada aparelho validado)
+    addNotification({
+      type: 'aparelho_validado',
+      title: `Progresso de conferência - ${notaId}`,
+      description: `${pendencia.aparelhosConferidos}/${pendencia.aparelhosTotal} aparelhos validados (${pendencia.percentualConferencia}%)`,
+      targetUsers: ['financeiro']
+    });
   }
   
   pendenciasFinanceiras[index] = pendencia;

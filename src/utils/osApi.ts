@@ -397,6 +397,46 @@ export const salvarParecerEstoque = (
     responsavel
   });
 
+  // ============= VALIDAÇÃO PROGRESSIVA =============
+  // Se o produto veio de uma nota, atualizar validação progressiva
+  if (produto.notaOuVendaId && produto.notaOuVendaId.startsWith('NC-') || produto.notaOuVendaId?.startsWith('URG-')) {
+    try {
+      // Importar dinamicamente para evitar dependência circular
+      const { validarAparelhoNota, verificarConferenciaNota } = require('./estoqueApi');
+      const { atualizarPendencia, getPendenciaPorNota } = require('./pendenciasFinanceiraApi');
+      const { addNotification } = require('./notificationsApi');
+      
+      // Validar o aparelho na nota
+      const resultado = validarAparelhoNota(produto.notaOuVendaId, produto.imei, {
+        responsavel,
+        observacoes
+      });
+      
+      if (resultado.sucesso) {
+        // Atualizar pendência financeira
+        const conferencia = verificarConferenciaNota(produto.notaOuVendaId);
+        
+        atualizarPendencia(produto.notaOuVendaId, {
+          valorConferido: resultado.nota?.valorConferido,
+          aparelhosConferidos: conferencia.aparelhosConferidos,
+          statusConferencia: resultado.conferidoCompleto 
+            ? (resultado.discrepancia ? 'Discrepância Detectada' : 'Conferência Completa') 
+            : 'Em Conferência',
+          responsavel,
+          aparelhoInfo: {
+            modelo: `${produto.marca} ${produto.modelo}`,
+            imei: produto.imei,
+            valor: produto.valorCusto
+          }
+        });
+        
+        console.log(`[Validação Progressiva] Aparelho ${produto.imei} validado na nota ${produto.notaOuVendaId}. Progresso: ${conferencia.percentual}%`);
+      }
+    } catch (error) {
+      console.warn('[Validação Progressiva] Erro ao atualizar nota:', error);
+    }
+  }
+
   // Se aprovado direto pelo estoque OU produto revisado e deferido
   if (status === 'Análise Realizada – Produto em ótimo estado' || status === 'Produto revisado e deferido') {
     produto.timeline.push({
