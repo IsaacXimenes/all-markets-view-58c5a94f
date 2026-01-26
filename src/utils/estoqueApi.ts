@@ -12,11 +12,13 @@ export interface HistoricoValorRecomendado {
 export interface TimelineEntry {
   id: string;
   data: string;
-  tipo: 'entrada' | 'parecer_estoque' | 'parecer_assistencia' | 'despesa' | 'liberacao';
+  tipo: 'entrada' | 'validacao' | 'pagamento' | 'discrepancia' | 'alerta_sla' | 'parecer_estoque' | 'parecer_assistencia' | 'despesa' | 'liberacao';
   titulo: string;
   descricao: string;
   responsavel?: string;
   valor?: number;
+  aparelhoId?: string; // Para validações de aparelhos específicos
+  comprovante?: string; // URL de comprovante
 }
 
 export interface Produto {
@@ -48,6 +50,25 @@ export interface Produto {
   movimentacaoId?: string; // ID da movimentação ativa
 }
 
+// Produto individual dentro de uma nota
+export interface ProdutoNota {
+  id?: string; // ID único do produto na nota
+  marca: string;
+  modelo: string;
+  cor: string;
+  imei: string;
+  tipo: 'Novo' | 'Seminovo';
+  tipoProduto?: 'Aparelho' | 'Acessório';
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+  saudeBateria: number;
+  // Campos de conferência
+  statusConferencia?: 'Pendente' | 'Conferido';
+  dataConferencia?: string;
+  responsavelConferencia?: string;
+}
+
 export interface NotaCompra {
   id: string;
   data: string;
@@ -58,25 +79,30 @@ export interface NotaCompra {
   origem?: 'Normal' | 'Urgência';
   statusUrgencia?: 'Aguardando Financeiro' | 'Pago - Aguardando Produtos' | 'Produtos Inseridos' | 'Concluído';
   dataPagamentoFinanceiro?: string;
-  produtos: {
-    marca: string;
-    modelo: string;
-    cor: string;
-    imei: string;
-    tipo: 'Novo' | 'Seminovo';
-    tipoProduto?: 'Aparelho' | 'Acessório';
-    quantidade: number;
-    valorUnitario: number;
-    valorTotal: number;
-    saudeBateria: number;
-  }[];
+  produtos: ProdutoNota[];
   pagamento?: {
     formaPagamento: string;
     parcelas: number;
     valorParcela: number;
     dataVencimento: string;
+    comprovante?: string; // URL do comprovante
+    contaPagamento?: string; // ID da conta financeira
   };
   responsavelFinanceiro?: string;
+  // NOVOS CAMPOS para fluxo de conferência
+  valorConferido?: number;
+  valorPendente?: number;
+  statusPagamento?: 'Aguardando Conferência' | 'Pago' | 'Parcial';
+  statusConferencia?: 'Em Conferência' | 'Conferência Completa' | 'Discrepância Detectada';
+  dataConferenciaCompleta?: string;
+  dataVencimento?: string;
+  responsavelEstoque?: string;
+  vendedorRegistro?: string; // Quem registrou (para urgências)
+  discrepancia?: boolean;
+  motivoDiscrepancia?: string;
+  acaoRecomendada?: 'Cobrar Fornecedor' | 'Cobrar Estoque';
+  fotoComprovante?: string; // URL da foto (urgências)
+  timeline?: TimelineEntry[];
 }
 
 export interface Movimentacao {

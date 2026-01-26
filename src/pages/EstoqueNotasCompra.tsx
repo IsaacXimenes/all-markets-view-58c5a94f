@@ -38,7 +38,9 @@ export default function EstoqueNotasCompra() {
     fornecedor: '',
     valorTotal: '',
     formaPagamento: '',
-    observacoes: ''
+    observacoes: '',
+    vendedorResponsavel: '',
+    fotoComprovante: ''
   });
 
   // Helper para obter nome do fornecedor
@@ -315,17 +317,44 @@ export default function EstoqueNotasCompra() {
                     rows={2}
                   />
                 </div>
+                <div>
+                  <Label>Vendedor Responsável *</Label>
+                  <Input
+                    value={urgenciaForm.vendedorResponsavel}
+                    onChange={(e) => setUrgenciaForm(prev => ({ ...prev, vendedorResponsavel: e.target.value }))}
+                    placeholder="Nome do vendedor que solicitou"
+                  />
+                </div>
+                <div>
+                  <Label>Foto/Comprovante * (URL)</Label>
+                  <Input
+                    value={urgenciaForm.fotoComprovante}
+                    onChange={(e) => setUrgenciaForm(prev => ({ ...prev, fotoComprovante: e.target.value }))}
+                    placeholder="URL da foto do aparelho/comprovante"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">Foto obrigatória para notas de urgência (JPG, PNG, WebP)</p>
+                </div>
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowUrgenciaModal(false)}>
                 Cancelar
               </Button>
-                <Button 
+              <Button 
                 className="bg-orange-600 hover:bg-orange-700"
                 onClick={() => {
                   if (!urgenciaForm.fornecedor || !urgenciaForm.valorTotal || !urgenciaForm.formaPagamento) {
                     toast.error('Preencha todos os campos obrigatórios');
+                    return;
+                  }
+                  
+                  if (!urgenciaForm.vendedorResponsavel) {
+                    toast.error('Informe o vendedor responsável');
+                    return;
+                  }
+                  
+                  if (!urgenciaForm.fotoComprovante) {
+                    toast.error('Foto/comprovante é obrigatório para notas de urgência');
                     return;
                   }
                   
@@ -337,6 +366,8 @@ export default function EstoqueNotasCompra() {
                     fornecedor: urgenciaForm.fornecedor,
                     valorTotal: valorNumerico,
                     origem: 'Urgência',
+                    vendedorRegistro: urgenciaForm.vendedorResponsavel,
+                    fotoComprovante: urgenciaForm.fotoComprovante,
                     produtos: [],
                     pagamento: {
                       formaPagamento: urgenciaForm.formaPagamento,
@@ -351,7 +382,7 @@ export default function EstoqueNotasCompra() {
                   
                   toast.success(`Nota de urgência ${novaNota.id} enviada para o Financeiro!`);
                   setShowUrgenciaModal(false);
-                  setUrgenciaForm({ fornecedor: '', valorTotal: '', formaPagamento: '', observacoes: '' });
+                  setUrgenciaForm({ fornecedor: '', valorTotal: '', formaPagamento: '', observacoes: '', vendedorResponsavel: '', fotoComprovante: '' });
                 }}
               >
                 <Zap className="mr-2 h-4 w-4" />

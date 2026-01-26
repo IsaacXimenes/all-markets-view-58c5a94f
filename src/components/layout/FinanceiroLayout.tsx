@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { cn } from '@/lib/utils';
-import { FileCheck, MinusCircle, Wrench, Receipt, Wallet, Package, CreditCard, ArrowDownCircle, Building2, ReceiptText } from 'lucide-react';
+import { FileCheck, MinusCircle, Wrench, Receipt, Wallet, Package, CreditCard, ArrowDownCircle, Building2, ReceiptText, Clock } from 'lucide-react';
 
 interface FinanceiroLayoutProps {
   children: React.ReactNode;
@@ -11,11 +11,12 @@ interface FinanceiroLayoutProps {
 export function FinanceiroLayout({ children, title }: FinanceiroLayoutProps) {
   const location = useLocation();
   
-  // Ordem: Conferência ... > Notas ... > Despesas ... > Lotes ... > Pagamentos ... > Teto ... > Extrato
+  // Ordem: Conferência ... > Notas ... > Pendências ... > Despesas ... > Lotes ... > Pagamentos ... > Teto ... > Extrato
   const tabs = [
     { name: 'Conferência de Contas', href: '/financeiro/conferencia', icon: FileCheck },
     { name: 'Conferências - Fiado', href: '/financeiro/fiado', icon: Wallet },
     { name: 'Conferência de Notas', href: '/financeiro/conferencia-notas-entrada', icon: FileCheck },
+    { name: 'Notas - Pendências', href: '/financeiro/notas-pendencias', icon: Clock },
     { name: 'Notas Pendentes - Assistência', href: '/financeiro/notas-assistencia', icon: Wrench },
     { name: 'Despesas Fixas', href: '/financeiro/despesas-fixas', icon: MinusCircle },
     { name: 'Despesas Variáveis', href: '/financeiro/despesas-variaveis', icon: MinusCircle },

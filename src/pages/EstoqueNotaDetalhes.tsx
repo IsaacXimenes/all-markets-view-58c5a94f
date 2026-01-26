@@ -31,8 +31,8 @@ interface TimelineNotaEntry {
   }[];
 }
 
-// Interface estendida de nota com timeline e status recusado
-interface NotaCompraExtendida extends Omit<NotaCompra, 'status'> {
+// Interface estendida de nota com timeline local e status recusado
+interface NotaCompraExtendida extends Omit<NotaCompra, 'status' | 'timeline'> {
   timeline?: TimelineNotaEntry[];
   motivoRecusa?: string;
   status: 'Pendente' | 'Concluído' | 'Recusado' | 'Enviado para Financeiro';

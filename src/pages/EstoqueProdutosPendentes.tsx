@@ -451,6 +451,7 @@ export default function EstoqueProdutosPendentes() {
                   <TableHead>IMEI</TableHead>
                   <TableHead>Produto</TableHead>
                   <TableHead>Origem</TableHead>
+                  <TableHead>Nota de Origem</TableHead>
                   <TableHead>Fornecedor</TableHead>
                   <TableHead>Loja</TableHead>
                   <TableHead>Valor Origem</TableHead>
@@ -463,7 +464,7 @@ export default function EstoqueProdutosPendentes() {
               <TableBody>
                 {filteredProdutos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                       Nenhum produto pendente de conferência
                     </TableCell>
                   </TableRow>
@@ -479,6 +480,19 @@ export default function EstoqueProdutosPendentes() {
                         </div>
                       </TableCell>
                       <TableCell>{getOrigemBadge(produto.origemEntrada)}</TableCell>
+                      <TableCell>
+                        {(produto as any).notaOrigemId ? (
+                          (produto as any).notaOrigemId.startsWith('URG') ? (
+                            <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">
+                              Urgência
+                            </Badge>
+                          ) : (
+                            <span className="font-mono text-xs">{(produto as any).notaOrigemId}</span>
+                          )
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-sm">
                         {getFornecedorNome((produto as any).fornecedor || (produto as any).fornecedorId || '')}
                       </TableCell>
