@@ -1,471 +1,455 @@
 
-# Plano: Implementação dos Fluxos de Notas de Compra (Urgência e Entrada Normal)
+# Plano: Melhorias na Validação de Produtos Pendentes
 
 ## Visão Geral
 
-Este plano implementa dois fluxos críticos de gestão de notas de compra que integram os módulos de **Estoque**, **Financeiro** e **Vendas**:
+Este plano implementa três melhorias críticas para o fluxo de validação de produtos:
 
-1. **Fluxo de Urgência**: Registro rápido com foto obrigatória, validação progressiva e rastreamento de vendedor
-2. **Fluxo Normal**: Cadastro completo com validação progressiva de aparelhos e detecção de discrepâncias
+1. **Barra de progresso visual** na coluna "Nota de Origem" da tabela de Produtos Pendentes
+2. **Validação em lote** para múltiplos aparelhos da mesma nota
+3. **Upload real de comprovantes** substituindo campos de URL por upload de arquivos
 
 ---
 
-## Fase 1: Estruturas de Dados
+## Fase 1: Barra de Progresso na Coluna "Nota de Origem"
 
-### 1.1 Estender Interface NotaCompra (`src/utils/estoqueApi.ts`)
+### Arquivo: `src/pages/EstoqueProdutosPendentes.tsx`
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    CAMPOS NOVOS NA NOTA                         │
-├─────────────────────────────────────────────────────────────────┤
-│ valorConferido: number      // Soma dos valores já validados   │
-│ valorPendente: number       // valorTotal - valorConferido     │
-│ statusPagamento: string     // Aguardando | Pago | Parcial     │
-│ statusConferencia: string   // Em Conferência | Completa | Disc│
-│ dataConferenciaCompleta: string // Quando atingiu 100%         │
-│ dataVencimento: string      // Prazo para pagamento            │
-│ responsavelEstoque: string  // Quem validou                    │
-│ vendedorRegistro: string    // Quem registrou (urgências)      │
-│ discrepancia: boolean       // Se há diferença de valores      │
-│ motivoDiscrepancia: string  // Descrição da discrepância       │
-│ acaoRecomendada: string     // Cobrar Fornecedor | Estoque     │
-│ fotoComprovante: string     // URL da foto (urgências)         │
-│ timeline: TimelineEntry[]   // Histórico de eventos            │
-└─────────────────────────────────────────────────────────────────┘
-```
+**Modificações:**
 
-**Campos novos nos produtos da nota:**
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                 CAMPOS NOVOS NOS PRODUTOS                       │
-├─────────────────────────────────────────────────────────────────┤
-│ id: string                  // ID único do produto na nota     │
-│ statusConferencia: string   // Pendente | Conferido            │
-│ dataConferencia: string     // Data da validação               │
-│ responsavelConferencia: str // Quem validou                    │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Campos novos no pagamento:**
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                CAMPOS NOVOS NO PAGAMENTO                        │
-├─────────────────────────────────────────────────────────────────┤
-│ comprovante: string         // URL do comprovante              │
-│ contaPagamento: string      // ID da conta financeira          │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### 1.2 Criar Interface PendenciaFinanceira (`src/utils/financeApi.ts`)
-
+1. **Importar componente Progress e função de pendências:**
 ```typescript
-interface PendenciaFinanceira {
-  id: string;                   // PEND-NC-XXXXX
-  notaId: string;               // Referência à nota
-  fornecedor: string;
-  // Valores
-  valorTotal: number;
-  valorConferido: number;
-  valorPendente: number;
-  // Status
-  statusPagamento: 'Aguardando Conferência' | 'Pago' | 'Parcial';
-  statusConferencia: 'Em Conferência' | 'Conferência Completa' | 'Discrepância Detectada';
-  // Aparelhos
-  aparelhosTotal: number;
-  aparelhosConferidos: number;
-  percentualConferencia: number;
-  // Datas
-  dataCriacao: string;
-  dataVencimento: string;
-  dataConferenciaCompleta?: string;
-  dataPagamento?: string;
-  // SLA
-  slaAlerta: boolean;
-  diasDecorridos: number;
-  // Discrepâncias
-  discrepancia?: boolean;
-  motivoDiscrepancia?: string;
-  acaoRecomendada?: 'Cobrar Fornecedor' | 'Cobrar Estoque';
-  // Timeline
-  timeline: TimelineEntry[];
-}
+import { Progress } from '@/components/ui/progress';
+import { getPendenciaPorNota } from '@/utils/pendenciasFinanceiraApi';
 ```
 
-### 1.3 Estender Interface TimelineEntry (`src/utils/estoqueApi.ts`)
-
-Adicionar novos tipos de evento:
+2. **Criar função para obter progresso da nota:**
 ```typescript
-tipo: 'entrada' | 'validacao' | 'pagamento' | 'discrepancia' | 
-      'alerta_sla' | 'parecer_estoque' | 'parecer_assistencia' | 
-      'despesa' | 'liberacao';
+const getNotaProgresso = (notaOrigemId: string) => {
+  if (!notaOrigemId) return null;
+  const pendencia = getPendenciaPorNota(notaOrigemId);
+  if (!pendencia) return null;
+  return {
+    percentual: pendencia.percentualConferencia,
+    conferidos: pendencia.aparelhosConferidos,
+    total: pendencia.aparelhosTotal
+  };
+};
 ```
 
-Adicionar campos opcionais:
+3. **Modificar coluna "Nota de Origem" (linhas 483-494):**
+
+| Antes | Depois |
+|-------|--------|
+| Badge simples ou texto NC-XXXX | Badge + barra de progresso + texto X/Y |
+
+**Novo layout da célula:**
+```text
+┌─────────────────────────────────────┐
+│ [Urgência] ou NC-2025-0008          │
+│ ████████░░░░ 42%                    │
+│ 2/3 conferidos                      │
+└─────────────────────────────────────┘
+```
+
+**Código da célula atualizada:**
 ```typescript
-aparelhoId?: string;    // Para validações de aparelhos específicos
-comprovante?: string;   // URL de comprovante
+<TableCell>
+  {(produto as any).notaOrigemId ? (
+    <div className="space-y-1">
+      {/* Badge ou ID */}
+      {(produto as any).notaOrigemId.startsWith('URG') ? (
+        <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">
+          Urgência
+        </Badge>
+      ) : (
+        <span className="font-mono text-xs">{(produto as any).notaOrigemId}</span>
+      )}
+      {/* Barra de progresso */}
+      {(() => {
+        const progresso = getNotaProgresso((produto as any).notaOrigemId);
+        if (progresso) {
+          return (
+            <div className="space-y-1">
+              <Progress value={progresso.percentual} className="h-1.5" />
+              <span className="text-xs text-muted-foreground">
+                {progresso.conferidos}/{progresso.total} conferidos
+              </span>
+            </div>
+          );
+        }
+        return null;
+      })()}
+    </div>
+  ) : (
+    <span className="text-muted-foreground">—</span>
+  )}
+</TableCell>
 ```
 
 ---
 
-## Fase 2: Funções de API
+## Fase 2: Validação em Lote
 
-### 2.1 Novas Funções em `estoqueApi.ts`
+### Arquivo: `src/pages/EstoqueProdutosPendentes.tsx`
 
-| Função | Descrição |
-|--------|-----------|
-| `criarNotaComPendencia(nota)` | Cria nota e automaticamente cria pendência no Financeiro |
-| `validarAparelhoNota(notaId, aparelhoId, dados)` | Valida um aparelho e atualiza valorConferido |
-| `verificarConferencia(notaId)` | Verifica se 100% dos aparelhos foram validados |
-| `atualizarStatusPagamento(notaId, status)` | Atualiza status de pagamento da nota |
-| `gerarIdProdutoNota()` | Gera ID único para produto dentro da nota |
-| `calcularSLANota(dataEntrada)` | Calcula dias e cor do SLA |
+**Adicionar funcionalidades:**
 
-### 2.2 Novas Funções em `financeApi.ts`
+1. **Estado para seleção múltipla:**
+```typescript
+const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+const [dialogValidacaoLote, setDialogValidacaoLote] = useState(false);
+```
 
-| Função | Descrição |
-|--------|-----------|
-| `criarPendenciaFinanceira(nota)` | Cria registro de pendência no Financeiro |
-| `atualizarPendencia(notaId, dados)` | Atualiza pendência quando Estoque valida |
-| `finalizarPagamento(notaId, pagamento)` | Finaliza pagamento com comprovante |
-| `gerarAlertaSLA(notaId)` | Gera alerta se > 3 dias sem progresso |
-| `getPendencias()` | Retorna todas as pendências |
-| `getPendenciaPorNota(notaId)` | Retorna pendência específica |
-| `verificarSLAPendencias()` | Verifica SLA de todas as pendências |
+2. **Checkbox na tabela para seleção:**
+- Nova coluna com checkbox no header e em cada linha
+- Checkbox master para selecionar/deselecionar todos da mesma nota
 
----
+3. **Botão "Validar Selecionados" no header da tabela:**
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  Produtos Pendentes de Conferência    [Validar X Selecionados]  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-## Fase 3: Nova Página - Pendências Financeiras
+4. **Funções de validação em lote:**
+```typescript
+const handleSelectProduct = (productId: string) => { ... };
+const handleSelectAllFromNota = (notaId: string) => { ... };
+const handleValidarLote = () => { ... };
+```
 
-### 3.1 Criar `FinanceiroNotasPendencias.tsx`
+### Arquivo: `src/utils/estoqueApi.ts`
 
-**Rota:** `/financeiro/notas-pendencias`
+**Nova função para validação em lote:**
+```typescript
+export const validarAparelhosEmLote = (
+  notaId: string, 
+  aparelhoImeis: string[], 
+  responsavel: string
+): { sucesso: boolean; validados: number; erros: string[] }
+```
+
+### Modal de Validação em Lote
+
+**Campos:**
+- Lista de produtos selecionados (resumo)
+- Responsável pela conferência (Select obrigatório)
+- Observações gerais (Textarea opcional)
+- Botão "Confirmar Validação"
 
 **Layout:**
-
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  FINANCEIRO > NOTAS - PENDÊNCIAS                                           │
-├───────────────┬───────────────┬───────────────┬─────────────────────────────┤
-│ Total Pend.   │ Valor Pend.   │ Valor Conf.   │ Alertas SLA                 │
-│ [12]          │ [R$ 85.000]   │ [R$ 45.000]   │ [3 críticos]                │
-├───────────────┴───────────────┴───────────────┴─────────────────────────────┤
-│  FILTROS                                                                    │
-│  [Data Início] [Data Fim] [Fornecedor ▼] [Status Pgto ▼] [Status Conf ▼]   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  Nº Nota │ Fornec. │ Valor │ Conferido │ % Conf │ Pgto │ Conf │ SLA │ Ações │
-│  NC-0008 │ iStore  │ 19.2k │ ████░░ 8k │  42%   │ Agrd │ EmCf │ ⚠️3 │ 👁️    │
-│  NC-0007 │ FastCel │ 5.0k  │ █████ 5k  │ 100%   │ Agrd │ Cmpl │ ✅2 │ 💳    │
-│  URG-023 │ TechSup │ 3.2k  │ ██░░░ 1k  │  31%   │ Pago │ EmCf │ 🔴5 │ 👁️    │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-**Componentes:**
-- 4 Cards de resumo dinâmicos
-- Filtros avançados
-- Tabela com barra de progresso visual
-- Badges de status coloridos
-- Indicadores de SLA (verde, amarelo, vermelho)
-- Botões de ação contextuais
-
-### 3.2 Componente ModalDetalhePendencia
-
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│  📋 DETALHES - NOTA NC-2025-0008                               │
+│  ✅ VALIDAR PRODUTOS EM LOTE                                   │
 ├─────────────────────────────────────────────────────────────────┤
-│  INFORMAÇÕES GERAIS                                             │
-│  ┌──────────────┬──────────────┬──────────────┐                │
-│  │ Fornecedor   │ Data Entrada │ Dias Decorr. │                │
-│  │ iStore       │ 25/01/2026   │ 3 dias       │                │
-│  └──────────────┴──────────────┴──────────────┘                │
-├─────────────────────────────────────────────────────────────────┤
-│  VALORES                                                        │
-│  ┌────────────────────────────────────────────┐                │
-│  │ Total: R$ 19.200,00                        │                │
-│  │ Conferido: R$ 8.000,00 (42%)              │                │
-│  │ Pendente: R$ 11.200,00                    │                │
-│  │ ████████░░░░░░░░░░░░ 42%                   │                │
-│  └────────────────────────────────────────────┘                │
-├─────────────────────────────────────────────────────────────────┤
-│  APARELHOS (2/3 conferidos)                                     │
-│  ┌──────────────┬────────────┬─────────┬─────────────┐         │
-│  │ IMEI         │ Modelo     │ Valor   │ Status      │         │
-│  │ 352...012    │ iPhone 15  │ R$ 7.2k │ ✅ Conferido │         │
-│  │ 352...013    │ iPhone 15  │ R$ 7.2k │ ⏳ Pendente │         │
-│  │ 352...014    │ iPhone 14  │ R$ 4.8k │ ✅ Conferido │         │
-│  └──────────────┴────────────┴─────────┴─────────────┘         │
-├─────────────────────────────────────────────────────────────────┤
-│  TIMELINE                                                        │
-│  ● 26/01 14:30 - Aparelho 352...012 validado (Ana Costa)        │
-│  ● 26/01 10:15 - Aparelho 352...014 validado (Pedro Lima)       │
-│  ● 25/01 09:00 - Nota recebida no Financeiro                    │
-├─────────────────────────────────────────────────────────────────┤
-│                              [Fechar] [Finalizar Pagamento]     │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### 3.3 Componente ModalFinalizarPagamento
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  💳 FINALIZAR PAGAMENTO - NC-2025-0008                          │
-├─────────────────────────────────────────────────────────────────┤
-│  Valor Total: R$ 19.200,00                                      │
-│  Status Conferência: 100% Conferido ✅                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  Conta de Pagamento *                                           │
-│  [Bradesco Thiago Imports ▼]                                    │
-│                                                                 │
-│  Forma de Pagamento *                                           │
-│  [Pix ▼]                                                        │
-│                                                                 │
-│  Parcelas (se aplicável)                                        │
-│  [1 ▼]                                                          │
-│                                                                 │
-│  Data de Vencimento                                             │
-│  [📅 30/01/2026]                                                │
-│                                                                 │
-│  Comprovante *                                                  │
+│  Nota: NC-2025-0008                                             │
+│  Produtos selecionados: 3                                       │
 │  ┌───────────────────────────────────────┐                     │
-│  │ 📎 Arraste ou clique para upload      │                     │
-│  │    PDF, JPG ou PNG (máx 5MB)          │                     │
+│  │ • iPhone 15 Pro (IMEI: 352...024)     │                     │
+│  │ • iPhone 15 Pro Max (IMEI: 352...025) │                     │
+│  │ • iPhone 14 Pro (IMEI: 352...026)     │                     │
 │  └───────────────────────────────────────┘                     │
+│                                                                 │
+│  Responsável Conferência *                                      │
+│  [Ana Costa ▼]                                                  │
 │                                                                 │
 │  Observações                                                    │
 │  ┌───────────────────────────────────────┐                     │
-│  │                                       │                     │
+│  │ Todos os aparelhos conferidos OK      │                     │
 │  └───────────────────────────────────────┘                     │
 │                                                                 │
 ├─────────────────────────────────────────────────────────────────┤
-│                              [Cancelar] [Confirmar Pagamento]   │
+│                    [Cancelar] [Confirmar Validação]             │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Fase 4: Modificações em Páginas Existentes
-
-### 4.1 Modificar EstoqueNotasCompra.tsx
-
-**Adicionar colunas:**
-- `Valor Conferido` - com barra de progresso
-- `Status Conferência` - badge colorido
-- `Status Pagamento` - badge colorido
-
-**Adicionar filtros:**
-- Status Conferência (Select)
-- Status Pagamento (Select)
-
-**Adicionar ação:**
-- Botão "Ver Progresso" - abre modal com barra de progresso e timeline
-
-**Atualizar modal de urgência:**
-- Adicionar campo de foto obrigatória
-- Adicionar campo de vendedor responsável
-
-### 4.2 Modificar EstoqueProdutosPendentes.tsx
-
-**Adicionar coluna:**
-- `Nota de Origem` - mostra "Urgência" ou "NC-XXXXX"
-
-**Adicionar filtro:**
-- Tipo de Nota (Urgência, Entrada Normal)
-
-**Visual:**
-- Aparelhos de urgência com tag laranja diferenciada
-
-### 4.3 Modificar FinanceiroLayout.tsx
-
-**Adicionar nova aba:**
-```typescript
-{ name: 'Notas - Pendências', href: '/financeiro/notas-pendencias', icon: Clock }
-```
-
----
-
-## Fase 5: Sistema de Notificações
-
-### 5.1 Novas Notificações (`notificationsApi.ts`)
-
-| Evento | Para | Mensagem |
-|--------|------|----------|
-| Nota Criada | Financeiro | "Nova nota [NC-XXXXX] de [Fornecedor] aguardando conferência" |
-| Aparelho Validado | Financeiro | "[X]/[Y] aparelhos validados ([%]%)" |
-| 100% Conferido | Financeiro | "Nota [NC-XXXXX] pronta para pagamento" |
-| SLA Alerta | Financeiro | "Nota [NC-XXXXX] com SLA crítico ([X] dias)" |
-| Pagamento Confirmado | Estoque | "Nota [NC-XXXXX] paga com sucesso" |
-| Discrepância Detectada | Financeiro + Gestor | "Discrepância de R$ [X] detectada na nota [NC-XXXXX]" |
-
----
-
-## Fase 6: Regras de Negócio
-
-### 6.1 Validação de Foto (Urgências)
-
-```typescript
-// Validações
-- Formatos aceitos: JPG, PNG, WebP
-- Tamanho máximo: 5MB
-- Obrigatória para notas de urgência
-- Armazenamento: localStorage (base64) ou URL simulada
-```
-
-### 6.2 Validação Progressiva
-
-```typescript
-// Ao validar aparelho
-1. Marcar produto.statusConferencia = 'Conferido'
-2. Adicionar valor ao nota.valorConferido
-3. Recalcular nota.valorPendente
-4. Verificar se atingiu 100%
-5. Atualizar pendência no Financeiro
-6. Registrar na timeline
-7. Notificar Financeiro
-```
-
-### 6.3 Detecção de Discrepâncias
-
-```typescript
-// Ao atingir 100% de conferência
-if (Math.abs(valorConferido - valorTotal) > valorTotal * 0.001) {
-  // Tolerância de 0,1%
-  nota.discrepancia = true;
-  nota.statusConferencia = 'Discrepância Detectada';
-  
-  if (valorConferido < valorTotal) {
-    nota.motivoDiscrepancia = 'Valor conferido menor que nota';
-    nota.acaoRecomendada = 'Cobrar Fornecedor';
-  } else {
-    nota.motivoDiscrepancia = 'Valor conferido maior que nota';
-    nota.acaoRecomendada = 'Cobrar Estoque';
-  }
-}
-```
-
-### 6.4 SLA e Alertas
-
-```typescript
-// Cálculo de SLA
-const diasDecorridos = diferençaEmDias(dataCriacao, hoje);
-
-if (diasDecorridos >= 5) {
-  slaAlerta = 'crítico'; // Vermelho
-} else if (diasDecorridos >= 3) {
-  slaAlerta = 'aviso';   // Amarelo
-} else {
-  slaAlerta = 'normal';  // Verde
-}
-```
-
----
-
-## Fase 7: Fluxos Completos
-
-### 7.1 Fluxo de Urgência
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    FLUXO DE URGÊNCIA                            │
-└─────────────────────────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  VENDEDOR   │────▶│   ESTOQUE   │────▶│ FINANCEIRO  │
-│ Lança nota  │     │ Valida prod │     │ Finaliza    │
-│ + Foto      │     │ (NEGOCIADO) │     │ Pagamento   │
-└─────────────┘     └─────────────┘     └─────────────┘
-     │                    │                    │
-     ▼                    ▼                    ▼
- URG-XXXXX          Prod. Pendentes      Nota Concluída
- Status: Agrd.      Status: Triagem      Rastreio Vendedor
-```
-
-### 7.2 Fluxo Normal
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    FLUXO NORMAL                                 │
-└─────────────────────────────────────────────────────────────────┘
-     │
-     ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   ESTOQUE   │────▶│   ESTOQUE   │────▶│ FINANCEIRO  │
-│ Cadastra    │     │ Valida      │     │ Recebe      │
-│ Nota+Prod.  │     │ Progressivo │     │ Pendência   │
-└─────────────┘     └─────────────┘     └─────────────┘
-     │                    │                    │
-     │                    ▼                    ▼
-     │              ┌─────────────┐     ┌─────────────┐
-     │              │ 100% Conf.  │────▶│  Finaliza   │
-     │              │ ou Discrep. │     │  Pagamento  │
-     │              └─────────────┘     └─────────────┘
-     │                                       │
-     ▼                                       ▼
- NC-XXXXX                              Nota Concluída
- Pendência Auto                        Produtos Liberados
-```
-
----
-
-## Fase 8: Arquivos a Criar/Modificar
-
-### Novos Arquivos
-
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/pages/FinanceiroNotasPendencias.tsx` | Nova página de pendências |
-| `src/components/financeiro/ModalDetalhePendencia.tsx` | Modal de detalhes |
-| `src/components/financeiro/ModalFinalizarPagamento.tsx` | Modal de pagamento |
-| `src/components/estoque/ProgressoConferencia.tsx` | Componente de progresso |
+## Fase 3: Upload Real de Comprovantes
 
 ### Arquivos a Modificar
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/utils/estoqueApi.ts` | Estender interfaces e adicionar funções |
-| `src/utils/financeApi.ts` | Adicionar interface PendenciaFinanceira e funções |
-| `src/utils/notificationsApi.ts` | Adicionar novos tipos de notificação |
-| `src/pages/EstoqueNotasCompra.tsx` | Adicionar colunas, filtros e modal de urgência com foto |
-| `src/pages/EstoqueProdutosPendentes.tsx` | Adicionar coluna e filtro de origem |
-| `src/pages/FinanceiroConferenciaNotas.tsx` | Adicionar coluna de progresso |
-| `src/components/layout/FinanceiroLayout.tsx` | Adicionar nova aba |
-| `src/App.tsx` | Adicionar nova rota |
+1. **`src/pages/FinanceiroNotasPendencias.tsx`** - Modal de pagamento
+2. **`src/pages/EstoqueNotasCompra.tsx`** - Modal de urgência (foto obrigatória)
 
-**Total: 4 novos arquivos + 8 arquivos modificados = 12 arquivos**
+### Componente de Upload
+
+**Criar área de drag-and-drop com preview:**
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  Comprovante *                                                  │
+│  ┌───────────────────────────────────────┐                     │
+│  │  📎 Arraste ou clique para upload     │                     │
+│  │     PDF, JPG ou PNG (máx 5MB)         │                     │
+│  └───────────────────────────────────────┘                     │
+│                                                                 │
+│  OU ─────────────────────────────────────                      │
+│                                                                 │
+│  [🔗 Colar URL do comprovante]                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Preview do arquivo selecionado:**
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  ┌────────┐                                                     │
+│  │ 📄     │  comprovante_nc0008.pdf                            │
+│  │        │  156 KB                                             │
+│  └────────┘  [❌ Remover]                                       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Implementação do Upload
+
+**Estado do formulário atualizado:**
+```typescript
+const [pagamentoForm, setPagamentoForm] = useState({
+  // ... outros campos
+  comprovante: '',           // URL ou base64
+  comprovanteFile: null,     // File object
+  comprovanteNome: '',       // Nome do arquivo
+  comprovantePreview: ''     // URL de preview (para imagens)
+});
+```
+
+**Handler de upload:**
+```typescript
+const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  
+  // Validar tipo
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+  if (!allowedTypes.includes(file.type)) {
+    toast.error('Formato não suportado. Use JPG, PNG, WebP ou PDF.');
+    return;
+  }
+  
+  // Validar tamanho (5MB)
+  if (file.size > 5 * 1024 * 1024) {
+    toast.error('Arquivo muito grande. Máximo 5MB.');
+    return;
+  }
+  
+  // Converter para base64 para armazenamento mockado
+  const reader = new FileReader();
+  reader.onload = () => {
+    setPagamentoForm(prev => ({
+      ...prev,
+      comprovante: reader.result as string,
+      comprovanteFile: file,
+      comprovanteNome: file.name,
+      comprovantePreview: file.type.startsWith('image/') ? reader.result as string : ''
+    }));
+  };
+  reader.readAsDataURL(file);
+};
+```
 
 ---
 
-## Fase 9: Ordem de Implementação
+## Fase 4: Dados Mockados para Pendências
 
-1. **Estruturas de Dados** - Interfaces e tipos
-2. **Funções de API** - estoqueApi e financeApi
-3. **Sistema de Notificações** - Novos tipos
-4. **Modificar EstoqueNotasCompra** - Modal urgência com foto
-5. **Modificar EstoqueProdutosPendentes** - Coluna origem
-6. **Criar FinanceiroNotasPendencias** - Nova página completa
-7. **Criar Modais** - Detalhes e Pagamento
-8. **Integrar Rotas** - App.tsx e Layout
-9. **Testes** - Validar fluxos completos
+### Arquivo: `src/utils/estoqueApi.ts`
+
+**Atualizar notas mockadas para incluir campos de conferência:**
+
+```typescript
+// NC-2025-0006 - 1 produto, 0% conferido
+{
+  id: 'NC-2025-0006',
+  // ... campos existentes
+  origem: 'Normal',
+  valorConferido: 0,
+  valorPendente: 6400.00,
+  statusPagamento: 'Aguardando Conferência',
+  statusConferencia: 'Em Conferência',
+  produtos: [
+    { 
+      id: 'PROD-NC6-001',
+      marca: 'Apple', 
+      modelo: 'iPhone 15 Pro', 
+      // ... outros campos
+      statusConferencia: 'Pendente'
+    }
+  ],
+  timeline: [
+    {
+      id: 'TL-NC6-001',
+      data: '2024-11-23T09:00:00Z',
+      tipo: 'entrada',
+      titulo: 'Nota Cadastrada',
+      descricao: 'Nota de entrada cadastrada no sistema',
+      responsavel: 'Sistema'
+    }
+  ]
+}
+
+// NC-2025-0007 - 2 produtos, 50% conferido (1/2)
+{
+  id: 'NC-2025-0007',
+  // ... campos existentes
+  origem: 'Normal',
+  valorConferido: 3400.00,
+  valorPendente: 1600.00,
+  statusPagamento: 'Aguardando Conferência',
+  statusConferencia: 'Em Conferência',
+  produtos: [
+    { 
+      id: 'PROD-NC7-001',
+      // iPhone 14 Vermelho
+      statusConferencia: 'Conferido',
+      dataConferencia: '2024-11-25T14:30:00Z',
+      responsavelConferencia: 'Ana Costa'
+    },
+    { 
+      id: 'PROD-NC7-002',
+      // iPhone 11 Preto
+      statusConferencia: 'Pendente'
+    }
+  ],
+  timeline: [
+    {
+      id: 'TL-NC7-002',
+      data: '2024-11-25T14:30:00Z',
+      tipo: 'validacao',
+      titulo: 'Aparelho Validado',
+      descricao: 'iPhone 14 Vermelho conferido - R$ 3.400,00',
+      responsavel: 'Ana Costa'
+    },
+    {
+      id: 'TL-NC7-001',
+      data: '2024-11-24T09:00:00Z',
+      tipo: 'entrada',
+      titulo: 'Nota Cadastrada',
+      descricao: 'Nota de entrada cadastrada',
+      responsavel: 'Sistema'
+    }
+  ]
+}
+
+// NC-2025-0008 - 3 produtos, 66% conferido (2/3)
+{
+  id: 'NC-2025-0008',
+  // ... campos existentes
+  origem: 'Normal',
+  valorConferido: 12000.00,
+  valorPendente: 7200.00,
+  statusPagamento: 'Aguardando Conferência',
+  statusConferencia: 'Em Conferência',
+  produtos: [
+    { 
+      id: 'PROD-NC8-001',
+      // iPhone 15 Pro Max #1
+      statusConferencia: 'Conferido',
+      dataConferencia: '2024-11-26T10:15:00Z',
+      responsavelConferencia: 'Pedro Lima'
+    },
+    { 
+      id: 'PROD-NC8-002',
+      // iPhone 15 Pro Max #2
+      statusConferencia: 'Pendente'
+    },
+    { 
+      id: 'PROD-NC8-003',
+      // iPhone 14 Pro
+      statusConferencia: 'Conferido',
+      dataConferencia: '2024-11-26T14:30:00Z',
+      responsavelConferencia: 'Ana Costa'
+    }
+  ],
+  timeline: [...]
+}
+```
+
+### Nota de Urgência Mockada
+
+```typescript
+// URG-2025-0001 - Urgência com foto e vendedor
+{
+  id: 'URG-2025-0001',
+  data: '2024-11-26',
+  numeroNota: 'URG-001',
+  fornecedor: 'TechSupply Urgente',
+  valorTotal: 3200.00,
+  status: 'Pendente',
+  origem: 'Urgência',
+  statusUrgencia: 'Aguardando Financeiro',
+  vendedorRegistro: 'Carlos Vendedor',
+  fotoComprovante: 'data:image/jpeg;base64,...', // URL ou base64 simulado
+  valorConferido: 0,
+  valorPendente: 3200.00,
+  statusPagamento: 'Aguardando Conferência',
+  statusConferencia: 'Em Conferência',
+  produtos: [
+    {
+      id: 'PROD-URG1-001',
+      marca: 'Apple',
+      modelo: 'iPhone 14 Pro Max',
+      cor: 'Roxo Profundo',
+      imei: '352123456789030',
+      tipo: 'Seminovo',
+      tipoProduto: 'Aparelho',
+      quantidade: 1,
+      valorUnitario: 3200.00,
+      valorTotal: 3200.00,
+      saudeBateria: 88,
+      statusConferencia: 'Pendente'
+    }
+  ],
+  timeline: [
+    {
+      id: 'TL-URG1-001',
+      data: '2024-11-26T16:45:00Z',
+      tipo: 'entrada',
+      titulo: 'Urgência Registrada',
+      descricao: 'Nota de urgência registrada por Carlos Vendedor',
+      responsavel: 'Carlos Vendedor'
+    }
+  ]
+}
+```
+
+---
+
+## Fase 5: Arquivos a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/EstoqueProdutosPendentes.tsx` | Barra de progresso + seleção múltipla + validação em lote |
+| `src/pages/FinanceiroNotasPendencias.tsx` | Upload real de comprovantes no modal de pagamento |
+| `src/pages/EstoqueNotasCompra.tsx` | Upload real de foto no modal de urgência |
+| `src/utils/estoqueApi.ts` | Dados mockados + função validarAparelhosEmLote |
+| `src/utils/pendenciasFinanceiraApi.ts` | Atualizar inicializarPendenciasDeNotas com dados novos |
+
+---
+
+## Resultado Esperado
+
+Após implementação:
+
+1. **Produtos Pendentes** mostra progresso visual de cada nota na coluna "Nota de Origem"
+2. **Checkbox de seleção** permite selecionar múltiplos produtos para validação em lote
+3. **Upload de arquivos** funciona com drag-and-drop, validação de tipo/tamanho e preview
+4. **Dados mockados** incluem notas em diferentes estados de conferência (0%, 50%, 66%)
+5. **Nota de urgência mockada** com foto de exemplo e vendedor responsável
 
 ---
 
 ## Considerações Técnicas
 
-### Persistência
-- Dados mockados em memória para prototipagem rápida
-- localStorage para estados de UI e timeline
-- Preparado para migração futura para Supabase
+### Armazenamento de Arquivos
+- Como o sistema usa dados mockados, arquivos serão armazenados como base64 no estado/localStorage
+- Preview de imagens funcionará nativamente com base64
+- PDFs mostrarão apenas o nome do arquivo
 
 ### Performance
-- useMemo para cálculos pesados (totalizadores, filtros)
-- Componentes modularizados para lazy loading futuro
-- Atualização otimista de UI
+- useMemo para cálculos de progresso
+- Debounce na seleção múltipla para evitar re-renders excessivos
 
 ### UX
-- Feedback visual imediato (toasts, cores)
-- Indicadores de progresso claros
-- Alertas proativos de SLA
-- Confirmação antes de ações destrutivas
-
+- Toast de confirmação após validação em lote
+- Indicador de loading durante processamento
+- Confirmação antes de validar múltiplos produtos
