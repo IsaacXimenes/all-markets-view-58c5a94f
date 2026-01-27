@@ -153,13 +153,15 @@ export function GlobalSearch() {
 
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput 
-          placeholder="Digite para buscar módulos, ações, lojas, colaboradores..." 
+          placeholder="Buscar módulos, ações, lojas, colaboradores..." 
           value={search}
           onValueChange={setSearch}
         />
         <CommandList>
           {!hasResults && (
-            <CommandEmpty>Nenhum resultado encontrado.</CommandEmpty>
+            <CommandEmpty className="py-8 text-center text-muted-foreground">
+              Nenhum resultado encontrado.
+            </CommandEmpty>
           )}
 
           {/* Navegação */}
@@ -170,10 +172,11 @@ export function GlobalSearch() {
                   key={item.href}
                   value={item.name}
                   onSelect={() => handleSelect(item.href)}
-                  className="cursor-pointer"
                 >
-                  <item.icon className="mr-2 h-4 w-4" />
-                  <span>{item.name}</span>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                    <item.icon className="h-4 w-4 text-foreground" />
+                  </div>
+                  <span className="font-medium">{item.name}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -182,20 +185,23 @@ export function GlobalSearch() {
           {/* Ações Rápidas */}
           {filteredActions.length > 0 && (
             <>
-              <CommandSeparator />
+              <CommandSeparator className="my-2" />
               <CommandGroup heading="Ações Rápidas">
                 {filteredActions.map((item) => (
                   <CommandItem
                     key={item.href}
                     value={item.name}
                     onSelect={() => handleSelect(item.href)}
-                    className="cursor-pointer"
                   >
-                    <item.icon className="mr-2 h-4 w-4 text-primary" />
-                    <span>{item.name}</span>
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      {item.description}
-                    </span>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <item.icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{item.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {item.description}
+                      </span>
+                    </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -205,23 +211,26 @@ export function GlobalSearch() {
           {/* Lojas */}
           {filteredLojas.length > 0 && (
             <>
-              <CommandSeparator />
+              <CommandSeparator className="my-2" />
               <CommandGroup heading="Lojas">
                 {filteredLojas.map((loja) => (
                   <CommandItem
                     key={loja.id}
                     value={`loja-${loja.nome}`}
                     onSelect={() => handleSelect('/cadastros/lojas')}
-                    className="cursor-pointer"
                   >
-                    <Store className="mr-2 h-4 w-4" />
-                    <span>{loja.nome}</span>
-                    <Badge 
-                      variant="outline" 
-                      className={cn("ml-auto text-xs", getTipoBadgeColor(loja.tipo))}
-                    >
-                      {loja.tipo}
-                    </Badge>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                      <Store className="h-4 w-4 text-foreground" />
+                    </div>
+                    <div className="flex flex-1 items-center justify-between gap-2">
+                      <span className="font-medium">{loja.nome}</span>
+                      <Badge 
+                        variant="outline" 
+                        className={cn("text-xs shrink-0", getTipoBadgeColor(loja.tipo))}
+                      >
+                        {loja.tipo}
+                      </Badge>
+                    </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -231,23 +240,25 @@ export function GlobalSearch() {
           {/* Colaboradores */}
           {filteredColaboradores.length > 0 && (
             <>
-              <CommandSeparator />
+              <CommandSeparator className="my-2" />
               <CommandGroup heading="Colaboradores">
                 {filteredColaboradores.map((col) => (
                   <CommandItem
                     key={col.id}
                     value={`colaborador-${col.nome}`}
                     onSelect={() => handleSelect(`/rh/funcionario/${col.id}`)}
-                    className="cursor-pointer"
                   >
-                    <User className="mr-2 h-4 w-4" />
-                    <span>{col.nome}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {col.cargo}
-                    </span>
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      {obterNomeLoja(col.loja_id)}
-                    </span>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
+                      <User className="h-4 w-4 text-foreground" />
+                    </div>
+                    <div className="flex flex-1 flex-col min-w-0">
+                      <span className="font-medium truncate">{col.nome}</span>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="truncate">{col.cargo}</span>
+                        <span className="text-border">•</span>
+                        <span className="truncate">{obterNomeLoja(col.loja_id)}</span>
+                      </div>
+                    </div>
                   </CommandItem>
                 ))}
               </CommandGroup>
