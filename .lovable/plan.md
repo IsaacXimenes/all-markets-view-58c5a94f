@@ -1,173 +1,78 @@
 
-
-# Plano: Adicionar Botoes de Navegacao (Setas) nas Abas dos Modulos
+# Plano: Implementar Busca Global com Command Palette
 
 ## Visao Geral
 
-Este plano implementa botoes de navegacao com setas para esquerda e direita em todos os menus de abas dos modulos, facilitando a navegacao horizontal sem depender apenas da rolagem com scroll.
-
----
-
-## Layouts a Modificar
-
-Existem **8 layouts** que precisam ser atualizados:
-
-| Layout | Arquivo | Quantidade de Abas |
-|--------|---------|-------------------|
-| Cadastros | `src/components/layout/CadastrosLayout.tsx` | 16 abas |
-| Estoque | `src/components/layout/EstoqueLayout.tsx` | 9 abas |
-| Financeiro | `src/components/layout/FinanceiroLayout.tsx` | 13 abas |
-| Vendas | `src/components/layout/VendasLayout.tsx` | 7 abas |
-| Garantias | `src/components/layout/GarantiasLayout.tsx` | 5 abas |
-| OS | `src/components/layout/OSLayout.tsx` | 7 abas |
-| RH | `src/components/layout/RHLayout.tsx` | 6 abas |
-| Assistencia | `src/components/layout/AssistenciaLayout.tsx` | 7 abas |
+Este plano transforma o campo de busca "Buscar acoes, indices..." em uma **Command Palette funcional** que permite buscar e navegar rapidamente por todo o sistema - incluindo modulos, paginas, lojas, colaboradores e acoes rapidas.
 
 ---
 
 ## Design Visual
 
 ```text
-ANTES:
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  [Lojas] [Clientes] [Colaboradores] [Fornecedores] [Origens...] ...        │
-└─────────────────────────────────────────────────────────────────────────────┘
+ANTES (campo estatico):
+┌──────────────────────────────────────────────────────────────┐
+│  [🔍] Buscar acoes, indices...                               │
+└──────────────────────────────────────────────────────────────┘
 
-DEPOIS:
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ [<] [Lojas] [Clientes] [Colaboradores] [Fornecedores] [Origens...] ... [>] │
-└─────────────────────────────────────────────────────────────────────────────┘
-     │                                                                    │
-     └── Botao Esquerda                                  Botao Direita ──┘
-```
-
-**Caracteristicas dos botoes:**
-- Icones `ChevronLeft` e `ChevronRight` do lucide-react
-- Fundo com hover state sutil
-- Desabilitados quando nao ha mais conteudo para rolar
-- Posicionados nas extremidades da barra de abas
-
----
-
-## Componente Reutilizavel: TabsNavigation
-
-Para evitar duplicacao de codigo, vamos criar um componente reutilizavel:
-
-**Novo arquivo:** `src/components/layout/TabsNavigation.tsx`
-
-```typescript
-interface Tab {
-  name: string;
-  href: string;
-  icon: LucideIcon;
-}
-
-interface TabsNavigationProps {
-  tabs: Tab[];
-  size?: 'sm' | 'default';
-}
-
-export function TabsNavigation({ tabs, size = 'default' }: TabsNavigationProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const location = useLocation();
-
-  // Detectar se pode rolar
-  const checkScroll = () => {
-    if (!scrollRef.current) return;
-    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-    setCanScrollLeft(scrollLeft > 0);
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
-  };
-
-  // Funcoes de scroll
-  const scrollLeft = () => {
-    scrollRef.current?.scrollBy({ left: -200, behavior: 'smooth' });
-  };
-
-  const scrollRight = () => {
-    scrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' });
-  };
-
-  return (
-    <div className="relative flex items-center gap-1">
-      {/* Botao Esquerda */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn(
-          "h-8 w-8 shrink-0",
-          !canScrollLeft && "opacity-30 cursor-not-allowed"
-        )}
-        onClick={scrollLeft}
-        disabled={!canScrollLeft}
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-
-      {/* Area de Scroll */}
-      <div
-        ref={scrollRef}
-        onScroll={checkScroll}
-        className="flex gap-1 overflow-x-auto scrollbar-hide"
-      >
-        {tabs.map((tab) => (...))}
-      </div>
-
-      {/* Botao Direita */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn(
-          "h-8 w-8 shrink-0",
-          !canScrollRight && "opacity-30 cursor-not-allowed"
-        )}
-        onClick={scrollRight}
-        disabled={!canScrollRight}
-      >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
-    </div>
-  );
-}
+DEPOIS (clicavel, abre modal):
+┌──────────────────────────────────────────────────────────────┐
+│  [🔍] Buscar no sistema...                       [⌘K]       │
+└──────────────────────────────────────────────────────────────┘
+      │
+      ▼ (ao clicar ou pressionar Cmd+K)
+┌─────────────────────────────────────────────────────────────────┐
+│  🔍 Digite para buscar...                                       │
+├─────────────────────────────────────────────────────────────────┤
+│  NAVEGACAO                                                      │
+│  ├─ 🏠 Painel                                                   │
+│  ├─ 👥 Recursos Humanos                                         │
+│  ├─ 💰 Financeiro                                               │
+│  ├─ 📦 Estoque                                                  │
+│  ├─ 🛒 Vendas                                                   │
+│  └─ ...                                                         │
+├─────────────────────────────────────────────────────────────────┤
+│  ACOES RAPIDAS                                                  │
+│  ├─ ➕ Nova Venda                                               │
+│  ├─ ➕ Nova OS                                                  │
+│  ├─ ➕ Nova Garantia                                            │
+│  └─ ➕ Cadastrar Nota                                           │
+├─────────────────────────────────────────────────────────────────┤
+│  LOJAS (ao digitar)                                             │
+│  ├─ 🏪 Loja Matriz - Centro                                    │
+│  ├─ 🏪 Loja Sul - Barra                                        │
+│  └─ ...                                                         │
+├─────────────────────────────────────────────────────────────────┤
+│  COLABORADORES (ao digitar)                                     │
+│  ├─ 👤 Ana Silva - Vendedora                                   │
+│  ├─ 👤 Pedro Lima - Gestor                                     │
+│  └─ ...                                                         │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Logica de Navegacao
+## Funcionalidades
 
-**Estados controlados:**
-- `canScrollLeft` - boolean indicando se ha conteudo a esquerda
-- `canScrollRight` - boolean indicando se ha conteudo a direita
+### 1. Atalho de Teclado
+- **Cmd+K** (Mac) ou **Ctrl+K** (Windows) abre a busca global
+- **Escape** fecha o modal
+- Setas ↑↓ navegam entre resultados
+- **Enter** executa a acao selecionada
 
-**Eventos monitorados:**
-- `onScroll` - atualiza os estados ao rolar
-- `useEffect` com `ResizeObserver` - recalcula ao redimensionar a tela
+### 2. Categorias de Busca
 
-**Comportamento:**
-- Scroll suave de 200px por clique
-- Botoes desabilitados quando nao ha mais conteudo
-- Opacidade reduzida para indicar estado desabilitado
+| Categoria | Fonte de Dados | Acao ao Selecionar |
+|-----------|----------------|-------------------|
+| Navegacao | Lista estatica de modulos | `navigate(rota)` |
+| Acoes Rapidas | Lista estatica | `navigate(rota)` |
+| Lojas | `useCadastroStore.lojas` | `navigate(/cadastros/lojas)` + filtro |
+| Colaboradores | `useCadastroStore.colaboradores` | `navigate(/rh/funcionario/:id)` |
 
----
-
-## Estilo CSS
-
-Adicionar classe utilitaria para esconder a scrollbar nativa:
-
-**Arquivo:** `src/index.css`
-
-```css
-/* Esconder scrollbar mas manter funcionalidade */
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-```
+### 3. Busca Fuzzy
+- Busca por nome, cargo, loja
+- Resultados ordenados por relevancia
+- Maximo de 5 resultados por categoria
 
 ---
 
@@ -175,69 +80,104 @@ Adicionar classe utilitaria para esconder a scrollbar nativa:
 
 | Arquivo | Acao | Descricao |
 |---------|------|-----------|
-| `src/components/layout/TabsNavigation.tsx` | **Criar** | Componente reutilizavel com botoes de navegacao |
-| `src/index.css` | Modificar | Adicionar classe `.scrollbar-hide` |
-| `src/components/layout/CadastrosLayout.tsx` | Modificar | Usar TabsNavigation |
-| `src/components/layout/EstoqueLayout.tsx` | Modificar | Usar TabsNavigation |
-| `src/components/layout/FinanceiroLayout.tsx` | Modificar | Usar TabsNavigation |
-| `src/components/layout/VendasLayout.tsx` | Modificar | Usar TabsNavigation |
-| `src/components/layout/GarantiasLayout.tsx` | Modificar | Usar TabsNavigation |
-| `src/components/layout/OSLayout.tsx` | Modificar | Usar TabsNavigation |
-| `src/components/layout/RHLayout.tsx` | Modificar | Usar TabsNavigation |
-| `src/components/layout/AssistenciaLayout.tsx` | Modificar | Usar TabsNavigation |
+| `src/components/layout/GlobalSearch.tsx` | **Criar** | Componente da Command Palette |
+| `src/components/layout/Navbar.tsx` | Modificar | Substituir input estatico pelo GlobalSearch |
 
 ---
 
-## Exemplo de Uso nos Layouts
+## Estrutura do Componente GlobalSearch
 
-Cada layout sera simplificado para usar o novo componente:
-
-**Antes (CadastrosLayout):**
 ```typescript
-<div className="relative mb-6 border-b border-border">
-  <div className="absolute left-0 ...gradient..." />
-  <ScrollArea className="w-full whitespace-nowrap" type="always">
-    <nav className="flex gap-1 pb-2 px-1">
-      {tabs.map((tab) => (...))}
-    </nav>
-    <ScrollBar orientation="horizontal" />
-  </ScrollArea>
-  <div className="absolute right-0 ...gradient..." />
-</div>
+// Dados estaticos de navegacao
+const navigationItems = [
+  { name: 'Painel', href: '/', icon: Home, keywords: ['dashboard', 'inicio'] },
+  { name: 'Recursos Humanos', href: '/rh', icon: Users, keywords: ['rh', 'funcionarios', 'equipe'] },
+  { name: 'Financeiro', href: '/financeiro/conferencia', icon: Banknote, keywords: ['dinheiro', 'contas'] },
+  { name: 'Estoque', href: '/estoque', icon: Package, keywords: ['produtos', 'inventario'] },
+  { name: 'Vendas', href: '/vendas', icon: ShoppingCart, keywords: ['pedidos', 'clientes'] },
+  { name: 'Garantias', href: '/garantias/nova', icon: Shield, keywords: ['troca', 'devolucao'] },
+  { name: 'Assistencia', href: '/os/produtos-analise', icon: Wrench, keywords: ['os', 'conserto'] },
+  { name: 'Relatorios', href: '/relatorios', icon: BarChart3, keywords: ['graficos', 'dados'] },
+  { name: 'Cadastros', href: '/cadastros', icon: Database, keywords: ['registros', 'configuracoes'] },
+];
+
+// Acoes rapidas
+const quickActions = [
+  { name: 'Nova Venda', href: '/vendas/nova', icon: Plus },
+  { name: 'Nova Venda Digital', href: '/vendas/nova-digital', icon: Plus },
+  { name: 'Nova OS', href: '/os/assistencia/nova', icon: Plus },
+  { name: 'Nova Garantia', href: '/garantias/nova', icon: Plus },
+  { name: 'Cadastrar Nota', href: '/estoque/nota/cadastrar', icon: Plus },
+];
 ```
 
-**Depois (CadastrosLayout):**
+---
+
+## Fluxo de Uso
+
+1. Usuario clica no campo de busca ou pressiona **Cmd+K**
+2. Modal abre com categorias pre-carregadas
+3. Usuario digita termo de busca
+4. Sistema filtra em tempo real:
+   - Modulos por nome e keywords
+   - Lojas por nome e cidade
+   - Colaboradores por nome e cargo
+5. Usuario seleciona item com setas ou clique
+6. Sistema navega para a pagina correspondente
+
+---
+
+## Detalhes Tecnicos
+
+### Componentes Utilizados
+- `CommandDialog` - Modal do cmdk
+- `CommandInput` - Campo de busca
+- `CommandList` - Lista de resultados
+- `CommandGroup` - Grupos de categorias
+- `CommandItem` - Itens clicaveis
+- `CommandEmpty` - Mensagem quando sem resultados
+
+### Integracao com Dados
 ```typescript
-<div className="mb-6 border-b border-border">
-  <TabsNavigation tabs={tabs} size="sm" />
-</div>
+// Buscar lojas e colaboradores do store
+const { lojas, colaboradores } = useCadastroStore();
+
+// Filtrar por termo digitado
+const filteredLojas = lojas.filter(loja => 
+  loja.nome.toLowerCase().includes(search.toLowerCase()) ||
+  loja.cidade?.toLowerCase().includes(search.toLowerCase())
+).slice(0, 5);
+```
+
+### Atalho de Teclado
+```typescript
+useEffect(() => {
+  const down = (e: KeyboardEvent) => {
+    if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      setOpen(true);
+    }
+  };
+  document.addEventListener('keydown', down);
+  return () => document.removeEventListener('keydown', down);
+}, []);
 ```
 
 ---
 
 ## Acessibilidade
 
-- Botoes com `aria-label` descritivo
-- Suporte a navegacao por teclado (Tab + Enter)
-- Estados visuais claros para habilitado/desabilitado
-
----
-
-## Responsividade
-
-- Em telas pequenas: botoes ficam mais relevantes
-- Em telas grandes: botoes podem ficar ocultos se todo conteudo couber
-- Detecta automaticamente via `ResizeObserver`
+- Navegacao completa por teclado
+- Labels descritivos para screen readers
+- Foco automatico no input ao abrir
+- Anuncio de resultados encontrados
 
 ---
 
 ## Resultado Esperado
 
-Apos implementacao:
-
-1. Todos os 8 layouts terao botoes de navegacao
-2. Navegacao fluida com scroll suave de 200px por clique
-3. Feedback visual claro quando nao ha mais conteudo
-4. Codigo centralizado em um componente reutilizavel
-5. Manutencao simplificada para futuras alteracoes
-
+1. Campo de busca no header funcional e interativo
+2. Atalho Cmd+K / Ctrl+K para acesso rapido
+3. Busca unificada por modulos, lojas e colaboradores
+4. Navegacao instantanea ao selecionar resultado
+5. Experiencia similar a apps modernos (VS Code, Slack, Linear)
