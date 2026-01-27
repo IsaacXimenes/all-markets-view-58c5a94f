@@ -19,6 +19,7 @@ import {
 import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { formatCurrency } from '@/utils/formatUtils';
+import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { 
   Eye, 
   CreditCard, 
@@ -30,8 +31,7 @@ import {
   AlertCircle,
   CheckCircle,
   FileText,
-  DollarSign,
-  Upload
+  DollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -63,6 +63,8 @@ export default function FinanceiroNotasPendencias() {
     parcelas: '1',
     dataVencimento: '',
     comprovante: '',
+    comprovanteNome: '',
+    comprovantePreview: '',
     observacoes: '',
     responsavel: ''
   });
@@ -181,6 +183,8 @@ export default function FinanceiroNotasPendencias() {
       parcelas: '1',
       dataVencimento: '',
       comprovante: '',
+      comprovanteNome: '',
+      comprovantePreview: '',
       observacoes: '',
       responsavel: ''
     });
@@ -689,20 +693,17 @@ export default function FinanceiroNotasPendencias() {
                     </Select>
                   </div>
 
-                  <div>
-                    <Label>Comprovante (URL)</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        placeholder="URL do comprovante..."
-                        value={pagamentoForm.comprovante}
-                        onChange={(e) => setPagamentoForm(prev => ({ ...prev, comprovante: e.target.value }))}
-                      />
-                      <Button variant="outline" size="icon">
-                        <Upload className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">PDF, JPG ou PNG (máx 5MB)</p>
-                  </div>
+                  <FileUploadComprovante
+                    label="Comprovante"
+                    value={pagamentoForm.comprovante}
+                    fileName={pagamentoForm.comprovanteNome}
+                    onFileChange={(data) => setPagamentoForm(prev => ({
+                      ...prev,
+                      comprovante: data.comprovante,
+                      comprovanteNome: data.comprovanteNome,
+                      comprovantePreview: data.comprovantePreview
+                    }))}
+                  />
 
                   <div>
                     <Label>Observações</Label>

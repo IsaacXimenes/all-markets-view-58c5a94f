@@ -16,6 +16,7 @@ import { exportToCSV, formatCurrency, moedaMask, parseMoeda } from '@/utils/form
 import { Download, Plus, Eye, FileText, DollarSign, CheckCircle, Clock, Zap, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
+import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 
 // Função para gerar ID de urgência
 const gerarIdUrgencia = () => {
@@ -40,7 +41,9 @@ export default function EstoqueNotasCompra() {
     formaPagamento: '',
     observacoes: '',
     vendedorResponsavel: '',
-    fotoComprovante: ''
+    fotoComprovante: '',
+    fotoComprovanteNome: '',
+    fotoComprovantePreview: ''
   });
 
   // Helper para obter nome do fornecedor
@@ -325,15 +328,18 @@ export default function EstoqueNotasCompra() {
                     placeholder="Nome do vendedor que solicitou"
                   />
                 </div>
-                <div>
-                  <Label>Foto/Comprovante * (URL)</Label>
-                  <Input
-                    value={urgenciaForm.fotoComprovante}
-                    onChange={(e) => setUrgenciaForm(prev => ({ ...prev, fotoComprovante: e.target.value }))}
-                    placeholder="URL da foto do aparelho/comprovante"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">Foto obrigatória para notas de urgência (JPG, PNG, WebP)</p>
-                </div>
+                <FileUploadComprovante
+                  label="Foto/Comprovante"
+                  required
+                  value={urgenciaForm.fotoComprovante}
+                  fileName={urgenciaForm.fotoComprovanteNome}
+                  onFileChange={(data) => setUrgenciaForm(prev => ({
+                    ...prev,
+                    fotoComprovante: data.comprovante,
+                    fotoComprovanteNome: data.comprovanteNome,
+                    fotoComprovantePreview: data.comprovantePreview
+                  }))}
+                />
               </div>
             </div>
             <DialogFooter>
@@ -382,7 +388,16 @@ export default function EstoqueNotasCompra() {
                   
                   toast.success(`Nota de urgência ${novaNota.id} enviada para o Financeiro!`);
                   setShowUrgenciaModal(false);
-                  setUrgenciaForm({ fornecedor: '', valorTotal: '', formaPagamento: '', observacoes: '', vendedorResponsavel: '', fotoComprovante: '' });
+                  setUrgenciaForm({ 
+                    fornecedor: '', 
+                    valorTotal: '', 
+                    formaPagamento: '', 
+                    observacoes: '', 
+                    vendedorResponsavel: '', 
+                    fotoComprovante: '',
+                    fotoComprovanteNome: '',
+                    fotoComprovantePreview: ''
+                  });
                 }}
               >
                 <Zap className="mr-2 h-4 w-4" />

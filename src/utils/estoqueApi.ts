@@ -597,6 +597,7 @@ let notasCompra: NotaCompra[] = [
     },
     responsavelFinanceiro: 'Carlos Mendes'
   },
+  // NC-2025-0006 - 1 produto, 0% conferido
   {
     id: 'NC-2025-0006',
     data: '2024-11-23',
@@ -604,10 +605,39 @@ let notasCompra: NotaCompra[] = [
     fornecedor: 'Apple Distribuidor BR',
     valorTotal: 6400.00,
     status: 'Pendente',
+    origem: 'Normal',
+    valorConferido: 0,
+    valorPendente: 6400.00,
+    statusPagamento: 'Aguardando Conferência',
+    statusConferencia: 'Em Conferência',
     produtos: [
-      { marca: 'Apple', modelo: 'iPhone 15 Pro', cor: 'Preto Espacial', imei: '352123456789021', tipo: 'Novo', quantidade: 1, valorUnitario: 6400.00, valorTotal: 6400.00, saudeBateria: 100 }
+      { 
+        id: 'PROD-NC6-001',
+        marca: 'Apple', 
+        modelo: 'iPhone 15 Pro', 
+        cor: 'Preto Espacial', 
+        imei: '352123456789021', 
+        tipo: 'Novo', 
+        tipoProduto: 'Aparelho',
+        quantidade: 1, 
+        valorUnitario: 6400.00, 
+        valorTotal: 6400.00, 
+        saudeBateria: 100,
+        statusConferencia: 'Pendente'
+      }
+    ],
+    timeline: [
+      {
+        id: 'TL-NC6-001',
+        data: '2024-11-23T09:00:00Z',
+        tipo: 'entrada',
+        titulo: 'Nota Cadastrada',
+        descricao: 'Nota de entrada cadastrada no sistema',
+        responsavel: 'Sistema'
+      }
     ]
   },
+  // NC-2025-0007 - 2 produtos, 50% conferido (1/2)
   {
     id: 'NC-2025-0007',
     data: '2024-11-24',
@@ -615,11 +645,64 @@ let notasCompra: NotaCompra[] = [
     fornecedor: 'FastCell Distribuição',
     valorTotal: 5000.00,
     status: 'Pendente',
+    origem: 'Normal',
+    valorConferido: 3400.00,
+    valorPendente: 1600.00,
+    statusPagamento: 'Aguardando Conferência',
+    statusConferencia: 'Em Conferência',
     produtos: [
-      { marca: 'Apple', modelo: 'iPhone 14', cor: 'Vermelho', imei: '352123456789022', tipo: 'Seminovo', quantidade: 1, valorUnitario: 3400.00, valorTotal: 3400.00, saudeBateria: 82 },
-      { marca: 'Apple', modelo: 'iPhone 11', cor: 'Preto', imei: '352123456789023', tipo: 'Seminovo', quantidade: 1, valorUnitario: 1600.00, valorTotal: 1600.00, saudeBateria: 72 }
+      { 
+        id: 'PROD-NC7-001',
+        marca: 'Apple', 
+        modelo: 'iPhone 14', 
+        cor: 'Vermelho', 
+        imei: '352123456789022', 
+        tipo: 'Seminovo', 
+        tipoProduto: 'Aparelho',
+        quantidade: 1, 
+        valorUnitario: 3400.00, 
+        valorTotal: 3400.00, 
+        saudeBateria: 82,
+        statusConferencia: 'Conferido',
+        dataConferencia: '2024-11-25T14:30:00Z',
+        responsavelConferencia: 'Ana Costa'
+      },
+      { 
+        id: 'PROD-NC7-002',
+        marca: 'Apple', 
+        modelo: 'iPhone 11', 
+        cor: 'Preto', 
+        imei: '352123456789023', 
+        tipo: 'Seminovo', 
+        tipoProduto: 'Aparelho',
+        quantidade: 1, 
+        valorUnitario: 1600.00, 
+        valorTotal: 1600.00, 
+        saudeBateria: 72,
+        statusConferencia: 'Pendente'
+      }
+    ],
+    timeline: [
+      {
+        id: 'TL-NC7-002',
+        data: '2024-11-25T14:30:00Z',
+        tipo: 'validacao',
+        titulo: 'Aparelho Validado',
+        descricao: 'iPhone 14 Vermelho conferido - R$ 3.400,00. Progresso: 1/2 (50%)',
+        responsavel: 'Ana Costa',
+        valor: 3400.00
+      },
+      {
+        id: 'TL-NC7-001',
+        data: '2024-11-24T09:00:00Z',
+        tipo: 'entrada',
+        titulo: 'Nota Cadastrada',
+        descricao: 'Nota de entrada cadastrada no sistema',
+        responsavel: 'Sistema'
+      }
     ]
   },
+  // NC-2025-0008 - 3 produtos, 66% conferido (2/3)
   {
     id: 'NC-2025-0008',
     data: '2024-11-25',
@@ -627,9 +710,129 @@ let notasCompra: NotaCompra[] = [
     fornecedor: 'iStore Fornecedor',
     valorTotal: 19200.00,
     status: 'Pendente',
+    origem: 'Normal',
+    valorConferido: 12000.00,
+    valorPendente: 7200.00,
+    statusPagamento: 'Aguardando Conferência',
+    statusConferencia: 'Em Conferência',
     produtos: [
-      { marca: 'Apple', modelo: 'iPhone 15 Pro Max', cor: 'Branco', imei: '352123456789024', tipo: 'Novo', quantidade: 2, valorUnitario: 7200.00, valorTotal: 14400.00, saudeBateria: 100 },
-      { marca: 'Apple', modelo: 'iPhone 14 Pro', cor: 'Dourado', imei: '352123456789025', tipo: 'Seminovo', quantidade: 1, valorUnitario: 4800.00, valorTotal: 4800.00, saudeBateria: 95 }
+      { 
+        id: 'PROD-NC8-001',
+        marca: 'Apple', 
+        modelo: 'iPhone 15 Pro Max', 
+        cor: 'Branco', 
+        imei: '352123456789024', 
+        tipo: 'Novo', 
+        tipoProduto: 'Aparelho',
+        quantidade: 1, 
+        valorUnitario: 7200.00, 
+        valorTotal: 7200.00, 
+        saudeBateria: 100,
+        statusConferencia: 'Conferido',
+        dataConferencia: '2024-11-26T10:15:00Z',
+        responsavelConferencia: 'Pedro Lima'
+      },
+      { 
+        id: 'PROD-NC8-002',
+        marca: 'Apple', 
+        modelo: 'iPhone 15 Pro Max', 
+        cor: 'Preto', 
+        imei: '352123456789026', 
+        tipo: 'Novo', 
+        tipoProduto: 'Aparelho',
+        quantidade: 1, 
+        valorUnitario: 7200.00, 
+        valorTotal: 7200.00, 
+        saudeBateria: 100,
+        statusConferencia: 'Pendente'
+      },
+      { 
+        id: 'PROD-NC8-003',
+        marca: 'Apple', 
+        modelo: 'iPhone 14 Pro', 
+        cor: 'Dourado', 
+        imei: '352123456789025', 
+        tipo: 'Seminovo', 
+        tipoProduto: 'Aparelho',
+        quantidade: 1, 
+        valorUnitario: 4800.00, 
+        valorTotal: 4800.00, 
+        saudeBateria: 95,
+        statusConferencia: 'Conferido',
+        dataConferencia: '2024-11-26T14:30:00Z',
+        responsavelConferencia: 'Ana Costa'
+      }
+    ],
+    timeline: [
+      {
+        id: 'TL-NC8-003',
+        data: '2024-11-26T14:30:00Z',
+        tipo: 'validacao',
+        titulo: 'Aparelho Validado',
+        descricao: 'iPhone 14 Pro Dourado conferido - R$ 4.800,00. Progresso: 2/3 (66%)',
+        responsavel: 'Ana Costa',
+        valor: 4800.00
+      },
+      {
+        id: 'TL-NC8-002',
+        data: '2024-11-26T10:15:00Z',
+        tipo: 'validacao',
+        titulo: 'Aparelho Validado',
+        descricao: 'iPhone 15 Pro Max Branco conferido - R$ 7.200,00. Progresso: 1/3 (33%)',
+        responsavel: 'Pedro Lima',
+        valor: 7200.00
+      },
+      {
+        id: 'TL-NC8-001',
+        data: '2024-11-25T09:00:00Z',
+        tipo: 'entrada',
+        titulo: 'Nota Cadastrada',
+        descricao: 'Nota de entrada cadastrada no sistema',
+        responsavel: 'Sistema'
+      }
+    ]
+  },
+  // URG-2025-0001 - Nota de Urgência com foto e vendedor
+  {
+    id: 'URG-2025-0001',
+    data: '2024-11-26',
+    numeroNota: 'URG-001',
+    fornecedor: 'TechSupply Urgente',
+    valorTotal: 3200.00,
+    status: 'Pendente',
+    origem: 'Urgência',
+    statusUrgencia: 'Aguardando Financeiro',
+    vendedorRegistro: 'Carlos Vendedor',
+    fotoComprovante: 'https://images.unsplash.com/photo-1592899677977-9c10ca588bbd?w=400',
+    valorConferido: 0,
+    valorPendente: 3200.00,
+    statusPagamento: 'Aguardando Conferência',
+    statusConferencia: 'Em Conferência',
+    produtos: [
+      {
+        id: 'PROD-URG1-001',
+        marca: 'Apple',
+        modelo: 'iPhone 14 Pro Max',
+        cor: 'Roxo Profundo',
+        imei: '352123456789030',
+        tipo: 'Seminovo',
+        tipoProduto: 'Aparelho',
+        quantidade: 1,
+        valorUnitario: 3200.00,
+        valorTotal: 3200.00,
+        saudeBateria: 88,
+        statusConferencia: 'Pendente'
+      }
+    ],
+    timeline: [
+      {
+        id: 'TL-URG1-001',
+        data: '2024-11-26T16:45:00Z',
+        tipo: 'entrada',
+        titulo: 'Urgência Registrada',
+        descricao: 'Nota de urgência registrada por Carlos Vendedor',
+        responsavel: 'Carlos Vendedor'
+      }
     ]
   }
 ];
@@ -1066,6 +1269,39 @@ export const verificarConferenciaNota = (notaId: string): {
     motivo: nota.motivoDiscrepancia,
     aparelhosConferidos,
     aparelhosTotal
+  };
+};
+
+// Validar múltiplos aparelhos em lote
+export const validarAparelhosEmLote = (
+  notaId: string,
+  aparelhoImeis: string[],
+  responsavel: string,
+  observacoes?: string
+): { sucesso: boolean; validados: number; erros: string[]; nota?: NotaCompra } => {
+  const nota = notasCompra.find(n => n.id === notaId);
+  if (!nota) return { sucesso: false, validados: 0, erros: ['Nota não encontrada'] };
+
+  const erros: string[] = [];
+  let validados = 0;
+
+  for (const imei of aparelhoImeis) {
+    const resultado = validarAparelhoNota(notaId, imei, { responsavel, observacoes });
+    if (resultado.sucesso) {
+      validados++;
+    } else {
+      erros.push(`Falha ao validar IMEI ${imei}`);
+    }
+  }
+
+  // Buscar nota atualizada
+  const notaAtualizada = notasCompra.find(n => n.id === notaId);
+
+  return {
+    sucesso: validados > 0,
+    validados,
+    erros,
+    nota: notaAtualizada || undefined
   };
 };
 

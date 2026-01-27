@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -21,13 +24,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Eye, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, Wrench, RotateCcw, Undo2, DollarSign } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Eye, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, Wrench, RotateCcw, Undo2, DollarSign, CheckSquare } from 'lucide-react';
 import { getProdutosPendentes, ProdutoPendente, calcularSLA } from '@/utils/osApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { getFornecedores } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 import { InputComMascara } from '@/components/ui/InputComMascara';
+import { getPendenciaPorNota } from '@/utils/pendenciasFinanceiraApi';
+import { validarAparelhosEmLote } from '@/utils/estoqueApi';
 
 import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 
@@ -41,18 +53,39 @@ type StatusAparelhosPendentes =
 
 export default function EstoqueProdutosPendentes() {
   const navigate = useNavigate();
-  const { obterLojasTipoLoja, obterLojaById, obterNomeLoja } = useCadastroStore();
+  const { obterLojasTipoLoja, obterLojaById, obterNomeLoja, obterEstoquistas } = useCadastroStore();
   const [produtosPendentes, setProdutosPendentes] = useState<ProdutoPendente[]>([]);
+  
+  // Estados para validação em lote
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [dialogValidacaoLote, setDialogValidacaoLote] = useState(false);
+  const [loteForm, setLoteForm] = useState({
+    responsavel: '',
+    observacoes: ''
+  });
   
   // Usar lojas do store centralizado (apenas tipo 'Loja')
   const lojas = obterLojasTipoLoja();
   const fornecedores = getFornecedores();
+  const estoquistas = obterEstoquistas();
 
   const getLojaNome = (lojaId: string) => {
     const loja = obterLojaById(lojaId);
     if (loja) return loja.nome;
     return obterNomeLoja(lojaId);
   };
+
+  // Função para obter progresso da nota
+  const getNotaProgresso = useCallback((notaOrigemId: string) => {
+    if (!notaOrigemId) return null;
+    const pendencia = getPendenciaPorNota(notaOrigemId);
+    if (!pendencia) return null;
+    return {
+      percentual: pendencia.percentualConferencia,
+      conferidos: pendencia.aparelhosConferidos,
+      total: pendencia.aparelhosTotal
+    };
+  }, []);
 
   // Filtros - igual à aba Produtos + filtro de status + filtro de fornecedor + filtro de parecer estoque
   const [filters, setFilters] = useState({
@@ -230,6 +263,71 @@ export default function EstoqueProdutosPendentes() {
 
   const handleLimpar = () => {
     setFilters({ imei: '', modelo: '', loja: 'todas', status: 'todos', fornecedor: 'todos', parecerEstoque: 'todos' });
+    setSelectedProducts([]);
+  };
+
+  // Handlers para seleção de produtos
+  const handleSelectProduct = (productId: string, imei: string) => {
+    setSelectedProducts(prev => 
+      prev.includes(imei) 
+        ? prev.filter(id => id !== imei)
+        : [...prev, imei]
+    );
+  };
+
+  const handleSelectAllFiltered = () => {
+    const allImeis = filteredProdutos.map(p => p.imei);
+    if (selectedProducts.length === allImeis.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(allImeis);
+    }
+  };
+
+  // Produtos selecionados com suas notas
+  const produtosSelecionadosInfo = useMemo(() => {
+    return filteredProdutos.filter(p => selectedProducts.includes(p.imei));
+  }, [filteredProdutos, selectedProducts]);
+
+  // Agrupar por nota para validação em lote
+  const notasDosSeleccionados = useMemo(() => {
+    const notas = new Set(produtosSelecionadosInfo.map(p => (p as any).notaOrigemId).filter(Boolean));
+    return Array.from(notas);
+  }, [produtosSelecionadosInfo]);
+
+  // Handler para validação em lote
+  const handleValidarLote = () => {
+    if (!loteForm.responsavel) {
+      toast.error('Selecione o responsável pela conferência');
+      return;
+    }
+
+    if (notasDosSeleccionados.length !== 1) {
+      toast.error('Selecione produtos de uma única nota para validar em lote');
+      return;
+    }
+
+    const notaId = notasDosSeleccionados[0];
+    const imeisParaValidar = produtosSelecionadosInfo.map(p => p.imei);
+
+    const resultado = validarAparelhosEmLote(
+      notaId,
+      imeisParaValidar,
+      loteForm.responsavel,
+      loteForm.observacoes
+    );
+
+    if (resultado.sucesso) {
+      toast.success(`${resultado.validados} produto(s) validado(s) com sucesso!`);
+      setSelectedProducts([]);
+      setDialogValidacaoLote(false);
+      setLoteForm({ responsavel: '', observacoes: '' });
+      // Recarregar dados
+      const data = getProdutosPendentes();
+      setProdutosPendentes(data);
+    } else {
+      toast.error(`Erros na validação: ${resultado.erros.join(', ')}`);
+    }
   };
 
   return (
@@ -440,13 +538,31 @@ export default function EstoqueProdutosPendentes() {
       {/* Tabela de Produtos Pendentes */}
       <Card>
         <CardHeader>
-          <CardTitle>Produtos Pendentes de Conferência</CardTitle>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <CardTitle>Produtos Pendentes de Conferência</CardTitle>
+            {selectedProducts.length > 0 && (
+              <Button 
+                onClick={() => setDialogValidacaoLote(true)}
+                className="bg-green-600 hover:bg-green-700"
+                disabled={notasDosSeleccionados.length !== 1}
+              >
+                <CheckSquare className="h-4 w-4 mr-2" />
+                Validar {selectedProducts.length} Selecionado(s)
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox 
+                      checked={filteredProdutos.length > 0 && selectedProducts.length === filteredProdutos.length}
+                      onCheckedChange={handleSelectAllFiltered}
+                    />
+                  </TableHead>
                   <TableHead>ID</TableHead>
                   <TableHead>IMEI</TableHead>
                   <TableHead>Produto</TableHead>
@@ -464,13 +580,19 @@ export default function EstoqueProdutosPendentes() {
               <TableBody>
                 {filteredProdutos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                       Nenhum produto pendente de conferência
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredProdutos.map((produto) => (
                     <TableRow key={produto.id} className={getStatusRowClass(produto, produto.dataEntrada)}>
+                      <TableCell>
+                        <Checkbox 
+                          checked={selectedProducts.includes(produto.imei)}
+                          onCheckedChange={() => handleSelectProduct(produto.id, produto.imei)}
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-xs">{produto.id}</TableCell>
                       <TableCell className="font-mono text-xs">{formatIMEI(produto.imei)}</TableCell>
                       <TableCell>
@@ -482,13 +604,30 @@ export default function EstoqueProdutosPendentes() {
                       <TableCell>{getOrigemBadge(produto.origemEntrada)}</TableCell>
                       <TableCell>
                         {(produto as any).notaOrigemId ? (
-                          (produto as any).notaOrigemId.startsWith('URG') ? (
-                            <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">
-                              Urgência
-                            </Badge>
-                          ) : (
-                            <span className="font-mono text-xs">{(produto as any).notaOrigemId}</span>
-                          )
+                          <div className="space-y-1">
+                            {(produto as any).notaOrigemId.startsWith('URG') ? (
+                              <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">
+                                Urgência
+                              </Badge>
+                            ) : (
+                              <span className="font-mono text-xs">{(produto as any).notaOrigemId}</span>
+                            )}
+                            {/* Barra de progresso */}
+                            {(() => {
+                              const progresso = getNotaProgresso((produto as any).notaOrigemId);
+                              if (progresso) {
+                                return (
+                                  <div className="space-y-1">
+                                    <Progress value={progresso.percentual} className="h-1.5" />
+                                    <span className="text-xs text-muted-foreground">
+                                      {progresso.conferidos}/{progresso.total} conferidos
+                                    </span>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
                         ) : (
                           <span className="text-muted-foreground">—</span>
                         )}
@@ -531,6 +670,89 @@ export default function EstoqueProdutosPendentes() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Validação em Lote */}
+      <Dialog open={dialogValidacaoLote} onOpenChange={setDialogValidacaoLote}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-600">
+              <CheckSquare className="h-5 w-5" />
+              Validar Produtos em Lote
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {notasDosSeleccionados.length === 1 ? (
+              <>
+                <div className="p-3 rounded-lg bg-muted/50">
+                  <p className="text-sm text-muted-foreground">Nota</p>
+                  <p className="font-medium font-mono">{notasDosSeleccionados[0]}</p>
+                </div>
+                
+                <div>
+                  <p className="text-sm font-medium mb-2">Produtos selecionados: {selectedProducts.length}</p>
+                  <div className="max-h-40 overflow-y-auto space-y-1 border rounded-lg p-2">
+                    {produtosSelecionadosInfo.map(p => (
+                      <div key={p.id} className="text-sm flex items-center gap-2">
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                        <span>{p.modelo}</span>
+                        <span className="text-muted-foreground font-mono text-xs">({p.imei.slice(-6)})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Responsável Conferência *</Label>
+                  <Select 
+                    value={loteForm.responsavel} 
+                    onValueChange={(v) => setLoteForm(prev => ({ ...prev, responsavel: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {estoquistas.map(e => (
+                        <SelectItem key={e.id} value={e.nome}>{e.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Observações</Label>
+                  <Textarea
+                    value={loteForm.observacoes}
+                    onChange={(e) => setLoteForm(prev => ({ ...prev, observacoes: e.target.value }))}
+                    placeholder="Observações gerais sobre a conferência..."
+                    rows={2}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                <AlertTriangle className="h-10 w-10 mx-auto mb-2 text-yellow-500" />
+                <p>Selecione produtos de uma única nota para validar em lote.</p>
+                <p className="text-sm mt-2">Notas encontradas: {notasDosSeleccionados.join(', ') || 'Nenhuma'}</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogValidacaoLote(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleValidarLote}
+              disabled={notasDosSeleccionados.length !== 1 || !loteForm.responsavel}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Confirmar Validação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </EstoqueLayout>
   );
 }

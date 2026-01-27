@@ -61,20 +61,35 @@ export const criarPendenciaFinanceira = (nota: NotaCompra): PendenciaFinanceira 
   const id = `PEND-${nota.id}`;
   
   const aparelhosTotal = nota.produtos.filter(p => p.tipoProduto !== 'Acessório').length || nota.produtos.length;
+  const aparelhosConferidos = nota.produtos.filter(p => p.statusConferencia === 'Conferido').length;
+  const percentualConferencia = aparelhosTotal > 0 ? Math.round((aparelhosConferidos / aparelhosTotal) * 100) : 0;
   const sla = calcularSLAPendencia(nota.data);
+  
+  // Usar valores da nota se disponíveis
+  const valorConferido = nota.valorConferido ?? nota.produtos
+    .filter(p => p.statusConferencia === 'Conferido')
+    .reduce((acc, p) => acc + p.valorTotal, 0);
+  
+  const valorPendente = nota.valorTotal - valorConferido;
+  
+  // Determinar status de conferência
+  let statusConferencia: PendenciaFinanceira['statusConferencia'] = 'Em Conferência';
+  if (percentualConferencia === 100) {
+    statusConferencia = nota.discrepancia ? 'Discrepância Detectada' : 'Conferência Completa';
+  }
   
   const novaPendencia: PendenciaFinanceira = {
     id,
     notaId: nota.id,
     fornecedor: nota.fornecedor,
     valorTotal: nota.valorTotal,
-    valorConferido: nota.valorConferido || 0,
-    valorPendente: nota.valorTotal - (nota.valorConferido || 0),
+    valorConferido,
+    valorPendente,
     statusPagamento: 'Aguardando Conferência',
-    statusConferencia: 'Em Conferência',
+    statusConferencia,
     aparelhosTotal,
-    aparelhosConferidos: nota.produtos.filter(p => p.statusConferencia === 'Conferido').length,
-    percentualConferencia: 0,
+    aparelhosConferidos,
+    percentualConferencia,
     dataCriacao: nota.data,
     dataVencimento: nota.dataVencimento || calcularDataVencimento(nota.data, 30),
     slaAlerta: sla.alerta,
