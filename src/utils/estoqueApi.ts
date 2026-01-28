@@ -67,6 +67,9 @@ export interface ProdutoNota {
   statusConferencia?: 'Pendente' | 'Conferido';
   dataConferencia?: string;
   responsavelConferencia?: string;
+  // Novos campos para individualização
+  capacidade?: '64 GB' | '128 GB' | '256 GB' | '512 GB' | '1 TB';
+  percentualBateria?: number; // 0 a 100
 }
 
 export interface NotaCompra {
@@ -89,11 +92,12 @@ export interface NotaCompra {
     contaPagamento?: string; // ID da conta financeira
   };
   responsavelFinanceiro?: string;
-  // NOVOS CAMPOS para fluxo de conferência
+  // Campos para fluxo de conferência
   valorConferido?: number;
   valorPendente?: number;
-  statusPagamento?: 'Aguardando Conferência' | 'Pago' | 'Parcial';
-  statusConferencia?: 'Em Conferência' | 'Conferência Completa' | 'Discrepância Detectada';
+  tipoPagamento?: 'Parcial' | '100% Antecipado' | 'Pós-Conferência'; // Novo campo para fluxo tripartite
+  statusPagamento?: 'Aguardando Conferência' | 'Pago' | 'Parcialmente Pago';
+  statusConferencia?: 'Em Conferência' | 'Conferência Completa' | 'Discrepância Detectada' | 'Finalizada com Pendência';
   dataConferenciaCompleta?: string;
   dataVencimento?: string;
   responsavelEstoque?: string;

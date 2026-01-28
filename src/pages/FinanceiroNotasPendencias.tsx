@@ -7,19 +7,17 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { 
   getPendencias, 
   PendenciaFinanceira, 
   finalizarPagamentoPendencia,
-  getPendenciaPorNota
+  forcarFinalizacaoPendencia
 } from '@/utils/pendenciasFinanceiraApi';
-import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
-import { useCadastroStore } from '@/store/cadastroStore';
+import { getFornecedores } from '@/utils/cadastrosApi';
 import { formatCurrency } from '@/utils/formatUtils';
-import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
+import { ModalDetalhePendencia } from '@/components/estoque/ModalDetalhePendencia';
+import { ModalFinalizarPagamento, DadosPagamento } from '@/components/estoque/ModalFinalizarPagamento';
 import { 
   Eye, 
   CreditCard, 
@@ -41,10 +39,7 @@ export default function FinanceiroNotasPendencias() {
   const [dialogDetalhes, setDialogDetalhes] = useState(false);
   const [dialogPagamento, setDialogPagamento] = useState(false);
   
-  const { obterFinanceiros } = useCadastroStore();
-  const contasFinanceiras = getContasFinanceiras().filter(c => c.status === 'Ativo');
   const fornecedoresList = getFornecedores();
-  const colaboradoresFinanceiros = obterFinanceiros();
   
   // Filtros
   const [filters, setFilters] = useState({
@@ -54,19 +49,6 @@ export default function FinanceiroNotasPendencias() {
     statusPagamento: 'todos',
     statusConferencia: 'todos',
     palavraChave: ''
-  });
-  
-  // Form de pagamento
-  const [pagamentoForm, setPagamentoForm] = useState({
-    contaPagamento: '',
-    formaPagamento: '',
-    parcelas: '1',
-    dataVencimento: '',
-    comprovante: '',
-    comprovanteNome: '',
-    comprovantePreview: '',
-    observacoes: '',
-    responsavel: ''
   });
 
   // Filtrar pendências
@@ -151,12 +133,14 @@ export default function FinanceiroNotasPendencias() {
     }
   };
 
-  const getStatusConferenciaBadge = (status: string) => {
+  const getConferenciaStatusBadge = (status: string) => {
     switch (status) {
       case 'Conferência Completa':
         return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">Completa</Badge>;
       case 'Discrepância Detectada':
         return <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30">Discrepância</Badge>;
+      case 'Finalizada com Pendência':
+        return <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">Finalizada c/ Pend.</Badge>;
       default:
         return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">Em Conf.</Badge>;
     }
@@ -177,37 +161,36 @@ export default function FinanceiroNotasPendencias() {
 
   const handleAbrirPagamento = (pendencia: PendenciaFinanceira) => {
     setPendenciaSelecionada(pendencia);
-    setPagamentoForm({
-      contaPagamento: '',
-      formaPagamento: '',
-      parcelas: '1',
-      dataVencimento: '',
-      comprovante: '',
-      comprovanteNome: '',
-      comprovantePreview: '',
-      observacoes: '',
-      responsavel: ''
-    });
     setDialogPagamento(true);
   };
 
-  const handleFinalizarPagamento = () => {
+  const handleFinalizarPagamento = (dados: DadosPagamento) => {
     if (!pendenciaSelecionada) return;
     
-    if (!pagamentoForm.contaPagamento || !pagamentoForm.formaPagamento || !pagamentoForm.responsavel) {
-      toast.error('Preencha todos os campos obrigatórios');
-      return;
+    let resultado;
+    
+    // Se conferência incompleta e forçar finalização
+    if (dados.forcarFinalizacao && pendenciaSelecionada.percentualConferencia < 100) {
+      resultado = forcarFinalizacaoPendencia(pendenciaSelecionada.notaId, {
+        formaPagamento: dados.formaPagamento,
+        parcelas: dados.parcelas,
+        contaPagamento: dados.contaPagamento,
+        comprovante: dados.comprovante,
+        dataVencimento: dados.dataVencimento,
+        observacoes: dados.observacoes,
+        responsavel: dados.responsavel
+      });
+    } else {
+      resultado = finalizarPagamentoPendencia(pendenciaSelecionada.notaId, {
+        formaPagamento: dados.formaPagamento,
+        parcelas: dados.parcelas,
+        contaPagamento: dados.contaPagamento,
+        comprovante: dados.comprovante,
+        dataVencimento: dados.dataVencimento,
+        observacoes: dados.observacoes,
+        responsavel: dados.responsavel
+      });
     }
-
-    const resultado = finalizarPagamentoPendencia(pendenciaSelecionada.notaId, {
-      formaPagamento: pagamentoForm.formaPagamento,
-      parcelas: parseInt(pagamentoForm.parcelas),
-      contaPagamento: pagamentoForm.contaPagamento,
-      comprovante: pagamentoForm.comprovante,
-      dataVencimento: pagamentoForm.dataVencimento,
-      observacoes: pagamentoForm.observacoes,
-      responsavel: pagamentoForm.responsavel
-    });
 
     if (resultado) {
       toast.success(`Pagamento da nota ${pendenciaSelecionada.notaId} confirmado!`);
@@ -256,7 +239,7 @@ export default function FinanceiroNotasPendencias() {
     });
   };
 
-  const mostrarCampoParcelas = pagamentoForm.formaPagamento === 'Cartão de Crédito' || pagamentoForm.formaPagamento === 'Boleto';
+  
 
   return (
     <FinanceiroLayout title="Notas - Pendências">
@@ -371,12 +354,13 @@ export default function FinanceiroNotasPendencias() {
                   <SelectTrigger id="statusConferencia">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="Em Conferência">Em Conferência</SelectItem>
-                    <SelectItem value="Conferência Completa">Completa</SelectItem>
-                    <SelectItem value="Discrepância Detectada">Discrepância</SelectItem>
-                  </SelectContent>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="Em Conferência">Em Conferência</SelectItem>
+                  <SelectItem value="Conferência Completa">Completa</SelectItem>
+                  <SelectItem value="Discrepância Detectada">Discrepância</SelectItem>
+                  <SelectItem value="Finalizada com Pendência">Finalizada c/ Pendência</SelectItem>
+                </SelectContent>
                 </Select>
               </div>
               <div>
@@ -458,7 +442,7 @@ export default function FinanceiroNotasPendencias() {
                           </Badge>
                         </TableCell>
                         <TableCell>{getStatusPagamentoBadge(pendencia.statusPagamento)}</TableCell>
-                        <TableCell>{getStatusConferenciaBadge(pendencia.statusConferencia)}</TableCell>
+                        <TableCell>{getConferenciaStatusBadge(pendencia.statusConferencia)}</TableCell>
                         <TableCell>{getSLABadge(pendencia)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
@@ -490,247 +474,25 @@ export default function FinanceiroNotasPendencias() {
           </CardContent>
         </Card>
 
-        {/* Modal de Detalhes */}
-        <Dialog open={dialogDetalhes} onOpenChange={setDialogDetalhes}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Detalhes - Nota {pendenciaSelecionada?.notaId}
-              </DialogTitle>
-            </DialogHeader>
-            
-            {pendenciaSelecionada && (
-              <div className="space-y-6">
-                {/* Informações Gerais */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-sm text-muted-foreground">Fornecedor</p>
-                    <p className="font-medium">{pendenciaSelecionada.fornecedor}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-sm text-muted-foreground">Data Entrada</p>
-                    <p className="font-medium">{new Date(pendenciaSelecionada.dataCriacao).toLocaleDateString('pt-BR')}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-sm text-muted-foreground">Dias Decorridos</p>
-                    <p className="font-medium">{pendenciaSelecionada.diasDecorridos} dias</p>
-                  </div>
-                </div>
+        {/* Modal de Detalhes - Usando componente reutilizável */}
+        <ModalDetalhePendencia
+          pendencia={pendenciaSelecionada}
+          open={dialogDetalhes}
+          onClose={() => setDialogDetalhes(false)}
+          showPaymentButton={true}
+          onPayment={() => {
+            setDialogDetalhes(false);
+            setDialogPagamento(true);
+          }}
+        />
 
-                {/* Valores */}
-                <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium mb-3">Valores</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Total:</span>
-                      <span className="font-medium">{formatCurrency(pendenciaSelecionada.valorTotal)}</span>
-                    </div>
-                    <div className="flex justify-between text-green-600">
-                      <span>Conferido:</span>
-                      <span className="font-medium">{formatCurrency(pendenciaSelecionada.valorConferido)} ({pendenciaSelecionada.percentualConferencia}%)</span>
-                    </div>
-                    <div className="flex justify-between text-orange-600">
-                      <span>Pendente:</span>
-                      <span className="font-medium">{formatCurrency(pendenciaSelecionada.valorPendente)}</span>
-                    </div>
-                    <Progress value={pendenciaSelecionada.percentualConferencia} className="h-3 mt-2" />
-                  </div>
-                </div>
-
-                {/* Aparelhos */}
-                <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium mb-3">
-                    Aparelhos ({pendenciaSelecionada.aparelhosConferidos}/{pendenciaSelecionada.aparelhosTotal} conferidos)
-                  </h4>
-                  <Progress 
-                    value={(pendenciaSelecionada.aparelhosConferidos / pendenciaSelecionada.aparelhosTotal) * 100} 
-                    className="h-2" 
-                  />
-                </div>
-
-                {/* Timeline */}
-                <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium mb-3">Timeline</h4>
-                  <div className="space-y-3 max-h-48 overflow-y-auto">
-                    {pendenciaSelecionada.timeline.map((entry, idx) => (
-                      <div key={entry.id} className="flex gap-3 text-sm">
-                        <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-primary" />
-                        <div>
-                          <p className="text-muted-foreground">
-                            {new Date(entry.data).toLocaleDateString('pt-BR')} {new Date(entry.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                          <p className="font-medium">{entry.titulo}</p>
-                          <p className="text-muted-foreground">{entry.descricao}</p>
-                          {entry.responsavel && (
-                            <p className="text-xs text-muted-foreground">Por: {entry.responsavel}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogDetalhes(false)}>
-                Fechar
-              </Button>
-              {pendenciaSelecionada?.statusPagamento !== 'Pago' && (
-                <Button onClick={() => handleAbrirPagamento(pendenciaSelecionada!)}>
-                  <CreditCard className="h-4 w-4 mr-2" />
-                  Finalizar Pagamento
-                </Button>
-              )}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Modal de Pagamento */}
-        <Dialog open={dialogPagamento} onOpenChange={setDialogPagamento}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Finalizar Pagamento - {pendenciaSelecionada?.notaId}
-              </DialogTitle>
-            </DialogHeader>
-            
-            {pendenciaSelecionada && (
-              <div className="space-y-4">
-                <div className="p-3 rounded-lg bg-muted/50">
-                  <p className="text-sm text-muted-foreground">Valor Total</p>
-                  <p className="text-xl font-bold">{formatCurrency(pendenciaSelecionada.valorTotal)}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Status Conferência: {pendenciaSelecionada.percentualConferencia}% conferido
-                  </p>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <Label>Conta de Pagamento *</Label>
-                    <Select 
-                      value={pagamentoForm.contaPagamento} 
-                      onValueChange={(v) => setPagamentoForm(prev => ({ ...prev, contaPagamento: v }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a conta" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {contasFinanceiras.map(conta => (
-                          <SelectItem key={conta.id} value={conta.id}>
-                            {conta.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Forma de Pagamento *</Label>
-                    <Select 
-                      value={pagamentoForm.formaPagamento} 
-                      onValueChange={(v) => setPagamentoForm(prev => ({ ...prev, formaPagamento: v }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Pix">Pix</SelectItem>
-                        <SelectItem value="Transferência Bancária">Transferência Bancária</SelectItem>
-                        <SelectItem value="Boleto">Boleto</SelectItem>
-                        <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
-                        <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {mostrarCampoParcelas && (
-                    <div>
-                      <Label>Parcelas</Label>
-                      <Select 
-                        value={pagamentoForm.parcelas} 
-                        onValueChange={(v) => setPagamentoForm(prev => ({ ...prev, parcelas: v }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
-                            <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  <div>
-                    <Label>Data de Vencimento</Label>
-                    <Input
-                      type="date"
-                      value={pagamentoForm.dataVencimento}
-                      onChange={(e) => setPagamentoForm(prev => ({ ...prev, dataVencimento: e.target.value }))}
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Responsável Financeiro *</Label>
-                    <Select 
-                      value={pagamentoForm.responsavel} 
-                      onValueChange={(v) => setPagamentoForm(prev => ({ ...prev, responsavel: v }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {colaboradoresFinanceiros.map(colab => (
-                          <SelectItem key={colab.id} value={colab.nome}>
-                            {colab.nome}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <FileUploadComprovante
-                    label="Comprovante"
-                    value={pagamentoForm.comprovante}
-                    fileName={pagamentoForm.comprovanteNome}
-                    onFileChange={(data) => setPagamentoForm(prev => ({
-                      ...prev,
-                      comprovante: data.comprovante,
-                      comprovanteNome: data.comprovanteNome,
-                      comprovantePreview: data.comprovantePreview
-                    }))}
-                  />
-
-                  <div>
-                    <Label>Observações</Label>
-                    <Textarea
-                      value={pagamentoForm.observacoes}
-                      onChange={(e) => setPagamentoForm(prev => ({ ...prev, observacoes: e.target.value }))}
-                      placeholder="Observações adicionais..."
-                      rows={2}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogPagamento(false)}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleFinalizarPagamento}
-                disabled={!pagamentoForm.contaPagamento || !pagamentoForm.formaPagamento || !pagamentoForm.responsavel}
-              >
-                Confirmar Pagamento
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Modal de Pagamento - Usando componente reutilizável */}
+        <ModalFinalizarPagamento
+          pendencia={pendenciaSelecionada}
+          open={dialogPagamento}
+          onClose={() => setDialogPagamento(false)}
+          onConfirm={handleFinalizarPagamento}
+        />
       </div>
     </FinanceiroLayout>
   );

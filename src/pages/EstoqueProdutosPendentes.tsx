@@ -94,7 +94,8 @@ export default function EstoqueProdutosPendentes() {
     loja: 'todas',
     status: 'todos',
     fornecedor: 'todos',
-    parecerEstoque: 'todos'
+    parecerEstoque: 'todos',
+    tipoNota: 'todos' // Novo filtro: 'todos' | 'urgencia' | 'normal'
   });
 
   useEffect(() => {
@@ -124,6 +125,12 @@ export default function EstoqueProdutosPendentes() {
       if (filters.parecerEstoque !== 'todos') {
         const parecerStatus = produto.parecerEstoque?.status || 'Aguardando Parecer';
         if (parecerStatus !== filters.parecerEstoque) return false;
+      }
+      // Filtro de Tipo de Nota (Urgência/Normal)
+      if (filters.tipoNota !== 'todos') {
+        const notaOrigemId = (produto as any).notaOrigemId || '';
+        if (filters.tipoNota === 'urgencia' && !notaOrigemId.startsWith('URG')) return false;
+        if (filters.tipoNota === 'normal' && !notaOrigemId.startsWith('NC-')) return false;
       }
       return true;
     });
@@ -262,7 +269,7 @@ export default function EstoqueProdutosPendentes() {
   };
 
   const handleLimpar = () => {
-    setFilters({ imei: '', modelo: '', loja: 'todas', status: 'todos', fornecedor: 'todos', parecerEstoque: 'todos' });
+    setFilters({ imei: '', modelo: '', loja: 'todas', status: 'todos', fornecedor: 'todos', parecerEstoque: 'todos', tipoNota: 'todos' });
     setSelectedProducts([]);
   };
 
@@ -519,6 +526,19 @@ export default function EstoqueProdutosPendentes() {
                   <SelectItem value="Reprovado">Reprovado</SelectItem>
                   <SelectItem value="Encaminhado para conferência da Assistência">Encaminhado Assistência</SelectItem>
                   <SelectItem value="Devolvido ao fornecedor">Devolvido ao Fornecedor</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="tipoNota">Tipo de Nota</Label>
+              <Select value={filters.tipoNota} onValueChange={(value) => setFilters({ ...filters, tipoNota: value })}>
+                <SelectTrigger id="tipoNota">
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="normal">Entrada Normal (NC-)</SelectItem>
+                  <SelectItem value="urgencia">Urgência (URG-)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

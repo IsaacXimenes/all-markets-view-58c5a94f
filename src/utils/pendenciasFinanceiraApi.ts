@@ -12,7 +12,7 @@ export interface PendenciaFinanceira {
   valorPendente: number;
   // Status
   statusPagamento: 'Aguardando Conferência' | 'Pago' | 'Parcial';
-  statusConferencia: 'Em Conferência' | 'Conferência Completa' | 'Discrepância Detectada';
+  statusConferencia: 'Em Conferência' | 'Conferência Completa' | 'Discrepância Detectada' | 'Finalizada com Pendência';
   // Aparelhos
   aparelhosTotal: number;
   aparelhosConferidos: number;
@@ -316,6 +316,77 @@ export const verificarSLAPendencias = (): void => {
       pendencia.timeline.unshift(newTimelineEntry);
     }
   });
+};
+
+// Forçar finalização de pendência mesmo sem 100% de conferência
+export const forcarFinalizacaoPendencia = (
+  notaId: string,
+  pagamento: {
+    formaPagamento: string;
+    parcelas: number;
+    contaPagamento: string;
+    comprovante?: string;
+    dataVencimento?: string;
+    observacoes?: string;
+    responsavel: string;
+  }
+): PendenciaFinanceira | null => {
+  const index = pendenciasFinanceiras.findIndex(p => p.notaId === notaId);
+  if (index === -1) return null;
+  
+  const pendencia = pendenciasFinanceiras[index];
+  
+  // Registrar valor não conferido
+  const valorNaoConferido = pendencia.valorTotal - pendencia.valorConferido;
+  
+  // Marcar como "Finalizada com Pendência"
+  pendencia.statusConferencia = 'Finalizada com Pendência';
+  pendencia.statusPagamento = 'Pago';
+  pendencia.dataPagamento = new Date().toISOString();
+  
+  // Adicionar timeline
+  const newTimelineEntry: TimelineEntry = {
+    id: `TL-${notaId}-${String(pendencia.timeline.length + 1).padStart(3, '0')}`,
+    data: new Date().toISOString(),
+    tipo: 'pagamento',
+    titulo: 'Finalizada com Pendência',
+    descricao: `Pagamento forçado com ${pendencia.percentualConferencia}% conferido. Valor não conferido: ${formatCurrency(valorNaoConferido)}. ${pagamento.observacoes || ''}`,
+    responsavel: pagamento.responsavel,
+    valor: pendencia.valorTotal,
+    comprovante: pagamento.comprovante
+  };
+  pendencia.timeline.unshift(newTimelineEntry);
+  
+  pendenciasFinanceiras[index] = pendencia;
+  
+  // Atualizar nota original
+  const nota = getNotaById(notaId);
+  if (nota) {
+    updateNota(notaId, {
+      status: 'Concluído',
+      statusPagamento: 'Pago',
+      statusConferencia: 'Finalizada com Pendência',
+      pagamento: {
+        formaPagamento: pagamento.formaPagamento,
+        parcelas: pagamento.parcelas,
+        valorParcela: pendencia.valorTotal / pagamento.parcelas,
+        dataVencimento: pagamento.dataVencimento || new Date().toISOString().split('T')[0],
+        comprovante: pagamento.comprovante,
+        contaPagamento: pagamento.contaPagamento
+      },
+      responsavelFinanceiro: pagamento.responsavel
+    });
+  }
+  
+  // Notificar
+  addNotification({
+    type: 'pagamento_confirmado',
+    title: 'Pagamento forçado confirmado',
+    description: `Nota ${notaId} finalizada com ${pendencia.percentualConferencia}% de conferência - ${formatCurrency(pendencia.valorTotal)}`,
+    targetUsers: ['estoque', 'gestor']
+  });
+  
+  return pendencia;
 };
 
 // Inicializar pendências a partir das notas existentes
