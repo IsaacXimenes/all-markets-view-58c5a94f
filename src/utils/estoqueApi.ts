@@ -1316,3 +1316,84 @@ const formatCurrency = (value: number): string => {
     currency: 'BRL'
   }).format(value);
 };
+
+// ============= INTEGRAÇÃO COM FINANCEIRO =============
+
+// Criar nota de compra e automaticamente criar pendência no Financeiro
+export const criarNotaComPendencia = (notaData: Omit<NotaCompra, 'id' | 'status'>): NotaCompra => {
+  // Importar dinamicamente para evitar dependência circular
+  const { criarPendenciaFinanceira } = require('./pendenciasFinanceiraApi');
+  // Criar a nota normalmente
+  const novaNota = addNotaCompra(notaData);
+  
+  // Inicializar valores de conferência
+  novaNota.valorConferido = 0;
+  novaNota.valorPendente = novaNota.valorTotal;
+  novaNota.statusConferencia = 'Em Conferência';
+  novaNota.statusPagamento = 'Aguardando Conferência';
+  
+  // Criar pendência financeira automaticamente
+  criarPendenciaFinanceira(novaNota);
+  
+  // Marcar como enviada para financeiro
+  localStorage.setItem(`nota_status_${novaNota.id}`, 'Enviado para Financeiro');
+  
+  return novaNota;
+};
+
+// Atualizar status de pagamento da nota
+export const atualizarStatusPagamento = (
+  notaId: string, 
+  status: 'Aguardando Conferência' | 'Pago' | 'Parcialmente Pago'
+): NotaCompra | null => {
+  const nota = notasCompra.find(n => n.id === notaId);
+  if (!nota) return null;
+  
+  nota.statusPagamento = status;
+  
+  // Se pago, atualizar status geral
+  if (status === 'Pago') {
+    nota.status = 'Concluído';
+    localStorage.setItem(`nota_status_${notaId}`, 'Concluído');
+  }
+  
+  // Adicionar entrada na timeline
+  if (!nota.timeline) nota.timeline = [];
+  nota.timeline.unshift({
+    id: `TL-${notaId}-${String(nota.timeline.length + 1).padStart(3, '0')}`,
+    data: new Date().toISOString(),
+    tipo: 'pagamento',
+    titulo: 'Status de Pagamento Atualizado',
+    descricao: `Status alterado para: ${status}`,
+    responsavel: 'Sistema'
+  });
+  
+  return nota;
+};
+
+// Sincronizar validação de aparelho com pendência financeira
+export const sincronizarValidacaoComFinanceiro = (
+  notaId: string,
+  aparelhoInfo: { modelo: string; imei: string; valor: number },
+  responsavel: string
+): void => {
+  const nota = notasCompra.find(n => n.id === notaId);
+  if (!nota) return;
+  
+  const aparelhosConferidos = nota.produtos.filter(p => p.statusConferencia === 'Conferido').length;
+  const valorConferido = nota.produtos
+    .filter(p => p.statusConferencia === 'Conferido')
+    .reduce((acc, p) => acc + p.valorTotal, 0);
+  
+  // Importar dinamicamente para evitar dependência circular
+  const { atualizarPendencia } = require('./pendenciasFinanceiraApi');
+  
+  // Atualizar pendência no Financeiro
+  atualizarPendencia(notaId, {
+    valorConferido,
+    aparelhosConferidos,
+    statusConferencia: nota.statusConferencia,
+    responsavel,
+    aparelhoInfo
+  });
+};

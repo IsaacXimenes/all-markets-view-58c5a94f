@@ -9,12 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getNotasCompra, finalizarNota, NotaCompra } from '@/utils/estoqueApi';
 import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
-import { Eye, CheckCircle, Download, Filter, X, Check, FileText, Clock, CheckCircle2 } from 'lucide-react';
+import { Eye, CheckCircle, Download, Filter, X, Check, FileText, Clock, CheckCircle2, FileSearch } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { migrarProdutosNotaParaPendentes } from '@/utils/osApi';
 import { adicionarEstoqueAcessorio, getOrCreateAcessorio } from '@/utils/acessoriosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
+import { getPendenciaPorNota } from '@/utils/pendenciasFinanceiraApi';
+import { ModalDetalhePendencia } from '@/components/estoque/ModalDetalhePendencia';
 
 import { formatCurrency } from '@/utils/formatUtils';
 
@@ -51,8 +53,10 @@ export default function FinanceiroConferenciaNotas() {
   const [parcelas, setParcelas] = useState('1');
   const [responsavelFinanceiro, setResponsavelFinanceiro] = useState('');
   const [lojaDestino, setLojaDestino] = useState('');
-
-  // Filtros - igual à Conferência de Contas
+  
+  // Estado para modal de pendência
+  const [pendenciaSelecionada, setPendenciaSelecionada] = useState<any>(null);
+  const [dialogPendencia, setDialogPendencia] = useState(false);
   const [filters, setFilters] = useState({
     dataInicio: '',
     dataFim: '',
@@ -112,6 +116,17 @@ export default function FinanceiroConferenciaNotas() {
     setResponsavelFinanceiro('');
     setLojaDestino('');
     setDialogOpen(true);
+  };
+  
+  // Função para ver pendência
+  const handleVerPendencia = (nota: NotaCompra) => {
+    const pendencia = getPendenciaPorNota(nota.id);
+    if (pendencia) {
+      setPendenciaSelecionada(pendencia);
+      setDialogPendencia(true);
+    } else {
+      toast.info('Pendência não encontrada para esta nota');
+    }
   };
 
   const mostrarCampoParcelas = formaPagamento === 'Cartão de Crédito' || formaPagamento === 'Boleto';
@@ -445,16 +460,26 @@ export default function FinanceiroConferenciaNotas() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {nota.statusExtendido === 'Enviado para Financeiro' ? (
-                            <Button size="sm" onClick={() => handleVerNota(nota)}>
-                              <Check className="h-4 w-4 mr-1" />
-                              Conferir
+                          <div className="flex gap-1">
+                            {nota.statusExtendido === 'Enviado para Financeiro' ? (
+                              <Button size="sm" onClick={() => handleVerNota(nota)}>
+                                <Check className="h-4 w-4 mr-1" />
+                                Conferir
+                              </Button>
+                            ) : (
+                              <Button variant="ghost" size="sm" onClick={() => handleVerNota(nota)}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleVerPendencia(nota)}
+                              title="Ver Pendência"
+                            >
+                              <FileSearch className="h-4 w-4" />
                             </Button>
-                          ) : (
-                            <Button variant="ghost" size="sm" onClick={() => handleVerNota(nota)}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -631,6 +656,14 @@ export default function FinanceiroConferenciaNotas() {
             )}
           </DialogContent>
         </Dialog>
+        
+        {/* Modal de Detalhes da Pendência */}
+        <ModalDetalhePendencia
+          pendencia={pendenciaSelecionada}
+          open={dialogPendencia}
+          onClose={() => setDialogPendencia(false)}
+          showPaymentButton={false}
+        />
       </div>
     </FinanceiroLayout>
   );

@@ -10,10 +10,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { getNotasCompra, addNotaCompra } from '@/utils/estoqueApi';
+import { Progress } from '@/components/ui/progress';
+import { getNotasCompra, addNotaCompra, NotaCompra, verificarConferenciaNota } from '@/utils/estoqueApi';
 import { getFornecedores } from '@/utils/cadastrosApi';
 import { exportToCSV, formatCurrency, moedaMask, parseMoeda } from '@/utils/formatUtils';
-import { Download, Plus, Eye, FileText, DollarSign, CheckCircle, Clock, Zap, X } from 'lucide-react';
+import { Download, Plus, Eye, FileText, DollarSign, CheckCircle, Clock, Zap, X, BarChart } from 'lucide-react';
 import { toast } from 'sonner';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
@@ -30,6 +31,8 @@ export default function EstoqueNotasCompra() {
   const [notas] = useState(getNotasCompra());
   const [fornecedorFilter, setFornecedorFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('todos');
+  const [statusConferenciaFilter, setStatusConferenciaFilter] = useState<string>('todos');
+  const [statusPagamentoFilter, setStatusPagamentoFilter] = useState<string>('todos');
   const fornecedores = getFornecedores();
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
@@ -45,6 +48,10 @@ export default function EstoqueNotasCompra() {
     fotoComprovanteNome: '',
     fotoComprovantePreview: ''
   });
+  
+  // Estado para modal de progresso
+  const [showProgressoModal, setShowProgressoModal] = useState(false);
+  const [notaSelecionada, setNotaSelecionada] = useState<NotaCompra | null>(null);
 
   // Helper para obter nome do fornecedor
   const getFornecedorNome = (fornecedorIdOuNome: string) => {
@@ -60,10 +67,54 @@ export default function EstoqueNotasCompra() {
       }
     }
     if (statusFilter !== 'todos' && n.status !== statusFilter) return false;
+    if (statusConferenciaFilter !== 'todos' && n.statusConferencia !== statusConferenciaFilter) return false;
+    if (statusPagamentoFilter !== 'todos' && n.statusPagamento !== statusPagamentoFilter) return false;
     if (dataInicio && n.data < dataInicio) return false;
     if (dataFim && n.data > dataFim) return false;
     return true;
   });
+  
+  // Função para obter progresso da nota
+  const getProgressoNota = (notaId: string) => {
+    const conferencia = verificarConferenciaNota(notaId);
+    return conferencia.percentual;
+  };
+  
+  // Função para ver progresso
+  const handleVerProgresso = (nota: NotaCompra) => {
+    setNotaSelecionada(nota);
+    setShowProgressoModal(true);
+  };
+  
+  // Helper para cor do badge de conferência
+  const getConferenciaBadgeClass = (status?: string) => {
+    switch (status) {
+      case 'Conferência Completa':
+        return 'bg-green-500/10 text-green-600 border-green-500/30';
+      case 'Discrepância Detectada':
+        return 'bg-red-500/10 text-red-600 border-red-500/30';
+      case 'Em Conferência':
+        return 'bg-blue-500/10 text-blue-600 border-blue-500/30';
+      case 'Finalizada com Pendência':
+        return 'bg-orange-500/10 text-orange-600 border-orange-500/30';
+      default:
+        return 'bg-gray-500/10 text-gray-600 border-gray-500/30';
+    }
+  };
+  
+  // Helper para cor do badge de pagamento
+  const getPagamentoBadgeClass = (status?: string) => {
+    switch (status) {
+      case 'Pago':
+        return 'bg-green-500/10 text-green-600 border-green-500/30';
+      case 'Parcialmente Pago':
+        return 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30';
+      case 'Aguardando Conferência':
+        return 'bg-blue-500/10 text-blue-600 border-blue-500/30';
+      default:
+        return 'bg-gray-500/10 text-gray-600 border-gray-500/30';
+    }
+  };
 
   // Cálculos para os cards
   const stats = useMemo(() => {
@@ -167,13 +218,38 @@ export default function EstoqueNotasCompra() {
           </div>
 
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Todos" />
+            <SelectTrigger className="w-[130px]">
+              <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="todos">Todos</SelectItem>
+              <SelectItem value="todos">Todos Status</SelectItem>
               <SelectItem value="Pendente">Pendente</SelectItem>
               <SelectItem value="Concluído">Concluído</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={statusConferenciaFilter} onValueChange={setStatusConferenciaFilter}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Conferência" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todas Conferências</SelectItem>
+              <SelectItem value="Em Conferência">Em Conferência</SelectItem>
+              <SelectItem value="Conferência Completa">Conferência Completa</SelectItem>
+              <SelectItem value="Discrepância Detectada">Discrepância</SelectItem>
+              <SelectItem value="Finalizada com Pendência">Finalizada c/ Pendência</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={statusPagamentoFilter} onValueChange={setStatusPagamentoFilter}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Pagamento" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos Pagamentos</SelectItem>
+              <SelectItem value="Aguardando Conferência">Aguardando Conf.</SelectItem>
+              <SelectItem value="Pago">Pago</SelectItem>
+              <SelectItem value="Parcialmente Pago">Parcial</SelectItem>
             </SelectContent>
           </Select>
 
@@ -183,6 +259,8 @@ export default function EstoqueNotasCompra() {
               onClick={() => {
                 setFornecedorFilter('');
                 setStatusFilter('todos');
+                setStatusConferenciaFilter('todos');
+                setStatusPagamentoFilter('todos');
                 setDataInicio('');
                 setDataFim('');
               }}
@@ -218,12 +296,17 @@ export default function EstoqueNotasCompra() {
                 <TableHead>Nº Nota</TableHead>
                 <TableHead>Fornecedor</TableHead>
                 <TableHead>Valor Total</TableHead>
+                <TableHead>Valor Conferido</TableHead>
+                <TableHead>Status Conf.</TableHead>
+                <TableHead>Status Pag.</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {notasFiltradas.map(nota => (
+              {notasFiltradas.map(nota => {
+                const progresso = getProgressoNota(nota.id);
+                return (
                 <TableRow 
                   key={nota.id}
                   className={
@@ -238,7 +321,25 @@ export default function EstoqueNotasCompra() {
                   <TableCell className="font-mono text-xs">{nota.numeroNota}</TableCell>
                   <TableCell>{nota.fornecedor}</TableCell>
                   <TableCell>
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(nota.valorTotal)}
+                    {formatCurrency(nota.valorTotal)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Progress value={progresso} className="w-16 h-2" />
+                      <span className="text-xs text-muted-foreground">
+                        {formatCurrency(nota.valorConferido || 0)}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={getConferenciaBadgeClass(nota.statusConferencia)}>
+                      {nota.statusConferencia || 'Pendente'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={getPagamentoBadgeClass(nota.statusPagamento)}>
+                      {nota.statusPagamento || 'Aguardando'}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={nota.status === 'Concluído' ? 'default' : 'destructive'}>
@@ -246,16 +347,27 @@ export default function EstoqueNotasCompra() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => navigate(`/estoque/nota/${nota.id}`)}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleVerProgresso(nota)}
+                        title="Ver Progresso"
+                      >
+                        <BarChart className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => navigate(`/estoque/nota/${nota.id}`)}
+                        title="Ver Detalhes"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
-              ))}
+              )})}
             </TableBody>
           </Table>
         </div>
@@ -402,6 +514,96 @@ export default function EstoqueNotasCompra() {
               >
                 <Zap className="mr-2 h-4 w-4" />
                 Enviar para Financeiro
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal de Progresso de Conferência */}
+        <Dialog open={showProgressoModal} onOpenChange={setShowProgressoModal}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <BarChart className="h-5 w-5" />
+                Progresso de Conferência - {notaSelecionada?.id}
+              </DialogTitle>
+            </DialogHeader>
+            {notaSelecionada && (() => {
+              const conferencia = verificarConferenciaNota(notaSelecionada.id);
+              return (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Progresso</span>
+                      <span className="font-medium">{conferencia.percentual}%</span>
+                    </div>
+                    <Progress 
+                      value={conferencia.percentual} 
+                      className={`h-3 ${
+                        conferencia.percentual === 100 
+                          ? '[&>div]:bg-green-500' 
+                          : conferencia.percentual >= 50 
+                          ? '[&>div]:bg-blue-500' 
+                          : '[&>div]:bg-yellow-500'
+                      }`} 
+                    />
+                    <p className="text-center text-sm text-muted-foreground">
+                      {conferencia.aparelhosConferidos}/{conferencia.aparelhosTotal} aparelhos conferidos
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-muted/30 rounded">
+                      <Label className="text-xs">Valor Total</Label>
+                      <p className="font-semibold">{formatCurrency(notaSelecionada.valorTotal)}</p>
+                    </div>
+                    <div className="p-3 bg-muted/30 rounded">
+                      <Label className="text-xs">Valor Conferido</Label>
+                      <p className="font-semibold text-green-600">
+                        {formatCurrency(notaSelecionada.valorConferido || 0)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {conferencia.discrepancia && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/30 rounded">
+                      <p className="text-sm font-medium text-red-600">⚠️ Discrepância Detectada</p>
+                      <p className="text-xs text-muted-foreground">{conferencia.motivo}</p>
+                    </div>
+                  )}
+
+                  {/* Timeline de validações */}
+                  <div className="space-y-2">
+                    <Label>Histórico de Validações</Label>
+                    <div className="max-h-48 overflow-auto space-y-2">
+                      {notaSelecionada.timeline && notaSelecionada.timeline.length > 0 ? (
+                        notaSelecionada.timeline.map(entry => (
+                          <div key={entry.id} className="border-l-2 border-primary/30 pl-3 py-2">
+                            <p className="text-sm font-medium">{entry.titulo}</p>
+                            <p className="text-xs text-muted-foreground">{entry.descricao}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(entry.data).toLocaleString('pt-BR')} - {entry.responsavel}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Nenhuma validação registrada</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowProgressoModal(false)}>
+                Fechar
+              </Button>
+              <Button onClick={() => {
+                setShowProgressoModal(false);
+                navigate(`/estoque/nota/${notaSelecionada?.id}`);
+              }}>
+                <Eye className="mr-2 h-4 w-4" />
+                Ver Detalhes
               </Button>
             </DialogFooter>
           </DialogContent>
