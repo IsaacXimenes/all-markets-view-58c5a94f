@@ -54,6 +54,7 @@ export default function EstoqueNotaCadastrar() {
   
   // Pagamento
   const [formaPagamento, setFormaPagamento] = useState<'Dinheiro' | 'Pix' | ''>('');
+  const [tipoPagamento, setTipoPagamento] = useState<'Pós-Conferência' | 'Parcial' | '100% Antecipado'>('Pós-Conferência');
   const [observacaoPagamento, setObservacaoPagamento] = useState('');
   
   const [produtos, setProdutos] = useState<ProdutoLinha[]>([
@@ -212,6 +213,7 @@ export default function EstoqueNotaCadastrar() {
       numeroNota,
       fornecedor,
       valorTotal: calcularValorTotal(),
+      tipoPagamento,
       produtos: produtos.map(p => ({
         marca: p.marca,
         modelo: p.modelo,
@@ -475,22 +477,56 @@ export default function EstoqueNotaCadastrar() {
             <CardTitle>Pagamento *</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <Label className="mb-3 block">Forma de Pagamento *</Label>
-              <RadioGroup 
-                value={formaPagamento} 
-                onValueChange={(v) => setFormaPagamento(v as 'Dinheiro' | 'Pix')}
-                className="flex gap-6"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Dinheiro" id="dinheiro" />
-                  <Label htmlFor="dinheiro" className="font-normal cursor-pointer">Dinheiro</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="Pix" id="pix" />
-                  <Label htmlFor="pix" className="font-normal cursor-pointer">Pix</Label>
-                </div>
-              </RadioGroup>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label className="mb-3 block">Forma de Pagamento *</Label>
+                <RadioGroup 
+                  value={formaPagamento} 
+                  onValueChange={(v) => setFormaPagamento(v as 'Dinheiro' | 'Pix')}
+                  className="flex gap-6"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Dinheiro" id="dinheiro" />
+                    <Label htmlFor="dinheiro" className="font-normal cursor-pointer">Dinheiro</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Pix" id="pix" />
+                    <Label htmlFor="pix" className="font-normal cursor-pointer">Pix</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              
+              <div>
+                <Label className="mb-3 block">Tipo de Pagamento *</Label>
+                <Select 
+                  value={tipoPagamento} 
+                  onValueChange={(v) => setTipoPagamento(v as 'Pós-Conferência' | 'Parcial' | '100% Antecipado')}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pós-Conferência">
+                      <div className="flex flex-col">
+                        <span>Pós-Conferência</span>
+                        <span className="text-xs text-muted-foreground">Pagamento após validação do estoque</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="Parcial">
+                      <div className="flex flex-col">
+                        <span>Parcial</span>
+                        <span className="text-xs text-muted-foreground">Pagamento adiantado + restante após conferência</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="100% Antecipado">
+                      <div className="flex flex-col">
+                        <span>100% Antecipado</span>
+                        <span className="text-xs text-muted-foreground">Pagamento total antes da conferência</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div>
@@ -499,7 +535,7 @@ export default function EstoqueNotaCadastrar() {
                 id="observacao"
                 value={observacaoPagamento}
                 onChange={(e) => setObservacaoPagamento(e.target.value)}
-                placeholder="Ex: Pagamento parcial, Aguardando confirmação, etc."
+                placeholder="Informações adicionais sobre o pagamento..."
                 rows={3}
               />
             </div>
