@@ -1,241 +1,280 @@
 
-# Plano: Implementar Pendências Restantes do Fluxo Estoque-Financeiro
 
-## Resumo das 3 Implementações
+# Plano: Implementar Funções de API Pendentes para Fluxo Estoque-Financeiro
 
-| # | Funcionalidade | Arquivo | Descrição |
-|---|----------------|---------|-----------|
-| 1 | Individualização Automática | EstoqueNotaCadastrar.tsx | Expandir produtos com quantidade > 1 em N registros individuais |
-| 2 | Exibir tipoPagamento | EstoqueNotaDetalhes.tsx | Mostrar tipo de pagamento selecionado na página de detalhes |
-| 3 | Coluna Nota de Origem | EstoqueProdutosPendentes.tsx | Melhorar badge colorido para Urgência vs Entrada Normal |
+## Análise do Estado Atual
+
+Após análise completa do código, identifiquei que **a maior parte das funcionalidades já foi implementada**:
+
+### Já Implementado
+
+| Função | Arquivo | Status |
+|--------|---------|--------|
+| `validarAparelhoNota()` | estoqueApi.ts (linhas 1153-1249) | Completa |
+| `verificarConferenciaNota()` | estoqueApi.ts (linhas 1252-1276) | Completa |
+| `validarAparelhosEmLote()` | estoqueApi.ts (linhas 1279-1309) | Completa |
+| `criarPendenciaFinanceira()` | pendenciasFinanceiraApi.ts (linhas 58-119) | Completa |
+| `atualizarPendencia()` | pendenciasFinanceiraApi.ts (linhas 122-206) | Completa |
+| `finalizarPagamentoPendencia()` | pendenciasFinanceiraApi.ts (linhas 209-271) | Completa |
+| `forcarFinalizacaoPendencia()` | pendenciasFinanceiraApi.ts (linhas 321-389) | Completa |
+| `verificarSLAPendencias()` | pendenciasFinanceiraApi.ts (linhas 292-318) | Completa (gera alertas SLA) |
+| `FinanceiroNotasPendencias.tsx` | Página completa | Com modais integrados |
+| `ModalDetalhePendencia.tsx` | Componente | Com timeline visual |
+| `ModalFinalizarPagamento.tsx` | Componente | Com validações de comprovante |
+
+### Pendente de Implementação
+
+| Função/Recurso | Arquivo | Descrição |
+|----------------|---------|-----------|
+| `criarNotaComPendencia()` | estoqueApi.ts | Criar nota e automaticamente criar pendência no Financeiro |
+| `atualizarStatusPagamento()` | estoqueApi.ts | Atualizar status de pagamento da nota |
+| Colunas extras na tabela | EstoqueNotasCompra.tsx | Valor Conferido, Status Conferência, Status Pagamento |
+| Botão "Ver Progresso" | EstoqueNotasCompra.tsx | Modal com barra de progresso e timeline |
+| Botão "Ver Pendência" | FinanceiroConferenciaNotas.tsx | Abrir modal de detalhes da pendência |
 
 ---
 
-## Etapa 1: Individualização Automática de Produtos
+## Arquivos a Modificar
 
-**Arquivo**: `src/pages/EstoqueNotaCadastrar.tsx`
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `src/utils/estoqueApi.ts` | Modificar | Adicionar `criarNotaComPendencia()` e `atualizarStatusPagamento()` |
+| `src/pages/EstoqueNotasCompra.tsx` | Modificar | Adicionar colunas e modal de progresso |
+| `src/pages/FinanceiroConferenciaNotas.tsx` | Modificar | Adicionar botão "Ver Pendência" |
 
-Adicionar função `expandirProdutos()` que transforma produtos com `quantidade > 1` em N registros individuais:
+---
+
+## Etapa 1: Adicionar Função `criarNotaComPendencia()`
+
+**Arquivo**: `src/utils/estoqueApi.ts`
+
+Criar função que combina criação de nota + criação de pendência financeira:
 
 ```typescript
-// Função para expandir produtos com quantidade > 1 em registros individuais
-const expandirProdutos = (produtosOriginais: ProdutoLinha[], notaId: string) => {
-  const produtosExpandidos = [];
+import { criarPendenciaFinanceira } from './pendenciasFinanceiraApi';
 
-  produtosOriginais.forEach((p, prodIndex) => {
-    if (p.tipoProduto === 'Aparelho' || p.quantidade <= 1) {
-      // Aparelhos sempre têm quantidade 1 com IMEI específico
-      produtosExpandidos.push({
-        id: `PROD-${notaId}-${String(prodIndex + 1).padStart(3, '0')}`,
-        marca: p.marca,
-        modelo: p.modelo,
-        cor: p.cor,
-        imei: p.imei || '',
-        tipo: p.categoria,
-        tipoProduto: p.tipoProduto,
-        quantidade: 1,
-        valorUnitario: p.custoUnitario,
-        valorTotal: p.custoUnitario,
-        saudeBateria: p.categoria === 'Novo' ? 100 : 85,
-        statusConferencia: 'Pendente'
-      });
-    } else {
-      // Acessórios com quantidade > 1: gerar N registros individuais
-      for (let i = 0; i < p.quantidade; i++) {
-        produtosExpandidos.push({
-          id: `PROD-${notaId}-${String(prodIndex + 1).padStart(3, '0')}-${String(i + 1).padStart(3, '0')}`,
-          marca: p.marca,
-          modelo: p.modelo,
-          cor: p.cor,
-          imei: '', // Acessórios não têm IMEI
-          tipo: p.categoria,
-          tipoProduto: p.tipoProduto,
-          quantidade: 1,
-          valorUnitario: p.custoUnitario,
-          valorTotal: p.custoUnitario,
-          saudeBateria: 100,
-          statusConferencia: 'Pendente'
-        });
-      }
-    }
-  });
-
-  return produtosExpandidos;
+// Criar nota de compra e automaticamente criar pendência no Financeiro
+export const criarNotaComPendencia = (nota: Omit<NotaCompra, 'id' | 'status'>): NotaCompra => {
+  // Criar a nota normalmente
+  const novaNota = addNotaCompra(nota);
+  
+  // Inicializar valores de conferência
+  novaNota.valorConferido = 0;
+  novaNota.valorPendente = novaNota.valorTotal;
+  novaNota.statusConferencia = 'Em Conferência';
+  novaNota.statusPagamento = 'Aguardando Conferência';
+  
+  // Criar pendência financeira automaticamente
+  criarPendenciaFinanceira(novaNota);
+  
+  // Marcar como enviada para financeiro
+  localStorage.setItem(`nota_status_${novaNota.id}`, 'Enviado para Financeiro');
+  
+  return novaNota;
 };
 ```
 
-**Modificar handleSalvar()** para usar a função de expansão e exibir mensagem informativa:
+---
+
+## Etapa 2: Adicionar Função `atualizarStatusPagamento()`
+
+**Arquivo**: `src/utils/estoqueApi.ts`
 
 ```typescript
-const handleSalvar = () => {
-  // ... validações existentes ...
-
-  // Gerar ID temporário para expansão
-  const tempNotaId = `NC-${new Date().getFullYear()}-${String(notasExistentes.length + 1).padStart(5, '0')}`;
+// Atualizar status de pagamento da nota
+export const atualizarStatusPagamento = (
+  notaId: string, 
+  status: 'Aguardando Conferência' | 'Pago' | 'Parcialmente Pago'
+): NotaCompra | null => {
+  const nota = notasCompra.find(n => n.id === notaId);
+  if (!nota) return null;
   
-  // Expandir produtos com quantidade > 1
-  const produtosExpandidos = expandirProdutos(produtos, tempNotaId);
-
-  const novaNota = addNotaCompra({
-    // ... dados existentes ...
-    produtos: produtosExpandidos,
-  });
-
-  // Mensagem informativa sobre individualização
-  if (produtosExpandidos.length > produtos.length) {
-    toast.success(`Nota ${novaNota.id} cadastrada!`, {
-      description: `${produtosExpandidos.length} registros individuais criados. Tipo: ${tipoPagamento}`
-    });
-  } else {
-    toast.success(`Nota ${novaNota.id} cadastrada. Tipo: ${tipoPagamento}`);
+  nota.statusPagamento = status;
+  
+  // Se pago, atualizar status geral
+  if (status === 'Pago') {
+    nota.status = 'Concluído';
+    localStorage.setItem(`nota_status_${notaId}`, 'Concluído');
   }
+  
+  // Adicionar entrada na timeline
+  if (!nota.timeline) nota.timeline = [];
+  nota.timeline.unshift({
+    id: `TL-${notaId}-${String(nota.timeline.length + 1).padStart(3, '0')}`,
+    data: new Date().toISOString(),
+    tipo: 'pagamento',
+    titulo: 'Status de Pagamento Atualizado',
+    descricao: `Status alterado para: ${status}`,
+    responsavel: 'Sistema'
+  });
+  
+  return nota;
 };
 ```
 
 ---
 
-## Etapa 2: Exibir tipoPagamento na Página de Detalhes
+## Etapa 3: Melhorar Tabela EstoqueNotasCompra.tsx
 
-**Arquivo**: `src/pages/EstoqueNotaDetalhes.tsx`
+**Arquivo**: `src/pages/EstoqueNotasCompra.tsx`
 
-Adicionar campo visual na seção de informações da nota (grid de 3 colunas):
-
-```typescript
-<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-  {/* ... campos existentes ... */}
-  
-  <div>
-    <Label>Tipo de Pagamento</Label>
-    <div className="mt-1">
-      {nota.tipoPagamento ? (
-        <Badge 
-          variant="outline" 
-          className={
-            nota.tipoPagamento === 'Pós-Conferência' 
-              ? 'bg-blue-500/10 text-blue-600 border-blue-500/30'
-              : nota.tipoPagamento === 'Parcial'
-              ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
-              : 'bg-green-500/10 text-green-600 border-green-500/30'
-          }
-        >
-          {nota.tipoPagamento}
-        </Badge>
-      ) : (
-        <Badge variant="outline" className="bg-gray-500/10">
-          Não definido
-        </Badge>
-      )}
-    </div>
-    <p className="text-xs text-muted-foreground mt-1">
-      {nota.tipoPagamento === 'Pós-Conferência' && 'Pagamento após validação do estoque'}
-      {nota.tipoPagamento === 'Parcial' && 'Pagamento adiantado + restante após conferência'}
-      {nota.tipoPagamento === '100% Antecipado' && 'Pagamento total antes da conferência'}
-    </p>
-  </div>
-  
-  <div>
-    <Label>Valor Total</Label>
-    <Input value={formatCurrency(nota.valorTotal)} disabled className="font-semibold" />
-  </div>
-</div>
-```
-
----
-
-## Etapa 3: Melhorar Coluna "Nota de Origem" com Badges Coloridos
-
-**Arquivo**: `src/pages/EstoqueProdutosPendentes.tsx`
-
-Atualizar a célula da coluna "Nota de Origem" para badges mais visuais:
+Adicionar colunas extras na tabela:
 
 ```typescript
+// Importar componentes necessários
+import { Progress } from '@/components/ui/progress';
+import { Dialog } from '@/components/ui/dialog';
+import { getPendenciaPorNota } from '@/utils/pendenciasFinanceiraApi';
+
+// Novas colunas na tabela
+<TableHead>Valor Conferido</TableHead>
+<TableHead>Status Conf.</TableHead>
+<TableHead>Status Pag.</TableHead>
+
+// Células com dados
 <TableCell>
-  {(produto as any).notaOrigemId ? (
-    <div className="space-y-1">
-      {/* Badge colorido baseado no tipo de nota */}
-      {(produto as any).notaOrigemId.startsWith('URG') ? (
-        <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30 font-medium">
-          🚨 Urgência
-        </Badge>
-      ) : (produto as any).notaOrigemId.startsWith('NC-') ? (
-        <div className="flex items-center gap-1">
-          <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">
-            Entrada
-          </Badge>
-          <span className="font-mono text-xs text-muted-foreground">
-            {(produto as any).notaOrigemId}
-          </span>
-        </div>
-      ) : (
-        <span className="font-mono text-xs">{(produto as any).notaOrigemId}</span>
-      )}
-      
-      {/* Barra de progresso de conferência com cores dinâmicas */}
-      {(() => {
-        const progresso = getNotaProgresso((produto as any).notaOrigemId);
-        if (progresso) {
-          return (
-            <div className="space-y-1 mt-1">
-              <Progress 
-                value={progresso.percentual} 
-                className={`h-1.5 ${
-                  progresso.percentual === 100 
-                    ? '[&>div]:bg-green-500' 
-                    : progresso.percentual >= 50 
-                    ? '[&>div]:bg-blue-500' 
-                    : '[&>div]:bg-yellow-500'
-                }`} 
-              />
-              <span className="text-xs text-muted-foreground">
-                {progresso.conferidos}/{progresso.total} ({progresso.percentual}%)
-              </span>
-            </div>
-          );
-        }
-        return null;
-      })()}
-    </div>
-  ) : (
-    <span className="text-muted-foreground">—</span>
-  )}
+  <div className="flex items-center gap-2">
+    <Progress value={getProgressoNota(nota.id)} className="w-16 h-2" />
+    <span className="text-xs">
+      {formatCurrency(nota.valorConferido || 0)}
+    </span>
+  </div>
+</TableCell>
+<TableCell>
+  <Badge variant="outline" className={getConferenciaBadgeClass(nota.statusConferencia)}>
+    {nota.statusConferencia || 'Pendente'}
+  </Badge>
+</TableCell>
+<TableCell>
+  <Badge variant="outline" className={getPagamentoBadgeClass(nota.statusPagamento)}>
+    {nota.statusPagamento || 'Aguardando'}
+  </Badge>
 </TableCell>
 ```
 
+Adicionar botão "Ver Progresso":
+
+```typescript
+<Button 
+  variant="ghost" 
+  size="sm"
+  onClick={() => handleVerProgresso(nota)}
+>
+  <BarChart className="h-4 w-4" />
+</Button>
+
+// Modal de progresso
+<Dialog open={progressoModalOpen} onOpenChange={setProgressoModalOpen}>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Progresso de Conferência - {notaSelecionada?.id}</DialogTitle>
+    </DialogHeader>
+    <div className="space-y-4">
+      <Progress value={progressoNota} className="h-3" />
+      <p className="text-center font-medium">
+        {progressoNota}% conferido
+      </p>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <Label>Valor Total</Label>
+          <p>{formatCurrency(notaSelecionada?.valorTotal)}</p>
+        </div>
+        <div>
+          <Label>Valor Conferido</Label>
+          <p className="text-green-600">{formatCurrency(notaSelecionada?.valorConferido)}</p>
+        </div>
+      </div>
+      {/* Timeline de validações */}
+      <div className="max-h-48 overflow-auto">
+        {notaSelecionada?.timeline?.map(entry => (
+          <div key={entry.id} className="border-l-2 pl-3 py-2">
+            <p className="text-sm font-medium">{entry.titulo}</p>
+            <p className="text-xs text-muted-foreground">{entry.descricao}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </DialogContent>
+</Dialog>
+```
+
 ---
 
-## Resumo Visual das Mudanças
+## Etapa 4: Adicionar Botão "Ver Pendência" no FinanceiroConferenciaNotas.tsx
 
-### EstoqueNotaCadastrar.tsx
-- Nova função `expandirProdutos()` (linhas 189-245)
-- Modificação do `handleSalvar()` para usar expansão
-- Toast informativo mostrando quantidade de registros criados
+**Arquivo**: `src/pages/FinanceiroConferenciaNotas.tsx`
 
-### EstoqueNotaDetalhes.tsx
-- Grid expandido para 3 colunas (linhas 519-580)
-- Novo campo "Tipo de Pagamento" com badge colorido
-- Descrição explicativa do tipo selecionado
+```typescript
+// Importar componentes
+import { ModalDetalhePendencia } from '@/components/estoque/ModalDetalhePendencia';
+import { getPendenciaPorNota } from '@/utils/pendenciasFinanceiraApi';
 
-### EstoqueProdutosPendentes.tsx
-- Badge "🚨 Urgência" (laranja) para notas URG-
-- Badge "Entrada" (azul) + ID para notas NC-
-- Barra de progresso com cores dinâmicas (verde 100%, azul >= 50%, amarelo < 50%)
-- Percentual numérico junto ao progresso
+// Estado para modal
+const [pendenciaSelecionada, setPendenciaSelecionada] = useState(null);
+const [dialogPendencia, setDialogPendencia] = useState(false);
+
+// Função para ver pendência
+const handleVerPendencia = (nota) => {
+  const pendencia = getPendenciaPorNota(nota.id);
+  if (pendencia) {
+    setPendenciaSelecionada(pendencia);
+    setDialogPendencia(true);
+  } else {
+    toast.info('Pendência não encontrada para esta nota');
+  }
+};
+
+// Botão na tabela (ao lado do botão existente)
+<Button 
+  variant="ghost" 
+  size="sm"
+  onClick={() => handleVerPendencia(nota)}
+  title="Ver Pendência"
+>
+  <FileSearch className="h-4 w-4" />
+</Button>
+
+// Modal no final do componente
+<ModalDetalhePendencia
+  pendencia={pendenciaSelecionada}
+  open={dialogPendencia}
+  onClose={() => setDialogPendencia(false)}
+  showPaymentButton={false}
+/>
+```
 
 ---
 
-## Fluxo de Teste Recomendado
+## Resumo das Mudanças
 
-1. **Testar Individualização**:
-   - Cadastrar nota com acessório quantidade = 5
-   - Verificar que 5 registros individuais foram criados
-   - Cada registro deve ter ID único (PROD-NC-XXX-001, PROD-NC-XXX-002, etc.)
+### Funções Novas em estoqueApi.ts
+1. `criarNotaComPendencia()` - Cria nota + pendência automaticamente
+2. `atualizarStatusPagamento()` - Atualiza status de pagamento
 
-2. **Testar Tipo de Pagamento**:
-   - Selecionar "Parcial" no cadastro
-   - Abrir detalhes da nota
-   - Verificar badge amarelo com descrição correta
+### Melhorias em EstoqueNotasCompra.tsx
+- 3 colunas extras: Valor Conferido, Status Conferência, Status Pagamento
+- Botão "Ver Progresso" com modal de detalhes
+- Barra de progresso visual na tabela
 
-3. **Testar Badges de Origem**:
-   - Acessar Produtos Pendentes
-   - Verificar badges "Urgência" (laranja) e "Entrada" (azul)
-   - Verificar cores dinâmicas na barra de progresso
+### Melhorias em FinanceiroConferenciaNotas.tsx
+- Botão "Ver Pendência" em cada linha
+- Integração com ModalDetalhePendencia
+
+---
+
+## Ordem de Implementação
+
+1. Adicionar funções em estoqueApi.ts
+2. Modificar EstoqueNotasCompra.tsx (colunas + modal)
+3. Modificar FinanceiroConferenciaNotas.tsx (botão ver pendência)
+4. Testar fluxo completo
+
+---
+
+## Observações Técnicas
+
+- As funções `validarAparelhoNota`, `verificarConferenciaNota` e demais já existem e funcionam corretamente
+- A sincronização entre Estoque e Financeiro via `atualizarPendencia()` já está implementada
+- Os componentes `ModalDetalhePendencia` e `ModalFinalizarPagamento` já existem e podem ser reutilizados
+- A página `FinanceiroNotasPendencias.tsx` já está completa com todas as funcionalidades solicitadas
+
