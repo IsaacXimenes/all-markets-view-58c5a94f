@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
@@ -9,12 +9,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Save, ChevronDown, ChevronUp, Clock, Edit, Send, XCircle, CheckCircle, FileText } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Progress } from '@/components/ui/progress';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ArrowLeft, Save, ChevronDown, ChevronUp, Clock, Edit, Send, XCircle, CheckCircle, FileText, User } from 'lucide-react';
 import { getNotasCompra, updateNota, NotaCompra } from '@/utils/estoqueApi';
-import { getFornecedores } from '@/utils/cadastrosApi';
+import { getFornecedores, getColaboradores } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/utils/formatUtils';
+import { atualizarPendencia } from '@/utils/pendenciasFinanceiraApi';
 
 // Interface para timeline de alterações
 interface TimelineNotaEntry {
@@ -22,7 +26,7 @@ interface TimelineNotaEntry {
   dataHora: string;
   usuarioId: string;
   usuarioNome: string;
-  tipoEvento: 'criacao' | 'edicao' | 'enviado_financeiro' | 'recusado_financeiro' | 'aprovado_financeiro';
+  tipoEvento: 'criacao' | 'edicao' | 'enviado_financeiro' | 'recusado_financeiro' | 'aprovado_financeiro' | 'conferencia_produto';
   observacoes?: string;
   camposAlterados?: {
     campo: string;
@@ -31,11 +35,21 @@ interface TimelineNotaEntry {
   }[];
 }
 
+// Interface para conferência de produto
+interface ConferenciaProduto {
+  imei: string;
+  conferido: boolean;
+  responsavelId: string;
+  responsavelNome: string;
+  dataHora: string;
+}
+
 // Interface estendida de nota com timeline local e status recusado
 interface NotaCompraExtendida extends Omit<NotaCompra, 'status' | 'timeline'> {
   timeline?: TimelineNotaEntry[];
   motivoRecusa?: string;
   status: 'Pendente' | 'Concluído' | 'Recusado' | 'Enviado para Financeiro';
+  conferencias?: ConferenciaProduto[];
 }
 
 // Mock de usuário logado
@@ -51,9 +65,15 @@ export default function EstoqueNotaDetalhes() {
   const [isEditing, setIsEditing] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(true);
   const [fornecedores, setFornecedores] = useState<ReturnType<typeof getFornecedores>>([]);
+  const [colaboradores, setColaboradores] = useState<ReturnType<typeof getColaboradores>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [motivoRecusa, setMotivoRecusa] = useState('');
   const [dialogRecusaOpen, setDialogRecusaOpen] = useState(false);
+  
+  // Estado para modal de conferência
+  const [dialogConferenciaOpen, setDialogConferenciaOpen] = useState(false);
+  const [produtoSelecionado, setProdutoSelecionado] = useState<{ imei: string; modelo: string } | null>(null);
+  const [responsavelConferencia, setResponsavelConferencia] = useState('');
   
   // Estado de edição
   const [editData, setEditData] = useState({
@@ -62,15 +82,18 @@ export default function EstoqueNotaDetalhes() {
     observacoes: ''
   });
   
-  // Carregar fornecedores no mount
+  // Carregar fornecedores e colaboradores no mount
   useEffect(() => {
-    console.log('[EstoqueNotaDetalhes] useEffect fornecedores running...');
+    console.log('[EstoqueNotaDetalhes] useEffect fornecedores/colaboradores running...');
     try {
-      const data = getFornecedores();
-      console.log('[EstoqueNotaDetalhes] Fornecedores loaded:', data?.length);
-      setFornecedores(data);
+      const fornecedoresData = getFornecedores();
+      const colaboradoresData = getColaboradores();
+      console.log('[EstoqueNotaDetalhes] Fornecedores loaded:', fornecedoresData?.length);
+      console.log('[EstoqueNotaDetalhes] Colaboradores loaded:', colaboradoresData?.length);
+      setFornecedores(fornecedoresData);
+      setColaboradores(colaboradoresData.filter(c => c.status === 'Ativo'));
     } catch (error) {
-      console.error('[EstoqueNotaDetalhes] Erro ao carregar fornecedores:', error);
+      console.error('[EstoqueNotaDetalhes] Erro ao carregar dados:', error);
     }
   }, []);
 
@@ -118,11 +141,23 @@ export default function EstoqueNotaDetalhes() {
           // Carregar motivo de recusa se houver
           const storedMotivo = localStorage.getItem(`nota_motivo_${id}`);
           
+          // Carregar conferências do localStorage
+          let conferencias: ConferenciaProduto[] = [];
+          try {
+            const storedConferencias = localStorage.getItem(`nota_conferencias_${id}`);
+            if (storedConferencias) {
+              conferencias = JSON.parse(storedConferencias);
+            }
+          } catch (parseError) {
+            console.error('[EstoqueNotaDetalhes] Error parsing conferencias:', parseError);
+          }
+          
           setNota({
             ...notaBase,
             timeline,
             status: status as NotaCompraExtendida['status'],
-            motivoRecusa: storedMotivo || undefined
+            motivoRecusa: storedMotivo || undefined,
+            conferencias
           });
           
           setEditData({
@@ -143,6 +178,18 @@ export default function EstoqueNotaDetalhes() {
     
     loadNota();
   }, [id]);
+
+  // Calcular progresso de conferência (precisa estar ANTES dos early returns)
+  const progressoConferencia = useMemo(() => {
+    if (!nota) return { conferidos: 0, total: 0, percentual: 0, valorConferido: 0 };
+    const total = nota.produtos.length;
+    const conferidos = nota.conferencias?.length || 0;
+    const percentual = total > 0 ? Math.round((conferidos / total) * 100) : 0;
+    const valorConferido = nota.produtos
+      .filter(p => nota.conferencias?.some(c => c.imei === p.imei))
+      .reduce((acc, p) => acc + p.valorTotal, 0);
+    return { conferidos, total, percentual, valorConferido };
+  }, [nota]);
 
   console.log('[EstoqueNotaDetalhes] Rendering, nota:', !!nota, 'isLoading:', isLoading);
 
@@ -170,6 +217,16 @@ export default function EstoqueNotaDetalhes() {
     );
   }
 
+  // Verificar se produto está conferido
+  const isProdutoConferido = (imei: string) => {
+    return nota?.conferencias?.some(c => c.imei === imei) || false;
+  };
+
+  // Obter conferência do produto
+  const getConferenciaProduto = (imei: string) => {
+    return nota?.conferencias?.find(c => c.imei === imei);
+  };
+
   const addTimelineEntry = (
     tipo: TimelineNotaEntry['tipoEvento'],
     observacoes: string,
@@ -189,6 +246,62 @@ export default function EstoqueNotaDetalhes() {
     localStorage.setItem(`nota_timeline_${id}`, JSON.stringify(updatedTimeline));
     
     setNota(prev => prev ? { ...prev, timeline: updatedTimeline } : null);
+  };
+
+  // Abrir modal para conferir produto
+  const handleAbrirConferencia = (produto: { imei: string; modelo: string }) => {
+    setProdutoSelecionado(produto);
+    setResponsavelConferencia('');
+    setDialogConferenciaOpen(true);
+  };
+
+  // Confirmar conferência do produto
+  const handleConfirmarConferencia = () => {
+    if (!nota || !produtoSelecionado || !responsavelConferencia) {
+      toast.error('Selecione o responsável pela conferência');
+      return;
+    }
+
+    const colaborador = colaboradores.find(c => c.id === responsavelConferencia);
+    if (!colaborador) return;
+
+    const novaConferencia: ConferenciaProduto = {
+      imei: produtoSelecionado.imei,
+      conferido: true,
+      responsavelId: colaborador.id,
+      responsavelNome: colaborador.nome,
+      dataHora: new Date().toISOString()
+    };
+
+    const updatedConferencias = [...(nota.conferencias || []), novaConferencia];
+    
+    // Salvar no localStorage
+    localStorage.setItem(`nota_conferencias_${id}`, JSON.stringify(updatedConferencias));
+    
+    // Adicionar entrada na timeline
+    addTimelineEntry(
+      'conferencia_produto',
+      `Produto conferido: IMEI ${produtoSelecionado.imei} - ${produtoSelecionado.modelo} por ${colaborador.nome}`
+    );
+
+    // Atualizar estado local
+    setNota(prev => prev ? { ...prev, conferencias: updatedConferencias } : null);
+    
+    // Calcular novos valores para atualizar pendência financeira
+    const valorProduto = nota.produtos.find(p => p.imei === produtoSelecionado.imei)?.valorTotal || 0;
+    const novoValorConferido = progressoConferencia.valorConferido + valorProduto;
+    const novoPercentual = Math.round(((progressoConferencia.conferidos + 1) / progressoConferencia.total) * 100);
+    
+    // Atualizar pendência financeira com aparelhosConferidos
+    atualizarPendencia(nota.id, {
+      valorConferido: novoValorConferido,
+      aparelhosConferidos: progressoConferencia.conferidos + 1,
+      statusConferencia: novoPercentual === 100 ? 'Conferência Completa' : 'Em Conferência'
+    });
+
+    setDialogConferenciaOpen(false);
+    setProdutoSelecionado(null);
+    toast.success(`Produto ${produtoSelecionado.imei} conferido com sucesso!`);
   };
 
   const handleSaveEdit = () => {
@@ -472,20 +585,112 @@ export default function EstoqueNotaDetalhes() {
               </div>
             )}
 
+            {/* Seção de Conferência de Produtos */}
             <div className="border-t pt-4">
-              <h3 className="font-semibold mb-3">Produtos</h3>
-              <div className="space-y-2">
-                {nota.produtos.map((prod, idx) => (
-                  <div key={idx} className="p-3 bg-muted/30 rounded">
-                    <div className="flex justify-between">
-                      <span className="font-medium">{prod.marca} {prod.modelo} - {prod.cor}</span>
-                      <span className="font-semibold">{formatCurrency(prod.valorTotal)}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      IMEI: {prod.imei} | Qtd: {prod.quantidade} | Tipo: {prod.tipo} | Saúde Bat: {prod.saudeBateria}%
-                    </div>
-                  </div>
-                ))}
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold">Conferência de Produtos</h3>
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className={
+                    progressoConferencia.percentual === 100 
+                      ? 'bg-green-500/10 text-green-600 border-green-500/30' 
+                      : 'bg-blue-500/10 text-blue-600 border-blue-500/30'
+                  }>
+                    {progressoConferencia.conferidos}/{progressoConferencia.total} conferidos
+                  </Badge>
+                </div>
+              </div>
+              
+              {/* Barra de Progresso */}
+              <div className="mb-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Progresso de Conferência</span>
+                  <span className="font-medium">{progressoConferencia.percentual}%</span>
+                </div>
+                <Progress value={progressoConferencia.percentual} className="h-2" />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Valor Conferido: {formatCurrency(progressoConferencia.valorConferido)}</span>
+                  <span>Valor Total: {formatCurrency(nota.valorTotal)}</span>
+                </div>
+              </div>
+              
+              {/* Tabela de Produtos com Checkbox */}
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">Status</TableHead>
+                      <TableHead>Produto</TableHead>
+                      <TableHead>IMEI</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Conferido Por</TableHead>
+                      <TableHead className="w-24">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {nota.produtos.map((prod, idx) => {
+                      const conferido = isProdutoConferido(prod.imei);
+                      const conferencia = getConferenciaProduto(prod.imei);
+                      
+                      return (
+                        <TableRow 
+                          key={idx} 
+                          className={conferido ? 'bg-green-500/10' : 'bg-yellow-500/10'}
+                        >
+                          <TableCell>
+                            <div className="flex items-center justify-center">
+                              {conferido ? (
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                              ) : (
+                                <Clock className="h-5 w-5 text-yellow-600" />
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium">{prod.marca} {prod.modelo}</div>
+                            <div className="text-xs text-muted-foreground">{prod.cor} | Bat: {prod.saudeBateria}%</div>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">{prod.imei}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{prod.tipo}</Badge>
+                          </TableCell>
+                          <TableCell className="font-medium">{formatCurrency(prod.valorTotal)}</TableCell>
+                          <TableCell>
+                            {conferencia ? (
+                              <div className="text-xs">
+                                <div className="flex items-center gap-1 font-medium">
+                                  <User className="h-3 w-3" />
+                                  {conferencia.responsavelNome}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {new Date(conferencia.dataHora).toLocaleString('pt-BR', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">Pendente</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {!conferido && nota.status !== 'Concluído' && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => handleAbrirConferencia({ imei: prod.imei, modelo: `${prod.marca} ${prod.modelo}` })}
+                              >
+                                Conferir
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
             </div>
 
@@ -632,6 +837,63 @@ export default function EstoqueNotaDetalhes() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Conferência de Produto */}
+      <Dialog open={dialogConferenciaOpen} onOpenChange={setDialogConferenciaOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Confirmar Conferência
+            </DialogTitle>
+          </DialogHeader>
+          {produtoSelecionado && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm text-muted-foreground">Produto</p>
+                <p className="font-medium">{produtoSelecionado.modelo}</p>
+                <p className="text-xs text-muted-foreground font-mono mt-1">IMEI: {produtoSelecionado.imei}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="responsavel">Responsável pela Conferência *</Label>
+                <Select value={responsavelConferencia} onValueChange={setResponsavelConferencia}>
+                  <SelectTrigger id="responsavel">
+                    <SelectValue placeholder="Selecione o colaborador" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[100]">
+                    {colaboradores.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nome} - {c.cargo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="p-3 bg-blue-500/10 rounded-lg text-sm">
+                <p className="text-muted-foreground">
+                  Data/Hora: <span className="font-medium text-foreground">{new Date().toLocaleString('pt-BR')}</span>
+                </p>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDialogConferenciaOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleConfirmarConferencia}
+                  disabled={!responsavelConferencia}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Confirmar Conferência
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </EstoqueLayout>
