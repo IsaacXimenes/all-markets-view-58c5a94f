@@ -517,7 +517,7 @@ export default function EstoqueNotaDetalhes() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <Label>ID da Nota</Label>
                 <Input value={nota.id} disabled />
@@ -553,6 +553,38 @@ export default function EstoqueNotaDetalhes() {
                 ) : (
                   <Input value={nota.fornecedor} disabled />
                 )}
+              </div>
+              <div>
+                <Label>Tipo de Pagamento</Label>
+                <div className="mt-1">
+                  {(nota as any).tipoPagamento ? (
+                    <Badge 
+                      variant="outline" 
+                      className={
+                        (nota as any).tipoPagamento === 'Pós-Conferência' 
+                          ? 'bg-blue-500/10 text-blue-600 border-blue-500/30'
+                          : (nota as any).tipoPagamento === 'Parcial'
+                          ? 'bg-amber-500/10 text-amber-600 border-amber-500/30'
+                          : 'bg-green-500/10 text-green-600 border-green-500/30'
+                      }
+                    >
+                      {(nota as any).tipoPagamento}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-gray-500/10">
+                      Não definido
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {(nota as any).tipoPagamento === 'Pós-Conferência' && 'Pagamento após validação do estoque'}
+                  {(nota as any).tipoPagamento === 'Parcial' && 'Pagamento adiantado + restante'}
+                  {(nota as any).tipoPagamento === '100% Antecipado' && 'Pagamento total antes da conferência'}
+                </p>
+              </div>
+              <div>
+                <Label>Valor Total</Label>
+                <Input value={formatCurrency(nota.valorTotal)} disabled className="font-semibold" />
               </div>
             </div>
 

@@ -186,6 +186,51 @@ export default function EstoqueNotaCadastrar() {
     return dataStr;
   };
 
+  // Função para expandir produtos com quantidade > 1 em registros individuais
+  const expandirProdutos = (produtosOriginais: ProdutoLinha[], notaId: string) => {
+    const produtosExpandidos: any[] = [];
+
+    produtosOriginais.forEach((p, prodIndex) => {
+      if (p.tipoProduto === 'Aparelho' || p.quantidade <= 1) {
+        // Aparelhos sempre têm quantidade 1 com IMEI específico
+        produtosExpandidos.push({
+          id: `PROD-${notaId}-${String(prodIndex + 1).padStart(3, '0')}`,
+          marca: p.marca,
+          modelo: p.modelo,
+          cor: p.cor,
+          imei: p.imei || '',
+          tipo: p.categoria,
+          tipoProduto: p.tipoProduto,
+          quantidade: 1,
+          valorUnitario: p.custoUnitario,
+          valorTotal: p.custoUnitario,
+          saudeBateria: p.categoria === 'Novo' ? 100 : 85,
+          statusConferencia: 'Pendente'
+        });
+      } else {
+        // Acessórios com quantidade > 1: gerar N registros individuais
+        for (let i = 0; i < p.quantidade; i++) {
+          produtosExpandidos.push({
+            id: `PROD-${notaId}-${String(prodIndex + 1).padStart(3, '0')}-${String(i + 1).padStart(3, '0')}`,
+            marca: p.marca,
+            modelo: p.modelo,
+            cor: p.cor,
+            imei: '', // Acessórios não têm IMEI
+            tipo: p.categoria,
+            tipoProduto: p.tipoProduto,
+            quantidade: 1,
+            valorUnitario: p.custoUnitario,
+            valorTotal: p.custoUnitario,
+            saudeBateria: 100,
+            statusConferencia: 'Pendente'
+          });
+        }
+      }
+    });
+
+    return produtosExpandidos;
+  };
+
   const handleSalvar = () => {
     const camposFaltando = validarCampos();
     
@@ -208,24 +253,19 @@ export default function EstoqueNotaCadastrar() {
       return;
     }
 
+    // Gerar ID temporário para expansão
+    const tempNotaId = `NC-${new Date().getFullYear()}-${String(notasExistentes.length + 1).padStart(5, '0')}`;
+    
+    // Expandir produtos com quantidade > 1
+    const produtosExpandidos = expandirProdutos(produtos, tempNotaId);
+
     const novaNota = addNotaCompra({
       data: formatarDataParaSalvar(dataEntrada),
       numeroNota,
       fornecedor,
       valorTotal: calcularValorTotal(),
       tipoPagamento,
-      produtos: produtos.map(p => ({
-        marca: p.marca,
-        modelo: p.modelo,
-        cor: p.cor,
-        imei: p.imei || 'N/A',
-        tipo: p.categoria,
-        tipoProduto: p.tipoProduto,
-        quantidade: p.quantidade,
-        valorUnitario: p.custoUnitario,
-        valorTotal: p.custoTotal,
-        saudeBateria: p.categoria === 'Novo' ? 100 : 85
-      })),
+      produtos: produtosExpandidos,
       pagamento: formaPagamento ? {
         formaPagamento,
         parcelas: 1,
@@ -234,7 +274,14 @@ export default function EstoqueNotaCadastrar() {
       } : undefined
     });
 
-    toast.success(`Nota ${novaNota.id} cadastrada com sucesso. Status: Pendente (aguardando Financeiro)`);
+    // Mensagem informativa sobre individualização
+    if (produtosExpandidos.length > produtos.length) {
+      toast.success(`Nota ${novaNota.id} cadastrada!`, {
+        description: `${produtosExpandidos.length} registros individuais criados. Tipo: ${tipoPagamento}`
+      });
+    } else {
+      toast.success(`Nota ${novaNota.id} cadastrada. Tipo: ${tipoPagamento}`);
+    }
     navigate('/estoque/notas-compra');
   };
 

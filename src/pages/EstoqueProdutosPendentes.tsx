@@ -625,22 +625,41 @@ export default function EstoqueProdutosPendentes() {
                       <TableCell>
                         {(produto as any).notaOrigemId ? (
                           <div className="space-y-1">
+                            {/* Badge colorido baseado no tipo de nota */}
                             {(produto as any).notaOrigemId.startsWith('URG') ? (
-                              <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">
-                                Urgência
+                              <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30 font-medium">
+                                🚨 Urgência
                               </Badge>
+                            ) : (produto as any).notaOrigemId.startsWith('NC-') ? (
+                              <div className="flex items-center gap-1">
+                                <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">
+                                  Entrada
+                                </Badge>
+                                <span className="font-mono text-xs text-muted-foreground">
+                                  {(produto as any).notaOrigemId}
+                                </span>
+                              </div>
                             ) : (
                               <span className="font-mono text-xs">{(produto as any).notaOrigemId}</span>
                             )}
-                            {/* Barra de progresso */}
+                            {/* Barra de progresso com cores dinâmicas */}
                             {(() => {
                               const progresso = getNotaProgresso((produto as any).notaOrigemId);
                               if (progresso) {
                                 return (
-                                  <div className="space-y-1">
-                                    <Progress value={progresso.percentual} className="h-1.5" />
+                                  <div className="space-y-1 mt-1">
+                                    <Progress 
+                                      value={progresso.percentual} 
+                                      className={`h-1.5 ${
+                                        progresso.percentual === 100 
+                                          ? '[&>div]:bg-green-500' 
+                                          : progresso.percentual >= 50 
+                                          ? '[&>div]:bg-blue-500' 
+                                          : '[&>div]:bg-yellow-500'
+                                      }`} 
+                                    />
                                     <span className="text-xs text-muted-foreground">
-                                      {progresso.conferidos}/{progresso.total} conferidos
+                                      {progresso.conferidos}/{progresso.total} ({progresso.percentual}%)
                                     </span>
                                   </div>
                                 );
