@@ -181,8 +181,8 @@ let garantias: GarantiaItem[] = [
     dataInicioGarantia: '2025-03-15',
     dataFimGarantia: '2026-03-15',
     status: 'Ativa',
-    lojaVenda: 'LOJA-001',
-    vendedorId: 'COL-001',
+    lojaVenda: 'db894e7d', // Loja - JK Shopping
+    vendedorId: '6dcbc817', // Caua Victor Costa dos Santos
     clienteId: 'CLI-001',
     clienteNome: 'João Silva',
     clienteTelefone: '(11) 99999-1111',
@@ -200,8 +200,8 @@ let garantias: GarantiaItem[] = [
     dataInicioGarantia: '2025-04-16',
     dataFimGarantia: '2026-04-10',
     status: 'Concluída',
-    lojaVenda: 'LOJA-002',
-    vendedorId: 'COL-002',
+    lojaVenda: '3ac7e00c', // Loja - Matriz
+    vendedorId: '143ac0c2', // Antonio Sousa Silva Filho
     clienteId: 'CLI-002',
     clienteNome: 'Maria Santos',
     clienteTelefone: '(11) 99999-2222',
@@ -220,8 +220,8 @@ let garantias: GarantiaItem[] = [
     dataInicioGarantia: '2024-01-10',
     dataFimGarantia: format(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
     status: 'Ativa',
-    lojaVenda: 'LOJA-004',
-    vendedorId: 'COL-003',
+    lojaVenda: '5b9446d5', // Loja - Shopping Sul
+    vendedorId: '428d37c2', // Bruno Alves Peres
     clienteId: 'CLI-003',
     clienteNome: 'Pedro Oliveira',
     clienteTelefone: '(11) 99999-3333',
@@ -240,8 +240,8 @@ let garantias: GarantiaItem[] = [
     dataInicioGarantia: '2024-01-25',
     dataFimGarantia: format(new Date(Date.now() + 20 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
     status: 'Ativa',
-    lojaVenda: 'LOJA-003',
-    vendedorId: 'COL-004',
+    lojaVenda: 'fcc78c1a', // Loja - Online
+    vendedorId: '4bfe3508', // Elida Franca de Souza
     clienteId: 'CLI-004',
     clienteNome: 'Ana Costa',
     clienteTelefone: '(11) 99999-4444',
@@ -260,8 +260,8 @@ let garantias: GarantiaItem[] = [
     dataInicioGarantia: '2025-01-19',
     dataFimGarantia: '2025-12-15',
     status: 'Em Tratativa',
-    lojaVenda: 'LOJA-005',
-    vendedorId: 'COL-005',
+    lojaVenda: '0d06e7db', // Loja - Águas Lindas Shopping
+    vendedorId: 'b106080f', // Erick Guthemberg Ferreira da Silva
     clienteId: 'CLI-001',
     clienteNome: 'João Silva',
     clienteTelefone: '(11) 99999-1111',
@@ -279,8 +279,8 @@ let garantias: GarantiaItem[] = [
     dataInicioGarantia: '2024-11-20',
     dataFimGarantia: '2025-11-20',
     status: 'Concluída',
-    lojaVenda: 'LOJA-002',
-    vendedorId: 'COL-006',
+    lojaVenda: '3ac7e00c', // Loja - Matriz
+    vendedorId: '1b9137c8', // Evelyn Cordeiro de Oliveira
     clienteId: 'CLI-005',
     clienteNome: 'Carlos Lima',
     clienteTelefone: '(11) 99999-5555',
@@ -299,8 +299,8 @@ let garantias: GarantiaItem[] = [
     dataInicioGarantia: '2024-12-05',
     dataFimGarantia: '2025-06-05',
     status: 'Em Tratativa',
-    lojaVenda: 'LOJA-003',
-    vendedorId: 'COL-007',
+    lojaVenda: 'fcc78c1a', // Loja - Online
+    vendedorId: '143ac0c2', // Antonio Sousa Silva Filho
     clienteId: 'CLI-002',
     clienteNome: 'Maria Santos',
     clienteTelefone: '(11) 99999-2222',
@@ -318,8 +318,8 @@ let garantias: GarantiaItem[] = [
     dataInicioGarantia: '2024-12-05',
     dataFimGarantia: '2025-03-05',
     status: 'Ativa',
-    lojaVenda: 'LOJA-001',
-    vendedorId: 'COL-008',
+    lojaVenda: 'db894e7d', // Loja - JK Shopping
+    vendedorId: '6dcbc817', // Caua Victor Costa dos Santos
     clienteId: 'CLI-003',
     clienteNome: 'Pedro Oliveira',
     clienteTelefone: '(11) 99999-3333',
@@ -338,8 +338,8 @@ let garantias: GarantiaItem[] = [
     dataInicioGarantia: '2024-01-10',
     dataFimGarantia: format(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
     status: 'Ativa',
-    lojaVenda: 'LOJA-001',
-    vendedorId: 'COL-001',
+    lojaVenda: 'db894e7d', // Loja - JK Shopping
+    vendedorId: '6dcbc817', // Caua Victor Costa dos Santos
     clienteId: 'CLI-001',
     clienteNome: 'João Silva',
     clienteTelefone: '(11) 99999-1111',
@@ -358,8 +358,8 @@ let garantias: GarantiaItem[] = [
     dataInicioGarantia: '2024-01-18',
     dataFimGarantia: format(new Date(Date.now() + 25 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
     status: 'Ativa',
-    lojaVenda: 'LOJA-002',
-    vendedorId: 'COL-002',
+    lojaVenda: '3ac7e00c', // Loja - Matriz
+    vendedorId: '143ac0c2', // Antonio Sousa Silva Filho
     clienteId: 'CLI-002',
     clienteNome: 'Maria Santos',
     clienteTelefone: '(11) 99999-2222',
@@ -378,8 +378,8 @@ let garantias: GarantiaItem[] = [
     dataInicioGarantia: '2024-01-01',
     dataFimGarantia: format(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
     status: 'Expirada',
-    lojaVenda: 'LOJA-003',
-    vendedorId: 'COL-003',
+    lojaVenda: 'fcc78c1a', // Loja - Online
+    vendedorId: '428d37c2', // Bruno Alves Peres
     clienteId: 'CLI-004',
     clienteNome: 'Ana Costa',
     clienteTelefone: '(11) 99999-4444',
@@ -398,8 +398,8 @@ let garantias: GarantiaItem[] = [
     dataInicioGarantia: '2023-12-01',
     dataFimGarantia: format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
     status: 'Expirada',
-    lojaVenda: 'LOJA-004',
-    vendedorId: 'COL-004',
+    lojaVenda: '5b9446d5', // Loja - Shopping Sul
+    vendedorId: '4bfe3508', // Elida Franca de Souza
     clienteId: 'CLI-005',
     clienteNome: 'Carlos Lima',
     clienteTelefone: '(11) 99999-5555',
