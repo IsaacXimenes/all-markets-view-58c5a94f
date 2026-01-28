@@ -15,7 +15,8 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ArrowLeft, Save, ChevronDown, ChevronUp, Clock, Edit, Send, XCircle, CheckCircle, FileText, User } from 'lucide-react';
 import { getNotasCompra, updateNota, NotaCompra } from '@/utils/estoqueApi';
-import { getFornecedores, getColaboradores } from '@/utils/cadastrosApi';
+import { getFornecedores } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/utils/formatUtils';
 import { atualizarPendencia } from '@/utils/pendenciasFinanceiraApi';
@@ -65,7 +66,6 @@ export default function EstoqueNotaDetalhes() {
   const [isEditing, setIsEditing] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(true);
   const [fornecedores, setFornecedores] = useState<ReturnType<typeof getFornecedores>>([]);
-  const [colaboradores, setColaboradores] = useState<ReturnType<typeof getColaboradores>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [motivoRecusa, setMotivoRecusa] = useState('');
   const [dialogRecusaOpen, setDialogRecusaOpen] = useState(false);
@@ -75,6 +75,10 @@ export default function EstoqueNotaDetalhes() {
   const [produtoSelecionado, setProdutoSelecionado] = useState<{ imei: string; modelo: string } | null>(null);
   const [responsavelConferencia, setResponsavelConferencia] = useState('');
   
+  // Colaboradores e helper do store centralizado (Zustand)
+  const colaboradores = useCadastroStore(state => state.colaboradores.filter(c => c.ativo));
+  const obterNomeLoja = useCadastroStore(state => state.obterNomeLoja);
+  
   // Estado de edição
   const [editData, setEditData] = useState({
     numeroNota: '',
@@ -82,16 +86,13 @@ export default function EstoqueNotaDetalhes() {
     observacoes: ''
   });
   
-  // Carregar fornecedores e colaboradores no mount
+  // Carregar fornecedores no mount
   useEffect(() => {
-    console.log('[EstoqueNotaDetalhes] useEffect fornecedores/colaboradores running...');
+    console.log('[EstoqueNotaDetalhes] useEffect fornecedores running...');
     try {
       const fornecedoresData = getFornecedores();
-      const colaboradoresData = getColaboradores();
       console.log('[EstoqueNotaDetalhes] Fornecedores loaded:', fornecedoresData?.length);
-      console.log('[EstoqueNotaDetalhes] Colaboradores loaded:', colaboradoresData?.length);
       setFornecedores(fornecedoresData);
-      setColaboradores(colaboradoresData.filter(c => c.status === 'Ativo'));
     } catch (error) {
       console.error('[EstoqueNotaDetalhes] Erro ao carregar dados:', error);
     }
@@ -863,10 +864,10 @@ export default function EstoqueNotaDetalhes() {
                   <SelectTrigger id="responsavel">
                     <SelectValue placeholder="Selecione o colaborador" />
                   </SelectTrigger>
-                  <SelectContent className="z-[100]">
+                  <SelectContent className="z-[100] max-h-64 overflow-y-auto">
                     {colaboradores.map(c => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.nome} - {c.cargo}
+                        {c.nome} - {c.cargo} ({obterNomeLoja(c.loja_id)})
                       </SelectItem>
                     ))}
                   </SelectContent>
