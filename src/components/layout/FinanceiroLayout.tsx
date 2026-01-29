@@ -10,7 +10,6 @@ interface FinanceiroLayoutProps {
 const tabs = [
   { name: 'Conferência de Contas', href: '/financeiro/conferencia', icon: FileCheck },
   { name: 'Conferências - Fiado', href: '/financeiro/fiado', icon: Wallet },
-  { name: 'Conferência de Notas', href: '/financeiro/conferencia-notas-entrada', icon: FileCheck },
   { name: 'Notas - Pendências', href: '/financeiro/notas-pendencias', icon: Clock },
   { name: 'Notas Pendentes - Assistência', href: '/financeiro/notas-assistencia', icon: Wrench },
   { name: 'Despesas Fixas', href: '/financeiro/despesas-fixas', icon: MinusCircle },

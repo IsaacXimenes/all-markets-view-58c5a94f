@@ -305,7 +305,6 @@ export const definirAtuacaoInicial = (tipoPagamento: TipoPagamentoNota): Atuacao
 
 // LANÇAMENTO INICIAL: Nota criada SEM produtos
 export const criarNotaEntrada = (dados: {
-  numeroNota?: string; // Agora opcional - será gerado automaticamente se não fornecido
   data: string;
   fornecedor: string;
   tipoPagamento: TipoPagamentoNota;
@@ -316,10 +315,14 @@ export const criarNotaEntrada = (dados: {
   observacoes?: string;
 }): NotaEntrada => {
   notaCounter++;
-  const id = `NE-${new Date().getFullYear()}-${String(notaCounter).padStart(5, '0')}`;
   
-  // Gerar número da nota automaticamente se não fornecido
-  const numeroNotaFinal = dados.numeroNota || gerarNumeroNotaAutoIncremental();
+  // Gerar número da nota automaticamente no formato NE-YYYY-XXXXX
+  const ano = new Date().getFullYear();
+  const sequencial = String(notasEntrada.length + notaCounter).padStart(5, '0');
+  const numeroNota = `NE-${ano}-${sequencial}`;
+  
+  // ID é igual ao número da nota para consistência
+  const id = numeroNota;
   
   // LANÇAMENTO INICIAL: Nenhum produto cadastrado
   // Produtos serão adicionados posteriormente via Notas Pendências
@@ -342,7 +345,7 @@ export const criarNotaEntrada = (dados: {
   
   const novaNota: NotaEntrada = {
     id,
-    numeroNota: numeroNotaFinal,
+    numeroNota,
     data: dados.data,
     fornecedor: dados.fornecedor,
     status: statusInicial,
@@ -1067,61 +1070,66 @@ export const converterNotaParaPendencia = (nota: NotaEntrada): PendenciaFinancei
 export const inicializarNotasEntradaMock = (): void => {
   if (notasEntrada.length > 0) return;
   
-  // Nota 1 - 100% Antecipado, já paga, aguardando conferência
+  // Nota 1 - Pagamento Pós, atuação Estoque, aguardando conferência
   const nota1 = criarNotaEntrada({
-    numeroNota: 'NF-2025-00001',
-    data: '2025-01-15',
+    data: '2026-01-15',
     fornecedor: 'Apple Distribuidor BR',
-    tipoPagamento: 'Pagamento 100% Antecipado',
+    tipoPagamento: 'Pagamento Pos',
     qtdInformada: 5,
     valorTotal: 32000,
     formaPagamento: 'Pix',
     responsavel: 'Carlos Estoque'
   });
-  registrarPagamento(nota1.id, {
-    valor: 32000,
-    formaPagamento: 'Pix',
-    responsavel: 'Maria Financeiro',
-    tipo: 'inicial'
-  });
+  // Cadastrar alguns produtos para permitir ação
+  cadastrarProdutosNota(nota1.id, [{
+    tipoProduto: 'Aparelho',
+    marca: 'Apple',
+    modelo: 'iPhone 14 Pro',
+    quantidade: 2,
+    custoUnitario: 6400,
+    custoTotal: 12800
+  }], 'Carlos Estoque');
   
-  // Nota 2 - Parcial, com pagamento inicial feito, em conferência
-  const nota2 = criarNotaEntrada({
-    numeroNota: 'NF-2025-00002',
-    data: '2025-01-18',
+  // Nota 2 - 100% Antecipado, atuação Financeiro, aguardando pagamento
+  criarNotaEntrada({
+    data: '2026-01-18',
     fornecedor: 'TechSupply Imports',
-    tipoPagamento: 'Pagamento Parcial',
+    tipoPagamento: 'Pagamento 100% Antecipado',
     qtdInformada: 10,
     valorTotal: 45000,
     formaPagamento: 'Pix',
     responsavel: 'Carlos Estoque'
   });
-  registrarPagamento(nota2.id, {
-    valor: 22500,
-    formaPagamento: 'Transferência',
-    responsavel: 'Maria Financeiro',
-    tipo: 'inicial'
-  });
   
-  // Nota 3 - Pós-conferência, criada, aguardando conferência
+  // Nota 3 - Parcial, atuação Financeiro, aguardando pagamento inicial
   criarNotaEntrada({
-    numeroNota: 'NF-2025-00003',
-    data: '2025-01-20',
+    data: '2026-01-20',
     fornecedor: 'MobileWorld Atacado',
-    tipoPagamento: 'Pagamento Pos',
+    tipoPagamento: 'Pagamento Parcial',
     qtdInformada: 8,
     valorTotal: 28000,
     formaPagamento: 'Dinheiro',
     responsavel: 'Carlos Estoque'
   });
   
-  // Nota 4 - Criada, sem produtos ainda (Pagamento Pós)
+  // Nota 4 - Pagamento Pós, atuação Estoque, sem produtos cadastrados ainda
   criarNotaEntrada({
-    numeroNota: 'NF-2025-00004',
-    data: '2025-01-22',
+    data: '2026-01-22',
     fornecedor: 'FastCell Distribuição',
     tipoPagamento: 'Pagamento Pos',
     qtdInformada: 15,
+    valorTotal: 52000,
+    formaPagamento: 'Pix',
+    responsavel: 'Carlos Estoque'
+  });
+  
+  // Nota 5 - Pagamento Pós, atuação Estoque (para teste do botão +)
+  criarNotaEntrada({
+    data: '2026-01-25',
+    fornecedor: 'GlobalPhones Brasil',
+    tipoPagamento: 'Pagamento Pos',
+    qtdInformada: 6,
+    valorTotal: 24000,
     formaPagamento: 'Pix',
     responsavel: 'Carlos Estoque'
   });

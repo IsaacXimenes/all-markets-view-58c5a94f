@@ -22,7 +22,9 @@ import {
   FileText,
   DollarSign,
   Package,
-  ClipboardCheck
+  ClipboardCheck,
+  Plus,
+  Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -315,6 +317,18 @@ export default function EstoqueNotasPendencias() {
               <div className="flex gap-2">
                 <Button onClick={handleRefresh} variant="outline">
                   Atualizar
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/30"
+                  onClick={() => navigate('/estoque/notas-urgencia')}
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  Lançamento Urgência
+                </Button>
+                <Button onClick={() => navigate('/estoque/nota/cadastrar')}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Cadastrar Nova Nota
                 </Button>
                 <Button onClick={handleExport} variant="outline">
                   <Download className="h-4 w-4 mr-2" />

@@ -276,7 +276,8 @@ export function TabelaNotasPendencias({
                       {/* Ações do Estoque */}
                       {modulo === 'Estoque' && podeEditarNota && (
                         <>
-                          {nota.qtdCadastrada < nota.qtdInformada && (
+                          {/* Botão para cadastrar produtos - aparece quando qtd cadastrada < informada OU quando qtdInformada > 0 e ainda há espaço */}
+                          {(nota.qtdCadastrada < nota.qtdInformada || nota.qtdInformada === 0) && (
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
