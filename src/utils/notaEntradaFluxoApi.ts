@@ -799,6 +799,92 @@ export const conferirProduto = (
   return nota;
 };
 
+// Conferência simplificada - apenas marca como conferido sem alterar dados
+export const conferirProdutoSimples = (
+  notaId: string,
+  produtoId: string,
+  responsavel: string
+): NotaEntrada | null => {
+  const nota = notasEntrada.find(n => n.id === notaId);
+  if (!nota) return null;
+  
+  // Verificar se nota está finalizada
+  if (nota.status === 'Finalizada') {
+    console.error('Não é possível conferir produtos em nota finalizada');
+    return null;
+  }
+  
+  const produto = nota.produtos.find(p => p.id === produtoId);
+  if (!produto) return null;
+  
+  // Apenas atualiza status de conferência (dados já foram preenchidos no cadastro)
+  produto.statusRecebimento = 'Recebido';
+  produto.statusConferencia = 'Conferido';
+  produto.dataConferencia = new Date().toISOString();
+  produto.responsavelConferencia = responsavel;
+  
+  // Atualizar contadores
+  nota.qtdConferida = nota.produtos.filter(p => p.statusConferencia === 'Conferido').length;
+  nota.valorConferido = nota.produtos
+    .filter(p => p.statusConferencia === 'Conferido')
+    .reduce((acc, p) => acc + p.custoTotal, 0);
+  
+  // Registrar na timeline
+  registrarTimeline(
+    nota,
+    responsavel,
+    'Estoque',
+    `Produto conferido: ${produto.modelo}`,
+    nota.status,
+    produto.custoTotal,
+    `${nota.qtdConferida}/${nota.qtdCadastrada} produtos conferidos`
+  );
+  
+  // Atualizar status da nota
+  if (nota.qtdConferida > 0 && nota.qtdConferida < nota.qtdCadastrada) {
+    if (nota.status === 'Aguardando Conferencia') {
+      nota.status = 'Conferencia Parcial';
+    }
+  } else if (nota.qtdConferida === nota.qtdCadastrada && nota.qtdCadastrada > 0) {
+    // Verificar se há divergência de valores
+    const tolerancia = nota.valorTotal * 0.0001;
+    if (nota.valorPago > 0 && Math.abs(nota.valorPago - nota.valorConferido) > tolerancia) {
+      nota.status = 'Com Divergencia';
+      nota.alertas.push({
+        id: `ALERTA-${notaId}-DIV-${Date.now()}`,
+        tipo: 'divergencia_valor',
+        mensagem: `Divergência detectada: Pago R$ ${nota.valorPago.toFixed(2)}, Conferido R$ ${nota.valorConferido.toFixed(2)}`,
+        dataGeracao: new Date().toISOString(),
+        visto: false,
+        resolvido: false
+      });
+    } else {
+      nota.status = 'Conferencia Concluida';
+      
+      if (nota.tipoPagamento === 'Pagamento Pos') {
+        nota.status = 'Aguardando Pagamento Final';
+        alterarAtuacao(nota.id, 'Financeiro', 'Sistema', 'Conferência 100% concluída - aguardando pagamento');
+      }
+      
+      if (nota.tipoPagamento === 'Pagamento Parcial' && nota.valorPendente > 0) {
+        nota.status = 'Aguardando Pagamento Final';
+        alterarAtuacao(nota.id, 'Financeiro', 'Sistema', 'Conferência concluída - aguardando pagamento final');
+      }
+      
+      if (nota.tipoPagamento === 'Pagamento 100% Antecipado' && nota.valorPago >= nota.valorTotal) {
+        nota.status = 'Finalizada';
+        nota.dataFinalizacao = new Date().toISOString();
+        nota.responsavelFinalizacao = responsavel;
+        alterarAtuacao(nota.id, 'Encerrado', 'Sistema', 'Nota finalizada - pagamento antecipado já realizado');
+      }
+    }
+  }
+  
+  nota.alertas = [...nota.alertas.filter(a => !a.resolvido), ...verificarAlertasNota(nota)];
+  
+  return nota;
+};
+
 // ============= FUNÇÕES DE FINALIZAÇÃO =============
 
 export const finalizarNota = (

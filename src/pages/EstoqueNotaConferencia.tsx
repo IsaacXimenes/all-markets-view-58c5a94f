@@ -3,11 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
@@ -22,17 +20,16 @@ import {
 } from 'lucide-react';
 import { 
   getNotaEntradaById, 
-  conferirProduto, 
+  conferirProdutoSimples, 
   NotaEntrada,
   ProdutoNotaEntrada,
   podeRealizarAcao,
   TimelineNotaEntrada
 } from '@/utils/notaEntradaFluxoApi';
 import { getCores } from '@/utils/coresApi';
-import { useCadastroStore } from '@/store/cadastroStore';
 import { toast } from 'sonner';
-import { InputComMascara } from '@/components/ui/InputComMascara';
 import { formatCurrency } from '@/utils/formatUtils';
+import { formatIMEI } from '@/utils/imeiMask';
 
 export default function EstoqueNotaConferencia() {
   const { id } = useParams();
@@ -42,19 +39,7 @@ export default function EstoqueNotaConferencia() {
   const [isLoading, setIsLoading] = useState(true);
   const [timelineOpen, setTimelineOpen] = useState(true);
   
-  // Estado de conferência do produto selecionado
-  const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoNotaEntrada | null>(null);
-  const [conferenciaDados, setConferenciaDados] = useState({
-    imei: '',
-    cor: '',
-    categoria: '' as 'Novo' | 'Seminovo' | '',
-    capacidade: '',
-    percentualBateria: 100
-  });
-  
   const coresCadastradas = useMemo(() => getCores(), []);
-  const allColaboradores = useCadastroStore(state => state.colaboradores);
-  const colaboradores = useMemo(() => allColaboradores.filter(c => c.ativo), [allColaboradores]);
 
   useEffect(() => {
     if (id) {
@@ -72,51 +57,24 @@ export default function EstoqueNotaConferencia() {
     return { conferidos, total, percentual };
   }, [nota]);
 
-  const handleSelecionarProduto = (produto: ProdutoNotaEntrada) => {
+  const getCorHex = (corNome: string) => {
+    const cor = coresCadastradas.find(c => c.nome === corNome);
+    return cor?.hexadecimal || '#888888';
+  };
+
+  const handleConferirProduto = (produto: ProdutoNotaEntrada) => {
+    if (!nota) return;
+    
     if (produto.statusConferencia === 'Conferido') {
       toast.info('Este produto já foi conferido');
       return;
     }
-    setProdutoSelecionado(produto);
-    setConferenciaDados({
-      imei: '',
-      cor: '',
-      categoria: '',
-      capacidade: '',
-      percentualBateria: 100
-    });
-  };
-
-  const handleConferir = () => {
-    if (!nota || !produtoSelecionado) return;
     
-    // Validações
-    if (produtoSelecionado.tipoProduto === 'Aparelho' && !conferenciaDados.imei) {
-      toast.error('IMEI é obrigatório para aparelhos');
-      return;
-    }
-    if (!conferenciaDados.cor) {
-      toast.error('Cor é obrigatória');
-      return;
-    }
-    if (!conferenciaDados.categoria) {
-      toast.error('Categoria é obrigatória');
-      return;
-    }
-    
-    const resultado = conferirProduto(nota.id, produtoSelecionado.id, {
-      imei: conferenciaDados.imei || undefined,
-      cor: conferenciaDados.cor,
-      categoria: conferenciaDados.categoria as 'Novo' | 'Seminovo',
-      capacidade: conferenciaDados.capacidade || undefined,
-      percentualBateria: conferenciaDados.percentualBateria,
-      responsavel: 'Carlos Estoque'
-    });
+    const resultado = conferirProdutoSimples(nota.id, produto.id, 'Carlos Estoque');
     
     if (resultado) {
-      toast.success(`Produto conferido: ${produtoSelecionado.modelo}`);
+      toast.success(`Produto conferido: ${produto.modelo}`);
       setNota(resultado);
-      setProdutoSelecionado(null);
       
       // Verificar se finalizou conferência
       const novoProgresso = resultado.produtos.filter(p => p.statusConferencia === 'Conferido').length;
@@ -238,279 +196,132 @@ export default function EstoqueNotaConferencia() {
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Lista de Produtos */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Produtos para Conferir</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Modelo</TableHead>
-                      <TableHead>Marca</TableHead>
-                      <TableHead>Custo</TableHead>
-                      <TableHead>IMEI</TableHead>
-                      <TableHead>Ação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {nota.produtos.map(produto => (
-                      <TableRow 
-                        key={produto.id}
-                        className={
-                          produto.statusConferencia === 'Conferido' 
-                            ? 'bg-primary/10' 
-                            : produtoSelecionado?.id === produto.id 
-                              ? 'bg-accent'
-                              : ''
-                        }
-                      >
-                        <TableCell>
-                          {produto.statusConferencia === 'Conferido' ? (
-                            <CheckCircle className="h-5 w-5 text-primary" />
-                          ) : (
-                            <Clock className="h-5 w-5 text-warning" />
-                          )}
-                        </TableCell>
-                        <TableCell className="font-medium">{produto.modelo}</TableCell>
-                        <TableCell>{produto.marca}</TableCell>
-                        <TableCell>{formatCurrency(produto.custoTotal)}</TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {produto.imei || '-'}
-                        </TableCell>
-                        <TableCell>
-                          {produto.statusConferencia === 'Pendente' && (
-                            <Button
-                              size="sm"
-                              variant={produtoSelecionado?.id === produto.id ? 'default' : 'outline'}
-                              onClick={() => handleSelecionarProduto(produto)}
-                            >
-                              Conferir
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Painel de Conferência */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {produtoSelecionado 
-                    ? `Conferir: ${produtoSelecionado.modelo}` 
-                    : 'Selecione um produto'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {produtoSelecionado ? (
-                  <div className="space-y-4">
-                    <div>
-                      <Label className="text-muted-foreground">Marca</Label>
-                      <p className="font-medium">{produtoSelecionado.marca}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Modelo</Label>
-                      <p className="font-medium">{produtoSelecionado.modelo}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Custo</Label>
-                      <p className="font-medium">{formatCurrency(produtoSelecionado.custoTotal)}</p>
-                    </div>
-                    
-                    <Separator />
-                    
-                    {/* Campos de conferência */}
-                    {produtoSelecionado.tipoProduto === 'Aparelho' && (
-                      <div>
-                        <Label htmlFor="imei">IMEI *</Label>
-                        <InputComMascara
-                          mascara="imei"
-                          value={conferenciaDados.imei}
-                          onChange={(formatted, raw) => setConferenciaDados({
-                            ...conferenciaDados,
-                            imei: String(raw)
-                          })}
-                          placeholder="00-000000-000000-0"
-                        />
-                      </div>
-                    )}
-                    
-                    <div>
-                      <Label htmlFor="cor">Cor *</Label>
-                      <Select 
-                        value={conferenciaDados.cor}
-                        onValueChange={(value) => setConferenciaDados({
-                          ...conferenciaDados,
-                          cor: value
-                        })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a cor" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {coresCadastradas.map(c => (
-                            <SelectItem key={c.id} value={c.nome}>
-                              <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-3 h-3 rounded-full border" 
-                                  style={{ backgroundColor: c.hexadecimal }}
-                                />
-                                {c.nome}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="categoria">Categoria *</Label>
-                      <Select 
-                        value={conferenciaDados.categoria}
-                        onValueChange={(value) => setConferenciaDados({
-                          ...conferenciaDados,
-                          categoria: value as 'Novo' | 'Seminovo'
-                        })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Novo">Novo</SelectItem>
-                          <SelectItem value="Seminovo">Seminovo</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    {produtoSelecionado.tipoProduto === 'Aparelho' && (
-                      <>
-                        <div>
-                          <Label htmlFor="capacidade">Capacidade</Label>
-                          <Select 
-                            value={conferenciaDados.capacidade}
-                            onValueChange={(value) => setConferenciaDados({
-                              ...conferenciaDados,
-                              capacidade: value
-                            })}
+        {/* Tabela de Produtos - Layout igual ao cadastro */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Produtos para Conferir</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Marca</TableHead>
+                    <TableHead>Modelo</TableHead>
+                    <TableHead>IMEI</TableHead>
+                    <TableHead>Cor</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead>Qtd</TableHead>
+                    <TableHead>Custo Unit.</TableHead>
+                    <TableHead>Custo Total</TableHead>
+                    <TableHead className="text-center">Conferir</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {nota.produtos.map(produto => (
+                    <TableRow 
+                      key={produto.id}
+                      className={produto.statusConferencia === 'Conferido' ? 'bg-primary/10' : ''}
+                    >
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {produto.tipoProduto}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">{produto.marca}</TableCell>
+                      <TableCell className="font-medium">{produto.modelo}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {produto.imei ? formatIMEI(produto.imei) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {produto.cor ? (
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full border border-border" 
+                              style={{ backgroundColor: getCorHex(produto.cor) }}
+                            />
+                            <span className="text-sm">{produto.cor}</span>
+                          </div>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={produto.categoria === 'Novo' ? 'default' : 'secondary'} className="text-xs">
+                          {produto.categoria || '-'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">{produto.quantidade}</TableCell>
+                      <TableCell>{formatCurrency(produto.custoUnitario)}</TableCell>
+                      <TableCell className="font-medium">{formatCurrency(produto.custoTotal)}</TableCell>
+                      <TableCell className="text-center">
+                        {produto.statusConferencia === 'Conferido' ? (
+                          <CheckCircle className="h-6 w-6 text-primary mx-auto" />
+                        ) : (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 hover:bg-primary/20"
+                            onClick={() => handleConferirProduto(produto)}
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="64 GB">64 GB</SelectItem>
-                              <SelectItem value="128 GB">128 GB</SelectItem>
-                              <SelectItem value="256 GB">256 GB</SelectItem>
-                              <SelectItem value="512 GB">512 GB</SelectItem>
-                              <SelectItem value="1 TB">1 TB</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="bateria">% Bateria</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={conferenciaDados.percentualBateria}
-                            onChange={(e) => setConferenciaDados({
-                              ...conferenciaDados,
-                              percentualBateria: parseInt(e.target.value) || 0
-                            })}
-                          />
-                        </div>
-                      </>
-                    )}
-                    
-                    <Button onClick={handleConferir} className="w-full" size="lg">
-                      <Check className="mr-2 h-4 w-4" />
-                      Confirmar Conferência
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Clique em "Conferir" em um produto da lista para iniciar a conferência</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                            <Check className="h-5 w-5 text-primary" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Timeline */}
-        <Card>
-          <Collapsible open={timelineOpen} onOpenChange={setTimelineOpen}>
+        <Collapsible open={timelineOpen} onOpenChange={setTimelineOpen}>
+          <Card>
             <CollapsibleTrigger asChild>
               <CardHeader className="cursor-pointer hover:bg-muted/50">
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Clock className="h-5 w-5" />
                     Timeline da Nota
                   </CardTitle>
-                  {timelineOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                  {timelineOpen ? <ChevronUp /> : <ChevronDown />}
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
               <CardContent>
-                <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {nota.timeline.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-4">Nenhum evento registrado</p>
-                  ) : (
-                    nota.timeline.slice().reverse().map((entry, idx) => (
-                      <div key={entry.id} className="flex gap-4 pb-4 border-b last:border-0">
-                        <div className="flex flex-col items-center">
-                          <div className={`w-3 h-3 rounded-full ${
-                            entry.statusNovo === 'Finalizada' ? 'bg-primary' :
-                            entry.statusNovo === 'Com Divergencia' ? 'bg-destructive' :
-                            'bg-primary/70'
-                          }`} />
-                          {idx < nota.timeline.length - 1 && (
-                            <div className="w-0.5 h-full bg-border mt-1" />
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-medium">{entry.acao}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {entry.usuario} ({entry.perfil})
-                              </p>
-                              {entry.detalhes && (
-                                <p className="text-sm mt-1">{entry.detalhes}</p>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">
-                                {formatDateTime(entry.dataHora)}
-                              </p>
-                              {entry.impactoFinanceiro && (
-                                <p className="text-sm font-medium text-primary">
-                                  {formatCurrency(entry.impactoFinanceiro)}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                <div className="space-y-4">
+                  {nota.timeline.slice().reverse().map((evento, index) => (
+                    <div key={evento.id} className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className={`w-3 h-3 rounded-full ${
+                          evento.statusNovo === 'Finalizada' ? 'bg-primary' :
+                          evento.statusNovo === 'Com Divergencia' ? 'bg-destructive' :
+                          evento.acao.includes('conferido') ? 'bg-green-500' :
+                          evento.acao.includes('Pagamento') ? 'bg-purple-500' :
+                          'bg-blue-500'
+                        }`} />
+                        {index < nota.timeline.length - 1 && (
+                          <div className="w-0.5 h-full bg-border mt-1" />
+                        )}
                       </div>
-                    ))
-                  )}
+                      <div className="flex-1 pb-4">
+                        <p className="font-medium text-sm">{evento.acao}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDateTime(evento.dataHora)} • {evento.usuario}
+                        </p>
+                        {evento.detalhes && (
+                          <p className="text-xs text-muted-foreground mt-1">{evento.detalhes}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </CollapsibleContent>
-          </Collapsible>
-        </Card>
+          </Card>
+        </Collapsible>
       </div>
     </EstoqueLayout>
   );
