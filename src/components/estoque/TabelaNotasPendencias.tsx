@@ -159,6 +159,8 @@ export function TabelaNotasPendencias({
   const podeEditar = (nota: NotaEntrada) => podeEditarNota(nota, modulo);
 
   const getRowClass = (nota: NotaEntrada) => {
+    // Notas finalizadas ficam com fundo verde claro
+    if (nota.status === 'Finalizada' || nota.atuacaoAtual === 'Encerrado') return 'bg-green-500/10';
     if (nota.status === 'Com Divergencia') return 'bg-destructive/10';
     if (nota.alertas.some(a => !a.resolvido && a.tipo === 'status_critico')) return 'bg-warning/10';
     if (nota.atuacaoAtual === modulo) return 'bg-primary/5';
