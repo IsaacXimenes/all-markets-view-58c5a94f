@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -54,6 +54,14 @@ export function ModalFinalizarPagamento({
   const { obterFinanceiros } = useCadastroStore();
   const contasFinanceiras = getContasFinanceiras().filter(c => c.status === 'Ativo');
   const colaboradoresFinanceiros = obterFinanceiros();
+  
+  // Usuário logado simulado (primeiro financeiro disponível ou padrão)
+  const usuarioLogado = useMemo(() => {
+    if (colaboradoresFinanceiros.length > 0) {
+      return colaboradoresFinanceiros[0].nome;
+    }
+    return 'Usuário Financeiro';
+  }, [colaboradoresFinanceiros]);
 
   const [form, setForm] = useState<DadosPagamento>({
     contaPagamento: '',
@@ -66,6 +74,13 @@ export function ModalFinalizarPagamento({
     responsavel: '',
     forcarFinalizacao: false
   });
+
+  // Preencher responsável automaticamente quando o modal abrir
+  useEffect(() => {
+    if (open && usuarioLogado && !form.responsavel) {
+      setForm(prev => ({ ...prev, responsavel: usuarioLogado }));
+    }
+  }, [open, usuarioLogado]);
 
   // Verificar se conferência está incompleta
   const conferenciaIncompleta = useMemo(() => {
