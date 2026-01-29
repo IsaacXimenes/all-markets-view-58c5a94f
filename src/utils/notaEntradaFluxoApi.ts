@@ -138,14 +138,13 @@ export interface NotaEntrada {
 // ============= ARMAZENAMENTO =============
 
 let notasEntrada: NotaEntrada[] = [];
-let notaCounter = 0;
+let proximoSequencial = 1; // Contador único para auto-incremento
 
 // Função para gerar número de nota auto-incremental
 export const gerarNumeroNotaAutoIncremental = (): string => {
   const ano = new Date().getFullYear();
-  // Contar notas existentes para o ano atual + 1
-  const notasAnoAtual = notasEntrada.filter(n => n.numeroNota.includes(`NE-${ano}`)).length;
-  const sequencial = String(notasAnoAtual + notaCounter + 1).padStart(5, '0');
+  const sequencial = String(proximoSequencial).padStart(5, '0');
+  proximoSequencial++;
   return `NE-${ano}-${sequencial}`;
 };
 
@@ -314,12 +313,8 @@ export const criarNotaEntrada = (dados: {
   responsavel: string;
   observacoes?: string;
 }): NotaEntrada => {
-  notaCounter++;
-  
-  // Gerar número da nota automaticamente no formato NE-YYYY-XXXXX
-  const ano = new Date().getFullYear();
-  const sequencial = String(notasEntrada.length + notaCounter).padStart(5, '0');
-  const numeroNota = `NE-${ano}-${sequencial}`;
+  // Gerar número da nota usando contador auto-incremental
+  const numeroNota = gerarNumeroNotaAutoIncremental();
   
   // ID é igual ao número da nota para consistência
   const id = numeroNota;
@@ -863,11 +858,16 @@ export const finalizarNota = (
 
 // ============= FUNÇÕES DE CONSULTA =============
 
+// Ordenar por dataCriacao (mais recente primeiro)
+const ordenarPorDataCriacao = (a: NotaEntrada, b: NotaEntrada): number => {
+  return new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime();
+};
+
 export const getNotasEntrada = (): NotaEntrada[] => {
   return notasEntrada.map(n => ({
     ...n,
     alertas: [...n.alertas.filter(a => !a.resolvido), ...verificarAlertasNota(n)]
-  }));
+  })).sort(ordenarPorDataCriacao);
 };
 
 export const getNotaEntradaById = (id: string): NotaEntrada | null => {
@@ -880,7 +880,7 @@ export const getNotaEntradaById = (id: string): NotaEntrada | null => {
 };
 
 export const getNotasEntradaPorStatus = (status: NotaEntradaStatus): NotaEntrada[] => {
-  return notasEntrada.filter(n => n.status === status);
+  return notasEntrada.filter(n => n.status === status).sort(ordenarPorDataCriacao);
 };
 
 export const getNotasPendentes = (): NotaEntrada[] => {
@@ -895,7 +895,7 @@ export const getNotasPendentes = (): NotaEntrada[] => {
     'Aguardando Pagamento Final',
     'Com Divergencia'
   ];
-  return notasEntrada.filter(n => statusNaoFinalizados.includes(n.status));
+  return notasEntrada.filter(n => statusNaoFinalizados.includes(n.status)).sort(ordenarPorDataCriacao);
 };
 
 // ============= REGRAS DE CAMPOS =============
@@ -1005,7 +1005,7 @@ export const getNotasParaFinanceiro = (): NotaEntrada[] => {
     if (nota.status === 'Finalizada') return false;
     
     return true; // Financeiro visualiza todas as notas em andamento
-  });
+  }).sort(ordenarPorDataCriacao);
 };
 
 // Converter NotaEntrada para formato compatível com a UI do Financeiro
@@ -1069,6 +1069,9 @@ export const converterNotaParaPendencia = (nota: NotaEntrada): PendenciaFinancei
 
 export const inicializarNotasEntradaMock = (): void => {
   if (notasEntrada.length > 0) return;
+  
+  // Resetar contador para inicialização limpa
+  proximoSequencial = 1;
   
   // Nota 1 - Pagamento Pós, atuação Estoque, aguardando conferência
   const nota1 = criarNotaEntrada({
