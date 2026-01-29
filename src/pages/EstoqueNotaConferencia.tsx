@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { 
   getNotaEntradaById, 
-  conferirProdutoSimples, 
+  finalizarConferencia, 
   NotaEntrada,
   ProdutoNotaEntrada,
   podeRealizarAcao,
@@ -30,6 +30,7 @@ import { getCores } from '@/utils/coresApi';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/utils/formatUtils';
 import { formatIMEI } from '@/utils/imeiMask';
+import { Save } from 'lucide-react';
 
 export default function EstoqueNotaConferencia() {
   const { id } = useParams();
@@ -39,12 +40,26 @@ export default function EstoqueNotaConferencia() {
   const [isLoading, setIsLoading] = useState(true);
   const [timelineOpen, setTimelineOpen] = useState(true);
   
+  // Estado local para rastrear produtos marcados como conferidos (antes de salvar)
+  const [produtosConferidos, setProdutosConferidos] = useState<Set<string>>(new Set());
+  
   const coresCadastradas = useMemo(() => getCores(), []);
 
   useEffect(() => {
     if (id) {
       const notaData = getNotaEntradaById(id);
       setNota(notaData);
+      
+      // Inicializar com produtos já conferidos
+      if (notaData) {
+        const jaConferidos = new Set(
+          notaData.produtos
+            .filter(p => p.statusConferencia === 'Conferido')
+            .map(p => p.id)
+        );
+        setProdutosConferidos(jaConferidos);
+      }
+      
       setIsLoading(false);
     }
   }, [id]);
@@ -52,41 +67,56 @@ export default function EstoqueNotaConferencia() {
   const progressoConferencia = useMemo(() => {
     if (!nota) return { conferidos: 0, total: 0, percentual: 0 };
     const total = nota.produtos.length;
-    const conferidos = nota.produtos.filter(p => p.statusConferencia === 'Conferido').length;
+    const conferidos = produtosConferidos.size;
     const percentual = total > 0 ? Math.round((conferidos / total) * 100) : 0;
     return { conferidos, total, percentual };
-  }, [nota]);
+  }, [nota, produtosConferidos]);
 
   const getCorHex = (corNome: string) => {
     const cor = coresCadastradas.find(c => c.nome === corNome);
     return cor?.hexadecimal || '#888888';
   };
 
-  const handleConferirProduto = (produto: ProdutoNotaEntrada) => {
+  // Toggle local de conferência (não salva ainda)
+  const handleToggleConferido = (produtoId: string) => {
+    setProdutosConferidos(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(produtoId)) {
+        newSet.delete(produtoId);
+      } else {
+        newSet.add(produtoId);
+      }
+      return newSet;
+    });
+  };
+
+  // Salvar conferência - só aqui que confirma tudo
+  const handleSalvarConferencia = () => {
     if (!nota) return;
     
-    if (produto.statusConferencia === 'Conferido') {
-      toast.info('Este produto já foi conferido');
+    if (produtosConferidos.size === 0) {
+      toast.error('Marque pelo menos um produto como conferido');
       return;
     }
     
-    const resultado = conferirProdutoSimples(nota.id, produto.id, 'Carlos Estoque');
+    const produtosIds = Array.from(produtosConferidos);
+    const resultado = finalizarConferencia(nota.id, produtosIds, 'Carlos Estoque');
     
     if (resultado) {
-      toast.success(`Produto conferido: ${produto.modelo}`);
       setNota(resultado);
+      toast.success(`${produtosIds.length} produto(s) conferido(s) com sucesso!`);
       
-      // Verificar se finalizou conferência
-      const novoProgresso = resultado.produtos.filter(p => p.statusConferencia === 'Conferido').length;
-      if (novoProgresso === resultado.produtos.length) {
-        toast.success('Conferência concluída! Nota atualizada.', {
+      // Verificar se finalizou 100%
+      if (resultado.qtdConferida === resultado.qtdCadastrada) {
+        toast.success('Conferência 100% concluída!', {
           description: resultado.tipoPagamento === 'Pagamento Pos' 
-            ? 'Enviada para pagamento no Financeiro' 
-            : 'Status atualizado'
+            ? 'Nota enviada para pagamento no Financeiro' 
+            : 'Status da nota atualizado'
         });
+        navigate('/estoque/notas-pendencias');
       }
     } else {
-      toast.error('Erro ao conferir produto');
+      toast.error('Erro ao salvar conferência');
     }
   };
 
@@ -256,12 +286,21 @@ export default function EstoqueNotaConferencia() {
                       <TableCell className="text-center">
                         {produto.statusConferencia === 'Conferido' ? (
                           <CheckCircle className="h-6 w-6 text-primary mx-auto" />
+                        ) : produtosConferidos.has(produto.id) ? (
+                          <Button
+                            size="icon"
+                            variant="default"
+                            className="h-8 w-8"
+                            onClick={() => handleToggleConferido(produto.id)}
+                          >
+                            <Check className="h-5 w-5" />
+                          </Button>
                         ) : (
                           <Button
                             size="icon"
                             variant="ghost"
                             className="h-8 w-8 hover:bg-primary/20"
-                            onClick={() => handleConferirProduto(produto)}
+                            onClick={() => handleToggleConferido(produto.id)}
                           >
                             <Check className="h-5 w-5 text-primary" />
                           </Button>
@@ -271,6 +310,18 @@ export default function EstoqueNotaConferencia() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+            
+            {/* Botão Salvar Conferência */}
+            <div className="flex justify-end mt-6 pt-4 border-t">
+              <Button 
+                onClick={handleSalvarConferencia} 
+                size="lg"
+                disabled={produtosConferidos.size === 0 || produtosConferidos.size === nota.produtos.filter(p => p.statusConferencia === 'Conferido').length}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                Salvar Conferência ({progressoConferencia.conferidos}/{progressoConferencia.total})
+              </Button>
             </div>
           </CardContent>
         </Card>

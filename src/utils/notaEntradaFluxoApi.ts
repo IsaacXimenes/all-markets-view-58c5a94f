@@ -897,6 +897,102 @@ export const conferirProdutoSimples = (
   return JSON.parse(JSON.stringify(notaOriginal));
 };
 
+// Finalizar conferência em lote - confirma múltiplos produtos de uma vez
+export const finalizarConferencia = (
+  notaId: string,
+  produtosIds: string[],
+  responsavel: string
+): NotaEntrada | null => {
+  const notaOriginal = notasEntrada.find(n => n.id === notaId);
+  if (!notaOriginal) return null;
+  
+  // Verificar se nota está finalizada
+  if (notaOriginal.status === 'Finalizada') {
+    console.error('Não é possível conferir produtos em nota finalizada');
+    return null;
+  }
+  
+  // Conferir cada produto
+  let produtosConferidos = 0;
+  for (const produtoId of produtosIds) {
+    const produto = notaOriginal.produtos.find(p => p.id === produtoId);
+    if (produto && produto.statusConferencia !== 'Conferido') {
+      produto.statusRecebimento = 'Recebido';
+      produto.statusConferencia = 'Conferido';
+      produto.dataConferencia = new Date().toISOString();
+      produto.responsavelConferencia = responsavel;
+      produtosConferidos++;
+    }
+  }
+  
+  if (produtosConferidos === 0) {
+    console.log('Nenhum produto novo para conferir');
+    return null;
+  }
+  
+  // Atualizar contadores
+  notaOriginal.qtdConferida = notaOriginal.produtos.filter(p => p.statusConferencia === 'Conferido').length;
+  notaOriginal.valorConferido = notaOriginal.produtos
+    .filter(p => p.statusConferencia === 'Conferido')
+    .reduce((acc, p) => acc + p.custoTotal, 0);
+  
+  // Registrar na timeline
+  registrarTimeline(
+    notaOriginal,
+    responsavel,
+    'Estoque',
+    `Conferência salva: ${produtosConferidos} produto(s)`,
+    notaOriginal.status,
+    notaOriginal.valorConferido,
+    `Total conferido: ${notaOriginal.qtdConferida}/${notaOriginal.qtdCadastrada}`
+  );
+  
+  // Atualizar status da nota
+  if (notaOriginal.qtdConferida > 0 && notaOriginal.qtdConferida < notaOriginal.qtdCadastrada) {
+    if (notaOriginal.status === 'Aguardando Conferencia' || notaOriginal.status === 'Criada') {
+      notaOriginal.status = 'Conferencia Parcial';
+    }
+  } else if (notaOriginal.qtdConferida === notaOriginal.qtdCadastrada && notaOriginal.qtdCadastrada > 0) {
+    // Verificar se há divergência de valores
+    const tolerancia = notaOriginal.valorTotal * 0.0001;
+    if (notaOriginal.valorPago > 0 && Math.abs(notaOriginal.valorPago - notaOriginal.valorConferido) > tolerancia) {
+      notaOriginal.status = 'Com Divergencia';
+      notaOriginal.alertas.push({
+        id: `ALERTA-${notaId}-DIV-${Date.now()}`,
+        tipo: 'divergencia_valor',
+        mensagem: `Divergência detectada: Pago R$ ${notaOriginal.valorPago.toFixed(2)}, Conferido R$ ${notaOriginal.valorConferido.toFixed(2)}`,
+        dataGeracao: new Date().toISOString(),
+        visto: false,
+        resolvido: false
+      });
+    } else {
+      notaOriginal.status = 'Conferencia Concluida';
+      
+      if (notaOriginal.tipoPagamento === 'Pagamento Pos') {
+        notaOriginal.status = 'Aguardando Pagamento Final';
+        alterarAtuacao(notaOriginal.id, 'Financeiro', 'Sistema', 'Conferência 100% concluída - aguardando pagamento');
+      }
+      
+      if (notaOriginal.tipoPagamento === 'Pagamento Parcial' && notaOriginal.valorPendente > 0) {
+        notaOriginal.status = 'Aguardando Pagamento Final';
+        alterarAtuacao(notaOriginal.id, 'Financeiro', 'Sistema', 'Conferência concluída - aguardando pagamento final');
+      }
+      
+      if (notaOriginal.tipoPagamento === 'Pagamento 100% Antecipado' && notaOriginal.valorPago >= notaOriginal.valorTotal) {
+        notaOriginal.status = 'Finalizada';
+        notaOriginal.dataFinalizacao = new Date().toISOString();
+        notaOriginal.responsavelFinalizacao = responsavel;
+        alterarAtuacao(notaOriginal.id, 'Encerrado', 'Sistema', 'Nota finalizada - pagamento antecipado já realizado');
+      }
+    }
+  }
+  
+  notaOriginal.alertas = [...notaOriginal.alertas.filter(a => !a.resolvido), ...verificarAlertasNota(notaOriginal)];
+  
+  // Retornar cópia profunda para forçar re-render do React
+  return JSON.parse(JSON.stringify(notaOriginal));
+};
+
 // ============= FUNÇÕES DE FINALIZAÇÃO =============
 
 export const finalizarNota = (
