@@ -121,7 +121,7 @@ export default function EstoqueNotaConferencia() {
       const novoProgresso = resultado.produtos.filter(p => p.statusConferencia === 'Conferido').length;
       if (novoProgresso === resultado.produtos.length) {
         toast.success('Conferência concluída! Nota atualizada.', {
-          description: resultado.tipoPagamento === 'Pos' 
+          description: resultado.tipoPagamento === 'Pagamento Pos' 
             ? 'Enviada para pagamento no Financeiro' 
             : 'Status atualizado'
         });

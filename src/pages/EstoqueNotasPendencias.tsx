@@ -12,7 +12,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   getNotasPendentes, 
   NotaEntrada,
-  NotaEntradaStatus 
+  NotaEntradaStatus,
+  AtuacaoAtual,
+  TipoPagamentoNota,
+  podeEditarNota
 } from '@/utils/notaEntradaFluxoApi';
 import { getFornecedores } from '@/utils/cadastrosApi';
 import { formatCurrency } from '@/utils/formatUtils';
@@ -26,10 +29,12 @@ import {
   Clock, 
   AlertTriangle, 
   AlertCircle,
-  CheckCircle,
   FileText,
   DollarSign,
-  Package
+  Package,
+  Lock,
+  Warehouse,
+  Landmark
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -84,8 +89,9 @@ export default function EstoqueNotasPendencias() {
     ).length;
     const comDivergencia = notasFiltradas.filter(n => n.status === 'Com Divergencia').length;
     const valorTotal = notasFiltradas.reduce((acc, n) => acc + n.valorTotal, 0);
+    const atuacaoEstoque = notasFiltradas.filter(n => n.atuacaoAtual === 'Estoque').length;
     
-    return { total, aguardandoConferencia, aguardandoPagamento, comDivergencia, valorTotal };
+    return { total, aguardandoConferencia, aguardandoPagamento, comDivergencia, valorTotal, atuacaoEstoque };
   }, [notasFiltradas]);
 
   const getStatusBadge = (status: NotaEntradaStatus) => {
@@ -111,18 +117,49 @@ export default function EstoqueNotasPendencias() {
     );
   };
 
-  const getTipoPagamentoBadge = (tipo: string) => {
+  const getTipoPagamentoBadge = (tipo: TipoPagamentoNota) => {
     switch (tipo) {
-      case 'Antecipado':
-        return <Badge variant="outline" className="bg-primary/10 text-primary">Antecipado</Badge>;
-      case 'Parcial':
+      case 'Pagamento 100% Antecipado':
+        return <Badge variant="outline" className="bg-primary/10 text-primary">100% Antecipado</Badge>;
+      case 'Pagamento Parcial':
         return <Badge variant="outline" className="bg-accent text-accent-foreground">Parcial</Badge>;
-      case 'Pos':
+      case 'Pagamento Pos':
         return <Badge variant="outline" className="bg-muted text-muted-foreground">Pós</Badge>;
       default:
         return <Badge variant="outline">{tipo}</Badge>;
     }
   };
+
+  const getAtuacaoBadge = (atuacao: AtuacaoAtual) => {
+    switch (atuacao) {
+      case 'Estoque':
+        return (
+          <Badge className="bg-primary/20 text-primary border-primary/30 gap-1">
+            <Warehouse className="h-3 w-3" />
+            Estoque
+          </Badge>
+        );
+      case 'Financeiro':
+        return (
+          <Badge className="bg-accent text-accent-foreground gap-1">
+            <Landmark className="h-3 w-3" />
+            Financeiro
+          </Badge>
+        );
+      case 'Encerrado':
+        return (
+          <Badge variant="secondary" className="gap-1">
+            <Lock className="h-3 w-3" />
+            Encerrado
+          </Badge>
+        );
+      default:
+        return <Badge variant="outline">{atuacao}</Badge>;
+    }
+  };
+
+  // Verificar se pode editar (atuação é Estoque)
+  const podeEditar = (nota: NotaEntrada) => podeEditarNota(nota, 'Estoque');
 
   const getRowClass = (nota: NotaEntrada) => {
     if (nota.status === 'Com Divergencia') return 'bg-destructive/10';
@@ -330,9 +367,9 @@ export default function EstoqueNotasPendencias() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="Antecipado">Antecipado</SelectItem>
-                    <SelectItem value="Parcial">Parcial</SelectItem>
-                    <SelectItem value="Pos">Pós</SelectItem>
+                    <SelectItem value="Pagamento 100% Antecipado">100% Antecipado</SelectItem>
+                    <SelectItem value="Pagamento Parcial">Parcial</SelectItem>
+                    <SelectItem value="Pagamento Pos">Pós</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -379,6 +416,7 @@ export default function EstoqueNotasPendencias() {
                     <TableHead>Nº Nota</TableHead>
                     <TableHead>Fornecedor</TableHead>
                     <TableHead>Tipo Pag.</TableHead>
+                    <TableHead>Atuação Atual</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-center">Qtd Inf./Cad./Conf.</TableHead>
                     <TableHead>Valor Total</TableHead>
@@ -389,7 +427,7 @@ export default function EstoqueNotasPendencias() {
                 <TableBody>
                   {notasFiltradas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         Nenhuma nota pendente encontrada
                       </TableCell>
                     </TableRow>
@@ -399,6 +437,7 @@ export default function EstoqueNotasPendencias() {
                         <TableCell className="font-mono text-xs">{nota.numeroNota}</TableCell>
                         <TableCell>{nota.fornecedor}</TableCell>
                         <TableCell>{getTipoPagamentoBadge(nota.tipoPagamento)}</TableCell>
+                        <TableCell>{getAtuacaoBadge(nota.atuacaoAtual)}</TableCell>
                         <TableCell>{getStatusBadge(nota.status)}</TableCell>
                         <TableCell>
                           <div className="flex items-center justify-center gap-1">
@@ -444,8 +483,8 @@ export default function EstoqueNotasPendencias() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            {/* Botão Cadastrar Produtos */}
-                            {['Criada', 'Aguardando Conferencia', 'Conferencia Parcial'].includes(nota.status) && (
+                            {/* Botão Cadastrar Produtos - só se atuação for Estoque */}
+                            {podeEditar(nota) && ['Aguardando Conferencia', 'Conferencia Parcial'].includes(nota.status) && (
                               <Button 
                                 variant="ghost" 
                                 size="sm"
@@ -455,8 +494,8 @@ export default function EstoqueNotasPendencias() {
                                 <Plus className="h-4 w-4" />
                               </Button>
                             )}
-                            {/* Botão Conferir */}
-                            {['Aguardando Conferencia', 'Conferencia Parcial'].includes(nota.status) && nota.qtdCadastrada > 0 && (
+                            {/* Botão Conferir - só se atuação for Estoque */}
+                            {podeEditar(nota) && ['Aguardando Conferencia', 'Conferencia Parcial'].includes(nota.status) && nota.qtdCadastrada > 0 && (
                               <Button 
                                 variant="ghost" 
                                 size="sm"
@@ -466,7 +505,14 @@ export default function EstoqueNotasPendencias() {
                                 <ClipboardCheck className="h-4 w-4" />
                               </Button>
                             )}
-                            {/* Botão Ver Detalhes */}
+                            {/* Indicador de bloqueio se não pode editar */}
+                            {!podeEditar(nota) && nota.atuacaoAtual !== 'Encerrado' && (
+                              <div className="flex items-center gap-1 text-muted-foreground text-xs px-2">
+                                <Lock className="h-3 w-3" />
+                                <span>Aguardando {nota.atuacaoAtual}</span>
+                              </div>
+                            )}
+                            {/* Botão Ver Detalhes - sempre disponível */}
                             <Button 
                               variant="ghost" 
                               size="sm"
