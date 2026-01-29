@@ -165,6 +165,7 @@ const fornecedores = [
 ];
 
 let produtos: Produto[] = [
+  // 1 produto por loja - JK Shopping (saúde bateria 95% - verde)
   {
     id: 'PROD-0010',
     imei: '352123456789012',
@@ -176,15 +177,13 @@ let produtos: Produto[] = [
     valorCusto: 7200.00,
     valorVendaSugerido: 15120.00,
     vendaRecomendada: 12999.00,
-    saudeBateria: 100,
+    saudeBateria: 95,
     loja: LOJAS_IDS.JK_SHOPPING,
     estoqueConferido: true,
     assistenciaConferida: true,
     condicao: 'Lacrado',
     historicoCusto: [
-      { data: '2024-11-15', fornecedor: 'Apple Distribuidor BR', valor: 7200.00 },
-      { data: '2024-10-20', fornecedor: 'TechSupply Imports', valor: 7350.00 },
-      { data: '2024-09-10', fornecedor: 'MobileWorld Atacado', valor: 7100.00 }
+      { data: '2024-11-15', fornecedor: 'Apple Distribuidor BR', valor: 7200.00 }
     ],
     historicoValorRecomendado: [
       { data: '2025-01-10', usuario: 'Lucas Mendes', valorAntigo: null, valorNovo: 12999.00 }
@@ -192,35 +191,10 @@ let produtos: Produto[] = [
     statusNota: 'Concluído',
     origemEntrada: 'Fornecedor'
   },
+  // Matriz (saúde bateria 85% - normal)
   {
     id: 'PROD-0011',
     imei: '352123456789013',
-    marca: 'Apple',
-    modelo: 'iPhone 15 Pro',
-    cor: 'Azul Titânio',
-    tipo: 'Novo',
-    quantidade: 1,
-    valorCusto: 6400.00,
-    valorVendaSugerido: 13440.00,
-    vendaRecomendada: 10999.00,
-    saudeBateria: 100,
-    loja: LOJAS_IDS.SHOPPING_SUL,
-    estoqueConferido: true,
-    assistenciaConferida: true,
-    condicao: 'Lacrado',
-    historicoCusto: [
-      { data: '2024-11-18', fornecedor: 'Apple Distribuidor BR', valor: 6400.00 },
-      { data: '2024-10-25', fornecedor: 'iStore Fornecedor', valor: 6500.00 }
-    ],
-    historicoValorRecomendado: [
-      { data: '2025-01-08', usuario: 'Fernanda Lima', valorAntigo: null, valorNovo: 10999.00 }
-    ],
-    statusNota: 'Concluído',
-    origemEntrada: 'Fornecedor'
-  },
-  {
-    id: 'PROD-0012',
-    imei: '352123456789014',
     marca: 'Apple',
     modelo: 'iPhone 14 Pro',
     cor: 'Roxo Profundo',
@@ -229,7 +203,7 @@ let produtos: Produto[] = [
     valorCusto: 3800.00,
     valorVendaSugerido: 6840.00,
     vendaRecomendada: 5499.00,
-    saudeBateria: 92,
+    saudeBateria: 85,
     loja: LOJAS_IDS.MATRIZ,
     estoqueConferido: true,
     assistenciaConferida: true,
@@ -242,16 +216,15 @@ let produtos: Produto[] = [
       { data: '2025-01-05', usuario: 'Roberto Alves', valorAntigo: null, valorNovo: 5499.00 }
     ],
     statusNota: 'Concluído',
-    origemEntrada: 'Fornecedor',
+    origemEntrada: 'Base de Troca',
     timeline: [
-      { id: 'TL-0012-1', tipo: 'entrada', data: '2024-11-10T09:00:00', titulo: 'Entrada via Nota de Compra', descricao: 'Produto recebido via Nota NC-2025-0002', responsavel: 'Carlos Oliveira' },
-      { id: 'TL-0012-2', tipo: 'parecer_estoque', data: '2024-11-10T14:30:00', titulo: 'Análise Realizada', descricao: 'Produto em excelente estado, sem riscos ou marcas de uso', responsavel: 'Ana Costa' },
-      { id: 'TL-0012-3', tipo: 'liberacao', data: '2024-11-10T14:35:00', titulo: 'Produto Liberado', descricao: 'Produto liberado para venda', responsavel: 'Sistema' }
+      { id: 'TL-0011-1', tipo: 'entrada', data: '2024-11-10T09:00:00', titulo: 'Entrada via Base de Troca', descricao: 'Produto recebido via Base de Troca', responsavel: 'Carlos Oliveira' }
     ]
   },
+  // Shopping Sul (saúde bateria 78% - amarelo)
   {
-    id: 'PROD-0013',
-    imei: '352123456789015',
+    id: 'PROD-0012',
+    imei: '352123456789014',
     marca: 'Apple',
     modelo: 'iPhone 13',
     cor: 'Preto',
@@ -261,7 +234,7 @@ let produtos: Produto[] = [
     valorVendaSugerido: 4320.00,
     vendaRecomendada: 3599.00,
     saudeBateria: 78,
-    loja: LOJAS_IDS.ONLINE,
+    loja: LOJAS_IDS.SHOPPING_SUL,
     estoqueConferido: true,
     assistenciaConferida: false,
     condicao: 'Bom estado',
@@ -273,14 +246,33 @@ let produtos: Produto[] = [
       { data: '2025-01-06', usuario: 'Lucas Mendes', valorAntigo: null, valorNovo: 3599.00 }
     ],
     statusNota: 'Concluído',
-    origemEntrada: 'Base de Troca',
-    timeline: [
-      { id: 'TL-0013-1', tipo: 'entrada', data: '2024-11-05T11:00:00', titulo: 'Entrada via Base de Troca', descricao: 'Produto recebido via Base de Troca - Venda VEN-2024-0089', responsavel: 'Maria Santos' },
-      { id: 'TL-0013-2', tipo: 'parecer_estoque', data: '2024-11-05T15:20:00', titulo: 'Encaminhado para Assistência', descricao: 'Bateria abaixo de 80%, encaminhar para verificação técnica', responsavel: 'Pedro Lima' },
-      { id: 'TL-0013-3', tipo: 'parecer_assistencia', data: '2024-11-06T10:00:00', titulo: 'Conferência Realizada', descricao: 'Bateria funcional apesar de degradada, produto pode ser vendido com desconto', responsavel: 'Lucas Ferreira' },
-      { id: 'TL-0013-4', tipo: 'liberacao', data: '2024-11-06T10:05:00', titulo: 'Produto Liberado', descricao: 'Produto liberado para venda', responsavel: 'Sistema' }
-    ]
+    origemEntrada: 'Fornecedor'
   },
+  // Águas Lindas (saúde bateria 65% - vermelho)
+  {
+    id: 'PROD-0013',
+    imei: '352123456789015',
+    marca: 'Apple',
+    modelo: 'iPhone 12',
+    cor: 'Azul',
+    tipo: 'Seminovo',
+    quantidade: 1,
+    valorCusto: 1900.00,
+    valorVendaSugerido: 3420.00,
+    saudeBateria: 65,
+    loja: LOJAS_IDS.AGUAS_LINDAS,
+    estoqueConferido: false,
+    assistenciaConferida: false,
+    condicao: 'Estado regular',
+    pareceres: 'Bateria muito degradada, necessita troca urgente',
+    historicoCusto: [
+      { data: '2024-11-20', fornecedor: 'GlobalCell Supply', valor: 1900.00 }
+    ],
+    historicoValorRecomendado: [],
+    statusNota: 'Pendente',
+    origemEntrada: 'Base de Troca'
+  },
+  // Online (compartilha estoque com Matriz - saúde bateria 100% - verde)
   {
     id: 'PROD-0014',
     imei: '352123456789016',
@@ -293,7 +285,7 @@ let produtos: Produto[] = [
     valorVendaSugerido: 10920.00,
     vendaRecomendada: 8999.00,
     saudeBateria: 100,
-    loja: LOJAS_IDS.AGUAS_LINDAS,
+    loja: LOJAS_IDS.ONLINE,
     estoqueConferido: true,
     assistenciaConferida: true,
     condicao: 'Lacrado',
@@ -305,191 +297,6 @@ let produtos: Produto[] = [
     ],
     statusNota: 'Concluído',
     origemEntrada: 'Fornecedor'
-  },
-  {
-    id: 'PROD-0015',
-    imei: '352123456789017',
-    marca: 'Apple',
-    modelo: 'iPhone 12',
-    cor: 'Azul',
-    tipo: 'Seminovo',
-    quantidade: 1,
-    valorCusto: 1900.00,
-    valorVendaSugerido: 3420.00,
-    saudeBateria: 68,
-    loja: LOJAS_IDS.JK_SHOPPING,
-    estoqueConferido: false,
-    assistenciaConferida: false,
-    condicao: 'Estado regular',
-    pareceres: 'Bateria muito degradada, necessita troca urgente',
-    historicoCusto: [
-      { data: '2024-11-20', fornecedor: 'GlobalCell Supply', valor: 1900.00 }
-    ],
-    historicoValorRecomendado: [],
-    statusNota: 'Pendente',
-    origemEntrada: 'Base de Troca',
-    timeline: [
-      { id: 'TL-0015-1', tipo: 'entrada', data: '2024-11-20T08:30:00', titulo: 'Entrada via Base de Troca', descricao: 'Produto recebido via Base de Troca - Venda VEN-2024-0102', responsavel: 'Fernando Alves' }
-    ]
-  },
-  {
-    id: 'PROD-0016',
-    imei: '352123456789018',
-    marca: 'Apple',
-    modelo: 'iPhone 14 Plus',
-    cor: 'Amarelo',
-    tipo: 'Novo',
-    quantidade: 1,
-    valorCusto: 5800.00,
-    valorVendaSugerido: 12180.00,
-    vendaRecomendada: 9499.00,
-    saudeBateria: 100,
-    loja: LOJAS_IDS.SHOPPING_SUL,
-    estoqueConferido: true,
-    assistenciaConferida: true,
-    condicao: 'Lacrado',
-    historicoCusto: [
-      { data: '2024-11-19', fornecedor: 'Eletrônicos Premium', valor: 5800.00 }
-    ],
-    historicoValorRecomendado: [
-      { data: '2025-01-07', usuario: 'Roberto Alves', valorAntigo: null, valorNovo: 9499.00 }
-    ],
-    statusNota: 'Concluído',
-    origemEntrada: 'Fornecedor'
-  },
-  {
-    id: 'PROD-0017',
-    imei: '352123456789019',
-    marca: 'Apple',
-    modelo: 'iPhone SE 2022',
-    cor: 'Branco',
-    tipo: 'Seminovo',
-    quantidade: 1,
-    valorCusto: 1400.00,
-    valorVendaSugerido: 2520.00,
-    vendaRecomendada: 2199.00,
-    saudeBateria: 85,
-    loja: LOJAS_IDS.MATRIZ,
-    estoqueConferido: true,
-    assistenciaConferida: true,
-    condicao: 'Bom estado',
-    historicoCusto: [
-      { data: '2024-11-12', fornecedor: 'PhoneParts Brasil', valor: 1400.00 }
-    ],
-    historicoValorRecomendado: [
-      { data: '2025-01-04', usuario: 'Lucas Mendes', valorAntigo: null, valorNovo: 2199.00 }
-    ],
-    statusNota: 'Concluído',
-    origemEntrada: 'Fornecedor',
-    timeline: [
-      { id: 'TL-0017-1', tipo: 'entrada', data: '2024-11-12T10:00:00', titulo: 'Entrada via Nota de Compra', descricao: 'Produto recebido via Nota NC-2025-0005', responsavel: 'Carlos Oliveira' },
-      { id: 'TL-0017-2', tipo: 'parecer_estoque', data: '2024-11-12T14:00:00', titulo: 'Análise Realizada', descricao: 'Produto em bom estado, funcionamento normal', responsavel: 'Ana Costa' },
-      { id: 'TL-0017-3', tipo: 'liberacao', data: '2024-11-12T14:05:00', titulo: 'Produto Liberado', descricao: 'Produto liberado para venda', responsavel: 'Sistema' }
-    ]
-  },
-  {
-    id: 'PROD-0018',
-    imei: '352123456789020',
-    marca: 'Apple',
-    modelo: 'iPhone 13 Pro',
-    cor: 'Verde Alpino',
-    tipo: 'Seminovo',
-    quantidade: 1,
-    valorCusto: 3200.00,
-    valorVendaSugerido: 5760.00,
-    vendaRecomendada: 4799.00,
-    saudeBateria: 88,
-    loja: LOJAS_IDS.ONLINE,
-    estoqueConferido: true,
-    assistenciaConferida: true,
-    condicao: 'Excelente estado',
-    historicoCusto: [
-      { data: '2024-11-08', fornecedor: 'TechnoImports', valor: 3200.00 }
-    ],
-    historicoValorRecomendado: [
-      { data: '2025-01-03', usuario: 'Fernanda Lima', valorAntigo: null, valorNovo: 4799.00 }
-    ],
-    statusNota: 'Concluído',
-    origemEntrada: 'Base de Troca',
-    timeline: [
-      { id: 'TL-0018-1', tipo: 'entrada', data: '2024-11-08T09:30:00', titulo: 'Entrada via Base de Troca', descricao: 'Produto recebido via Base de Troca - Venda VEN-2024-0078', responsavel: 'Maria Santos' },
-      { id: 'TL-0018-2', tipo: 'parecer_estoque', data: '2024-11-08T11:00:00', titulo: 'Análise Realizada', descricao: 'Produto em excelente estado, bateria acima de 85%', responsavel: 'Pedro Lima' },
-      { id: 'TL-0018-3', tipo: 'liberacao', data: '2024-11-08T11:05:00', titulo: 'Produto Liberado', descricao: 'Produto liberado para venda', responsavel: 'Sistema' }
-    ]
-  },
-  {
-    id: 'PROD-0019',
-    imei: '352123456789021',
-    marca: 'Apple',
-    modelo: 'iPhone 15 Pro',
-    cor: 'Preto Espacial',
-    tipo: 'Novo',
-    quantidade: 1,
-    valorCusto: 6400.00,
-    valorVendaSugerido: 13440.00,
-    saudeBateria: 100,
-    loja: LOJAS_IDS.AGUAS_LINDAS,
-    estoqueConferido: false,
-    assistenciaConferida: false,
-    condicao: 'Lacrado',
-    historicoCusto: [
-      { data: '2024-11-25', fornecedor: 'Apple Distribuidor BR', valor: 6400.00 }
-    ],
-    historicoValorRecomendado: [],
-    statusNota: 'Pendente',
-    origemEntrada: 'Fornecedor'
-  },
-  {
-    id: 'PROD-0020',
-    imei: '352123456789022',
-    marca: 'Apple',
-    modelo: 'iPhone 14',
-    cor: 'Vermelho',
-    tipo: 'Seminovo',
-    quantidade: 1,
-    valorCusto: 3400.00,
-    valorVendaSugerido: 6120.00,
-    saudeBateria: 82,
-    loja: LOJAS_IDS.JK_SHOPPING,
-    estoqueConferido: true,
-    assistenciaConferida: false,
-    condicao: 'Bom estado',
-    historicoCusto: [
-      { data: '2024-11-14', fornecedor: 'FastCell Distribuição', valor: 3400.00 }
-    ],
-    historicoValorRecomendado: [],
-    statusNota: 'Pendente',
-    origemEntrada: 'Fornecedor',
-    timeline: [
-      { id: 'TL-0020-1', tipo: 'entrada', data: '2024-11-14T13:00:00', titulo: 'Entrada via Nota de Compra', descricao: 'Produto recebido via Nota NC-2025-0006', responsavel: 'Fernando Alves' },
-      { id: 'TL-0020-2', tipo: 'parecer_estoque', data: '2024-11-14T16:30:00', titulo: 'Análise Realizada', descricao: 'Produto em bom estado, bateria aceitável', responsavel: 'Ana Costa' }
-    ]
-  },
-  {
-    id: 'PROD-0021',
-    imei: '352123456789023',
-    marca: 'Apple',
-    modelo: 'iPhone 11',
-    cor: 'Preto',
-    tipo: 'Seminovo',
-    quantidade: 1,
-    valorCusto: 1600.00,
-    valorVendaSugerido: 2880.00,
-    saudeBateria: 72,
-    loja: LOJAS_IDS.SHOPPING_SUL,
-    estoqueConferido: false,
-    assistenciaConferida: false,
-    condicao: 'Estado regular',
-    pareceres: 'Bateria degradada, trocar antes da venda',
-    historicoCusto: [
-      { data: '2024-11-17', fornecedor: 'MegaTech Distribuidor', valor: 1600.00 }
-    ],
-    historicoValorRecomendado: [],
-    statusNota: 'Pendente',
-    origemEntrada: 'Base de Troca',
-    timeline: [
-      { id: 'TL-0021-1', tipo: 'entrada', data: '2024-11-17T10:00:00', titulo: 'Entrada via Base de Troca', descricao: 'Produto recebido via Base de Troca - Venda VEN-2024-0098', responsavel: 'Maria Santos' }
-    ]
   }
 ];
 

@@ -324,18 +324,22 @@ export default function EstoqueProdutos() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={produto.tipo === 'Novo' ? 'default' : 'secondary'}>
+                    <Badge variant="outline" className={
+                      produto.tipo === 'Novo' 
+                        ? 'bg-primary/10 text-primary border-primary/30' 
+                        : 'bg-muted text-muted-foreground'
+                    }>
                       {produto.tipo}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={cn(
+                    <Badge variant="outline" className={
                       produto.origemEntrada === 'Base de Troca' 
-                        ? 'bg-purple-500/10 text-purple-600 border-purple-500/30'
+                        ? 'bg-accent text-accent-foreground'
                         : produto.origemEntrada === 'Emprestado - Garantia'
-                        ? 'bg-orange-500/10 text-orange-600 border-orange-500/30'
-                        : 'bg-green-500/10 text-green-600 border-green-500/30'
-                    )}>
+                        ? 'bg-destructive/10 text-destructive'
+                        : 'bg-primary/20 text-primary'
+                    }>
                       {produto.origemEntrada}
                     </Badge>
                   </TableCell>
