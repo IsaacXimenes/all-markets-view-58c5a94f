@@ -1,5 +1,6 @@
 // ============= API para Fluxo de Notas de Entrada de Produtos =============
 // Esta API implementa a máquina de estados completa para o fluxo de notas
+// CONCEITO: Lançamento Inicial (nota sem produtos) → Atuação Atual governa o fluxo
 
 import { addNotification } from './notificationsApi';
 
@@ -19,7 +20,11 @@ export type NotaEntradaStatus =
   | 'Finalizada';
 
 // Tipo de pagamento (imutável após primeiro pagamento)
-export type TipoPagamentoNota = 'Antecipado' | 'Parcial' | 'Pos';
+// Novos nomes conforme especificação
+export type TipoPagamentoNota = 'Pagamento Pos' | 'Pagamento Parcial' | 'Pagamento 100% Antecipado';
+
+// Atuação Atual - indica qual área tem ação pendente
+export type AtuacaoAtual = 'Estoque' | 'Financeiro' | 'Encerrado';
 
 // Perfil do usuário para timeline
 export type PerfilUsuario = 'Estoque' | 'Financeiro' | 'Sistema';
@@ -81,6 +86,9 @@ export interface NotaEntrada {
   // Sistema de status
   status: NotaEntradaStatus;
   
+  // Atuação Atual - controlado exclusivamente pelo sistema
+  atuacaoAtual: AtuacaoAtual;
+  
   // Tipo de pagamento
   tipoPagamento: TipoPagamentoNota;
   tipoPagamentoBloqueado: boolean;
@@ -122,6 +130,9 @@ export interface NotaEntrada {
   responsavelCriacao: string;
   responsavelFinalizacao?: string;
   observacoes?: string;
+  
+  // Forma de pagamento preferida (informativo)
+  formaPagamento?: 'Dinheiro' | 'Pix';
 }
 
 // ============= ARMAZENAMENTO =============
@@ -265,8 +276,25 @@ export const verificarAlertasNota = (nota: NotaEntrada): AlertaNota[] => {
   return alertasNovos;
 };
 
+// ============= FUNÇÕES DE ATUAÇÃO AUTOMÁTICA =============
+
+// Definir atuação inicial baseada no tipo de pagamento
+export const definirAtuacaoInicial = (tipoPagamento: TipoPagamentoNota): AtuacaoAtual => {
+  switch (tipoPagamento) {
+    case 'Pagamento Pos':
+      return 'Estoque'; // Estoque cadastra e confere primeiro
+    case 'Pagamento Parcial':
+      return 'Financeiro'; // Financeiro faz primeiro pagamento
+    case 'Pagamento 100% Antecipado':
+      return 'Financeiro'; // Financeiro paga 100% primeiro
+    default:
+      return 'Estoque';
+  }
+};
+
 // ============= FUNÇÕES DE CRIAÇÃO =============
 
+// LANÇAMENTO INICIAL: Nota criada SEM produtos
 export const criarNotaEntrada = (dados: {
   numeroNota: string;
   data: string;
@@ -274,37 +302,39 @@ export const criarNotaEntrada = (dados: {
   tipoPagamento: TipoPagamentoNota;
   qtdInformada?: number;
   valorTotal?: number;
-  produtos?: Omit<ProdutoNotaEntrada, 'id' | 'statusRecebimento' | 'statusConferencia'>[];
+  formaPagamento?: 'Dinheiro' | 'Pix';
   responsavel: string;
   observacoes?: string;
 }): NotaEntrada => {
   notaCounter++;
   const id = `NE-${new Date().getFullYear()}-${String(notaCounter).padStart(5, '0')}`;
   
-  // Processar produtos se fornecidos
-  const produtosProcessados: ProdutoNotaEntrada[] = (dados.produtos || []).map((p, idx) => ({
-    id: `PROD-${id}-${String(idx + 1).padStart(3, '0')}`,
-    tipoProduto: p.tipoProduto,
-    marca: p.marca,
-    modelo: p.modelo,
-    quantidade: p.quantidade,
-    custoUnitario: p.custoUnitario,
-    custoTotal: p.custoUnitario * p.quantidade,
-    // Campos de conferência inicializados
-    statusRecebimento: 'Pendente' as const,
-    statusConferencia: 'Pendente' as const
-  }));
+  // LANÇAMENTO INICIAL: Nenhum produto cadastrado
+  // Produtos serão adicionados posteriormente via Notas Pendências
+  const produtosProcessados: ProdutoNotaEntrada[] = [];
   
-  const valorTotal = dados.valorTotal || produtosProcessados.reduce((acc, p) => acc + p.custoTotal, 0);
-  const qtdCadastrada = produtosProcessados.length;
-  const qtdInformada = dados.qtdInformada || qtdCadastrada;
+  const valorTotal = dados.valorTotal || 0;
+  const qtdCadastrada = 0;
+  const qtdInformada = dados.qtdInformada || 0;
+  
+  // Definir atuação inicial automaticamente
+  const atuacaoInicial = definirAtuacaoInicial(dados.tipoPagamento);
+  
+  // Definir status inicial baseado no tipo de pagamento
+  let statusInicial: NotaEntradaStatus = 'Criada';
+  if (dados.tipoPagamento === 'Pagamento Pos') {
+    statusInicial = 'Aguardando Conferencia'; // Estoque primeiro
+  } else {
+    statusInicial = 'Aguardando Pagamento Inicial'; // Financeiro primeiro
+  }
   
   const novaNota: NotaEntrada = {
     id,
     numeroNota: dados.numeroNota,
     data: dados.data,
     fornecedor: dados.fornecedor,
-    status: 'Criada',
+    status: statusInicial,
+    atuacaoAtual: atuacaoInicial,
     tipoPagamento: dados.tipoPagamento,
     tipoPagamentoBloqueado: false,
     qtdInformada,
@@ -320,7 +350,8 @@ export const criarNotaEntrada = (dados: {
     pagamentos: [],
     dataCriacao: new Date().toISOString(),
     responsavelCriacao: dados.responsavel,
-    observacoes: dados.observacoes
+    observacoes: dados.observacoes,
+    formaPagamento: dados.formaPagamento
   };
   
   // Registrar criação na timeline
@@ -328,23 +359,101 @@ export const criarNotaEntrada = (dados: {
     novaNota,
     dados.responsavel,
     'Estoque',
-    'Nota de entrada criada',
-    'Criada',
+    'Lançamento inicial da nota',
+    statusInicial,
     valorTotal,
-    `Tipo de pagamento: ${dados.tipoPagamento}, Qtd informada: ${qtdInformada}`
+    `Tipo de pagamento: ${dados.tipoPagamento}. Atuação inicial: ${atuacaoInicial}`
+  );
+  
+  // Registrar definição do tipo de pagamento na timeline
+  registrarTimeline(
+    novaNota,
+    'Sistema',
+    'Sistema',
+    `Tipo de pagamento definido: ${dados.tipoPagamento}`,
+    statusInicial,
+    undefined,
+    `Atuação Atual definida automaticamente para: ${atuacaoInicial}`
   );
   
   notasEntrada.push(novaNota);
   
-  // Notificar módulos relevantes
-  addNotification({
-    type: 'nota_criada',
-    title: 'Nova nota de entrada',
-    description: `Nota ${id} criada - ${dados.fornecedor} - R$ ${valorTotal.toFixed(2)}`,
-    targetUsers: ['estoque']
-  });
+  // Notificar módulos relevantes baseado na atuação
+  if (atuacaoInicial === 'Estoque') {
+    addNotification({
+      type: 'nota_criada',
+      title: 'Nova nota de entrada',
+      description: `Nota ${id} aguardando cadastro de produtos - ${dados.fornecedor}`,
+      targetUsers: ['estoque']
+    });
+  } else {
+    addNotification({
+      type: 'pagamento_pendente',
+      title: 'Nova nota aguardando pagamento',
+      description: `Nota ${id} - ${dados.fornecedor} - R$ ${valorTotal.toFixed(2)}`,
+      targetUsers: ['financeiro']
+    });
+  }
   
   return novaNota;
+};
+
+// ============= FUNÇÕES DE ALTERAÇÃO DE ATUAÇÃO =============
+
+export const alterarAtuacao = (
+  notaId: string,
+  novaAtuacao: AtuacaoAtual,
+  usuario: string,
+  motivo: string
+): NotaEntrada | null => {
+  const nota = notasEntrada.find(n => n.id === notaId);
+  if (!nota) return null;
+  
+  const atuacaoAnterior = nota.atuacaoAtual;
+  nota.atuacaoAtual = novaAtuacao;
+  
+  // Registrar alteração na timeline
+  registrarTimeline(
+    nota,
+    usuario,
+    'Sistema',
+    `Atuação alterada de ${atuacaoAnterior} para ${novaAtuacao}`,
+    nota.status,
+    undefined,
+    motivo
+  );
+  
+  // Notificar módulo relevante
+  if (novaAtuacao === 'Estoque') {
+    addNotification({
+      type: 'nota_criada',
+      title: 'Nota aguardando ação do Estoque',
+      description: `Nota ${notaId} - ${motivo}`,
+      targetUsers: ['estoque']
+    });
+  } else if (novaAtuacao === 'Financeiro') {
+    addNotification({
+      type: 'pagamento_pendente',
+      title: 'Nota aguardando ação do Financeiro',
+      description: `Nota ${notaId} - ${motivo}`,
+      targetUsers: ['financeiro']
+    });
+  } else if (novaAtuacao === 'Encerrado') {
+    addNotification({
+      type: 'conferencia_completa',
+      title: 'Nota encerrada',
+      description: `Nota ${notaId} finalizada com sucesso`,
+      targetUsers: ['estoque', 'financeiro']
+    });
+  }
+  
+  return nota;
+};
+
+// Verificar se usuário pode editar nota baseado na atuação
+export const podeEditarNota = (nota: NotaEntrada, perfilUsuario: 'Estoque' | 'Financeiro'): boolean => {
+  if (nota.atuacaoAtual === 'Encerrado') return false;
+  return nota.atuacaoAtual === perfilUsuario;
 };
 
 // ============= FUNÇÕES DE TRANSIÇÃO DE STATUS =============
@@ -451,25 +560,29 @@ export const registrarPagamento = (
   );
   
   // Atualizar status conforme tipo de pagamento e regras
-  if (nota.tipoPagamento === 'Antecipado') {
+  if (nota.tipoPagamento === 'Pagamento 100% Antecipado') {
     if (nota.valorPago >= nota.valorTotal) {
       transicionarStatus(notaId, 'Pagamento Concluido', pagamento.responsavel, 'Financeiro');
-      // Após pagamento antecipado, vai para conferência
+      // Após pagamento antecipado, vai para conferência e muda atuação para Estoque
       transicionarStatus(notaId, 'Aguardando Conferencia', 'Sistema', 'Sistema');
+      alterarAtuacao(notaId, 'Estoque', 'Sistema', 'Pagamento 100% concluído - aguardando conferência do estoque');
     }
-  } else if (nota.tipoPagamento === 'Parcial') {
+  } else if (nota.tipoPagamento === 'Pagamento Parcial') {
     if (pagamento.tipo === 'inicial') {
       transicionarStatus(notaId, 'Pagamento Parcial Realizado', pagamento.responsavel, 'Financeiro');
       transicionarStatus(notaId, 'Aguardando Conferencia', 'Sistema', 'Sistema');
+      // Após primeiro pagamento, muda atuação para Estoque
+      alterarAtuacao(notaId, 'Estoque', 'Sistema', 'Pagamento inicial realizado - aguardando cadastro e conferência');
     } else if (pagamento.tipo === 'final' && nota.valorPago >= nota.valorTotal) {
       // Verificar se conferência está concluída
       if (nota.status === 'Aguardando Pagamento Final' || nota.status === 'Conferencia Concluida') {
         transicionarStatus(notaId, 'Finalizada', pagamento.responsavel, 'Financeiro');
         nota.dataFinalizacao = new Date().toISOString();
         nota.responsavelFinalizacao = pagamento.responsavel;
+        alterarAtuacao(notaId, 'Encerrado', 'Sistema', 'Nota finalizada - todos os pagamentos e conferência concluídos');
       }
     }
-  } else if (nota.tipoPagamento === 'Pos') {
+  } else if (nota.tipoPagamento === 'Pagamento Pos') {
     // Só pode pagar após conferência concluída
     if (nota.status !== 'Conferencia Concluida' && nota.status !== 'Aguardando Pagamento Final') {
       console.error('Pagamento Pós só pode ser feito após conferência concluída');
@@ -484,6 +597,7 @@ export const registrarPagamento = (
       transicionarStatus(notaId, 'Finalizada', pagamento.responsavel, 'Financeiro');
       nota.dataFinalizacao = new Date().toISOString();
       nota.responsavelFinalizacao = pagamento.responsavel;
+      alterarAtuacao(notaId, 'Encerrado', 'Sistema', 'Nota finalizada - pagamento pós-conferência concluído');
     }
   }
   
@@ -648,20 +762,23 @@ export const conferirProduto = (
       nota.status = 'Conferencia Concluida';
       
       // Se for Pós-Conferência, vai para aguardando pagamento final
-      if (nota.tipoPagamento === 'Pos') {
+      if (nota.tipoPagamento === 'Pagamento Pos') {
         nota.status = 'Aguardando Pagamento Final';
+        alterarAtuacao(nota.id, 'Financeiro', 'Sistema', 'Conferência 100% concluída - aguardando pagamento');
       }
       
       // Se for Parcial e tem pagamento pendente, vai para aguardando pagamento final
-      if (nota.tipoPagamento === 'Parcial' && nota.valorPendente > 0) {
+      if (nota.tipoPagamento === 'Pagamento Parcial' && nota.valorPendente > 0) {
         nota.status = 'Aguardando Pagamento Final';
+        alterarAtuacao(nota.id, 'Financeiro', 'Sistema', 'Conferência concluída - aguardando pagamento final');
       }
       
       // Se for Antecipado (já pago), finaliza direto
-      if (nota.tipoPagamento === 'Antecipado' && nota.valorPago >= nota.valorTotal) {
+      if (nota.tipoPagamento === 'Pagamento 100% Antecipado' && nota.valorPago >= nota.valorTotal) {
         nota.status = 'Finalizada';
         nota.dataFinalizacao = new Date().toISOString();
         nota.responsavelFinalizacao = dadosConferencia.responsavel;
+        alterarAtuacao(nota.id, 'Encerrado', 'Sistema', 'Nota finalizada - pagamento antecipado já realizado');
       }
     }
   }
@@ -817,13 +934,13 @@ export const podeRealizarAcao = (
     case 'pagar':
       if (perfil !== 'Financeiro') return false;
       
-      if (nota.tipoPagamento === 'Antecipado') {
+      if (nota.tipoPagamento === 'Pagamento 100% Antecipado') {
         return nota.status === 'Aguardando Pagamento Inicial';
       }
-      if (nota.tipoPagamento === 'Parcial') {
+      if (nota.tipoPagamento === 'Pagamento Parcial') {
         return ['Aguardando Pagamento Inicial', 'Aguardando Pagamento Final'].includes(nota.status);
       }
-      if (nota.tipoPagamento === 'Pos') {
+      if (nota.tipoPagamento === 'Pagamento Pos') {
         return ['Conferencia Concluida', 'Aguardando Pagamento Final'].includes(nota.status);
       }
       return false;
@@ -842,14 +959,15 @@ export const podeRealizarAcao = (
 export const inicializarNotasEntradaMock = (): void => {
   if (notasEntrada.length > 0) return;
   
-  // Nota 1 - Antecipado, já paga, aguardando conferência
+  // Nota 1 - 100% Antecipado, já paga, aguardando conferência
   const nota1 = criarNotaEntrada({
     numeroNota: 'NF-2025-00001',
     data: '2025-01-15',
     fornecedor: 'Apple Distribuidor BR',
-    tipoPagamento: 'Antecipado',
+    tipoPagamento: 'Pagamento 100% Antecipado',
     qtdInformada: 5,
     valorTotal: 32000,
+    formaPagamento: 'Pix',
     responsavel: 'Carlos Estoque'
   });
   registrarPagamento(nota1.id, {
@@ -864,9 +982,10 @@ export const inicializarNotasEntradaMock = (): void => {
     numeroNota: 'NF-2025-00002',
     data: '2025-01-18',
     fornecedor: 'TechSupply Imports',
-    tipoPagamento: 'Parcial',
+    tipoPagamento: 'Pagamento Parcial',
     qtdInformada: 10,
     valorTotal: 45000,
+    formaPagamento: 'Pix',
     responsavel: 'Carlos Estoque'
   });
   registrarPagamento(nota2.id, {
@@ -881,24 +1000,21 @@ export const inicializarNotasEntradaMock = (): void => {
     numeroNota: 'NF-2025-00003',
     data: '2025-01-20',
     fornecedor: 'MobileWorld Atacado',
-    tipoPagamento: 'Pos',
+    tipoPagamento: 'Pagamento Pos',
     qtdInformada: 8,
     valorTotal: 28000,
+    formaPagamento: 'Dinheiro',
     responsavel: 'Carlos Estoque'
   });
-  // Transicionar para aguardando conferência (Pós vai direto)
-  const nota3 = notasEntrada.find(n => n.numeroNota === 'NF-2025-00003');
-  if (nota3) {
-    transicionarStatus(nota3.id, 'Aguardando Conferencia', 'Sistema', 'Sistema');
-  }
   
-  // Nota 4 - Criada, sem produtos ainda
+  // Nota 4 - Criada, sem produtos ainda (Pagamento Pós)
   criarNotaEntrada({
     numeroNota: 'NF-2025-00004',
     data: '2025-01-22',
     fornecedor: 'FastCell Distribuição',
-    tipoPagamento: 'Pos',
+    tipoPagamento: 'Pagamento Pos',
     qtdInformada: 15,
+    formaPagamento: 'Pix',
     responsavel: 'Carlos Estoque'
   });
 };

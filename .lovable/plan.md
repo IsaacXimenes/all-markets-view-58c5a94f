@@ -3,51 +3,72 @@
 
 ## Resumo Executivo
 
-Este plano reformula o sistema de Notas de Entrada para seguir rigorosamente um novo fluxo baseado em **STATUS + TIPO DE PAGAMENTO** como regras mestras. O layout visual existente sera mantido, mas a logica de comportamento dos campos, transicoes de status e integracao entre modulos sera completamente reestruturada.
+Este plano reformula o sistema de Notas de Entrada para seguir rigorosamente um novo fluxo baseado em **STATUS + TIPO DE PAGAMENTO + ATUAÇÃO ATUAL** como regras mestras. O layout visual existente sera mantido, mas a logica de comportamento dos campos, transicoes de status e integracao entre modulos sera completamente reestruturada.
 
 ---
 
-## 1. Novos Status da Nota (Arquivo: estoqueApi.ts)
+## ✅ IMPLEMENTADO: Conceito de Lançamento Inicial
 
-Substituir os status atuais (`Pendente | Concluido`) por uma maquina de estados completa:
+### Regras Implementadas:
+1. **Lançamento Inicial**: Cadastro da nota SEM produtos - apenas registra existência e define fluxo
+2. **Quadro de Produtos**: Bloqueado (read-only) no lançamento inicial
+3. **Tipo de Pagamento**: Campo obrigatório que governa todo o fluxo
+4. **Atuação Atual**: Campo controlado pelo sistema, indica qual área tem ação pendente
 
-| Status | Descricao | Proximo Status Possivel |
+### Tipos de Pagamento (novos nomes):
+- `Pagamento Pos` - 100% após conferência
+- `Pagamento Parcial` - Adiantamento + restante após conferência  
+- `Pagamento 100% Antecipado` - Pagamento total antes da conferência
+
+### Atuação Inicial Automática:
+| Tipo de Pagamento | Atuação Inicial |
+|-------------------|-----------------|
+| Pagamento Pós | Estoque |
+| Pagamento Parcial | Financeiro |
+| Pagamento 100% Antecipado | Financeiro |
+
+---
+
+## 1. Status da Nota (10 obrigatórios)
+
+| Status | Descrição | Próximo Status Possível |
 |--------|-----------|-------------------------|
-| `Criada` | Nota recem cadastrada | Aguardando Pagamento Inicial, Aguardando Conferencia |
+| `Criada` | Nota recém cadastrada | Aguardando Pagamento Inicial, Aguardando Conferencia |
 | `Aguardando Pagamento Inicial` | Nota esperando pagamento (Antecipado/Parcial) | Pagamento Parcial Realizado, Pagamento Concluido |
 | `Pagamento Parcial Realizado` | Primeiro pagamento feito (Parcial) | Aguardando Conferencia |
 | `Pagamento Concluido` | 100% pago (antes de conferir) | Aguardando Conferencia |
 | `Aguardando Conferencia` | Produtos a conferir | Conferencia Parcial |
 | `Conferencia Parcial` | Parte dos aparelhos conferida | Conferencia Concluida, Com Divergencia |
 | `Conferencia Concluida` | 100% conferido | Aguardando Pagamento Final, Finalizada |
-| `Aguardando Pagamento Final` | Conferencia ok, falta pagar (Parcial/Pos) | Finalizada |
-| `Com Divergencia` | Discrepancia detectada | Aguardando Pagamento Final (apos resolucao) |
+| `Aguardando Pagamento Final` | Conferência ok, falta pagar (Parcial/Pós) | Finalizada |
+| `Com Divergencia` | Discrepância detectada | Aguardando Pagamento Final (após resolução) |
 | `Finalizada` | Nota encerrada (somente leitura) | - |
 
 ---
 
-## 2. Interface NotaCompra Atualizada
+## 2. Interface NotaEntrada Atualizada
 
 ```typescript
-export interface NotaCompra {
+export interface NotaEntrada {
   id: string;
   numeroNota: string;
   data: string;
   fornecedor: string;
   
-  // Novo sistema de status
-  status: 'Criada' | 'Aguardando Pagamento Inicial' | 'Pagamento Parcial Realizado' | 
-          'Pagamento Concluido' | 'Aguardando Conferencia' | 'Conferencia Parcial' |
-          'Conferencia Concluida' | 'Aguardando Pagamento Final' | 'Com Divergencia' | 'Finalizada';
+  // Sistema de status
+  status: NotaEntradaStatus;
   
-  // Tipo de pagamento (imutavel apos primeiro pagamento)
-  tipoPagamento: 'Antecipado' | 'Parcial' | 'Pos';
+  // ✅ NOVO: Atuação Atual - controlado pelo sistema
+  atuacaoAtual: 'Estoque' | 'Financeiro' | 'Encerrado';
+  
+  // Tipo de pagamento (novos nomes)
+  tipoPagamento: 'Pagamento Pos' | 'Pagamento Parcial' | 'Pagamento 100% Antecipado';
   tipoPagamentoBloqueado: boolean;
   
   // Quantidades
-  qtdInformada: number;           // Quantidade de aparelhos informada na nota
-  qtdCadastrada: number;          // Quantidade de produtos cadastrados
-  qtdConferida: number;           // Quantidade de produtos conferidos
+  qtdInformada: number;
+  qtdCadastrada: number;
+  qtdConferida: number;
   
   // Valores
   valorTotal: number;
@@ -56,315 +77,181 @@ export interface NotaCompra {
   valorConferido: number;
   
   // Produtos
-  produtos: ProdutoNota[];
+  produtos: ProdutoNotaEntrada[];
   
-  // Timeline imutavel
-  timeline: TimelineEntry[];
+  // Timeline imutável
+  timeline: TimelineNotaEntrada[];
   
   // Alertas
   alertas: AlertaNota[];
-}
-
-export interface ProdutoNota {
-  id: string;
-  tipoProduto: 'Aparelho' | 'Acessorio';
-  marca: string;
-  modelo: string;
-  imei?: string;              // Preenchido apenas apos recebimento
-  cor?: string;               // Preenchido apenas apos recebimento
-  categoria?: string;         // Preenchido apenas apos recebimento
-  quantidade: number;
-  custoUnitario: number;
-  custoTotal: number;
   
-  // Status do produto
-  statusRecebimento: 'Pendente' | 'Recebido';
-  statusConferencia: 'Pendente' | 'Conferido';
-  dataRecebimento?: string;
-  dataConferencia?: string;
-  responsavelConferencia?: string;
-}
-
-export interface TimelineEntry {
-  id: string;
-  dataHora: string;
-  usuario: string;
-  perfil: 'Estoque' | 'Financeiro' | 'Sistema';
-  acao: string;
-  statusAnterior: string;
-  statusNovo: string;
-  impactoFinanceiro?: number;
-}
-
-export interface AlertaNota {
-  id: string;
-  tipo: 'divergencia_valor' | 'conferencia_parcial_longa' | 'qtd_excedida' | 
-        'imei_ausente' | 'status_critico';
-  mensagem: string;
-  dataGeracao: string;
-  visto: boolean;
+  // Pagamentos registrados
+  pagamentos: Pagamento[];
+  
+  // Metadados
+  dataCriacao: string;
+  dataFinalizacao?: string;
+  responsavelCriacao: string;
+  formaPagamento?: 'Dinheiro' | 'Pix';
+  observacoes?: string;
 }
 ```
 
 ---
 
-## 3. Arquivos a Modificar
+## 3. Arquivos Modificados/Criados
 
-### 3.1 estoqueApi.ts
-- Atualizar interface `NotaCompra` com novos campos
-- Criar funcoes de transicao de status validadas
-- Implementar regras de bloqueio de campos por status
-- Adicionar funcao `registrarTimelineEntry()` imutavel
-- Criar funcoes de alerta automatico
+### ✅ 3.1 notaEntradaFluxoApi.ts (ATUALIZADO)
+- Interface `NotaEntrada` com campo `atuacaoAtual`
+- Novos tipos de pagamento: `Pagamento Pos`, `Pagamento Parcial`, `Pagamento 100% Antecipado`
+- Função `definirAtuacaoInicial()` - define atuação baseada no tipo de pagamento
+- Função `alterarAtuacao()` - altera atuação com registro na timeline
+- Função `podeEditarNota()` - verifica permissão baseada na atuação
+- Alterações automáticas de atuação após eventos (pagamento, conferência)
 
-### 3.2 EstoqueNotaCadastrar.tsx (Tela Full-Page)
-- Adicionar campo `Quantidade de Aparelhos Informada` (opcional)
-- Tornar produtos opcionais (nota pode ser criada vazia)
-- Remover campos IMEI e Cor do cadastro inicial
-- Manter Categoria visivel mas desabilitada
-- Status inicial: `Criada`
-- Redirecionar para `Notas Pendentes` apos salvar
+### ✅ 3.2 EstoqueNotaCadastrar.tsx (REFORMULADO)
+- Conceito de **Lançamento Inicial** implementado
+- Quadro de produtos **bloqueado** visualmente
+- Campo "Tipo de Pagamento" obrigatório
+- Campo "Atuação Atual" somente leitura (calculado automaticamente)
+- Alerta informativo explicando o fluxo
+- Descrição dinâmica do fluxo baseada no tipo selecionado
 
-### 3.3 EstoqueNotasPendencias.tsx (Aba Reformulada)
-- Adicionar colunas: Tipo Pagamento, Qtd Informada/Cadastrada/Conferida
-- Acoes por linha: Cadastrar Produtos, Continuar Cadastro, Realizar Conferencia
-- Cada acao abre tela full-page (sem modal)
-- Filtros por status completo
+### ✅ 3.3 EstoqueNotasPendencias.tsx (ATUALIZADO)
+- Nova coluna "Atuação Atual" com badges visuais
+- Badges de tipo de pagamento atualizados
+- Verificação de permissão via `podeEditarNota()`
+- Botões de ação condicionais (só aparecem se Atuação = Estoque)
+- Indicador visual de bloqueio quando Atuação ≠ Estoque
 
-### 3.4 EstoqueNotaDetalhes.tsx (Tela Full-Page Unificada)
-- Unificar cadastro de produtos, conferencia e visualizacao
-- Campos habilitados/desabilitados conforme status + recebimento
-- Exibir timeline imutavel sempre visivel
-- Secao de alertas em destaque
-- Bloqueio total quando `Finalizada`
-
-### 3.5 FinanceiroNotasPendencias.tsx
-- Filtrar notas por status de pagamento
-- Mostrar Valor Nota, Valor Pago, Valor Pendente
-- Bloquear pagamento Pos antes de conferencia concluida
-- Bloquear pagamento final sem 100% conferencia
-
-### 3.6 pendenciasFinanceiraApi.ts
-- Adaptar interface para novos status
-- Validar regras de pagamento por tipo
-
----
-
-## 4. Novas Paginas Full-Page a Criar
-
-### 4.1 EstoqueNotaCadastrarProdutos.tsx
+### ✅ 3.4 EstoqueNotaCadastrarProdutos.tsx (JÁ CRIADO)
 - Rota: `/estoque/nota/:id/cadastrar-produtos`
-- Quadro de produtos identico ao cadastro inicial
-- Campos: Tipo Produto, Marca, Modelo, Qtd, Custo Unitario, Custo Total
-- Campos bloqueados: IMEI, Cor, Categoria
-- Validacao: nao permitir Qtd Cadastrada > Qtd Informada
-- Ao salvar: atualizar nota e redirecionar para pendencias
+- Campos: Tipo Produto, Marca, Modelo, Qtd, Custo Unitário
 
-### 4.2 EstoqueNotaConferencia.tsx
+### ✅ 3.5 EstoqueNotaConferencia.tsx (JÁ CRIADO)
 - Rota: `/estoque/nota/:id/conferencia`
-- Lista de produtos para conferir individualmente
-- Campos habilitados ao conferir: IMEI, Cor, Categoria
-- IMEI obrigatorio para Aparelho, validacao de unicidade
-- Ao conferir cada produto: atualizar status, timeline, valores
+- Campos habilitados: IMEI, Cor, Categoria
 - Barra de progresso: Qtd Conferida / Qtd Cadastrada
 
 ---
 
-## 5. Fluxos por Tipo de Pagamento
+## 4. Fluxos por Tipo de Pagamento
 
-### 5.1 Antecipado (100% antes)
+### 4.1 Pagamento Pós (100% após conferência)
 ```
-Criada 
-  -> Aguardando Pagamento Inicial (vai p/ Financeiro)
-    -> Pagamento Concluido (Financeiro paga 100%)
-      -> Aguardando Conferencia (volta p/ Estoque)
-        -> Conferencia Parcial -> Conferencia Concluida
-          -> Finalizada
-```
-
-### 5.2 Parcial
-```
-Criada 
-  -> Aguardando Pagamento Inicial (vai p/ Financeiro)
-    -> Pagamento Parcial Realizado (Financeiro paga X%)
-      -> Aguardando Conferencia (Estoque pode conferir em paralelo)
-        -> Conferencia Parcial -> Conferencia Concluida
-          -> Aguardando Pagamento Final (Financeiro paga restante)
-            -> Finalizada
+Lançamento Inicial → Atuação = Estoque
+  ↓
+Estoque cadastra produtos
+  ↓
+Estoque realiza conferência
+  ↓
+100% conferido → Atuação = Financeiro
+  ↓
+Financeiro paga 100%
+  ↓
+Atuação = Encerrado
 ```
 
-### 5.3 Pos (100% apos conferencia)
+### 4.2 Pagamento Parcial
 ```
-Criada 
-  -> Aguardando Conferencia (fica no Estoque)
-    -> Conferencia Parcial -> Conferencia Concluida
-      -> Aguardando Pagamento Final (vai p/ Financeiro)
-        -> Finalizada (apos pagamento 100%)
+Lançamento Inicial → Atuação = Financeiro
+  ↓
+Financeiro paga adiantamento → Atuação = Estoque
+  ↓
+Estoque cadastra produtos e confere
+  ↓
+100% conferido → Atuação = Financeiro
+  ↓
+Financeiro paga restante
+  ↓
+Atuação = Encerrado
 ```
 
----
-
-## 6. Regras de Campos por Status
-
-| Campo | Antes Recebimento | Apos Recebimento | Nota Finalizada |
-|-------|-------------------|------------------|-----------------|
-| Tipo Produto | Editavel | Bloqueado | Bloqueado |
-| Marca | Editavel | Bloqueado | Bloqueado |
-| Modelo | Editavel | Bloqueado | Bloqueado |
-| IMEI | Desabilitado | Obrigatorio (Aparelho) | Bloqueado |
-| Cor | Desabilitado | Obrigatorio | Bloqueado |
-| Categoria | Desabilitado | Obrigatorio | Bloqueado |
-| Quantidade | Editavel | Bloqueado | Bloqueado |
-| Custo Unitario | Editavel | Bloqueado | Bloqueado |
-| Custo Total | Calculado | Calculado | Calculado |
-
----
-
-## 7. Sistema de Alertas Automaticos
-
-Criar funcao `verificarAlertasNota(nota)` que retorna alertas:
-
-| Condicao | Tipo Alerta | Mensagem |
-|----------|-------------|----------|
-| Valor Pago != Valor Conferido | `divergencia_valor` | "Divergencia: pago R$ X, conferido R$ Y" |
-| Conferencia Parcial > 5 dias | `conferencia_parcial_longa` | "Nota parada ha X dias em conferencia parcial" |
-| Qtd Cadastrada > Qtd Informada | `qtd_excedida` | "Quantidade de produtos excede o informado" |
-| Aparelho recebido sem IMEI | `imei_ausente` | "Aparelho X aguardando IMEI" |
-| Status critico > 3 dias | `status_critico` | "Nota parada em status critico" |
-
-Quando divergencia detectada: Status -> `Com Divergencia`
-
----
-
-## 8. Timeline Imutavel
-
-Toda acao registra entrada na timeline:
-
-```typescript
-const registrarTimeline = (
-  nota: NotaCompra,
-  usuario: string,
-  perfil: 'Estoque' | 'Financeiro' | 'Sistema',
-  acao: string,
-  statusNovo: string,
-  impactoFinanceiro?: number
-) => {
-  const entry: TimelineEntry = {
-    id: `TL-${nota.id}-${String(nota.timeline.length + 1).padStart(4, '0')}`,
-    dataHora: new Date().toISOString(),
-    usuario,
-    perfil,
-    acao,
-    statusAnterior: nota.status,
-    statusNovo,
-    impactoFinanceiro
-  };
-  nota.timeline.push(entry);
-  // Timeline nunca pode ser editada ou removida
-};
+### 4.3 Pagamento 100% Antecipado
+```
+Lançamento Inicial → Atuação = Financeiro
+  ↓
+Financeiro paga 100% → Atuação = Estoque
+  ↓
+Estoque cadastra produtos e confere
+  ↓
+100% conferido → Atuação = Encerrado (automático)
 ```
 
 ---
 
-## 9. Regras de Finalizacao
+## 5. Regras de Permissão por Tela
 
-Nota so pode ser `Finalizada` quando:
-- `qtdConferida === qtdInformada`
-- `valorPago === valorTotal`
-- `valorConferido === valorTotal` (tolerancia 0,01%)
-- Sem alertas de divergencia ativos
-
-Apos Finalizada:
-- Todos os campos somente leitura
-- Nenhuma acao operacional permitida
-- Apenas visualizacao e exportacao
+| Tela | Atuação Atual | Permissão |
+|------|---------------|-----------|
+| Estoque > Notas Pendências | Estoque | Edição liberada |
+| Estoque > Notas Pendências | Financeiro | Somente leitura |
+| Financeiro > Conferência de Notas | Financeiro | Edição liberada |
+| Financeiro > Conferência de Notas | Estoque | Somente leitura |
 
 ---
 
-## 10. Rotas Necessarias
+## 6. Timeline Obrigatória
 
-```typescript
-// Novas rotas em App.tsx
-<Route path="/estoque/nota/:id/cadastrar-produtos" element={<EstoqueNotaCadastrarProdutos />} />
-<Route path="/estoque/nota/:id/conferencia" element={<EstoqueNotaConferencia />} />
-```
-
----
-
-## 11. Ordem de Implementacao
-
-1. **estoqueApi.ts** - Atualizar interfaces e funcoes base
-2. **timelineApi.ts** - Criar funcao de registro imutavel
-3. **EstoqueNotaCadastrar.tsx** - Adaptar cadastro inicial
-4. **EstoqueNotasPendencias.tsx** - Reformular aba com novas colunas
-5. **EstoqueNotaCadastrarProdutos.tsx** - Criar nova pagina
-6. **EstoqueNotaConferencia.tsx** - Criar nova pagina
-7. **EstoqueNotaDetalhes.tsx** - Unificar visualizacao
-8. **FinanceiroNotasPendencias.tsx** - Adaptar para novos status
-9. **pendenciasFinanceiraApi.ts** - Atualizar regras de pagamento
+Eventos registrados automaticamente:
+- ✅ Lançamento inicial da nota
+- ✅ Definição do tipo de pagamento
+- ✅ Alterações de Atuação Atual
+- ✅ Pagamentos (parcial e total)
+- ✅ Início e fim da conferência
+- ✅ Alertas de divergência
+- ✅ Encerramento da nota
 
 ---
 
-## 12. Resumo Visual do Fluxo
+## 7. Próximos Passos (PENDENTE)
+
+### 7.1 FinanceiroNotasPendencias.tsx
+- [ ] Adaptar para novos status e tipos de pagamento
+- [ ] Implementar verificação de atuação
+- [ ] Bloquear pagamento Pós antes de conferência
+- [ ] Mostrar Valor Nota, Valor Pago, Valor Pendente
+
+### 7.2 EstoqueNotaDetalhes.tsx  
+- [ ] Unificar visualização com timeline visível
+- [ ] Seção de alertas em destaque
+- [ ] Bloqueio total quando Finalizada
+
+### 7.3 pendenciasFinanceiraApi.ts
+- [ ] Adaptar interface para novos status
+- [ ] Validar regras de pagamento por tipo
+
+---
+
+## 8. Resumo Visual do Fluxo com Atuação
 
 ```text
-                           +-----------------+
-                           |     CRIADA      |
-                           +--------+--------+
-                                    |
-             +----------------------+----------------------+
-             |                      |                      |
-             v                      v                      v
-    [Tipo: Antecipado]     [Tipo: Parcial]         [Tipo: Pos]
-             |                      |                      |
-             v                      v                      |
-    +--------+--------+    +--------+--------+             |
-    | AGUARD. PAG.    |    | AGUARD. PAG.    |             |
-    | INICIAL         |    | INICIAL         |             |
-    +--------+--------+    +--------+--------+             |
-             |                      |                      |
-             v                      v                      |
-    +--------+--------+    +--------+--------+             |
-    | PAGAMENTO       |    | PAG. PARCIAL    |             |
-    | CONCLUIDO       |    | REALIZADO       |             |
-    +--------+--------+    +--------+--------+             |
-             |                      |                      |
-             +-----------+----------+----------------------+
-                         |
-                         v
-               +--------+--------+
-               | AGUARD.         |
-               | CONFERENCIA     |
-               +--------+--------+
-                         |
-                         v
-               +--------+--------+
-               | CONFERENCIA     |<----+
-               | PARCIAL         |     |
-               +--------+--------+     | (produtos
-                         |             |  pendentes)
-                         v             |
-               +--------+--------+-----+
-               | CONFERENCIA     |
-               | CONCLUIDA       |
-               +--------+--------+
-                         |
-          +--------------+--------------+
-          |              |              |
-          v              v              v
-    [Antecipado]   [Parcial]        [Pos]
-    (ja pago)      (pagar rest)     (pagar 100%)
-          |              |              |
-          |              v              v
-          |     +--------+--------+--------+
-          |     | AGUARD. PAG.             |
-          |     | FINAL                    |
-          |     +--------+-----------------+
-          |              |
-          +--------------+
-                         |
-                         v
-               +--------+--------+
-               |   FINALIZADA    |
-               +-----------------+
+                    LANÇAMENTO INICIAL
+                           |
+         +-----------------+-----------------+
+         |                 |                 |
+    [Pag. Pós]       [Pag. Parcial]   [100% Antecipado]
+    Atuação:         Atuação:          Atuação:
+    ESTOQUE          FINANCEIRO        FINANCEIRO
+         |                 |                 |
+         |            Paga Inicial      Paga 100%
+         |                 |                 |
+         |            Atuação:          Atuação:
+         |            ESTOQUE           ESTOQUE
+         |                 |                 |
+         +--------+--------+--------+--------+
+                  |
+           CADASTRA PRODUTOS
+           CONFERE 100%
+                  |
+    +-------------+-------------+
+    |             |             |
+[Pós]        [Parcial]     [Antecipado]
+Atuação:     Atuação:      Atuação:
+FINANCEIRO   FINANCEIRO    ENCERRADO
+    |             |        (automático)
+Paga 100%    Paga Rest
+    |             |
+Atuação:     Atuação:
+ENCERRADO    ENCERRADO
 ```
