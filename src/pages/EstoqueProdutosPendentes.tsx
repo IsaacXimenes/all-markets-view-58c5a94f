@@ -149,37 +149,38 @@ export default function EstoqueProdutosPendentes() {
   }, [filteredProdutos]);
 
   const getStatusBadge = (produto: ProdutoPendente) => {
-    // Badge baseado no statusGeral para maior clareza visual
+    // Badge baseado no statusGeral - usando tokens semânticos
     switch (produto.statusGeral) {
       case 'Pendente Estoque':
         if (!produto.parecerEstoque) {
-          return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">Aguardando Parecer</Badge>;
+          return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600">Aguardando Parecer</Badge>;
         }
-        return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">Aprovado</Badge>;
+        return <Badge variant="outline" className="bg-green-500/10 text-green-600">Aprovado</Badge>;
       case 'Em Análise Assistência':
-        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">Em Assistência</Badge>;
+        return <Badge variant="outline" className="bg-accent text-accent-foreground">Em Assistência</Badge>;
       case 'Aguardando Peça':
-        return <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">Aguardando Peça</Badge>;
+        return <Badge variant="outline" className="bg-destructive/10 text-destructive">Aguardando Peça</Badge>;
       case 'Retornado da Assistência':
-        return <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500/30">Revisão Final</Badge>;
+        return <Badge variant="outline" className="bg-primary/20 text-primary">Revisão Final</Badge>;
       case 'Devolvido para Fornecedor':
-        return <Badge variant="outline" className="bg-gray-500/10 text-gray-600 border-gray-500/30">Devolvido p/ Fornecedor</Badge>;
+        return <Badge variant="outline" className="bg-muted text-muted-foreground">Devolvido p/ Fornecedor</Badge>;
       default:
-        return <Badge variant="outline" className="bg-gray-500/10 text-gray-600 border-gray-500/30">{produto.statusGeral}</Badge>;
+        return <Badge variant="outline" className="bg-muted text-muted-foreground">{produto.statusGeral}</Badge>;
     }
   };
 
   const getOrigemBadge = (origem: string) => {
+    // Mesmo padrão da tabela de Aparelhos
     if (origem === 'Base de Troca') {
-      return <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500/30">Base de Troca</Badge>;
+      return <Badge variant="outline" className="bg-accent text-accent-foreground">Base de Troca</Badge>;
     }
     if (origem === 'Emprestado - Garantia') {
-      return <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">Emprestado - Garantia</Badge>;
+      return <Badge variant="outline" className="bg-destructive/10 text-destructive">Emprestado - Garantia</Badge>;
     }
     if (origem === 'NEGOCIADO') {
-      return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">NEGOCIADO</Badge>;
+      return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600">NEGOCIADO</Badge>;
     }
-    return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">Fornecedor</Badge>;
+    return <Badge variant="outline" className="bg-primary/20 text-primary">Fornecedor</Badge>;
   };
 
   const getSLABadge = (dataEntrada: string) => {
@@ -210,26 +211,19 @@ export default function EstoqueProdutosPendentes() {
   };
 
   const getStatusRowClass = (produto: ProdutoPendente, dataEntrada: string) => {
-    // Se devolvido para fornecedor, cor cinza
+    // Se devolvido para fornecedor, cor de fundo muted
     if (produto.statusGeral === 'Devolvido para Fornecedor') {
-      return 'bg-gray-100 dark:bg-gray-900/30 opacity-70';
+      return 'bg-muted/50 opacity-70';
     }
     
-    const { cor } = calcularSLA(dataEntrada);
-    // Prioridade: SLA crítico > status geral
-    if (cor === 'vermelho') return 'bg-red-500/10';
-    if (cor === 'amarelo') return 'bg-yellow-500/10';
-    // Cores por status quando SLA normal
-    switch (produto.statusGeral) {
-      case 'Em Análise Assistência':
-        return 'bg-blue-500/5';
-      case 'Aguardando Peça':
-        return 'bg-orange-500/5';
-      case 'Retornado da Assistência':
-        return 'bg-purple-500/5';
-      default:
-        return '';
-    }
+    // Cores baseadas na saúde da bateria (mesmo padrão da tabela de Aparelhos)
+    const saudeBateria = produto.saudeBateria;
+    if (saudeBateria < 70) return 'bg-destructive/10'; // Crítico - vermelho
+    if (saudeBateria < 80) return 'bg-yellow-500/10'; // Atenção - amarelo
+    if (saudeBateria >= 90) return 'bg-green-500/10'; // Excelente - verde
+    
+    // Normal (80-89%) - sem cor de fundo
+    return '';
   };
 
   // Obter nome do fornecedor
@@ -591,6 +585,7 @@ export default function EstoqueProdutosPendentes() {
                   <TableHead>Fornecedor</TableHead>
                   <TableHead>Loja</TableHead>
                   <TableHead>Valor Origem</TableHead>
+                  <TableHead>Saúde Bat.</TableHead>
                   <TableHead>SLA</TableHead>
                   <TableHead>Parecer Estoque</TableHead>
                   <TableHead>Parecer Assistência</TableHead>
@@ -600,7 +595,7 @@ export default function EstoqueProdutosPendentes() {
               <TableBody>
                 {filteredProdutos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                       Nenhum produto pendente de conferência
                     </TableCell>
                   </TableRow>
@@ -676,15 +671,25 @@ export default function EstoqueProdutosPendentes() {
                       </TableCell>
                       <TableCell>{getLojaNome(produto.loja)}</TableCell>
                       <TableCell className="font-medium text-primary">{formatCurrency(produto.valorOrigem || produto.valorCusto)}</TableCell>
+                      <TableCell>
+                        <span className={
+                          produto.saudeBateria < 70 ? 'font-semibold text-destructive' :
+                          produto.saudeBateria < 80 ? 'font-semibold text-yellow-600' :
+                          produto.saudeBateria < 90 ? 'text-muted-foreground' : 
+                          'font-semibold text-green-600'
+                        }>
+                          {produto.saudeBateria}%
+                        </span>
+                      </TableCell>
                       <TableCell>{getSLABadge(produto.dataEntrada)}</TableCell>
                       <TableCell>{getStatusBadge(produto)}</TableCell>
                       <TableCell>
                         {produto.parecerAssistencia ? (
-                          <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30">
+                          <Badge variant="outline" className="bg-destructive/10 text-destructive">
                             {produto.parecerAssistencia.status === 'Aguardando peça' ? 'Aguardando Peça' : 'Em Análise'}
                           </Badge>
                         ) : produto.parecerEstoque?.status === 'Encaminhado para conferência da Assistência' ? (
-                          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">Para Análise</Badge>
+                          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600">Para Análise</Badge>
                         ) : (
                           <span className="text-muted-foreground text-sm">—</span>
                         )}
