@@ -21,7 +21,8 @@ import {
   Lock,
   Warehouse,
   Landmark,
-  CreditCard
+  CreditCard,
+  Clock
 } from 'lucide-react';
 
 interface TabelaNotasPendenciasProps {
@@ -51,6 +52,18 @@ const calcularDiasDecorridos = (data: string): number => {
   const dataInicio = new Date(data);
   const hoje = new Date();
   return Math.ceil((hoje.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+// Formatar data/hora para exibição
+const formatarDataHora = (dataISO: string): string => {
+  const data = new Date(dataISO);
+  return data.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 };
 
 export function TabelaNotasPendencias({
@@ -193,6 +206,7 @@ export function TabelaNotasPendencias({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Data/Hora</TableHead>
             <TableHead>Nº Nota</TableHead>
             <TableHead>Fornecedor</TableHead>
             <TableHead>Tipo Pag.</TableHead>
@@ -209,7 +223,7 @@ export function TabelaNotasPendencias({
         <TableBody>
           {notas.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                 Nenhuma nota pendente encontrada
               </TableCell>
             </TableRow>
@@ -221,6 +235,12 @@ export function TabelaNotasPendencias({
               
               return (
                 <TableRow key={nota.id} className={getRowClass(nota)}>
+                  <TableCell>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+                      <Clock className="h-3 w-3" />
+                      {formatarDataHora(nota.dataCriacao)}
+                    </div>
+                  </TableCell>
                   <TableCell className="font-mono text-xs">{nota.numeroNota}</TableCell>
                   <TableCell>{getNomeFornecedor(nota.fornecedor)}</TableCell>
                   <TableCell>{getTipoPagamentoBadge(nota.tipoPagamento)}</TableCell>

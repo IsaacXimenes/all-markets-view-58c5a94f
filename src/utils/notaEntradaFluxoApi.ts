@@ -1073,9 +1073,11 @@ export const inicializarNotasEntradaMock = (): void => {
   // Resetar contador para inicialização limpa
   proximoSequencial = 1;
   
-  // Nota 1 - Pagamento Pós, atuação Estoque, aguardando conferência
-  const nota1 = criarNotaEntrada({
+  // Criar notas com datas/horas distintas para ordenação correta
+  // Nota 1 - Pagamento Pós, atuação Estoque, aguardando conferência (mais antiga)
+  const nota1 = criarNotaEntradaComDataHora({
     data: '2026-01-15',
+    dataCriacao: '2026-01-15T09:30:00',
     fornecedor: 'Apple Distribuidor BR',
     tipoPagamento: 'Pagamento Pos',
     qtdInformada: 5,
@@ -1094,8 +1096,9 @@ export const inicializarNotasEntradaMock = (): void => {
   }], 'Carlos Estoque');
   
   // Nota 2 - 100% Antecipado, atuação Financeiro, aguardando pagamento
-  criarNotaEntrada({
+  criarNotaEntradaComDataHora({
     data: '2026-01-18',
+    dataCriacao: '2026-01-18T14:15:00',
     fornecedor: 'TechSupply Imports',
     tipoPagamento: 'Pagamento 100% Antecipado',
     qtdInformada: 10,
@@ -1105,8 +1108,9 @@ export const inicializarNotasEntradaMock = (): void => {
   });
   
   // Nota 3 - Parcial, atuação Financeiro, aguardando pagamento inicial
-  criarNotaEntrada({
+  criarNotaEntradaComDataHora({
     data: '2026-01-20',
+    dataCriacao: '2026-01-20T10:45:00',
     fornecedor: 'MobileWorld Atacado',
     tipoPagamento: 'Pagamento Parcial',
     qtdInformada: 8,
@@ -1116,8 +1120,9 @@ export const inicializarNotasEntradaMock = (): void => {
   });
   
   // Nota 4 - Pagamento Pós, atuação Estoque, sem produtos cadastrados ainda
-  criarNotaEntrada({
+  criarNotaEntradaComDataHora({
     data: '2026-01-22',
+    dataCriacao: '2026-01-22T16:30:00',
     fornecedor: 'FastCell Distribuição',
     tipoPagamento: 'Pagamento Pos',
     qtdInformada: 15,
@@ -1126,9 +1131,10 @@ export const inicializarNotasEntradaMock = (): void => {
     responsavel: 'Carlos Estoque'
   });
   
-  // Nota 5 - Pagamento Pós, atuação Estoque (para teste do botão +)
-  criarNotaEntrada({
+  // Nota 5 - Pagamento Pós, atuação Estoque (mais recente - para teste do botão +)
+  criarNotaEntradaComDataHora({
     data: '2026-01-25',
+    dataCriacao: '2026-01-25T11:00:00',
     fornecedor: 'GlobalPhones Brasil',
     tipoPagamento: 'Pagamento Pos',
     qtdInformada: 6,
@@ -1136,6 +1142,72 @@ export const inicializarNotasEntradaMock = (): void => {
     formaPagamento: 'Pix',
     responsavel: 'Carlos Estoque'
   });
+};
+
+// Função auxiliar para criar nota com data/hora específica (uso interno mockado)
+const criarNotaEntradaComDataHora = (dados: {
+  data: string;
+  dataCriacao: string;
+  fornecedor: string;
+  tipoPagamento: TipoPagamentoNota;
+  qtdInformada: number;
+  valorTotal: number;
+  formaPagamento: 'Pix' | 'Dinheiro';
+  responsavel: string;
+  observacoes?: string;
+}): NotaEntrada => {
+  const numeroNota = gerarNumeroNotaAutoIncremental();
+  const id = numeroNota;
+  
+  const atuacaoInicial: AtuacaoAtual = dados.tipoPagamento === 'Pagamento Pos' ? 'Estoque' : 'Financeiro';
+  
+  let statusInicial: NotaEntradaStatus;
+  if (dados.tipoPagamento === 'Pagamento 100% Antecipado') {
+    statusInicial = 'Aguardando Pagamento Inicial';
+  } else if (dados.tipoPagamento === 'Pagamento Parcial') {
+    statusInicial = 'Aguardando Pagamento Inicial';
+  } else {
+    statusInicial = 'Aguardando Conferencia';
+  }
+  
+  const novaNota: NotaEntrada = {
+    id,
+    numeroNota,
+    data: dados.data,
+    dataCriacao: dados.dataCriacao,
+    fornecedor: dados.fornecedor,
+    tipoPagamento: dados.tipoPagamento,
+    tipoPagamentoBloqueado: false,
+    qtdInformada: dados.qtdInformada,
+    qtdCadastrada: 0,
+    qtdConferida: 0,
+    status: statusInicial,
+    atuacaoAtual: atuacaoInicial,
+    valorTotal: dados.valorTotal,
+    valorPago: 0,
+    valorPendente: dados.valorTotal,
+    valorConferido: 0,
+    formaPagamento: dados.formaPagamento,
+    responsavelCriacao: dados.responsavel,
+    observacoes: dados.observacoes,
+    produtos: [],
+    pagamentos: [],
+    alertas: [],
+    timeline: [{
+      id: `TL-${Date.now()}`,
+      dataHora: dados.dataCriacao,
+      usuario: dados.responsavel,
+      perfil: 'Estoque' as PerfilUsuario,
+      acao: 'Nota criada',
+      statusAnterior: statusInicial,
+      statusNovo: statusInicial,
+      impactoFinanceiro: dados.valorTotal,
+      detalhes: `Tipo: ${dados.tipoPagamento} | Valor: R$ ${dados.valorTotal.toLocaleString('pt-BR')}`
+    }]
+  };
+  
+  notasEntrada.push(novaNota);
+  return novaNota;
 };
 
 // Inicializar ao carregar módulo
