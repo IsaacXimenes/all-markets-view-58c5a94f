@@ -954,6 +954,102 @@ export const podeRealizarAcao = (
   }
 };
 
+// ============= FUNÇÕES PARA MÓDULO FINANCEIRO =============
+
+// Interface compatível com o layout do FinanceiroNotasPendencias
+export interface PendenciaFinanceiraConvertida {
+  id: string;
+  notaId: string;
+  fornecedor: string;
+  valorTotal: number;
+  valorConferido: number;
+  valorPendente: number;
+  valorPago: number;
+  statusPagamento: 'Pago' | 'Parcial' | 'Aguardando';
+  statusConferencia: string;
+  atuacaoAtual: AtuacaoAtual;
+  tipoPagamento: TipoPagamentoNota;
+  qtdInformada: number;
+  qtdCadastrada: number;
+  qtdConferida: number;
+  dataCriacao: string;
+  status: NotaEntradaStatus;
+  timeline: TimelineNotaEntrada[];
+  podeEditar: boolean;
+  percentualConferencia: number;
+  diasDecorridos: number;
+  slaStatus: 'normal' | 'aviso' | 'critico';
+  slaAlerta: boolean;
+}
+
+// Obter notas para o módulo Financeiro
+// Exibe TODAS as notas para acompanhamento, mas marca quais podem ser editadas
+export const getNotasParaFinanceiro = (): NotaEntrada[] => {
+  return notasEntrada.filter(nota => {
+    // Não mostrar notas encerradas (ou mostrar para histórico se desejado)
+    if (nota.status === 'Finalizada') return false;
+    
+    return true; // Financeiro visualiza todas as notas em andamento
+  });
+};
+
+// Converter NotaEntrada para formato compatível com a UI do Financeiro
+export const converterNotaParaPendencia = (nota: NotaEntrada): PendenciaFinanceiraConvertida => {
+  // Calcular percentual de conferência
+  const percentualConferencia = nota.qtdInformada > 0 
+    ? Math.round((nota.qtdConferida / nota.qtdInformada) * 100) 
+    : 0;
+  
+  // Calcular dias decorridos
+  const dataCriacao = new Date(nota.dataCriacao);
+  const agora = new Date();
+  const diasDecorridos = Math.ceil((agora.getTime() - dataCriacao.getTime()) / (1000 * 60 * 60 * 24));
+  
+  // Determinar status SLA
+  let slaStatus: 'normal' | 'aviso' | 'critico' = 'normal';
+  let slaAlerta = false;
+  if (diasDecorridos >= 7) {
+    slaStatus = 'critico';
+    slaAlerta = true;
+  } else if (diasDecorridos >= 5) {
+    slaStatus = 'aviso';
+    slaAlerta = true;
+  }
+  
+  // Determinar status de pagamento
+  let statusPagamento: 'Pago' | 'Parcial' | 'Aguardando' = 'Aguardando';
+  if (nota.valorPago >= nota.valorTotal && nota.valorTotal > 0) {
+    statusPagamento = 'Pago';
+  } else if (nota.valorPago > 0) {
+    statusPagamento = 'Parcial';
+  }
+  
+  return {
+    id: `PEND-${nota.id}`,
+    notaId: nota.id,
+    fornecedor: nota.fornecedor,
+    valorTotal: nota.valorTotal,
+    valorConferido: nota.valorConferido,
+    valorPendente: nota.valorPendente,
+    valorPago: nota.valorPago,
+    statusPagamento,
+    statusConferencia: nota.status,
+    atuacaoAtual: nota.atuacaoAtual,
+    tipoPagamento: nota.tipoPagamento,
+    qtdInformada: nota.qtdInformada,
+    qtdCadastrada: nota.qtdCadastrada,
+    qtdConferida: nota.qtdConferida,
+    dataCriacao: nota.dataCriacao.split('T')[0],
+    status: nota.status,
+    timeline: nota.timeline,
+    podeEditar: nota.atuacaoAtual === 'Financeiro',
+    percentualConferencia,
+    diasDecorridos,
+    slaStatus,
+    slaAlerta
+  };
+};
+
 // ============= INICIALIZAÇÃO COM DADOS MOCKADOS =============
 
 export const inicializarNotasEntradaMock = (): void => {

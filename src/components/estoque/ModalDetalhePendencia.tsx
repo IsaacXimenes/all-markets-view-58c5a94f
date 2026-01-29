@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { PendenciaFinanceira } from '@/utils/pendenciasFinanceiraApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { 
   FileText, 
@@ -18,8 +17,45 @@ import {
   ArrowRight
 } from 'lucide-react';
 
+// Interface genérica que funciona com ambos os sistemas (legado e novo)
+export interface PendenciaModalData {
+  id: string;
+  notaId: string;
+  fornecedor: string;
+  valorTotal: number;
+  valorConferido: number;
+  valorPendente: number;
+  percentualConferencia: number;
+  statusPagamento: string;
+  statusConferencia: string;
+  dataCriacao: string;
+  diasDecorridos: number;
+  slaStatus: 'normal' | 'aviso' | 'critico';
+  slaAlerta: boolean;
+  // Campos opcionais para compatibilidade
+  aparelhosTotal?: number;
+  aparelhosConferidos?: number;
+  discrepancia?: boolean;
+  motivoDiscrepancia?: string;
+  acaoRecomendada?: string;
+  timeline?: Array<{
+    id?: string;
+    data?: string;
+    dataHora?: string;
+    tipo?: string;
+    titulo?: string;
+    descricao?: string;
+    acao?: string;
+    responsavel?: string;
+    usuario?: string;
+    valor?: number;
+    detalhes?: string;
+  }>;
+  produtos?: any[];
+}
+
 interface ModalDetalhePendenciaProps {
-  pendencia: PendenciaFinanceira | null;
+  pendencia: PendenciaModalData | null;
   open: boolean;
   onClose: () => void;
   showPaymentButton?: boolean;
@@ -166,7 +202,7 @@ export function ModalDetalhePendencia({
             <div className="p-4 rounded-lg border">
               <h4 className="font-medium mb-4 flex items-center gap-2">
                 <Package className="h-4 w-4" />
-                Aparelhos ({pendencia.aparelhosConferidos}/{pendencia.aparelhosTotal} conferidos)
+                Aparelhos ({pendencia.aparelhosConferidos ?? 0}/{pendencia.aparelhosTotal ?? 0} conferidos)
               </h4>
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
@@ -193,41 +229,43 @@ export function ModalDetalhePendencia({
             </div>
 
             {/* Timeline */}
-            <div className="p-4 rounded-lg border">
-              <h4 className="font-medium mb-4 flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Timeline de Eventos
-              </h4>
-              <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
-                {pendencia.timeline.map((entry, idx) => (
-                  <div key={entry.id} className="flex gap-3">
-                    <div className="flex-shrink-0 mt-1">
-                      {getTimelineIcon(entry.tipo)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-sm">{entry.titulo}</p>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(entry.data).toLocaleDateString('pt-BR')} às {new Date(entry.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+            {pendencia.timeline && pendencia.timeline.length > 0 && (
+              <div className="p-4 rounded-lg border">
+                <h4 className="font-medium mb-4 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Timeline de Eventos
+                </h4>
+                <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
+                  {pendencia.timeline.map((entry, idx) => (
+                    <div key={entry.id || idx} className="flex gap-3">
+                      <div className="flex-shrink-0 mt-1">
+                        {getTimelineIcon(entry.tipo || 'default')}
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1">{entry.descricao}</p>
-                      {entry.responsavel && (
-                        <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                          <User className="h-3 w-3" />
-                          {entry.responsavel}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium text-sm">{entry.titulo || entry.acao || 'Evento'}</p>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(entry.data || entry.dataHora || '').toLocaleDateString('pt-BR')} às {new Date(entry.data || entry.dataHora || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
                         </div>
-                      )}
-                      {entry.valor && (
-                        <p className="text-sm text-green-600 mt-1">
-                          {formatCurrency(entry.valor)}
-                        </p>
-                      )}
+                        <p className="text-sm text-muted-foreground mt-1">{entry.descricao || entry.detalhes || ''}</p>
+                        {(entry.responsavel || entry.usuario) && (
+                          <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                            <User className="h-3 w-3" />
+                            {entry.responsavel || entry.usuario}
+                          </div>
+                        )}
+                        {entry.valor && (
+                          <p className="text-sm text-green-600 mt-1">
+                            {formatCurrency(entry.valor)}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </ScrollArea>
 

@@ -6,13 +6,25 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { PendenciaFinanceira } from '@/utils/pendenciasFinanceiraApi';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { formatCurrency } from '@/utils/formatUtils';
 import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { CreditCard, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Interface genérica para pendência no modal de pagamento
+export interface PendenciaPagamentoData {
+  id: string;
+  notaId: string;
+  valorTotal: number;
+  valorPendente: number;
+  percentualConferencia: number;
+  aparelhosTotal?: number;
+  aparelhosConferidos?: number;
+  qtdInformada?: number;
+  qtdConferida?: number;
+}
 
 export interface DadosPagamento {
   contaPagamento: string;
@@ -27,7 +39,7 @@ export interface DadosPagamento {
 }
 
 interface ModalFinalizarPagamentoProps {
-  pendencia: PendenciaFinanceira | null;
+  pendencia: PendenciaPagamentoData | null;
   open: boolean;
   onClose: () => void;
   onConfirm: (dados: DadosPagamento) => void;
@@ -135,7 +147,8 @@ export function ModalFinalizarPagamento({
             <p className="text-sm text-muted-foreground">Valor Total</p>
             <p className="text-xl font-bold">{formatCurrency(pendencia.valorTotal)}</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Conferência: {pendencia.percentualConferencia}% ({pendencia.aparelhosConferidos}/{pendencia.aparelhosTotal} aparelhos)
+              Conferência: {pendencia.percentualConferencia}% 
+              ({pendencia.qtdConferida ?? pendencia.aparelhosConferidos ?? 0}/{pendencia.qtdInformada ?? pendencia.aparelhosTotal ?? 0} aparelhos)
             </p>
           </div>
 
