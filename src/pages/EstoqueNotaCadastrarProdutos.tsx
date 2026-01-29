@@ -20,11 +20,17 @@ import { getProdutosCadastro } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
 import { InputComMascara } from '@/components/ui/InputComMascara';
 import { formatCurrency } from '@/utils/formatUtils';
+import { getCores } from '@/utils/coresApi';
+
+const categoriasAparelho = ['Novo', 'Seminovo'];
 
 interface ProdutoLinha {
   tipoProduto: 'Aparelho' | 'Acessorio';
   marca: string;
   modelo: string;
+  imei: string;
+  cor: string;
+  categoria: 'Novo' | 'Seminovo' | '';
   quantidade: number;
   custoUnitario: number;
   custoTotal: number;
@@ -40,10 +46,15 @@ export default function EstoqueNotaCadastrarProdutos() {
   const [isLoading, setIsLoading] = useState(true);
   const produtosCadastro = getProdutosCadastro();
   
+  const cores = getCores().filter(c => c.status === 'Ativo');
+  
   const [produtos, setProdutos] = useState<ProdutoLinha[]>([{
     tipoProduto: 'Aparelho',
     marca: 'Apple',
     modelo: '',
+    imei: '',
+    cor: '',
+    categoria: '',
     quantidade: 1,
     custoUnitario: 0,
     custoTotal: 0
@@ -77,6 +88,9 @@ export default function EstoqueNotaCadastrarProdutos() {
       tipoProduto: 'Aparelho',
       marca: 'Apple',
       modelo: '',
+      imei: '',
+      cor: '',
+      categoria: '',
       quantidade: 1,
       custoUnitario: 0,
       custoTotal: 0
@@ -96,6 +110,9 @@ export default function EstoqueNotaCadastrarProdutos() {
     if (campo === 'tipoProduto') {
       novosProdutos[index].marca = valor === 'Aparelho' ? 'Apple' : '';
       novosProdutos[index].modelo = '';
+      novosProdutos[index].imei = '';
+      novosProdutos[index].cor = '';
+      novosProdutos[index].categoria = '';
       if (valor === 'Aparelho') {
         novosProdutos[index].quantidade = 1;
       }
@@ -117,6 +134,10 @@ export default function EstoqueNotaCadastrarProdutos() {
     atualizarProduto(index, 'custoUnitario', valor);
   };
 
+  const handleImeiChange = (index: number, formatted: string, raw: string | number) => {
+    atualizarProduto(index, 'imei', String(raw));
+  };
+
   const calcularValorTotal = () => {
     return produtos.reduce((acc, prod) => acc + prod.custoTotal, 0);
   };
@@ -125,6 +146,18 @@ export default function EstoqueNotaCadastrarProdutos() {
     for (const p of produtos) {
       if (!p.modelo) {
         toast.error('Selecione o modelo de todos os produtos');
+        return false;
+      }
+      if (p.tipoProduto === 'Aparelho' && !p.imei) {
+        toast.error('Informe o IMEI de todos os aparelhos');
+        return false;
+      }
+      if (p.tipoProduto === 'Aparelho' && !p.cor) {
+        toast.error('Selecione a cor de todos os aparelhos');
+        return false;
+      }
+      if (p.tipoProduto === 'Aparelho' && !p.categoria) {
+        toast.error('Selecione a categoria de todos os aparelhos');
         return false;
       }
       if (p.custoUnitario <= 0) {
@@ -146,6 +179,9 @@ export default function EstoqueNotaCadastrarProdutos() {
         tipoProduto: p.tipoProduto,
         marca: p.marca,
         modelo: p.modelo,
+        imei: p.imei,
+        cor: p.cor,
+        categoria: p.categoria as 'Novo' | 'Seminovo',
         quantidade: p.quantidade,
         custoUnitario: p.custoUnitario,
         custoTotal: p.custoTotal
@@ -346,29 +382,67 @@ export default function EstoqueNotaCadastrarProdutos() {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      {/* IMEI - Desabilitado (só após recebimento) */}
+                      {/* IMEI */}
                       <TableCell>
-                        <Input 
-                          disabled 
-                          placeholder="Após recebimento" 
-                          className="w-36 bg-muted"
-                        />
+                        {produto.tipoProduto === 'Aparelho' ? (
+                          <InputComMascara
+                            mascara="imei"
+                            value={produto.imei}
+                            onChange={(formatted, raw) => handleImeiChange(index, formatted, raw)}
+                            className="w-40"
+                            placeholder="00-000000-000000-0"
+                          />
+                        ) : (
+                          <Input disabled placeholder="N/A" className="w-40 bg-muted" />
+                        )}
                       </TableCell>
-                      {/* Cor - Desabilitada (só após recebimento) */}
+                      {/* Cor */}
                       <TableCell>
-                        <Input 
-                          disabled 
-                          placeholder="Após recebimento" 
-                          className="w-24 bg-muted"
-                        />
+                        {produto.tipoProduto === 'Aparelho' ? (
+                          <Select
+                            value={produto.cor}
+                            onValueChange={(value) => atualizarProduto(index, 'cor', value)}
+                          >
+                            <SelectTrigger className="w-32">
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {cores.map(cor => (
+                                <SelectItem key={cor.id} value={cor.nome}>
+                                  <div className="flex items-center gap-2">
+                                    <div 
+                                      className="w-3 h-3 rounded-full border border-border" 
+                                      style={{ backgroundColor: cor.hexadecimal }}
+                                    />
+                                    {cor.nome}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input disabled placeholder="N/A" className="w-32 bg-muted" />
+                        )}
                       </TableCell>
-                      {/* Categoria - Desabilitada (só após recebimento) */}
+                      {/* Categoria */}
                       <TableCell>
-                        <Input 
-                          disabled 
-                          placeholder="Após recebimento" 
-                          className="w-24 bg-muted"
-                        />
+                        {produto.tipoProduto === 'Aparelho' ? (
+                          <Select
+                            value={produto.categoria}
+                            onValueChange={(value) => atualizarProduto(index, 'categoria', value)}
+                          >
+                            <SelectTrigger className="w-20">
+                              <SelectValue placeholder="Cat" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categoriasAparelho.map(cat => (
+                                <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Input disabled placeholder="N/A" className="w-20 bg-muted" />
+                        )}
                       </TableCell>
                       <TableCell>
                         <Input
