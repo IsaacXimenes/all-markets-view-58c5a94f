@@ -8,17 +8,18 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  getPendencias, 
-  PendenciaFinanceira
-} from '@/utils/pendenciasFinanceiraApi';
+  getNotasPendentes, 
+  NotaEntrada,
+  NotaEntradaStatus 
+} from '@/utils/notaEntradaFluxoApi';
 import { getFornecedores } from '@/utils/cadastrosApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { 
   Eye, 
-  Pencil,
+  Plus,
+  ClipboardCheck,
   Download, 
   Filter, 
   X, 
@@ -27,15 +28,14 @@ import {
   AlertCircle,
   CheckCircle,
   FileText,
-  ClipboardList
+  DollarSign,
+  Package
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function EstoqueNotasPendencias() {
   const navigate = useNavigate();
-  const [pendencias, setPendencias] = useState<PendenciaFinanceira[]>(getPendencias());
-  const [pendenciaSelecionada, setPendenciaSelecionada] = useState<PendenciaFinanceira | null>(null);
-  const [dialogDetalhes, setDialogDetalhes] = useState(false);
+  const [notas, setNotas] = useState<NotaEntrada[]>(getNotasPendentes());
   
   const fornecedoresList = getFornecedores();
   
@@ -44,129 +44,123 @@ export default function EstoqueNotasPendencias() {
     dataInicio: '',
     dataFim: '',
     fornecedor: 'todos',
-    statusConferencia: 'todos',
+    status: 'todos',
+    tipoPagamento: 'todos',
     palavraChave: ''
   });
 
-  // Filtrar pendências com foco em status de conferência
-  const pendenciasFiltradas = useMemo(() => {
-    let filtered = pendencias.filter(p => {
-      if (filters.dataInicio && p.dataCriacao < filters.dataInicio) return false;
-      if (filters.dataFim && p.dataCriacao > filters.dataFim) return false;
-      if (filters.fornecedor !== 'todos' && p.fornecedor !== filters.fornecedor) return false;
-      if (filters.statusConferencia !== 'todos' && p.statusConferencia !== filters.statusConferencia) return false;
+  // Filtrar notas
+  const notasFiltradas = useMemo(() => {
+    let filtered = notas.filter(n => {
+      if (filters.dataInicio && n.data < filters.dataInicio) return false;
+      if (filters.dataFim && n.data > filters.dataFim) return false;
+      if (filters.fornecedor !== 'todos' && n.fornecedor !== filters.fornecedor) return false;
+      if (filters.status !== 'todos' && n.status !== filters.status) return false;
+      if (filters.tipoPagamento !== 'todos' && n.tipoPagamento !== filters.tipoPagamento) return false;
       if (filters.palavraChave && 
-          !p.notaId.toLowerCase().includes(filters.palavraChave.toLowerCase()) &&
-          !p.fornecedor.toLowerCase().includes(filters.palavraChave.toLowerCase())) return false;
+          !n.numeroNota.toLowerCase().includes(filters.palavraChave.toLowerCase()) &&
+          !n.fornecedor.toLowerCase().includes(filters.palavraChave.toLowerCase())) return false;
       return true;
     });
 
-    // Ordenar: SLA crítico primeiro, depois por status de conferência, depois por data
+    // Ordenar: alertas primeiro, depois por data
     return filtered.sort((a, b) => {
-      // Prioridade: alertas SLA primeiro
-      if (a.slaStatus === 'critico' && b.slaStatus !== 'critico') return -1;
-      if (a.slaStatus !== 'critico' && b.slaStatus === 'critico') return 1;
-      if (a.slaStatus === 'aviso' && b.slaStatus === 'normal') return -1;
-      if (a.slaStatus === 'normal' && b.slaStatus === 'aviso') return 1;
-      // Depois por status de conferência (não completas primeiro)
-      if (a.statusConferencia !== 'Conferência Completa' && b.statusConferencia === 'Conferência Completa') return -1;
-      if (a.statusConferencia === 'Conferência Completa' && b.statusConferencia !== 'Conferência Completa') return 1;
-      // Por fim, por data
-      return new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime();
+      // Notas com divergência primeiro
+      if (a.status === 'Com Divergencia' && b.status !== 'Com Divergencia') return -1;
+      if (a.status !== 'Com Divergencia' && b.status === 'Com Divergencia') return 1;
+      // Depois por data (mais antigas primeiro para SLA)
+      return new Date(a.data).getTime() - new Date(b.data).getTime();
     });
-  }, [pendencias, filters]);
+  }, [notas, filters]);
 
-  // Cards de resumo com foco no Estoque
+  // Cards de resumo
   const resumo = useMemo(() => {
-    const emConferencia = pendenciasFiltradas.filter(p => p.statusConferencia === 'Em Conferência').length;
-    const valorPendente = pendenciasFiltradas.reduce((acc, p) => acc + p.valorPendente, 0);
-    const valorConferido = pendenciasFiltradas.reduce((acc, p) => acc + p.valorConferido, 0);
-    const alertasSLA = pendenciasFiltradas.filter(p => p.slaAlerta && p.statusPagamento !== 'Pago').length;
+    const total = notasFiltradas.length;
+    const aguardandoConferencia = notasFiltradas.filter(n => 
+      ['Aguardando Conferencia', 'Conferencia Parcial'].includes(n.status)
+    ).length;
+    const aguardandoPagamento = notasFiltradas.filter(n => 
+      ['Aguardando Pagamento Inicial', 'Aguardando Pagamento Final'].includes(n.status)
+    ).length;
+    const comDivergencia = notasFiltradas.filter(n => n.status === 'Com Divergencia').length;
+    const valorTotal = notasFiltradas.reduce((acc, n) => acc + n.valorTotal, 0);
     
-    return { emConferencia, valorPendente, valorConferido, alertasSLA };
-  }, [pendenciasFiltradas]);
+    return { total, aguardandoConferencia, aguardandoPagamento, comDivergencia, valorTotal };
+  }, [notasFiltradas]);
 
-  const getSLABadge = (pendencia: PendenciaFinanceira) => {
-    if (pendencia.statusPagamento === 'Pago') {
-      return <Badge variant="outline" className="bg-green-500/10 text-green-600">Pago</Badge>;
-    }
+  const getStatusBadge = (status: NotaEntradaStatus) => {
+    const statusConfig: Record<NotaEntradaStatus, { bg: string; text: string; label: string }> = {
+      'Criada': { bg: 'bg-secondary', text: 'text-secondary-foreground', label: 'Criada' },
+      'Aguardando Pagamento Inicial': { bg: 'bg-primary/10', text: 'text-primary', label: 'Aguard. Pag. Inicial' },
+      'Pagamento Parcial Realizado': { bg: 'bg-primary/20', text: 'text-primary', label: 'Pag. Parcial' },
+      'Pagamento Concluido': { bg: 'bg-primary/30', text: 'text-primary', label: 'Pago' },
+      'Aguardando Conferencia': { bg: 'bg-accent', text: 'text-accent-foreground', label: 'Aguard. Conf.' },
+      'Conferencia Parcial': { bg: 'bg-accent', text: 'text-accent-foreground', label: 'Conf. Parcial' },
+      'Conferencia Concluida': { bg: 'bg-primary/40', text: 'text-primary', label: 'Conf. Concluída' },
+      'Aguardando Pagamento Final': { bg: 'bg-primary/10', text: 'text-primary', label: 'Aguard. Pag. Final' },
+      'Com Divergencia': { bg: 'bg-destructive/10', text: 'text-destructive', label: 'Divergência' },
+      'Finalizada': { bg: 'bg-primary', text: 'text-primary-foreground', label: 'Finalizada' }
+    };
     
-    switch (pendencia.slaStatus) {
-      case 'critico':
-        return (
-          <div className="flex items-center gap-1 bg-red-500/20 text-red-600 px-2 py-1 rounded text-xs font-medium">
-            <AlertCircle className="h-3 w-3" />
-            {pendencia.diasDecorridos}d
-          </div>
-        );
-      case 'aviso':
-        return (
-          <div className="flex items-center gap-1 bg-yellow-500/20 text-yellow-600 px-2 py-1 rounded text-xs font-medium">
-            <AlertTriangle className="h-3 w-3" />
-            {pendencia.diasDecorridos}d
-          </div>
-        );
-      default:
-        return (
-          <div className="flex items-center gap-1 text-muted-foreground text-xs">
-            <Clock className="h-3 w-3" />
-            {pendencia.diasDecorridos}d
-          </div>
-        );
-    }
+    const config = statusConfig[status] || { bg: 'bg-muted', text: 'text-muted-foreground', label: status };
+    
+    return (
+      <Badge variant="outline" className={`${config.bg} ${config.text}`}>
+        {config.label}
+      </Badge>
+    );
   };
 
-  const getStatusPagamentoBadge = (status: string) => {
-    switch (status) {
-      case 'Pago':
-        return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">Pago</Badge>;
+  const getTipoPagamentoBadge = (tipo: string) => {
+    switch (tipo) {
+      case 'Antecipado':
+        return <Badge variant="outline" className="bg-primary/10 text-primary">Antecipado</Badge>;
       case 'Parcial':
-        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">Parcial</Badge>;
+        return <Badge variant="outline" className="bg-accent text-accent-foreground">Parcial</Badge>;
+      case 'Pos':
+        return <Badge variant="outline" className="bg-muted text-muted-foreground">Pós</Badge>;
       default:
-        return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">Aguardando</Badge>;
+        return <Badge variant="outline">{tipo}</Badge>;
     }
   };
 
-  const getStatusConferenciaBadge = (status: string) => {
-    switch (status) {
-      case 'Conferência Completa':
-        return <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">Completa</Badge>;
-      case 'Discrepância Detectada':
-        return <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30">Discrepância</Badge>;
-      default:
-        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">Em Conf.</Badge>;
-    }
-  };
-
-  const getRowClass = (pendencia: PendenciaFinanceira) => {
-    if (pendencia.statusPagamento === 'Pago') return 'bg-green-500/10';
-    if (pendencia.slaStatus === 'critico') return 'bg-red-500/10';
-    if (pendencia.slaStatus === 'aviso') return 'bg-yellow-500/10';
-    if (pendencia.statusConferencia === 'Discrepância Detectada') return 'bg-orange-500/10';
+  const getRowClass = (nota: NotaEntrada) => {
+    if (nota.status === 'Com Divergencia') return 'bg-destructive/10';
+    if (nota.alertas.some(a => !a.resolvido && a.tipo === 'status_critico')) return 'bg-warning/10';
     return '';
   };
 
-  const handleVerDetalhes = (pendencia: PendenciaFinanceira) => {
-    setPendenciaSelecionada(pendencia);
-    setDialogDetalhes(true);
+  const calcularDiasDecorridos = (data: string): number => {
+    const dataInicio = new Date(data);
+    const hoje = new Date();
+    return Math.ceil((hoje.getTime() - dataInicio.getTime()) / (1000 * 60 * 60 * 24));
   };
 
-  const handleEditarNota = (notaId: string) => {
-    navigate(`/estoque/nota/${notaId}`);
+  const handleCadastrarProdutos = (nota: NotaEntrada) => {
+    navigate(`/estoque/nota/${nota.id}/cadastrar-produtos`);
+  };
+
+  const handleConferir = (nota: NotaEntrada) => {
+    navigate(`/estoque/nota/${nota.id}/conferencia`);
+  };
+
+  const handleVerDetalhes = (nota: NotaEntrada) => {
+    navigate(`/estoque/nota/${nota.id}`);
   };
 
   const handleExport = () => {
-    const dataToExport = pendenciasFiltradas.map(p => ({
-      'Nº Nota': p.notaId,
-      Fornecedor: p.fornecedor,
-      'Valor Total': formatCurrency(p.valorTotal),
-      'Valor Conferido': formatCurrency(p.valorConferido),
-      'Valor Pendente': formatCurrency(p.valorPendente),
-      '% Conferência': `${p.percentualConferencia}%`,
-      'Status Conferência': p.statusConferencia,
-      'Status Pagamento': p.statusPagamento,
-      'Dias Decorridos': p.diasDecorridos,
-      SLA: p.slaStatus
+    const dataToExport = notasFiltradas.map(n => ({
+      'Nº Nota': n.numeroNota,
+      Fornecedor: n.fornecedor,
+      'Tipo Pagamento': n.tipoPagamento,
+      Status: n.status,
+      'Qtd Informada': n.qtdInformada,
+      'Qtd Cadastrada': n.qtdCadastrada,
+      'Qtd Conferida': n.qtdConferida,
+      'Valor Total': formatCurrency(n.valorTotal),
+      'Valor Pago': formatCurrency(n.valorPago),
+      'Valor Pendente': formatCurrency(n.valorPendente),
+      'Dias Decorridos': calcularDiasDecorridos(n.data)
     }));
     
     const csvContent = Object.keys(dataToExport[0] || {}).join(';') + '\n' +
@@ -175,7 +169,7 @@ export default function EstoqueNotasPendencias() {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `estoque-pendencias-${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `notas-pendentes-${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     
     toast.success('Dados exportados com sucesso!');
@@ -186,29 +180,43 @@ export default function EstoqueNotasPendencias() {
       dataInicio: '',
       dataFim: '',
       fornecedor: 'todos',
-      statusConferencia: 'todos',
+      status: 'todos',
+      tipoPagamento: 'todos',
       palavraChave: ''
     });
   };
 
   const handleRefresh = () => {
-    setPendencias(getPendencias());
+    setNotas(getNotasPendentes());
     toast.success('Dados atualizados!');
   };
 
+  // Lista de status para filtro
+  const statusOptions: NotaEntradaStatus[] = [
+    'Criada',
+    'Aguardando Pagamento Inicial',
+    'Pagamento Parcial Realizado',
+    'Pagamento Concluido',
+    'Aguardando Conferencia',
+    'Conferencia Parcial',
+    'Conferencia Concluida',
+    'Aguardando Pagamento Final',
+    'Com Divergencia'
+  ];
+
   return (
-    <EstoqueLayout title="Notas - Pendências">
+    <EstoqueLayout title="Notas Pendentes">
       <div className="space-y-6">
         {/* Cards de Resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Em Conferência</p>
-                  <p className="text-2xl font-bold">{resumo.emConferencia}</p>
+                  <p className="text-sm text-muted-foreground">Total de Notas</p>
+                  <p className="text-2xl font-bold">{resumo.total}</p>
                 </div>
-                <ClipboardList className="h-10 w-10 text-blue-500 opacity-50" />
+                <FileText className="h-10 w-10 text-muted-foreground opacity-50" />
               </div>
             </CardContent>
           </Card>
@@ -216,10 +224,10 @@ export default function EstoqueNotasPendencias() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Valor Pendente</p>
-                  <p className="text-2xl font-bold text-orange-600">{formatCurrency(resumo.valorPendente)}</p>
+                  <p className="text-sm text-muted-foreground">Aguard. Conferência</p>
+                  <p className="text-2xl font-bold text-primary">{resumo.aguardandoConferencia}</p>
                 </div>
-                <FileText className="h-10 w-10 text-orange-500 opacity-50" />
+                <ClipboardCheck className="h-10 w-10 text-primary opacity-50" />
               </div>
             </CardContent>
           </Card>
@@ -227,10 +235,10 @@ export default function EstoqueNotasPendencias() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Valor Conferido</p>
-                  <p className="text-2xl font-bold text-green-600">{formatCurrency(resumo.valorConferido)}</p>
+                  <p className="text-sm text-muted-foreground">Aguard. Pagamento</p>
+                  <p className="text-2xl font-bold text-primary">{resumo.aguardandoPagamento}</p>
                 </div>
-                <CheckCircle className="h-10 w-10 text-green-500 opacity-50" />
+                <DollarSign className="h-10 w-10 text-primary opacity-50" />
               </div>
             </CardContent>
           </Card>
@@ -238,10 +246,21 @@ export default function EstoqueNotasPendencias() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Alertas SLA</p>
-                  <p className="text-2xl font-bold text-red-600">{resumo.alertasSLA}</p>
+                  <p className="text-sm text-muted-foreground">Com Divergência</p>
+                  <p className="text-2xl font-bold text-destructive">{resumo.comDivergencia}</p>
                 </div>
-                <AlertTriangle className="h-10 w-10 text-red-500 opacity-50" />
+                <AlertTriangle className="h-10 w-10 text-destructive opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Valor Total</p>
+                  <p className="text-2xl font-bold">{formatCurrency(resumo.valorTotal)}</p>
+                </div>
+                <Package className="h-10 w-10 text-muted-foreground opacity-50" />
               </div>
             </CardContent>
           </Card>
@@ -256,7 +275,7 @@ export default function EstoqueNotasPendencias() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               <div>
                 <Label htmlFor="dataInicio">Data Início</Label>
                 <Input
@@ -290,16 +309,30 @@ export default function EstoqueNotasPendencias() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="statusConferencia">Status Conferência</Label>
-                <Select value={filters.statusConferencia} onValueChange={(value) => setFilters({ ...filters, statusConferencia: value })}>
-                  <SelectTrigger id="statusConferencia">
+                <Label htmlFor="status">Status</Label>
+                <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
+                  <SelectTrigger id="status">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="Em Conferência">Em Conferência</SelectItem>
-                    <SelectItem value="Conferência Completa">Completa</SelectItem>
-                    <SelectItem value="Discrepância Detectada">Discrepância</SelectItem>
+                    {statusOptions.map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="tipoPagamento">Tipo Pagamento</Label>
+                <Select value={filters.tipoPagamento} onValueChange={(value) => setFilters({ ...filters, tipoPagamento: value })}>
+                  <SelectTrigger id="tipoPagamento">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="Antecipado">Antecipado</SelectItem>
+                    <SelectItem value="Parcial">Parcial</SelectItem>
+                    <SelectItem value="Pos">Pós</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -322,11 +355,11 @@ export default function EstoqueNotasPendencias() {
           </CardContent>
         </Card>
 
-        {/* Tabela de Pendências */}
+        {/* Tabela de Notas */}
         <Card>
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <CardTitle>Pendências - Conferência de Notas</CardTitle>
+              <CardTitle>Notas Pendentes</CardTitle>
               <div className="flex gap-2">
                 <Button onClick={handleRefresh} variant="outline">
                   Atualizar
@@ -345,68 +378,99 @@ export default function EstoqueNotasPendencias() {
                   <TableRow>
                     <TableHead>Nº Nota</TableHead>
                     <TableHead>Fornecedor</TableHead>
+                    <TableHead>Tipo Pag.</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-center">Qtd Inf./Cad./Conf.</TableHead>
                     <TableHead>Valor Total</TableHead>
-                    <TableHead>Conferido</TableHead>
-                    <TableHead>% Conf.</TableHead>
-                    <TableHead>Conferência</TableHead>
-                    <TableHead>Pagamento</TableHead>
-                    <TableHead>SLA</TableHead>
+                    <TableHead>Dias</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pendenciasFiltradas.length === 0 ? (
+                  {notasFiltradas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                        Nenhuma pendência encontrada
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        Nenhuma nota pendente encontrada
                       </TableCell>
                     </TableRow>
                   ) : (
-                    pendenciasFiltradas.map(pendencia => (
-                      <TableRow key={pendencia.id} className={getRowClass(pendencia)}>
-                        <TableCell className="font-mono text-xs">{pendencia.notaId}</TableCell>
-                        <TableCell>{pendencia.fornecedor}</TableCell>
-                        <TableCell>{formatCurrency(pendencia.valorTotal)}</TableCell>
+                    notasFiltradas.map(nota => (
+                      <TableRow key={nota.id} className={getRowClass(nota)}>
+                        <TableCell className="font-mono text-xs">{nota.numeroNota}</TableCell>
+                        <TableCell>{nota.fornecedor}</TableCell>
+                        <TableCell>{getTipoPagamentoBadge(nota.tipoPagamento)}</TableCell>
+                        <TableCell>{getStatusBadge(nota.status)}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Progress value={pendencia.percentualConferencia} className="w-16 h-2" />
-                            <span className="text-xs text-muted-foreground">
-                              {formatCurrency(pendencia.valorConferido)}
-                            </span>
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="font-medium">{nota.qtdInformada}</span>
+                            <span className="text-muted-foreground">/</span>
+                            <span className="text-primary font-medium">{nota.qtdCadastrada}</span>
+                            <span className="text-muted-foreground">/</span>
+                            <span className="text-primary font-medium">{nota.qtdConferida}</span>
+                            {nota.qtdCadastrada > 0 && (
+                              <Progress 
+                                value={(nota.qtdConferida / nota.qtdCadastrada) * 100} 
+                                className="w-12 h-2 ml-2" 
+                              />
+                            )}
                           </div>
                         </TableCell>
+                        <TableCell>{formatCurrency(nota.valorTotal)}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={
-                            pendencia.percentualConferencia === 100 
-                              ? 'bg-green-500/10 text-green-600' 
-                              : pendencia.percentualConferencia >= 50 
-                                ? 'bg-blue-500/10 text-blue-600'
-                                : 'bg-yellow-500/10 text-yellow-600'
-                          }>
-                            {pendencia.percentualConferencia}%
-                          </Badge>
+                          {(() => {
+                            const dias = calcularDiasDecorridos(nota.data);
+                            if (dias >= 5) {
+                              return (
+                                <div className="flex items-center gap-1 text-destructive">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {dias}d
+                                </div>
+                              );
+                            } else if (dias >= 3) {
+                              return (
+                                <div className="flex items-center gap-1 text-warning">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  {dias}d
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                {dias}d
+                              </div>
+                            );
+                          })()}
                         </TableCell>
-                        <TableCell>{getStatusConferenciaBadge(pendencia.statusConferencia)}</TableCell>
-                        <TableCell>{getStatusPagamentoBadge(pendencia.statusPagamento)}</TableCell>
-                        <TableCell>{getSLABadge(pendencia)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            {/* Botão Editar - visível apenas para notas não pagas */}
-                            {pendencia.statusPagamento !== 'Pago' && (
+                            {/* Botão Cadastrar Produtos */}
+                            {['Criada', 'Aguardando Conferencia', 'Conferencia Parcial'].includes(nota.status) && (
                               <Button 
                                 variant="ghost" 
                                 size="sm"
-                                onClick={() => handleEditarNota(pendencia.notaId)}
-                                title="Editar nota"
+                                onClick={() => handleCadastrarProdutos(nota)}
+                                title="Cadastrar produtos"
                               >
-                                <Pencil className="h-4 w-4" />
+                                <Plus className="h-4 w-4" />
                               </Button>
                             )}
-                            {/* Botão Ver Detalhes - sempre visível */}
+                            {/* Botão Conferir */}
+                            {['Aguardando Conferencia', 'Conferencia Parcial'].includes(nota.status) && nota.qtdCadastrada > 0 && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleConferir(nota)}
+                                title="Realizar conferência"
+                              >
+                                <ClipboardCheck className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {/* Botão Ver Detalhes */}
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              onClick={() => handleVerDetalhes(pendencia)}
+                              onClick={() => handleVerDetalhes(nota)}
                               title="Ver detalhes"
                             >
                               <Eye className="h-4 w-4" />
@@ -421,125 +485,6 @@ export default function EstoqueNotasPendencias() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Modal de Detalhes (Somente Leitura) */}
-        <Dialog open={dialogDetalhes} onOpenChange={setDialogDetalhes}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Detalhes - Nota {pendenciaSelecionada?.notaId}
-              </DialogTitle>
-            </DialogHeader>
-            
-            {pendenciaSelecionada && (
-              <div className="space-y-6">
-                {/* Informações Gerais */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-sm text-muted-foreground">Fornecedor</p>
-                    <p className="font-medium">{pendenciaSelecionada.fornecedor}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-sm text-muted-foreground">Data Entrada</p>
-                    <p className="font-medium">{new Date(pendenciaSelecionada.dataCriacao).toLocaleDateString('pt-BR')}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <p className="text-sm text-muted-foreground">Dias Decorridos</p>
-                    <p className="font-medium">{pendenciaSelecionada.diasDecorridos} dias</p>
-                  </div>
-                </div>
-
-                {/* Progresso de Conferência */}
-                <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium mb-3">Progresso de Conferência</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Aparelhos conferidos</span>
-                      <span className="font-medium">{pendenciaSelecionada.aparelhosConferidos}/{pendenciaSelecionada.aparelhosTotal}</span>
-                    </div>
-                    <Progress value={pendenciaSelecionada.percentualConferencia} className="h-3" />
-                    <p className="text-center text-sm font-medium">{pendenciaSelecionada.percentualConferencia}%</p>
-                  </div>
-                </div>
-
-                {/* Valores */}
-                <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium mb-3">Valores</h4>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-3 rounded-lg bg-muted/30">
-                      <p className="text-sm text-muted-foreground">Total</p>
-                      <p className="text-lg font-bold">{formatCurrency(pendenciaSelecionada.valorTotal)}</p>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-green-500/10">
-                      <p className="text-sm text-green-600">Conferido</p>
-                      <p className="text-lg font-bold text-green-600">{formatCurrency(pendenciaSelecionada.valorConferido)}</p>
-                    </div>
-                    <div className="text-center p-3 rounded-lg bg-orange-500/10">
-                      <p className="text-sm text-orange-600">Pendente</p>
-                      <p className="text-lg font-bold text-orange-600">{formatCurrency(pendenciaSelecionada.valorPendente)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Status Financeiro */}
-                <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium mb-3">Status Financeiro</h4>
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Status Pagamento</p>
-                      {getStatusPagamentoBadge(pendenciaSelecionada.statusPagamento)}
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Status Conferência</p>
-                      {getStatusConferenciaBadge(pendenciaSelecionada.statusConferencia)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Timeline */}
-                <div className="p-4 rounded-lg border">
-                  <h4 className="font-medium mb-3">Timeline (Compartilhada com Financeiro)</h4>
-                  <div className="space-y-3 max-h-48 overflow-y-auto">
-                    {pendenciaSelecionada.timeline.map((entry) => (
-                      <div key={entry.id} className="flex gap-3 text-sm">
-                        <div className="flex-shrink-0 w-2 h-2 mt-2 rounded-full bg-primary" />
-                        <div>
-                          <p className="text-muted-foreground">
-                            {new Date(entry.data).toLocaleDateString('pt-BR')} {new Date(entry.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                          <p className="font-medium">{entry.titulo}</p>
-                          <p className="text-muted-foreground">{entry.descricao}</p>
-                          {entry.responsavel && (
-                            <p className="text-xs text-muted-foreground">Por: {entry.responsavel}</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <DialogFooter>
-              {pendenciaSelecionada?.statusPagamento !== 'Pago' && (
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    setDialogDetalhes(false);
-                    handleEditarNota(pendenciaSelecionada!.notaId);
-                  }}
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Editar Nota
-                </Button>
-              )}
-              <Button onClick={() => setDialogDetalhes(false)}>
-                Fechar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </EstoqueLayout>
   );
