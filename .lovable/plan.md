@@ -1,257 +1,213 @@
 
-# Plano: Reformulação Completa do Fluxo de Notas de Entrada de Produtos
+# Plano: Sincronizar Notas de Entrada com Financeiro
 
-## Resumo Executivo
+## Problema Identificado
 
-Este plano reformula o sistema de Notas de Entrada para seguir rigorosamente um novo fluxo baseado em **STATUS + TIPO DE PAGAMENTO + ATUAÇÃO ATUAL** como regras mestras. O layout visual existente sera mantido, mas a logica de comportamento dos campos, transicoes de status e integracao entre modulos sera completamente reestruturada.
+O sistema possui **duas fontes de dados paralelas que não estão sincronizadas**:
 
----
+| Sistema | Arquivo | Armazenamento | Consumido por |
+|---------|---------|---------------|---------------|
+| **Novo** | `notaEntradaFluxoApi.ts` | `notasEntrada[]` | EstoqueNotaCadastrar, EstoqueNotasPendencias |
+| **Antigo** | `pendenciasFinanceiraApi.ts` | `pendenciasFinanceiras[]` | FinanceiroNotasPendencias |
 
-## ✅ IMPLEMENTADO: Conceito de Lançamento Inicial
-
-### Regras Implementadas:
-1. **Lançamento Inicial**: Cadastro da nota SEM produtos - apenas registra existência e define fluxo
-2. **Quadro de Produtos**: Bloqueado (read-only) no lançamento inicial
-3. **Tipo de Pagamento**: Campo obrigatório que governa todo o fluxo
-4. **Atuação Atual**: Campo controlado pelo sistema, indica qual área tem ação pendente
-
-### Tipos de Pagamento (novos nomes):
-- `Pagamento Pos` - 100% após conferência
-- `Pagamento Parcial` - Adiantamento + restante após conferência  
-- `Pagamento 100% Antecipado` - Pagamento total antes da conferência
-
-### Atuação Inicial Automática:
-| Tipo de Pagamento | Atuação Inicial |
-|-------------------|-----------------|
-| Pagamento Pós | Estoque |
-| Pagamento Parcial | Financeiro |
-| Pagamento 100% Antecipado | Financeiro |
+Quando uma nota e lançada via `criarNotaEntrada()`, ela **não cria registro** no sistema antigo `pendenciasFinanceiras[]`, por isso não aparece no Financeiro.
 
 ---
 
-## 1. Status da Nota (10 obrigatórios)
+## Solução: Adaptar Financeiro para Consumir Novo Sistema
 
-| Status | Descrição | Próximo Status Possível |
-|--------|-----------|-------------------------|
-| `Criada` | Nota recém cadastrada | Aguardando Pagamento Inicial, Aguardando Conferencia |
-| `Aguardando Pagamento Inicial` | Nota esperando pagamento (Antecipado/Parcial) | Pagamento Parcial Realizado, Pagamento Concluido |
-| `Pagamento Parcial Realizado` | Primeiro pagamento feito (Parcial) | Aguardando Conferencia |
-| `Pagamento Concluido` | 100% pago (antes de conferir) | Aguardando Conferencia |
-| `Aguardando Conferencia` | Produtos a conferir | Conferencia Parcial |
-| `Conferencia Parcial` | Parte dos aparelhos conferida | Conferencia Concluida, Com Divergencia |
-| `Conferencia Concluida` | 100% conferido | Aguardando Pagamento Final, Finalizada |
-| `Aguardando Pagamento Final` | Conferência ok, falta pagar (Parcial/Pós) | Finalizada |
-| `Com Divergencia` | Discrepância detectada | Aguardando Pagamento Final (após resolução) |
-| `Finalizada` | Nota encerrada (somente leitura) | - |
+A melhor solução e adaptar `FinanceiroNotasPendencias.tsx` para consumir diretamente as notas do novo sistema (`notaEntradaFluxoApi`), mantendo compatibilidade com o layout atual.
 
 ---
 
-## 2. Interface NotaEntrada Atualizada
+## Arquivos a Modificar
+
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `src/utils/notaEntradaFluxoApi.ts` | Adicionar funções | Criar `getNotasParaFinanceiro()` que filtra notas com `atuacaoAtual === 'Financeiro'` |
+| `src/pages/FinanceiroNotasPendencias.tsx` | Modificar | Consumir novo sistema ao inves do antigo |
+
+---
+
+## Etapa 1: Adicionar Funções de Consulta para Financeiro
+
+**Arquivo**: `src/utils/notaEntradaFluxoApi.ts`
+
+Adicionar funções para o Financeiro consumir as notas:
 
 ```typescript
-export interface NotaEntrada {
+// Obter notas para o módulo Financeiro
+// Exibe notas onde atuacaoAtual === 'Financeiro' OU que precisam de ação financeira
+export const getNotasParaFinanceiro = (): NotaEntrada[] => {
+  return notasEntrada.filter(nota => {
+    // Notas com atuação atual no Financeiro
+    if (nota.atuacaoAtual === 'Financeiro') return true;
+    
+    // Notas aguardando pagamento (mesmo se atuação é Estoque, mostrar para acompanhamento)
+    const statusFinanceiros = [
+      'Aguardando Pagamento Inicial',
+      'Aguardando Pagamento Final',
+      'Com Divergencia'
+    ];
+    if (statusFinanceiros.includes(nota.status)) return true;
+    
+    // Incluir notas finalizadas para histórico (opcional)
+    // if (nota.status === 'Finalizada') return true;
+    
+    return false;
+  });
+};
+
+// Converter NotaEntrada para formato compatível com PendenciaFinanceira
+// Isso permite manter o layout atual do FinanceiroNotasPendencias
+export const converterNotaParaPendencia = (nota: NotaEntrada): {
   id: string;
-  numeroNota: string;
-  data: string;
+  notaId: string;
   fornecedor: string;
-  
-  // Sistema de status
-  status: NotaEntradaStatus;
-  
-  // ✅ NOVO: Atuação Atual - controlado pelo sistema
-  atuacaoAtual: 'Estoque' | 'Financeiro' | 'Encerrado';
-  
-  // Tipo de pagamento (novos nomes)
-  tipoPagamento: 'Pagamento Pos' | 'Pagamento Parcial' | 'Pagamento 100% Antecipado';
-  tipoPagamentoBloqueado: boolean;
-  
-  // Quantidades
+  valorTotal: number;
+  valorConferido: number;
+  valorPendente: number;
+  valorPago: number;
+  statusPagamento: string;
+  statusConferencia: string;
+  atuacaoAtual: AtuacaoAtual;
+  tipoPagamento: TipoPagamentoNota;
   qtdInformada: number;
   qtdCadastrada: number;
   qtdConferida: number;
-  
-  // Valores
-  valorTotal: number;
-  valorPago: number;
-  valorPendente: number;
-  valorConferido: number;
-  
-  // Produtos
-  produtos: ProdutoNotaEntrada[];
-  
-  // Timeline imutável
-  timeline: TimelineNotaEntrada[];
-  
-  // Alertas
-  alertas: AlertaNota[];
-  
-  // Pagamentos registrados
-  pagamentos: Pagamento[];
-  
-  // Metadados
   dataCriacao: string;
-  dataFinalizacao?: string;
-  responsavelCriacao: string;
-  formaPagamento?: 'Dinheiro' | 'Pix';
-  observacoes?: string;
-}
+  status: NotaEntradaStatus;
+  timeline: TimelineNotaEntrada[];
+  podeEditar: boolean;
+} => {
+  return {
+    id: `PEND-${nota.id}`,
+    notaId: nota.id,
+    fornecedor: nota.fornecedor,
+    valorTotal: nota.valorTotal,
+    valorConferido: nota.valorConferido,
+    valorPendente: nota.valorPendente,
+    valorPago: nota.valorPago,
+    statusPagamento: nota.valorPago >= nota.valorTotal ? 'Pago' : 
+                     nota.valorPago > 0 ? 'Parcial' : 'Aguardando',
+    statusConferencia: nota.status,
+    atuacaoAtual: nota.atuacaoAtual,
+    tipoPagamento: nota.tipoPagamento,
+    qtdInformada: nota.qtdInformada,
+    qtdCadastrada: nota.qtdCadastrada,
+    qtdConferida: nota.qtdConferida,
+    dataCriacao: nota.dataCriacao,
+    status: nota.status,
+    timeline: nota.timeline,
+    podeEditar: nota.atuacaoAtual === 'Financeiro'
+  };
+};
 ```
 
 ---
 
-## 3. Arquivos Modificados/Criados
+## Etapa 2: Adaptar FinanceiroNotasPendencias.tsx
 
-### ✅ 3.1 notaEntradaFluxoApi.ts (ATUALIZADO)
-- Interface `NotaEntrada` com campo `atuacaoAtual`
-- Novos tipos de pagamento: `Pagamento Pos`, `Pagamento Parcial`, `Pagamento 100% Antecipado`
-- Função `definirAtuacaoInicial()` - define atuação baseada no tipo de pagamento
-- Função `alterarAtuacao()` - altera atuação com registro na timeline
-- Função `podeEditarNota()` - verifica permissão baseada na atuação
-- Alterações automáticas de atuação após eventos (pagamento, conferência)
+**Arquivo**: `src/pages/FinanceiroNotasPendencias.tsx`
 
-### ✅ 3.2 EstoqueNotaCadastrar.tsx (REFORMULADO)
-- Conceito de **Lançamento Inicial** implementado
-- Quadro de produtos **bloqueado** visualmente
-- Campo "Tipo de Pagamento" obrigatório
-- Campo "Atuação Atual" somente leitura (calculado automaticamente)
-- Alerta informativo explicando o fluxo
-- Descrição dinâmica do fluxo baseada no tipo selecionado
+Principais alteracões:
 
-### ✅ 3.3 EstoqueNotasPendencias.tsx (ATUALIZADO)
-- Nova coluna "Atuação Atual" com badges visuais
-- Badges de tipo de pagamento atualizados
-- Verificação de permissão via `podeEditarNota()`
-- Botões de ação condicionais (só aparecem se Atuação = Estoque)
-- Indicador visual de bloqueio quando Atuação ≠ Estoque
-
-### ✅ 3.4 EstoqueNotaCadastrarProdutos.tsx (JÁ CRIADO)
-- Rota: `/estoque/nota/:id/cadastrar-produtos`
-- Campos: Tipo Produto, Marca, Modelo, Qtd, Custo Unitário
-
-### ✅ 3.5 EstoqueNotaConferencia.tsx (JÁ CRIADO)
-- Rota: `/estoque/nota/:id/conferencia`
-- Campos habilitados: IMEI, Cor, Categoria
-- Barra de progresso: Qtd Conferida / Qtd Cadastrada
-
----
-
-## 4. Fluxos por Tipo de Pagamento
-
-### 4.1 Pagamento Pós (100% após conferência)
-```
-Lançamento Inicial → Atuação = Estoque
-  ↓
-Estoque cadastra produtos
-  ↓
-Estoque realiza conferência
-  ↓
-100% conferido → Atuação = Financeiro
-  ↓
-Financeiro paga 100%
-  ↓
-Atuação = Encerrado
+1. **Importar novo sistema**:
+```typescript
+import { 
+  getNotasParaFinanceiro, 
+  converterNotaParaPendencia,
+  registrarPagamento,
+  NotaEntrada,
+  AtuacaoAtual,
+  TipoPagamentoNota
+} from '@/utils/notaEntradaFluxoApi';
 ```
 
-### 4.2 Pagamento Parcial
-```
-Lançamento Inicial → Atuação = Financeiro
-  ↓
-Financeiro paga adiantamento → Atuação = Estoque
-  ↓
-Estoque cadastra produtos e confere
-  ↓
-100% conferido → Atuação = Financeiro
-  ↓
-Financeiro paga restante
-  ↓
-Atuação = Encerrado
+2. **Atualizar estado para consumir novo sistema**:
+```typescript
+// Antes:
+const [pendencias, setPendencias] = useState<PendenciaFinanceira[]>(getPendencias());
+
+// Depois:
+const notasFinanceiro = getNotasParaFinanceiro();
+const [pendencias, setPendencias] = useState(
+  notasFinanceiro.map(converterNotaParaPendencia)
+);
 ```
 
-### 4.3 Pagamento 100% Antecipado
-```
-Lançamento Inicial → Atuação = Financeiro
-  ↓
-Financeiro paga 100% → Atuação = Estoque
-  ↓
-Estoque cadastra produtos e confere
-  ↓
-100% conferido → Atuação = Encerrado (automático)
+3. **Adicionar coluna Atuacao Atual**:
+- Badge verde "Financeiro" quando pode editar
+- Badge cinza "Estoque" quando somente leitura
+
+4. **Adicionar coluna Tipo Pagamento**:
+- Exibir "Pos", "Parcial" ou "100% Antecipado"
+
+5. **Bloquear ações quando Atuação != Financeiro**:
+- Botão de pagamento desabilitado se `atuacaoAtual !== 'Financeiro'`
+- Mostrar tooltip explicando o motivo
+
+6. **Atualizar função de pagamento**:
+```typescript
+const handleFinalizarPagamento = (dados: DadosPagamento) => {
+  if (!pendenciaSelecionada) return;
+  
+  // Usar novo sistema
+  const resultado = registrarPagamento(pendenciaSelecionada.notaId, {
+    valor: pendenciaSelecionada.valorPendente,
+    formaPagamento: dados.formaPagamento,
+    contaPagamento: dados.contaPagamento,
+    comprovante: dados.comprovante,
+    responsavel: dados.responsavel,
+    tipo: pendenciaSelecionada.valorPago > 0 ? 'final' : 'inicial'
+  });
+
+  if (resultado) {
+    toast.success(`Pagamento da nota ${pendenciaSelecionada.notaId} confirmado!`);
+    // Recarregar dados do novo sistema
+    const novasNotas = getNotasParaFinanceiro();
+    setPendencias(novasNotas.map(converterNotaParaPendencia));
+    setDialogPagamento(false);
+  }
+};
 ```
 
 ---
 
-## 5. Regras de Permissão por Tela
+## Etapa 3: Adicionar Colunas na Tabela
 
-| Tela | Atuação Atual | Permissão |
-|------|---------------|-----------|
-| Estoque > Notas Pendências | Estoque | Edição liberada |
-| Estoque > Notas Pendências | Financeiro | Somente leitura |
-| Financeiro > Conferência de Notas | Financeiro | Edição liberada |
-| Financeiro > Conferência de Notas | Estoque | Somente leitura |
+Novas colunas a adicionar:
 
----
-
-## 6. Timeline Obrigatória
-
-Eventos registrados automaticamente:
-- ✅ Lançamento inicial da nota
-- ✅ Definição do tipo de pagamento
-- ✅ Alterações de Atuação Atual
-- ✅ Pagamentos (parcial e total)
-- ✅ Início e fim da conferência
-- ✅ Alertas de divergência
-- ✅ Encerramento da nota
+| Coluna | Descricao | Badge/Formato |
+|--------|-----------|---------------|
+| Tipo Pagamento | Pos, Parcial, Antecipado | Badge colorido |
+| Atuacao Atual | Estoque, Financeiro, Encerrado | Badge com icone |
+| Valor Pago | Quanto já foi pago | R$ formatado |
+| Qtd Informada/Cadastrada/Conferida | Progresso de quantidade | X / Y / Z |
 
 ---
 
-## 7. Próximos Passos (PENDENTE)
-
-### 7.1 FinanceiroNotasPendencias.tsx
-- [ ] Adaptar para novos status e tipos de pagamento
-- [ ] Implementar verificação de atuação
-- [ ] Bloquear pagamento Pós antes de conferência
-- [ ] Mostrar Valor Nota, Valor Pago, Valor Pendente
-
-### 7.2 EstoqueNotaDetalhes.tsx  
-- [ ] Unificar visualização com timeline visível
-- [ ] Seção de alertas em destaque
-- [ ] Bloqueio total quando Finalizada
-
-### 7.3 pendenciasFinanceiraApi.ts
-- [ ] Adaptar interface para novos status
-- [ ] Validar regras de pagamento por tipo
-
----
-
-## 8. Resumo Visual do Fluxo com Atuação
+## Resumo das Alteracões
 
 ```text
-                    LANÇAMENTO INICIAL
-                           |
-         +-----------------+-----------------+
-         |                 |                 |
-    [Pag. Pós]       [Pag. Parcial]   [100% Antecipado]
-    Atuação:         Atuação:          Atuação:
-    ESTOQUE          FINANCEIRO        FINANCEIRO
-         |                 |                 |
-         |            Paga Inicial      Paga 100%
-         |                 |                 |
-         |            Atuação:          Atuação:
-         |            ESTOQUE           ESTOQUE
-         |                 |                 |
-         +--------+--------+--------+--------+
-                  |
-           CADASTRA PRODUTOS
-           CONFERE 100%
-                  |
-    +-------------+-------------+
-    |             |             |
-[Pós]        [Parcial]     [Antecipado]
-Atuação:     Atuação:      Atuação:
-FINANCEIRO   FINANCEIRO    ENCERRADO
-    |             |        (automático)
-Paga 100%    Paga Rest
-    |             |
-Atuação:     Atuação:
-ENCERRADO    ENCERRADO
+1. notaEntradaFluxoApi.ts
+   ├── Adicionar getNotasParaFinanceiro()
+   └── Adicionar converterNotaParaPendencia()
+
+2. FinanceiroNotasPendencias.tsx
+   ├── Importar novo sistema
+   ├── Substituir getPendencias() por getNotasParaFinanceiro()
+   ├── Adicionar colunas: Tipo Pagamento, Atuacao Atual
+   ├── Bloquear ações quando Atuacao != Financeiro
+   └── Usar registrarPagamento() do novo sistema
 ```
+
+---
+
+## Resultado Esperado
+
+Após implementação:
+- Nota lançada no Estoque aparece **instantaneamente** no Financeiro
+- Financeiro visualiza a **Atuacao Atual** para saber se pode agir
+- Botões bloqueados quando atuação não é do Financeiro
+- Fluxo unificado entre módulos via um único sistema (`notaEntradaFluxoApi`)
