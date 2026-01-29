@@ -211,7 +211,7 @@ export default function Vendas() {
     <VendasLayout title="Gestão de Vendas">
       {/* Dashboard Cards - Sticky */}
       <div className="sticky top-0 z-10 bg-background pb-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-4 mb-6">
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -270,7 +270,7 @@ export default function Vendas() {
       {/* Filtros */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-8 3xl:grid-cols-9 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Data Início</label>
               <Input

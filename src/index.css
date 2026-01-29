@@ -174,4 +174,22 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Classes utilitárias para responsividade */
+  .responsive-grid-cards {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4;
+  }
+
+  .responsive-grid-filters {
+    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4;
+  }
+
+  .responsive-padding {
+    @apply p-3 sm:p-4 lg:p-6 xl:p-8;
+  }
+
+  /* Container responsivo para conteúdo principal */
+  .responsive-container {
+    @apply w-full max-w-full px-3 sm:px-4 lg:px-6 xl:px-8 2xl:px-10;
+  }
 }

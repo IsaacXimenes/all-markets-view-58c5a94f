@@ -240,7 +240,7 @@ export default function FinanceiroFiado() {
   return (
     <FinanceiroLayout title="Conferências - Fiado">
       {/* Cards de resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -301,7 +301,7 @@ export default function FinanceiroFiado() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-7 gap-4">
               <div>
                 <Label htmlFor="dataInicio">Data Vencimento Início</Label>
                 <Input

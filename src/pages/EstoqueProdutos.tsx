@@ -120,7 +120,7 @@ export default function EstoqueProdutos() {
       <div className="space-y-6">
         {/* Dashboard Cards - Sticky */}
         <div className="sticky top-0 z-10 bg-background pb-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -180,7 +180,7 @@ export default function EstoqueProdutos() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-4 items-end">
+        <div className="flex flex-wrap gap-3 xl:gap-4 items-end">
           <div>
             <p className="text-xs text-muted-foreground mb-1">IMEI</p>
             <Input

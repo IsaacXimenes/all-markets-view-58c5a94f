@@ -349,7 +349,7 @@ export default function EstoqueProdutosPendentes() {
       </Card>
 
       {/* Dashboard Cards - Sticky */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6 sticky top-0 z-10 bg-background py-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-7 gap-4 mb-6 sticky top-0 z-10 bg-background py-2">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -444,7 +444,7 @@ export default function EstoqueProdutosPendentes() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
             <div>
               <Label htmlFor="imei">IMEI</Label>
               <InputComMascara

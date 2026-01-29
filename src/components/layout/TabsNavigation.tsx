@@ -58,14 +58,14 @@ export function TabsNavigation({ tabs, size = 'default' }: TabsNavigationProps) 
         size="icon"
         className={cn(
           "shrink-0 transition-opacity",
-          isSmall ? "h-7 w-7" : "h-8 w-8",
+          isSmall ? "h-7 w-7" : "h-8 w-8 xl:h-9 xl:w-9",
           !canScrollLeft && "opacity-30 cursor-not-allowed"
         )}
         onClick={handleScrollLeft}
         disabled={!canScrollLeft}
         aria-label="Rolar para esquerda"
       >
-        <ChevronLeft className={cn(isSmall ? "h-3.5 w-3.5" : "h-4 w-4")} />
+        <ChevronLeft className={cn(isSmall ? "h-3.5 w-3.5" : "h-4 w-4 xl:h-5 xl:w-5")} />
       </Button>
 
       <div
@@ -82,14 +82,14 @@ export function TabsNavigation({ tabs, size = 'default' }: TabsNavigationProps) 
               to={tab.href}
               className={cn(
                 "flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap",
-                isSmall ? "px-3 py-2 text-xs" : "px-4 py-2 text-sm",
+                isSmall ? "px-3 py-2 text-xs" : "px-4 py-2 text-sm xl:px-5 xl:text-base",
                 "font-medium",
                 isActive
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
               )}
             >
-              <Icon className={cn(isSmall ? "h-3.5 w-3.5" : "h-4 w-4")} />
+              <Icon className={cn(isSmall ? "h-3.5 w-3.5" : "h-4 w-4 xl:h-5 xl:w-5")} />
               {tab.name}
             </Link>
           );
@@ -101,14 +101,14 @@ export function TabsNavigation({ tabs, size = 'default' }: TabsNavigationProps) 
         size="icon"
         className={cn(
           "shrink-0 transition-opacity",
-          isSmall ? "h-7 w-7" : "h-8 w-8",
+          isSmall ? "h-7 w-7" : "h-8 w-8 xl:h-9 xl:w-9",
           !canScrollRight && "opacity-30 cursor-not-allowed"
         )}
         onClick={handleScrollRight}
         disabled={!canScrollRight}
         aria-label="Rolar para direita"
       >
-        <ChevronRight className={cn(isSmall ? "h-3.5 w-3.5" : "h-4 w-4")} />
+        <ChevronRight className={cn(isSmall ? "h-3.5 w-3.5" : "h-4 w-4 xl:h-5 xl:w-5")} />
       </Button>
     </div>
   );

@@ -59,17 +59,20 @@ export function Dashboard() {
     <div className="min-h-screen flex">
       <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
       
-      <div className={cn("flex-1 flex flex-col transition-all duration-300", isSidebarCollapsed ? "ml-16" : "ml-64")}>
+      <div className={cn(
+        "flex-1 flex flex-col transition-all duration-300",
+        isSidebarCollapsed ? "ml-16" : "ml-64 xl:ml-72"
+      )}>
         <Navbar />
         
         <main className="flex-1 transition-all duration-300 overflow-hidden">
-          <div className="container max-w-full h-full p-4 lg:p-6 flex flex-col animate-fade-in">
-            <div className="bg-muted/30 rounded-lg p-4 mb-4 text-center border border-border">
-              <h1 className="text-2xl font-bold">Painel de Gestão</h1>
+          <div className="w-full max-w-full h-full p-3 sm:p-4 lg:p-6 xl:p-8 flex flex-col animate-fade-in">
+            <div className="bg-muted/30 rounded-lg p-3 sm:p-4 mb-4 text-center border border-border">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Painel de Gestão</h1>
             </div>
             
             {/* Stats Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4 animate-slide-up" style={{ '--delay': '100ms' } as React.CSSProperties}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-6 3xl:grid-cols-7 gap-3 mb-4 animate-slide-up" style={{ '--delay': '100ms' } as React.CSSProperties}>
               <StatsCard 
                 title="Receita Hoje" 
                 value={formatCurrency(receitaHoje)}
@@ -154,9 +157,9 @@ export function Dashboard() {
             </div>
             
             {/* Main Content Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0">
+            <div className="grid grid-cols-1 lg:grid-cols-3 2xl:grid-cols-4 gap-4 flex-1 min-h-0">
               {/* Left column - Resumo Rápido */}
-              <div className="lg:col-span-2 flex flex-col gap-4 animate-slide-up overflow-hidden" style={{ '--delay': '200ms' } as React.CSSProperties}>
+              <div className="lg:col-span-2 2xl:col-span-3 flex flex-col gap-4 animate-slide-up overflow-hidden" style={{ '--delay': '200ms' } as React.CSSProperties}>
                 <Card className="flex-1">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -165,7 +168,7 @@ export function Dashboard() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 2xl:grid-cols-5 gap-4">
                       <div className="text-center p-4 bg-muted/50 rounded-lg">
                         <p className="text-2xl font-bold text-primary">{vendas.length}</p>
                         <p className="text-sm text-muted-foreground">Vendas</p>
