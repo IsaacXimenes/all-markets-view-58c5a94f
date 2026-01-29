@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  getNotasPendentes, 
+  getNotasParaEstoque, 
   NotaEntrada,
   NotaEntradaStatus
 } from '@/utils/notaEntradaFluxoApi';
@@ -24,13 +24,14 @@ import {
   Package,
   ClipboardCheck,
   Plus,
-  Zap
+  Zap,
+  Archive
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function EstoqueNotasPendencias() {
   const navigate = useNavigate();
-  const [notas, setNotas] = useState<NotaEntrada[]>(getNotasPendentes());
+  const [notas, setNotas] = useState<NotaEntrada[]>(getNotasParaEstoque());
   
   const fornecedoresList = getFornecedores();
   
@@ -67,6 +68,7 @@ export default function EstoqueNotasPendencias() {
   // Cards de resumo
   const resumo = useMemo(() => {
     const total = notasFiltradas.length;
+    const finalizadas = notasFiltradas.filter(n => n.status === 'Finalizada' || n.atuacaoAtual === 'Encerrado').length;
     const aguardandoConferencia = notasFiltradas.filter(n => 
       ['Aguardando Conferencia', 'Conferencia Parcial'].includes(n.status)
     ).length;
@@ -74,10 +76,10 @@ export default function EstoqueNotasPendencias() {
       ['Aguardando Pagamento Inicial', 'Aguardando Pagamento Final'].includes(n.status)
     ).length;
     const comDivergencia = notasFiltradas.filter(n => n.status === 'Com Divergencia').length;
-    const valorTotal = notasFiltradas.reduce((acc, n) => acc + n.valorTotal, 0);
+    const valorTotal = notasFiltradas.filter(n => n.atuacaoAtual !== 'Encerrado').reduce((acc, n) => acc + n.valorTotal, 0);
     const atuacaoEstoque = notasFiltradas.filter(n => n.atuacaoAtual === 'Estoque').length;
     
-    return { total, aguardandoConferencia, aguardandoPagamento, comDivergencia, valorTotal, atuacaoEstoque };
+    return { total, finalizadas, aguardandoConferencia, aguardandoPagamento, comDivergencia, valorTotal, atuacaoEstoque };
   }, [notasFiltradas]);
 
   const handleCadastrarProdutos = (nota: NotaEntrada) => {
@@ -137,7 +139,7 @@ export default function EstoqueNotasPendencias() {
   };
 
   const handleRefresh = () => {
-    setNotas(getNotasPendentes());
+    setNotas(getNotasParaEstoque());
     toast.success('Dados atualizados!');
   };
 
@@ -151,14 +153,15 @@ export default function EstoqueNotasPendencias() {
     'Conferencia Parcial',
     'Conferencia Concluida',
     'Aguardando Pagamento Final',
-    'Com Divergencia'
+    'Com Divergencia',
+    'Finalizada'
   ];
 
   return (
     <EstoqueLayout title="Notas Pendentes">
       <div className="space-y-6">
         {/* Cards de Resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -200,6 +203,17 @@ export default function EstoqueNotasPendencias() {
                   <p className="text-2xl font-bold text-destructive">{resumo.comDivergencia}</p>
                 </div>
                 <AlertTriangle className="h-10 w-10 text-destructive opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-primary/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Finalizadas</p>
+                  <p className="text-2xl font-bold text-primary">{resumo.finalizadas}</p>
+                </div>
+                <Archive className="h-10 w-10 text-primary opacity-50" />
               </div>
             </CardContent>
           </Card>
@@ -316,7 +330,7 @@ export default function EstoqueNotasPendencias() {
                 </Button>
                 <Button 
                   variant="outline" 
-                  className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950/30"
+                  className="border-destructive/50 text-destructive hover:bg-destructive/10"
                   onClick={() => navigate('/estoque/notas-urgencia')}
                 >
                   <Zap className="h-4 w-4 mr-2" />

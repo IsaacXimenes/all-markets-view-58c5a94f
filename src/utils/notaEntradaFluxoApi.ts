@@ -1092,6 +1092,12 @@ export const getNotasPendentes = (): NotaEntrada[] => {
   return notasEntrada.filter(n => statusNaoFinalizados.includes(n.status)).sort(ordenarPorDataCriacao);
 };
 
+// Obter TODAS as notas para o módulo Estoque (incluindo finalizadas para histórico)
+export const getNotasParaEstoque = (): NotaEntrada[] => {
+  // Retorna todas as notas - finalizadas ficam para histórico com indicação visual
+  return [...notasEntrada].sort(ordenarPorDataCriacao);
+};
+
 // ============= REGRAS DE CAMPOS =============
 
 export const podeEditarCampo = (
