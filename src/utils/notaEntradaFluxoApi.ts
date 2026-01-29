@@ -1192,14 +1192,10 @@ export interface PendenciaFinanceiraConvertida {
 }
 
 // Obter notas para o módulo Financeiro
-// Exibe TODAS as notas para acompanhamento, mas marca quais podem ser editadas
+// Exibe TODAS as notas (incluindo finalizadas para histórico)
 export const getNotasParaFinanceiro = (): NotaEntrada[] => {
-  return notasEntrada.filter(nota => {
-    // Não mostrar notas encerradas (ou mostrar para histórico se desejado)
-    if (nota.status === 'Finalizada') return false;
-    
-    return true; // Financeiro visualiza todas as notas em andamento
-  }).sort(ordenarPorDataCriacao);
+  // Retorna todas as notas - finalizadas ficam para histórico com indicação visual
+  return [...notasEntrada].sort(ordenarPorDataCriacao);
 };
 
 // Converter NotaEntrada para formato compatível com a UI do Financeiro

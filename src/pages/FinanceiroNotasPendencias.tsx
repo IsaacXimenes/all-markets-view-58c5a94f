@@ -25,7 +25,8 @@ import {
   CheckCircle,
   FileText,
   DollarSign,
-  Landmark
+  Landmark,
+  Archive
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -80,14 +81,15 @@ export default function FinanceiroNotasPendencias() {
   const resumo = useMemo(() => {
     const total = notasFiltradas.length;
     const aguardandoFinanceiro = notasFiltradas.filter(n => n.atuacaoAtual === 'Financeiro').length;
-    const valorPendente = notasFiltradas.reduce((acc, n) => acc + n.valorPendente, 0);
+    const finalizadas = notasFiltradas.filter(n => n.status === 'Finalizada' || n.atuacaoAtual === 'Encerrado').length;
+    const valorPendente = notasFiltradas.filter(n => n.atuacaoAtual !== 'Encerrado').reduce((acc, n) => acc + n.valorPendente, 0);
     const valorConferido = notasFiltradas.reduce((acc, n) => acc + n.valorConferido, 0);
     const alertasSLA = notasFiltradas.filter(n => {
       const dias = calcularDiasDecorridos(n.data);
       return dias >= 5 && n.atuacaoAtual !== 'Encerrado';
     }).length;
     
-    return { total, aguardandoFinanceiro, valorPendente, valorConferido, alertasSLA };
+    return { total, aguardandoFinanceiro, finalizadas, valorPendente, valorConferido, alertasSLA };
   }, [notasFiltradas]);
 
   const handleVerDetalhes = (nota: NotaEntrada) => {
@@ -215,7 +217,7 @@ export default function FinanceiroNotasPendencias() {
     <FinanceiroLayout title="Notas - Pendências">
       <div className="space-y-6">
         {/* Cards de Resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -235,6 +237,17 @@ export default function FinanceiroNotasPendencias() {
                   <p className="text-2xl font-bold text-primary">{resumo.aguardandoFinanceiro}</p>
                 </div>
                 <Landmark className="h-10 w-10 text-primary opacity-50" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-primary/20">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Finalizadas</p>
+                  <p className="text-2xl font-bold text-primary">{resumo.finalizadas}</p>
+                </div>
+                <Archive className="h-10 w-10 text-primary opacity-50" />
               </div>
             </CardContent>
           </Card>
@@ -339,6 +352,7 @@ export default function FinanceiroNotasPendencias() {
                     <SelectItem value="todos">Todos</SelectItem>
                     <SelectItem value="Financeiro">Financeiro</SelectItem>
                     <SelectItem value="Estoque">Estoque</SelectItem>
+                    <SelectItem value="Encerrado">Encerrado (Histórico)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
