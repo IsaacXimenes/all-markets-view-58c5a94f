@@ -64,11 +64,9 @@ export default function FinanceiroNotasPendencias() {
       return true;
     });
 
-    // Ordenar: notas com atuação Financeiro primeiro, depois por data
+    // Ordenar: registros mais recentes primeiro (por dataCriacao)
     return filtered.sort((a, b) => {
-      if (a.atuacaoAtual === 'Financeiro' && b.atuacaoAtual !== 'Financeiro') return -1;
-      if (a.atuacaoAtual !== 'Financeiro' && b.atuacaoAtual === 'Financeiro') return 1;
-      return new Date(a.data).getTime() - new Date(b.data).getTime();
+      return new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime();
     });
   }, [notas, filters]);
 

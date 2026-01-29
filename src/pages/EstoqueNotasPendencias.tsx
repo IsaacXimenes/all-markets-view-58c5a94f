@@ -58,13 +58,9 @@ export default function EstoqueNotasPendencias() {
       return true;
     });
 
-    // Ordenar: alertas primeiro, depois por data
+    // Ordenar: registros mais recentes primeiro (por dataCriacao)
     return filtered.sort((a, b) => {
-      // Notas com divergência primeiro
-      if (a.status === 'Com Divergencia' && b.status !== 'Com Divergencia') return -1;
-      if (a.status !== 'Com Divergencia' && b.status === 'Com Divergencia') return 1;
-      // Depois por data (mais antigas primeiro para SLA)
-      return new Date(a.data).getTime() - new Date(b.data).getTime();
+      return new Date(b.dataCriacao).getTime() - new Date(a.dataCriacao).getTime();
     });
   }, [notas, filters]);
 
