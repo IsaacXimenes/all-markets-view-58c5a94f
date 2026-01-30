@@ -1,290 +1,187 @@
 
-# Plano: Layout Verdadeiramente Responsivo (Container-Based)
+# Plano: Corrigir Responsividade Real para Mobile Preview
 
-## Diagnóstico do Problema Real
+## Diagnóstico Completo do Problema
 
-### Por que os breakpoints não funcionam no Mobile Preview:
+### Causa Raiz Identificada
 
-```text
-┌─────────────────────────────────────────────┐
-│  Seu Monitor (viewport 1920px)              │
-│  ┌───────────────────────────────────────┐  │
-│  │  Lovable Interface                    │  │
-│  │  ┌─────────────────────────────────┐  │  │
-│  │  │  Mobile Preview (iframe ~400px) │  │  │
-│  │  │                                 │  │  │
-│  │  │  Tailwind vê: viewport=1920px   │  │  │
-│  │  │  Aplica: lg:grid-cols-4 ❌      │  │  │
-│  │  │                                 │  │  │
-│  │  └─────────────────────────────────┘  │  │
-│  └───────────────────────────────────────┘  │
-└─────────────────────────────────────────────┘
+O problema NÃO está nos grids (Container Queries estão corretos). O problema está na **detecção de mobile** e **estrutura de layout**:
+
+1. **`useIsMobile()` usa `window.innerWidth`**:
+   - No Mobile Preview, o `window.innerWidth` retorna o tamanho do **monitor** (ex: 1920px), não do iframe (~400px)
+   - Resultado: `isMobile = false` mesmo quando deveria ser `true`
+
+2. **PageLayout aplica margem da sidebar**:
+   - Quando `isMobile = false`, aplica `ml-64` (256px de margem)
+   - Em um container de 400px, sobram apenas ~144px para o conteúdo
+   - O restante é **cortado**
+
+3. **App.css tem CSS residual**:
+   - `#root { max-width: 1280px; padding: 2rem; }` pode estar interferindo
+
+---
+
+## Solução em 3 Partes
+
+### Parte 1: Remover CSS Residual do App.css
+
+O arquivo `App.css` contém estilos do template Vite que podem interferir. Vamos limpar:
+
+**Antes:**
+```css
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
 ```
 
-O Tailwind usa **media queries de viewport**, não do container. Por isso `sm:`, `lg:`, `xl:` **ignoram** o tamanho real do container no Mobile Preview.
-
-### Solução: CSS Container Queries
-
-CSS Container Queries permitem que elementos respondam ao tamanho do **container pai**, não do viewport:
-
-```text
-┌─────────────────────────────────────────────┐
-│  Container pai (400px)                      │
-│  Container Query: @container (max-width:400px) │
-│  Resultado: 1 coluna ✅                     │
-└─────────────────────────────────────────────┘
+**Depois:**
+```css
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
 ```
 
 ---
 
-## Mudanças Planejadas
+### Parte 2: Corrigir PageLayout para Usar Overflow Correto
 
-### 1. Atualizar `ResponsiveContainers.tsx` com Container Queries
+O `PageLayout.tsx` precisa garantir que o conteúdo nunca ultrapasse o container disponível:
 
-Vou reescrever os 3 componentes para usar container queries nativas do CSS (suportadas em todos os navegadores modernos desde 2023):
-
-**ResponsiveCardGrid:**
-- Container pai com `container-type: inline-size`
-- Regras CSS com `@container` ao invés de media queries
-- Fallback: se container query não suportado, usa 1 coluna
-
-**ResponsiveFilterGrid:**
-- Mesmo approach
-- Filtros empilham automaticamente quando container < 500px
-
-**ResponsiveTableContainer:**
-- Scroll horizontal nativo sempre visível
-- Barra com alto contraste
-
-### 2. Adicionar CSS de Container Queries em `index.css`
-
-```css
-/* Container Queries para grids responsivos */
-.responsive-card-container {
-  container-type: inline-size;
-}
-
-.responsive-card-grid {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: 1fr; /* default: 1 coluna */
-}
-
-@container (min-width: 500px) {
-  .responsive-card-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@container (min-width: 768px) {
-  .responsive-card-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@container (min-width: 1024px) {
-  .responsive-card-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-```
-
-### 3. Atualizar `EstoqueProdutos.tsx`
-
-- Usar os novos containers atualizados
-- Garantir que o wrapper principal não corta conteúdo
-- Filtros em layout flexível com wrap
-
-### 4. Corrigir margem direita no `PageLayout.tsx`
-
-O problema de margem cortada vem do padding do container + overflow. Vou:
-- Garantir `max-w-full` no container
-- Remover qualquer `overflow-hidden` desnecessário nos wrappers
+**Mudanças:**
+- Adicionar `overflow-x-hidden` no container principal para evitar scroll horizontal
+- Garantir que o conteúdo interno use `w-full` e `max-w-full`
+- Usar `box-sizing: border-box` implicitamente via Tailwind
 
 ---
 
-## Detalhes Técnicos
+### Parte 3: Melhorar Detecção de Mobile com Fallback CSS
 
-### Novo `ResponsiveContainers.tsx`
+Como o Mobile Preview não altera `window.innerWidth`, precisamos de uma abordagem híbrida:
 
-```tsx
-// ResponsiveCardGrid - Usa container queries
-export function ResponsiveCardGrid({ children, className, cols = 4 }) {
-  return (
-    <div className="responsive-card-container w-full">
-      <div className={cn(
-        "responsive-card-grid", 
-        `responsive-card-grid--cols-${cols}`,
-        className
-      )}>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-// ResponsiveFilterGrid - Usa container queries  
-export function ResponsiveFilterGrid({ children, className }) {
-  return (
-    <div className="responsive-filter-container w-full">
-      <div className={cn("responsive-filter-grid", className)}>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-// ResponsiveTableContainer - Scroll nativo sempre visível
-export function ResponsiveTableContainer({ children, className }) {
-  return (
-    <div className={cn("w-full overflow-hidden rounded-lg border", className)}>
-      <div className="overflow-x-auto scrollbar-visible -webkit-overflow-scrolling-touch">
-        {children}
-      </div>
-    </div>
-  )
-}
-```
-
-### CSS em `index.css`
-
-```css
-/* Container Queries - Cards */
-.responsive-card-container {
-  container-type: inline-size;
-  width: 100%;
-}
-
-.responsive-card-grid {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: 1fr;
-}
-
-@container (min-width: 480px) {
-  .responsive-card-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-@container (min-width: 720px) {
-  .responsive-card-grid--cols-3,
-  .responsive-card-grid--cols-4,
-  .responsive-card-grid--cols-5,
-  .responsive-card-grid--cols-6 { 
-    grid-template-columns: repeat(3, 1fr); 
-  }
-}
-
-@container (min-width: 960px) {
-  .responsive-card-grid--cols-4,
-  .responsive-card-grid--cols-5,
-  .responsive-card-grid--cols-6 { 
-    grid-template-columns: repeat(4, 1fr); 
-  }
-}
-
-/* Container Queries - Filtros */
-.responsive-filter-container {
-  container-type: inline-size;
-  width: 100%;
-}
-
-.responsive-filter-grid {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: 1fr;
-}
-
-@container (min-width: 400px) {
-  .responsive-filter-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-@container (min-width: 640px) {
-  .responsive-filter-grid { grid-template-columns: repeat(3, 1fr); }
-}
-
-@container (min-width: 880px) {
-  .responsive-filter-grid { grid-template-columns: repeat(4, 1fr); }
-}
-
-/* Itens que ocupam linha inteira */
-.responsive-filter-grid .col-span-full {
-  grid-column: 1 / -1;
-}
-
-/* Scrollbar sempre visível para tabelas */
-.scrollbar-visible {
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: auto;
-}
-
-.scrollbar-visible::-webkit-scrollbar {
-  height: 14px;
-  display: block !important;
-}
-
-.scrollbar-visible::-webkit-scrollbar-track {
-  background: hsl(var(--muted));
-  border-radius: 7px;
-}
-
-.scrollbar-visible::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.5);
-  border-radius: 7px;
-  border: 2px solid hsl(var(--muted));
-}
-
-.scrollbar-visible::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.7);
-}
-```
+1. **Manter Container Queries nos grids** (já implementado - funciona para o conteúdo)
+2. **Adicionar regra CSS que oculta a sidebar em containers estreitos**:
+   - Usar CSS `@container` para detectar quando o espaço é pequeno
+   - Forçar `margin-left: 0` quando o container pai é estreito
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Ação |
-|---------|------|
-| `src/components/ui/ResponsiveContainers.tsx` | **Reescrever** - Usar container queries |
-| `src/index.css` | **Adicionar** - CSS de container queries |
-| `src/pages/EstoqueProdutos.tsx` | **Ajustar** - Usar novos containers + corrigir estrutura |
+### 1. `src/App.css` — Limpar CSS residual
+
+```css
+/* Remover limitações do template Vite */
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+```
+
+---
+
+### 2. `src/components/layout/PageLayout.tsx` — Ajustar estrutura
+
+Mudanças principais:
+- Adicionar container query wrapper no layout principal
+- Usar classe CSS que remove margin-left quando container é estreito
+- Garantir overflow controlado
+
+**Nova estrutura:**
+```tsx
+<div className="min-h-screen flex overflow-x-hidden">
+  <Sidebar ... />
+  
+  <div className="page-main-content flex-1 flex flex-col transition-all duration-300 min-w-0">
+    ...
+  </div>
+</div>
+```
+
+---
+
+### 3. `src/index.css` — Adicionar regra CSS para layout responsivo
+
+```css
+/* Container Query para o layout principal */
+.page-layout-wrapper {
+  container-type: inline-size;
+  width: 100%;
+}
+
+/* Quando o container principal é estreito, remover margem da sidebar */
+@container (max-width: 768px) {
+  .page-main-content {
+    margin-left: 0 !important;
+  }
+}
+```
+
+---
+
+## Fluxo da Solução
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  Mobile Preview (iframe ~400px)                             │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │  .page-layout-wrapper (container-type: inline-size)     ││
+│  │  Container width: ~400px                                 ││
+│  │                                                          ││
+│  │  @container (max-width: 768px) ativado!                 ││
+│  │  → margin-left: 0 (sidebar some)                        ││
+│  │  → Cards em 1 coluna                                    ││
+│  │  → Filtros em 1 coluna                                  ││
+│  │  → Conteúdo 100% visível ✅                             ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Resultado Esperado
 
 ### Mobile Preview (~400px):
-- **4 cards**: 1 por linha, empilhados verticalmente ✅
-- **Filtros**: 1-2 por linha, todos visíveis ✅
-- **Botão Limpar**: Visível, ocupando largura total ✅
-- **Tabela**: Scroll horizontal com barra visível ✅
-- **Margem direita**: Sem corte ✅
+- **Sidebar**: Oculta (acessível via hamburger menu)
+- **Cards**: 1 coluna, todos visíveis
+- **Filtros**: 1-2 colunas, todos visíveis
+- **Tabela**: Scroll horizontal com barra visível
+- **Nenhum corte lateral**
 
-### Tablet (~768px):
-- **4 cards**: 2-3 por linha
-- **Filtros**: 2-3 por linha
-- **Tabela**: Scroll se necessário
-
-### Desktop (~1280px+):
-- **4 cards**: 4 por linha
-- **Filtros**: 4+ por linha
-- **Tabela**: Visível ou scroll conforme largura
+### Desktop (1280px+):
+- **Sidebar**: Visível normalmente
+- **Cards**: 4 colunas
+- **Filtros**: 4+ colunas
+- **Comportamento inalterado**
 
 ---
 
-## Vantagem das Container Queries
+## Arquivos Afetados
 
-1. **Funciona no Mobile Preview**: Responde ao tamanho real do container, não do viewport
-2. **Verdadeiramente responsivo**: Ao redimensionar a janela, adapta imediatamente
-3. **Independente de pixel específico**: Não depende de breakpoints fixos
-4. **Compatibilidade**: Suportado em Chrome 105+, Firefox 110+, Safari 16+ (desde 2023)
-5. **Fallback seguro**: Se não suportado, mostra 1 coluna (funcional)
+| Arquivo | Ação |
+|---------|------|
+| `src/App.css` | Limpar CSS residual do Vite |
+| `src/components/layout/PageLayout.tsx` | Adicionar wrapper com container query |
+| `src/index.css` | Adicionar regras CSS para layout responsivo |
+
+---
+
+## Por Que Isso Vai Funcionar
+
+1. **Container Queries ignoram o viewport**: Respondem ao tamanho real do elemento pai
+2. **A margem da sidebar será removida**: Quando o container tiver menos de 768px
+3. **O conteúdo terá 100% do espaço**: Sem competir com sidebar fixa
+4. **Abordagem CSS-first**: Não depende de JavaScript para detectar tamanho
 
 ---
 
 ## Próximos Passos após Aprovação
 
-1. Reescrever `ResponsiveContainers.tsx` com container queries
-2. Adicionar CSS de container queries em `index.css`
-3. Atualizar `EstoqueProdutos.tsx` para usar os novos containers
+1. Limpar `App.css` removendo estilos residuais
+2. Atualizar `PageLayout.tsx` com wrapper de container query
+3. Adicionar regras CSS em `index.css` para layout responsivo
 4. Testar no Mobile Preview
-5. Se funcionar, documentar e aplicar em todo o sistema
+5. Se funcionar, aplicar padrão em todo o sistema
