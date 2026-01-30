@@ -240,18 +240,18 @@ export default function EstoqueProdutos() {
                 </Select>
               </div>
 
-              <div className="flex items-center space-x-2 h-10 self-end col-span-full sm:col-span-1">
+              <div className="flex items-center space-x-2 h-10 self-end">
                 <Checkbox 
                   id="naoConferidos" 
                   checked={somenteNaoConferidos}
                   onCheckedChange={(checked) => setSomenteNaoConferidos(checked as boolean)}
                 />
-                <label htmlFor="naoConferidos" className="text-sm font-medium cursor-pointer">
+                <label htmlFor="naoConferidos" className="text-sm font-medium cursor-pointer whitespace-nowrap">
                   Só não conferidos
                 </label>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-2 col-span-full self-end">
+              <div className="flex gap-2 self-end">
                 <Button 
                   onClick={() => {
                     setLojaFilter('todas');
@@ -262,13 +262,13 @@ export default function EstoqueProdutos() {
                     setSomenteNaoConferidos(false);
                   }} 
                   variant="ghost"
-                  className="w-full sm:w-auto"
+                  size="sm"
                 >
-                  <X className="mr-2 h-4 w-4" />
+                  <X className="mr-1 h-4 w-4" />
                   Limpar
                 </Button>
-                <Button onClick={handleExport} variant="outline" className="w-full sm:w-auto">
-                  <Download className="mr-2 h-4 w-4" />
+                <Button onClick={handleExport} variant="outline" size="sm">
+                  <Download className="mr-1 h-4 w-4" />
                   CSV
                 </Button>
               </div>
