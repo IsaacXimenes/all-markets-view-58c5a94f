@@ -1,172 +1,118 @@
 
-# Plano: Responsividade Completa para Conferência de Contas
-
-## Diagnóstico da Estrutura Atual
-
-A tela `FinanceiroConferencia.tsx` possui os seguintes elementos que precisam de ajustes para mobile:
-
-### Elementos Identificados:
-1. **Cards de Pendentes/Conferidos** (linhas 734, 808): Usam `[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]` - funciona bem mas pode melhorar em mobile
-2. **Cards de Resumo** (linha 878): Usam `[grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]` - muito largo para 390px
-3. **Filtros** (linha 920): Usam `[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]` - precisa de 1 coluna em mobile
-4. **Tabela** (linha 1002): Tem `min-w-[1100px]` mas scroll pode não estar visível
-5. **Painel Lateral** (linha 1077): Em mobile ocupa 100% da largura, precisa empilhar verticalmente
+## Objetivo
+Na rota **/estoque/produtos (Aparelhos)**, garantir que no modo mobile (incluindo “Mobile Preview”) o usuário veja:
+- **4 cards** completos, redimensionando automaticamente (sem cortar)
+- **Filtros** todos visíveis (empilhados quando necessário)
+- **Tabela** com **scroll horizontal visível e funcional** (barra aparecendo, não só “arrastar”)
 
 ---
 
-## Implementação
+## Diagnóstico (por que está cortando)
+Hoje a tela “Aparelhos” usa grids com breakpoints (`sm:`, `lg:`). Isso funciona quando o **viewport** realmente fica pequeno.
 
-### 1. Cards de Pendentes e Conferidos
-**Linha 734 e 808**
-
-```text
-Antes:
-[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]
-
-Depois:
-grid-cols-2 sm:grid-cols-3 lg:[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]
-```
-
-Em mobile (390px), 2 colunas = ~195px cada (cabe bem)
-Em tablet, 3 colunas
-Em desktop, auto-fit com mínimo 180px
-
-### 2. Cards de Resumo
-**Linha 878**
-
-```text
-Antes:
-[grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]
-
-Depois:
-grid-cols-1 sm:grid-cols-2 lg:grid-cols-3
-```
-
-Em mobile: 1 coluna (ocupa 100%)
-Em tablet: 2 colunas
-Em desktop: 3 colunas
-
-### 3. Filtros
-**Linha 920**
-
-```text
-Antes:
-[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]
-
-Depois:
-grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]
-```
-
-Em mobile: 1 coluna (cada filtro empilhado)
-Em tablet: 2 colunas
-Em desktop: 3 colunas
-Em telas grandes: auto-fit
-
-### 4. Tabela - Garantir Scroll Horizontal Visível
-**Linha 1000-1072**
-
-A tabela já tem `min-w-[1100px]` e usa o componente `Table` que tem `TableScrollArea` embutido.
-
-Verificar se o wrapper `<Card>` permite overflow:
-```text
-Antes:
-<Card>
-  <CardContent className="p-0">
-    <Table className="min-w-[1100px]">
-
-Depois:
-<Card className="overflow-hidden">
-  <CardContent className="p-0 overflow-x-auto">
-    <Table className="min-w-[1100px]">
-```
-
-### 5. Layout Principal - Empilhar Painel em Mobile
-**Linha 726**
-
-```text
-Antes:
-<div className="flex flex-col xl:flex-row gap-4 xl:gap-6 min-w-0">
-
-Depois (manter igual, já está correto):
-flex-col em mobile, flex-row em xl
-```
-
-### 6. Painel Lateral - Ajustar para Mobile
-**Linha 1077-1089**
-
-```text
-Antes:
-<div className="w-full xl:w-[380px] xl:min-w-[350px] xl:max-w-[420px] xl:sticky xl:top-4 h-fit flex-shrink-0">
-
-Depois (ajustar padding):
-<div className="w-full xl:w-[380px] xl:min-w-[350px] xl:max-w-[420px] xl:sticky xl:top-4 h-fit flex-shrink-0">
-```
-
-O painel já ocupa 100% em mobile, está correto.
-
-### 7. Grid interno do Painel (2 colunas → 1 em mobile extremo)
-**Linha 1089**
-
-```text
-Antes:
-<div className="grid grid-cols-2 gap-3 p-3 bg-muted rounded-lg text-sm">
-
-Manter igual - 2 colunas funciona em 390px (cada ~180px)
-```
+Mas no “mobile preview” (dependendo de como você está abrindo), pode acontecer do **viewport continuar grande** e apenas o **container ficar estreito**. Nesse cenário:
+- O Tailwind ainda aplica layout “desktop” (4 colunas / muitos campos lado a lado)
+- O conteúdo “passa” da largura disponível e fica **cortado**
+- A tabela fica “sem scroll visível” porque o componente `Table` usa `ScrollArea` com `type="hover"` (em touch não existe hover, então a barra some)
 
 ---
 
-## Arquivos a Modificar
+## Solução (mais robusta): layout baseado no “espaço disponível”, não no viewport
+Vamos trocar os grids de cards e filtros para um padrão “container-friendly” usando **auto-fit + minmax**, que se adapta ao espaço real disponível.
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/pages/FinanceiroConferencia.tsx` | Ajustar grids para breakpoints mobile-first, garantir scroll na tabela |
+E vamos corrigir a tabela para que a barra horizontal fique **sempre visível**.
 
 ---
 
-## Resumo das Mudanças
+## Mudanças planejadas (arquivos)
 
+### 1) `src/pages/EstoqueProdutos.tsx` — Cards (4) sempre visíveis, sem corte
+**Trocar o grid atual:**
+- De: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`
+- Para algo como:
 ```text
-1. Cards Pendentes/Conferidos (linha 734, 808):
-   - De: [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]
-   - Para: grid-cols-2 sm:grid-cols-3 lg:[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]
-
-2. Cards Resumo (linha 878):
-   - De: [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]
-   - Para: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3
-
-3. Filtros (linha 920):
-   - De: [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]
-   - Para: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]
-
-4. Tabela (linha 1000):
-   - Adicionar overflow-hidden no Card
-   - Adicionar overflow-x-auto no CardContent
-   - Manter min-w-[1100px] para forçar scroll
-
-5. Botões de Filtro (linha 985):
-   - Ajustar para empilhar em mobile: flex-col sm:flex-row
+grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(260px,1fr))]
 ```
 
+Por que isso resolve:
+- Se o container tiver ~360–420px, cabe **1 card por linha** (todos aparecem empilhados)
+- Se o container for maior, automaticamente vira 2/3/4 colunas sem quebrar
+- Não depende de breakpoint do viewport
+
+Ajustes adicionais:
+- Garantir `min-w-0` em wrappers dos cards (e eventualmente `truncate`) para não estourar textos longos.
+- Remover qualquer `overflow-hidden` desnecessário no “wrapper” do grid (manter só nos próprios cards se quiser).
+
 ---
 
-## Resultado Esperado no Mobile (390px)
+### 2) `src/pages/EstoqueProdutos.tsx` — Filtros: todos visíveis, sempre empilhando quando precisar
+Hoje os filtros usam `grid-cols-1 sm:grid-cols-2 lg:grid-cols-4` e ainda tem `col-span` baseado em quantidade de colunas (isso costuma quebrar quando mudamos a grade).
 
-- **Cards Pendentes/Conferidos**: 2 por linha, compactos
-- **Cards Resumo**: 1 por linha, empilhados verticalmente
-- **Filtros**: 1 por linha, cada select ocupa 100% da largura
-- **Tabela**: Scroll horizontal visível, barra de scroll aparente
-- **Painel Lateral**: Aparece abaixo da tabela (já funciona com flex-col)
+Vamos padronizar para:
+```text
+grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]
+```
+
+E ajustar os itens especiais:
+- Checkbox “Só não conferidos”: usar `col-span-full` para sempre ocupar a linha toda quando necessário.
+- Botões “Limpar / CSV”: também `col-span-full` e layout:
+```text
+flex flex-col sm:flex-row gap-2
+```
+(sem depender de `sm:col-span-2` / `lg:col-span-1`, que fica frágil quando a grade muda)
+
+Resultado esperado:
+- Em container estreito: filtros 1 por linha (todos aparecem)
+- Em container médio: 2 por linha
+- Em container largo: 3/4 por linha
 
 ---
 
-## Validação
+### 3) `src/components/ui/table.tsx` — Scroll horizontal sempre visível em mobile
+Atualmente:
+- `TableScrollArea` usa `type="hover"`
+- Em mobile/touch, “hover” não acontece, então a barra fica praticamente invisível
 
-1. Clicar em "Show mobile preview" no Lovable
-2. Navegar para `/financeiro/conferencia`
-3. Verificar:
-   - Cards de métodos de pagamento: 2 por linha
-   - Cards de resumo: 1 por linha
-   - Filtros: 1 por linha
-   - Tabela: scroll horizontal funcional
-   - Ao clicar em uma linha, painel aparece abaixo
+Vamos mudar para:
+- `type="always"` (ou no mínimo “sempre em telas pequenas”)
+
+Também vamos garantir que:
+- O `Viewport` permita o gesto de scroll horizontal
+- A barra tenha altura suficiente (ex.: `h-3` ou `h-4`) e contraste ok
+
+Resultado esperado:
+- A tabela continua com largura grande (min-width)
+- A barra aparece e o usuário entende que dá para rolar
+
+---
+
+### 4) `src/pages/EstoqueProdutos.tsx` — Evitar “scroll duplo” na tabela
+Hoje o `Table` já tem um scroll interno (Radix ScrollArea). Se a gente também deixar `overflow-x-auto` no CardContent, às vezes vira confuso.
+
+Decisão:
+- Manter **um único** responsável pelo scroll horizontal:
+  - Preferência: deixar o `Table` controlar o scroll (e corrigir o `type="always"` no `table.tsx`)
+  - Ajustar o wrapper do Card para não criar scroll duplicado
+
+---
+
+## Como vamos validar (checklist rápido)
+1. Abrir **/estoque/produtos**
+2. Ativar o modo mobile (do jeito que você costuma testar)
+3. Confirmar:
+   - Vejo os **4 cards** (sem cortar nenhum) e consigo rolar a tela normalmente
+   - Vejo **todos os filtros** (IMEI, Modelo, Loja, Tipo, Origem, checkbox, botões)
+   - A tabela mostra uma **barra de rolagem horizontal** visível
+   - Consigo rolar para ver colunas da direita (Ações etc.)
+
+---
+
+## Resultado final esperado (mobile)
+- Cards: **um embaixo do outro**, ajustando conforme o espaço
+- Filtros: **um embaixo do outro**, sem esconder nenhum
+- Tabela: **scroll lateral evidente e funcionando**
+
+---
+
+## Observação importante (para ficar “à prova” de Mobile Preview)
+Se você estiver usando um “mobile preview” que **não reduz o viewport**, essa abordagem com `auto-fit/minmax` é a que mais evita cortes, porque responde ao espaço real disponível, não ao breakpoint.
