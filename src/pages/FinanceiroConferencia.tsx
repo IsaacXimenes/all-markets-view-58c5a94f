@@ -723,9 +723,9 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
 
   return (
     <FinanceiroLayout title="Conferência de Contas - Vendas">
-      <div className="flex gap-6">
-        {/* Painel Principal - Tabela (70%) */}
-        <div className={`transition-all ${vendaSelecionada ? 'w-[70%]' : 'w-full'}`}>
+      <div className="flex flex-col xl:flex-row gap-4 xl:gap-6 min-w-0">
+        {/* Painel Principal - Tabela */}
+        <div className={`transition-all min-w-0 ${vendaSelecionada ? 'w-full xl:flex-1' : 'w-full'}`}>
           {/* Cards Pendentes - Primeira Linha */}
           <div className="mb-3">
             <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
@@ -1074,10 +1074,10 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
           </Card>
         </div>
 
-        {/* Painel Lateral (30%) */}
+        {/* Painel Lateral */}
         {vendaSelecionada && (
-          <div className="w-[30%] sticky top-4 h-fit min-w-[350px]">
-            <Card className="max-h-[calc(100vh-120px)] overflow-y-auto">
+          <div className="w-full xl:w-[380px] xl:min-w-[350px] xl:max-w-[420px] xl:sticky xl:top-4 h-fit flex-shrink-0">
+            <Card className="max-h-[80vh] xl:max-h-[calc(100vh-120px)] overflow-y-auto">
               <CardHeader className="pb-3 sticky top-0 bg-card z-10 border-b">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">Detalhes da Venda</CardTitle>
