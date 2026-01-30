@@ -175,7 +175,7 @@
     display: none;
   }
 
-  /* Classes utilitárias para responsividade */
+  /* Classes utilitárias para responsividade (legacy) */
   .responsive-grid-cards {
     @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4;
   }
@@ -196,17 +196,128 @@
   /* Scrollbar sempre visível para containers de tabela */
   .scrollbar-visible {
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: auto;
   }
   .scrollbar-visible::-webkit-scrollbar {
-    height: 12px;
+    height: 14px;
+    display: block !important;
   }
   .scrollbar-visible::-webkit-scrollbar-track {
-    @apply bg-muted rounded-full;
+    background: hsl(var(--muted));
+    border-radius: 7px;
   }
   .scrollbar-visible::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/50 rounded-full;
+    background: hsl(var(--muted-foreground) / 0.5);
+    border-radius: 7px;
+    border: 2px solid hsl(var(--muted));
   }
   .scrollbar-visible::-webkit-scrollbar-thumb:hover {
-    @apply bg-muted-foreground/70;
+    background: hsl(var(--muted-foreground) / 0.7);
   }
+}
+
+/* ============================================
+   CSS Container Queries - Grids Responsivos
+   Responde ao tamanho do container, não viewport
+   ============================================ */
+
+/* Container para Cards */
+.responsive-card-container {
+  container-type: inline-size;
+  width: 100%;
+}
+
+.responsive-card-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+}
+
+@container (min-width: 480px) {
+  .responsive-card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@container (min-width: 720px) {
+  .responsive-card-grid--cols-3,
+  .responsive-card-grid--cols-4,
+  .responsive-card-grid--cols-5,
+  .responsive-card-grid--cols-6 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@container (min-width: 960px) {
+  .responsive-card-grid--cols-4,
+  .responsive-card-grid--cols-5,
+  .responsive-card-grid--cols-6 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@container (min-width: 1200px) {
+  .responsive-card-grid--cols-5,
+  .responsive-card-grid--cols-6 {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@container (min-width: 1440px) {
+  .responsive-card-grid--cols-6 {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* Container para Filtros */
+.responsive-filter-container {
+  container-type: inline-size;
+  width: 100%;
+}
+
+.responsive-filter-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr;
+}
+
+@container (min-width: 400px) {
+  .responsive-filter-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@container (min-width: 600px) {
+  .responsive-filter-grid--cols-3,
+  .responsive-filter-grid--cols-4,
+  .responsive-filter-grid--cols-5,
+  .responsive-filter-grid--cols-6 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@container (min-width: 800px) {
+  .responsive-filter-grid--cols-4,
+  .responsive-filter-grid--cols-5,
+  .responsive-filter-grid--cols-6 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@container (min-width: 1000px) {
+  .responsive-filter-grid--cols-5,
+  .responsive-filter-grid--cols-6 {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+@container (min-width: 1200px) {
+  .responsive-filter-grid--cols-6 {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+/* Itens que ocupam linha inteira dentro do grid */
+.responsive-filter-grid .col-span-full {
+  grid-column: 1 / -1;
 }
