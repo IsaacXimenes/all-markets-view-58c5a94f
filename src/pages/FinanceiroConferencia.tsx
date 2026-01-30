@@ -731,67 +731,67 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
             <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
               <Clock className="h-3 w-3" /> PENDENTES
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
               {mostrarCardsPorFiltro.credito && (
-                <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+                <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800 overflow-hidden">
                   <CardContent className="pt-3 pb-3">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-red-600 opacity-70" />
-                      <div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CreditCard className="h-4 w-4 text-red-600 opacity-70 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-red-700 dark:text-red-300">Crédito</p>
-                        <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.cartaoCredito)}</p>
+                        <p className="text-sm font-bold text-red-800 dark:text-red-200 truncate" title={formatCurrency(somatorioPagamentos.pendente.cartaoCredito)}>{formatCurrency(somatorioPagamentos.pendente.cartaoCredito)}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
               {mostrarCardsPorFiltro.debito && (
-                <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+                <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800 overflow-hidden">
                   <CardContent className="pt-3 pb-3">
-                    <div className="flex items-center gap-2">
-                      <Wallet className="h-4 w-4 text-red-600 opacity-70" />
-                      <div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Wallet className="h-4 w-4 text-red-600 opacity-70 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-red-700 dark:text-red-300">Débito</p>
-                        <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.cartaoDebito)}</p>
+                        <p className="text-sm font-bold text-red-800 dark:text-red-200 truncate" title={formatCurrency(somatorioPagamentos.pendente.cartaoDebito)}>{formatCurrency(somatorioPagamentos.pendente.cartaoDebito)}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
               {mostrarCardsPorFiltro.pix && (
-                <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+                <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800 overflow-hidden">
                   <CardContent className="pt-3 pb-3">
-                    <div className="flex items-center gap-2">
-                      <Smartphone className="h-4 w-4 text-red-600 opacity-70" />
-                      <div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Smartphone className="h-4 w-4 text-red-600 opacity-70 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-red-700 dark:text-red-300">Pix</p>
-                        <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.pix)}</p>
+                        <p className="text-sm font-bold text-red-800 dark:text-red-200 truncate" title={formatCurrency(somatorioPagamentos.pendente.pix)}>{formatCurrency(somatorioPagamentos.pendente.pix)}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
               {mostrarCardsPorFiltro.dinheiro && (
-                <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+                <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800 overflow-hidden">
                   <CardContent className="pt-3 pb-3">
-                    <div className="flex items-center gap-2">
-                      <Banknote className="h-4 w-4 text-red-600 opacity-70" />
-                      <div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Banknote className="h-4 w-4 text-red-600 opacity-70 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-red-700 dark:text-red-300">Dinheiro</p>
-                        <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.dinheiro)}</p>
+                        <p className="text-sm font-bold text-red-800 dark:text-red-200 truncate" title={formatCurrency(somatorioPagamentos.pendente.dinheiro)}>{formatCurrency(somatorioPagamentos.pendente.dinheiro)}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
               {mostrarCardsPorFiltro.boleto && (
-                <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
+                <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800 overflow-hidden">
                   <CardContent className="pt-3 pb-3">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-red-600 opacity-70" />
-                      <div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-4 w-4 text-red-600 opacity-70 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-red-700 dark:text-red-300">Boleto</p>
-                        <p className="text-sm font-bold text-red-800 dark:text-red-200">{formatCurrency(somatorioPagamentos.pendente.boleto)}</p>
+                        <p className="text-sm font-bold text-red-800 dark:text-red-200 truncate" title={formatCurrency(somatorioPagamentos.pendente.boleto)}>{formatCurrency(somatorioPagamentos.pendente.boleto)}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -805,67 +805,67 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
             <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3" /> CONFERIDOS
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
               {mostrarCardsPorFiltro.credito && (
-                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800 overflow-hidden">
                   <CardContent className="pt-3 pb-3">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-green-600 opacity-70" />
-                      <div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <CreditCard className="h-4 w-4 text-green-600 opacity-70 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-green-700 dark:text-green-300">Crédito</p>
-                        <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.cartaoCredito)}</p>
+                        <p className="text-sm font-bold text-green-800 dark:text-green-200 truncate" title={formatCurrency(somatorioPagamentos.conferido.cartaoCredito)}>{formatCurrency(somatorioPagamentos.conferido.cartaoCredito)}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
               {mostrarCardsPorFiltro.debito && (
-                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800 overflow-hidden">
                   <CardContent className="pt-3 pb-3">
-                    <div className="flex items-center gap-2">
-                      <Wallet className="h-4 w-4 text-green-600 opacity-70" />
-                      <div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Wallet className="h-4 w-4 text-green-600 opacity-70 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-green-700 dark:text-green-300">Débito</p>
-                        <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.cartaoDebito)}</p>
+                        <p className="text-sm font-bold text-green-800 dark:text-green-200 truncate" title={formatCurrency(somatorioPagamentos.conferido.cartaoDebito)}>{formatCurrency(somatorioPagamentos.conferido.cartaoDebito)}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
               {mostrarCardsPorFiltro.pix && (
-                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800 overflow-hidden">
                   <CardContent className="pt-3 pb-3">
-                    <div className="flex items-center gap-2">
-                      <Smartphone className="h-4 w-4 text-green-600 opacity-70" />
-                      <div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Smartphone className="h-4 w-4 text-green-600 opacity-70 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-green-700 dark:text-green-300">Pix</p>
-                        <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.pix)}</p>
+                        <p className="text-sm font-bold text-green-800 dark:text-green-200 truncate" title={formatCurrency(somatorioPagamentos.conferido.pix)}>{formatCurrency(somatorioPagamentos.conferido.pix)}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
               {mostrarCardsPorFiltro.dinheiro && (
-                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800 overflow-hidden">
                   <CardContent className="pt-3 pb-3">
-                    <div className="flex items-center gap-2">
-                      <Banknote className="h-4 w-4 text-green-600 opacity-70" />
-                      <div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Banknote className="h-4 w-4 text-green-600 opacity-70 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-green-700 dark:text-green-300">Dinheiro</p>
-                        <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.dinheiro)}</p>
+                        <p className="text-sm font-bold text-green-800 dark:text-green-200 truncate" title={formatCurrency(somatorioPagamentos.conferido.dinheiro)}>{formatCurrency(somatorioPagamentos.conferido.dinheiro)}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
               {mostrarCardsPorFiltro.boleto && (
-                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
+                <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800 overflow-hidden">
                   <CardContent className="pt-3 pb-3">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-green-600 opacity-70" />
-                      <div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-4 w-4 text-green-600 opacity-70 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs text-green-700 dark:text-green-300">Boleto</p>
-                        <p className="text-sm font-bold text-green-800 dark:text-green-200">{formatCurrency(somatorioPagamentos.conferido.boleto)}</p>
+                        <p className="text-sm font-bold text-green-800 dark:text-green-200 truncate" title={formatCurrency(somatorioPagamentos.conferido.boleto)}>{formatCurrency(somatorioPagamentos.conferido.boleto)}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -875,34 +875,34 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
           </div>
 
           {/* Cards de resumo */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <Card>
+          <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))] mb-6">
+            <Card className="overflow-hidden">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm text-muted-foreground">Vendas Pendentes</p>
-                    <p className="text-3xl font-bold text-yellow-600">{pendentes}</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-yellow-600">{pendentes}</p>
                   </div>
-                  <Clock className="h-10 w-10 text-yellow-500 opacity-50" />
+                  <Clock className="h-8 w-8 sm:h-10 sm:w-10 text-yellow-500 opacity-50 flex-shrink-0" />
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="overflow-hidden">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex items-center justify-between min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm text-muted-foreground">Vendas Finalizadas</p>
-                    <p className="text-3xl font-bold text-green-600">{finalizados}</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-green-600">{finalizados}</p>
                   </div>
-                  <CheckCircle2 className="h-10 w-10 text-green-500 opacity-50" />
+                  <CheckCircle2 className="h-8 w-8 sm:h-10 sm:w-10 text-green-500 opacity-50 flex-shrink-0" />
                 </div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="overflow-hidden">
               <CardContent className="pt-6">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-muted-foreground">Total Lançamentos Pendentes</p>
-                  <p className="text-2xl font-bold">{formatCurrency(totalPendente)}</p>
+                  <p className="text-xl sm:text-2xl font-bold truncate" title={formatCurrency(totalPendente)}>{formatCurrency(totalPendente)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -917,7 +917,7 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
                 <div>
                   <Label>Data Início</Label>
                   <Input type="date" value={filters.dataInicio} onChange={(e) => setFilters({ ...filters, dataInicio: e.target.value })} />
@@ -999,77 +999,75 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
           {/* Tabela com lançamentos divididos por método */}
           <Card>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
+              <Table className="min-w-[1100px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="min-w-[110px]">ID Venda</TableHead>
+                    <TableHead className="min-w-[100px]">Data</TableHead>
+                    <TableHead className="min-w-[110px]">
+                      <div className="flex items-center gap-1">
+                        <Timer className="h-4 w-4" />
+                        SLA
+                      </div>
+                    </TableHead>
+                    <TableHead className="min-w-[150px]">Método Pagamento</TableHead>
+                    <TableHead className="min-w-[130px] text-right">Valor</TableHead>
+                    <TableHead className="min-w-[220px]">Conta Destino</TableHead>
+                    <TableHead className="min-w-[110px]">Situação</TableHead>
+                    <TableHead className="min-w-[140px]">Status</TableHead>
+                    <TableHead className="min-w-[70px]">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLinhas.length === 0 ? (
                     <TableRow>
-                      <TableHead>ID Venda</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead>
-                        <div className="flex items-center gap-1">
-                          <Timer className="h-4 w-4" />
-                          SLA
-                        </div>
-                      </TableHead>
-                      <TableHead>Método Pagamento</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                      <TableHead>Conta Destino</TableHead>
-                      <TableHead>Situação</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Ações</TableHead>
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        Nenhum lançamento encontrado
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLinhas.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                          Nenhum lançamento encontrado
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredLinhas.map((linha, idx) => (
-                      <TableRow 
-                        key={`${linha.vendaId}-${linha.metodoPagamento}-${idx}`} 
-                        className={`${getRowClassName(linha)} ${vendaSelecionada?.id === linha.vendaId ? 'ring-2 ring-primary' : ''} cursor-pointer`}
-                        onClick={() => handleSelecionarVenda(linha.venda)}
-                      >
-                        <TableCell className="font-medium">{linha.vendaId}</TableCell>
-                        <TableCell>{new Date(linha.venda.dataHora).toLocaleDateString('pt-BR')}</TableCell>
-                        <TableCell>
-                          <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-                            linha.slaHoras && linha.slaHoras >= 24 
-                              ? 'bg-destructive/20 text-destructive' 
-                              : linha.slaHoras && linha.slaHoras >= 12 
-                                ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400' 
-                                : 'bg-muted text-muted-foreground'
-                          }`}>
-                            <Timer className="h-3 w-3" />
-                            {linha.tempoSLA || '-'}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="whitespace-nowrap">
-                            {linha.metodoPagamento}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">{formatCurrency(getValorExibido(linha))}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Building2 className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-sm">{getContaNomeCompleto(linha.contaDestinoId)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{getSituacaoBadge(linha.conferido)}</TableCell>
-                        <TableCell>{getStatusBadge(linha.venda.statusFluxo as StatusVenda)}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSelecionarVenda(linha.venda); }}>
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  ) : filteredLinhas.map((linha, idx) => (
+                    <TableRow 
+                      key={`${linha.vendaId}-${linha.metodoPagamento}-${idx}`} 
+                      className={`${getRowClassName(linha)} ${vendaSelecionada?.id === linha.vendaId ? 'ring-2 ring-primary' : ''} cursor-pointer`}
+                      onClick={() => handleSelecionarVenda(linha.venda)}
+                    >
+                      <TableCell className="font-medium">{linha.vendaId}</TableCell>
+                      <TableCell>{new Date(linha.venda.dataHora).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>
+                        <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                          linha.slaHoras && linha.slaHoras >= 24 
+                            ? 'bg-destructive/20 text-destructive' 
+                            : linha.slaHoras && linha.slaHoras >= 12 
+                              ? 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-400' 
+                              : 'bg-muted text-muted-foreground'
+                        }`}>
+                          <Timer className="h-3 w-3" />
+                          {linha.tempoSLA || '-'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {linha.metodoPagamento}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">{formatCurrency(getValorExibido(linha))}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 max-w-[220px]">
+                          <Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          <span className="text-sm truncate" title={getContaNomeCompleto(linha.contaDestinoId)}>{getContaNomeCompleto(linha.contaDestinoId)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getSituacaoBadge(linha.conferido)}</TableCell>
+                      <TableCell>{getStatusBadge(linha.venda.statusFluxo as StatusVenda)}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSelecionarVenda(linha.venda); }}>
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </div>
