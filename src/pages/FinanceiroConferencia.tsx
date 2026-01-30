@@ -731,7 +731,7 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
             <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
               <Clock className="h-3 w-3" /> PENDENTES
             </p>
-            <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
               {mostrarCardsPorFiltro.credito && (
                 <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800 overflow-hidden">
                   <CardContent className="pt-3 pb-3">
@@ -805,7 +805,7 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
             <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3" /> CONFERIDOS
             </p>
-            <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
+            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
               {mostrarCardsPorFiltro.credito && (
                 <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800 overflow-hidden">
                   <CardContent className="pt-3 pb-3">
@@ -875,7 +875,7 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
           </div>
 
           {/* Cards de resumo */}
-          <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))] mb-6">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-6">
             <Card className="overflow-hidden">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between min-w-0">
@@ -917,7 +917,7 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:[grid-template-columns:repeat(auto-fit,minmax(180px,1fr))]">
                 <div>
                   <Label>Data Início</Label>
                   <Input type="date" value={filters.dataInicio} onChange={(e) => setFilters({ ...filters, dataInicio: e.target.value })} />
@@ -982,7 +982,7 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-end gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-2">
                   <Button variant="outline" onClick={handleLimpar} className="flex-1">
                     <X className="h-4 w-4 mr-1" />
                     Limpar
@@ -997,8 +997,8 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
           </Card>
 
           {/* Tabela com lançamentos divididos por método */}
-          <Card>
-            <CardContent className="p-0">
+          <Card className="overflow-hidden">
+            <CardContent className="p-0 overflow-x-auto">
               <Table className="min-w-[1100px]">
                 <TableHeader>
                   <TableRow>
