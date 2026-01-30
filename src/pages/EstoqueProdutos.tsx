@@ -19,6 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 import { InputComMascara } from '@/components/ui/InputComMascara';
+import { ResponsiveCardGrid, ResponsiveFilterGrid } from '@/components/ui/ResponsiveContainers';
 
 import { formatCurrency, exportToCSV, parseMoeda } from '@/utils/formatUtils';
 
@@ -119,8 +120,8 @@ export default function EstoqueProdutos() {
     <EstoqueLayout title="Gerenciamento de Produtos">
       <div className="space-y-4 sm:space-y-6 min-w-0">
         {/* Dashboard Cards */}
-        <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
-          <Card className="overflow-hidden">
+        <ResponsiveCardGrid cols={4}>
+          <Card className="overflow-hidden min-w-0">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
@@ -134,7 +135,7 @@ export default function EstoqueProdutos() {
             </CardContent>
           </Card>
 
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden min-w-0">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="p-2 rounded-lg bg-green-500/10 flex-shrink-0">
@@ -148,130 +149,130 @@ export default function EstoqueProdutos() {
             </CardContent>
           </Card>
 
-          <Card className={`overflow-hidden ${statsFiltrados.produtosBateriaFraca > 0 ? 'bg-orange-500/10' : ''}`}>
+          <Card className={cn("overflow-hidden min-w-0", statsFiltrados.produtosBateriaFraca > 0 && 'bg-orange-500/10')}>
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="p-2 rounded-lg bg-orange-500/10 flex-shrink-0">
-                  <AlertTriangle className={`h-5 w-5 ${statsFiltrados.produtosBateriaFraca > 0 ? 'text-orange-500' : 'text-muted-foreground'}`} />
+                  <AlertTriangle className={cn("h-5 w-5", statsFiltrados.produtosBateriaFraca > 0 ? 'text-orange-500' : 'text-muted-foreground')} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs sm:text-sm text-muted-foreground truncate">Bateria &lt; 85%</p>
-                  <p className={`text-xl sm:text-2xl font-bold ${statsFiltrados.produtosBateriaFraca > 0 ? 'text-orange-500' : ''}`}>{statsFiltrados.produtosBateriaFraca}</p>
+                  <p className={cn("text-xl sm:text-2xl font-bold", statsFiltrados.produtosBateriaFraca > 0 && 'text-orange-500')}>{statsFiltrados.produtosBateriaFraca}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className={`overflow-hidden ${statsFiltrados.notasPendentes > 0 ? 'bg-red-500/10' : ''}`}>
+          <Card className={cn("overflow-hidden min-w-0", statsFiltrados.notasPendentes > 0 && 'bg-red-500/10')}>
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="p-2 rounded-lg bg-red-500/10 flex-shrink-0">
-                  <FileWarning className={`h-5 w-5 ${statsFiltrados.notasPendentes > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
+                  <FileWarning className={cn("h-5 w-5", statsFiltrados.notasPendentes > 0 ? 'text-red-500' : 'text-muted-foreground')} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs sm:text-sm text-muted-foreground truncate">Notas Pendentes</p>
-                  <p className={`text-xl sm:text-2xl font-bold ${statsFiltrados.notasPendentes > 0 ? 'text-red-500' : ''}`}>{statsFiltrados.notasPendentes}</p>
+                  <p className={cn("text-xl sm:text-2xl font-bold", statsFiltrados.notasPendentes > 0 && 'text-red-500')}>{statsFiltrados.notasPendentes}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-        </div>
+        </ResponsiveCardGrid>
 
         {/* Filters */}
         <Card className="overflow-hidden">
           <CardContent className="p-3 sm:p-4">
-            <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">IMEI</p>
-            <Input
-              placeholder="WW-XXXXXX-YYYYYY-Z"
-              value={imeiFilter}
-              onChange={(e) => setImeiFilter(formatIMEI(e.target.value))}
-              className="w-full"
-            />
-          </div>
+            <ResponsiveFilterGrid cols={5}>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">IMEI</p>
+                <Input
+                  placeholder="WW-XXXXXX-YYYYYY-Z"
+                  value={imeiFilter}
+                  onChange={(e) => setImeiFilter(formatIMEI(e.target.value))}
+                  className="w-full"
+                />
+              </div>
 
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Modelo</p>
-            <Input
-              placeholder="Modelo"
-              value={modeloFilter}
-              onChange={(e) => setModeloFilter(e.target.value)}
-              className="w-full"
-            />
-          </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Modelo</p>
+                <Input
+                  placeholder="Modelo"
+                  value={modeloFilter}
+                  onChange={(e) => setModeloFilter(e.target.value)}
+                  className="w-full"
+                />
+              </div>
 
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Loja</p>
-            <AutocompleteLoja
-              value={lojaFilter === 'todas' ? '' : lojaFilter}
-              onChange={(v) => setLojaFilter(v || 'todas')}
-              placeholder="Todas as lojas"
-            />
-          </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Loja</p>
+                <AutocompleteLoja
+                  value={lojaFilter === 'todas' ? '' : lojaFilter}
+                  onChange={(v) => setLojaFilter(v || 'todas')}
+                  placeholder="Todas as lojas"
+                />
+              </div>
 
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Tipo</p>
-            <Select value={tipoFilter} onValueChange={setTipoFilter}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Todos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos</SelectItem>
-                <SelectItem value="Novo">Novo</SelectItem>
-                <SelectItem value="Seminovo">Seminovo</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Tipo</p>
+                <Select value={tipoFilter} onValueChange={setTipoFilter}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="Novo">Novo</SelectItem>
+                    <SelectItem value="Seminovo">Seminovo</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div>
-            <p className="text-xs text-muted-foreground mb-1">Origem</p>
-            <Select value={origemFilter} onValueChange={setOrigemFilter}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Todas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todas">Todas</SelectItem>
-                <SelectItem value="Fornecedor">Fornecedor</SelectItem>
-                <SelectItem value="Base de Troca">Base de Troca</SelectItem>
-                <SelectItem value="Emprestado - Garantia">Emprestado - Garantia</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Origem</p>
+                <Select value={origemFilter} onValueChange={setOrigemFilter}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas</SelectItem>
+                    <SelectItem value="Fornecedor">Fornecedor</SelectItem>
+                    <SelectItem value="Base de Troca">Base de Troca</SelectItem>
+                    <SelectItem value="Emprestado - Garantia">Emprestado - Garantia</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="flex items-center space-x-2 h-10 self-end col-span-full sm:col-span-1">
-            <Checkbox 
-              id="naoConferidos" 
-              checked={somenteNaoConferidos}
-              onCheckedChange={(checked) => setSomenteNaoConferidos(checked as boolean)}
-            />
-            <label htmlFor="naoConferidos" className="text-sm font-medium cursor-pointer">
-              Só não conferidos
-            </label>
-          </div>
+              <div className="flex items-center space-x-2 h-10 self-end col-span-full sm:col-span-1">
+                <Checkbox 
+                  id="naoConferidos" 
+                  checked={somenteNaoConferidos}
+                  onCheckedChange={(checked) => setSomenteNaoConferidos(checked as boolean)}
+                />
+                <label htmlFor="naoConferidos" className="text-sm font-medium cursor-pointer">
+                  Só não conferidos
+                </label>
+              </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 col-span-full self-end">
-            <Button 
-              onClick={() => {
-                setLojaFilter('todas');
-                setModeloFilter('');
-                setImeiFilter('');
-                setTipoFilter('todos');
-                setOrigemFilter('todas');
-                setSomenteNaoConferidos(false);
-              }} 
-              variant="ghost"
-              className="w-full sm:w-auto"
-            >
-              <X className="mr-2 h-4 w-4" />
-              Limpar
-            </Button>
-            <Button onClick={handleExport} variant="outline" className="w-full sm:w-auto">
-              <Download className="mr-2 h-4 w-4" />
-              CSV
-            </Button>
-            </div>
-          </div>
+              <div className="flex flex-col sm:flex-row gap-2 col-span-full self-end">
+                <Button 
+                  onClick={() => {
+                    setLojaFilter('todas');
+                    setModeloFilter('');
+                    setImeiFilter('');
+                    setTipoFilter('todos');
+                    setOrigemFilter('todas');
+                    setSomenteNaoConferidos(false);
+                  }} 
+                  variant="ghost"
+                  className="w-full sm:w-auto"
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Limpar
+                </Button>
+                <Button onClick={handleExport} variant="outline" className="w-full sm:w-auto">
+                  <Download className="mr-2 h-4 w-4" />
+                  CSV
+                </Button>
+              </div>
+            </ResponsiveFilterGrid>
           </CardContent>
         </Card>
 
