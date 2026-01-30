@@ -295,7 +295,7 @@ export default function FinanceiroConferenciaNotas() {
     <FinanceiroLayout title="Conferência de Notas de Entrada">
       <div className="space-y-6">
         {/* Cards de Resumo Dinâmicos */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -351,7 +351,7 @@ export default function FinanceiroConferenciaNotas() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="dataInicio">Data Início</Label>
                 <Input

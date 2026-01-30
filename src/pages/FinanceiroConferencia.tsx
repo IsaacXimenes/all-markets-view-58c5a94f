@@ -731,7 +731,7 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
             <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
               <Clock className="h-3 w-3" /> PENDENTES
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               {mostrarCardsPorFiltro.credito && (
                 <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-red-200 dark:border-red-800">
                   <CardContent className="pt-3 pb-3">
@@ -805,7 +805,7 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
             <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3" /> CONFERIDOS
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               {mostrarCardsPorFiltro.credito && (
                 <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/50 dark:to-green-900/30 border-green-200 dark:border-green-800">
                   <CardContent className="pt-3 pb-3">
@@ -875,7 +875,7 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
           </div>
 
           {/* Cards de resumo */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
@@ -917,7 +917,7 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
                 <div>
                   <Label>Data Início</Label>
                   <Input type="date" value={filters.dataInicio} onChange={(e) => setFilters({ ...filters, dataInicio: e.target.value })} />

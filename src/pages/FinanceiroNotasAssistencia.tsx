@@ -148,7 +148,7 @@ export default function FinanceiroNotasAssistencia() {
     <FinanceiroLayout title="Notas Pendentes - Assistência">
       <div className="space-y-6">
         {/* Cards de Resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -204,7 +204,7 @@ export default function FinanceiroNotasAssistencia() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <div>
                 <Label htmlFor="dataInicio">Data Início</Label>
                 <Input

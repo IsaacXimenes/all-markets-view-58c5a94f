@@ -318,7 +318,7 @@ export default function FinanceiroExtratoContas() {
         </Card>
 
         {/* Cards de Resumo Geral */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card className="bg-green-50 dark:bg-green-950/20 border-green-200">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -379,7 +379,7 @@ export default function FinanceiroExtratoContas() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
               {contasProprias.map(renderContaCard)}
             </div>
           )}
@@ -400,7 +400,7 @@ export default function FinanceiroExtratoContas() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
               {contasTerceirizadas.map(renderContaCard)}
             </div>
           )}

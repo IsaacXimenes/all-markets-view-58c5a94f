@@ -175,7 +175,7 @@ export default function FinanceiroExtrato() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <div>
                 <Label>Data Início</Label>
                 <Input
@@ -230,7 +230,7 @@ export default function FinanceiroExtrato() {
         </Card>
 
         {/* Resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <Card className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900">
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
