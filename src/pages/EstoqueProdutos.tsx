@@ -119,7 +119,7 @@ export default function EstoqueProdutos() {
     <EstoqueLayout title="Gerenciamento de Produtos">
       <div className="space-y-4 sm:space-y-6 min-w-0">
         {/* Dashboard Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
           <Card className="overflow-hidden">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-3 min-w-0">
@@ -180,7 +180,7 @@ export default function EstoqueProdutos() {
         {/* Filters */}
         <Card className="overflow-hidden">
           <CardContent className="p-3 sm:p-4">
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(200px,1fr))]">
           <div>
             <p className="text-xs text-muted-foreground mb-1">IMEI</p>
             <Input
@@ -239,7 +239,7 @@ export default function EstoqueProdutos() {
             </Select>
           </div>
 
-          <div className="flex items-center space-x-2 h-10 self-end">
+          <div className="flex items-center space-x-2 h-10 self-end col-span-full sm:col-span-1">
             <Checkbox 
               id="naoConferidos" 
               checked={somenteNaoConferidos}
@@ -250,7 +250,7 @@ export default function EstoqueProdutos() {
             </label>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 sm:col-span-2 lg:col-span-1 self-end">
+          <div className="flex flex-col sm:flex-row gap-2 col-span-full self-end">
             <Button 
               onClick={() => {
                 setLojaFilter('todas');
@@ -276,8 +276,8 @@ export default function EstoqueProdutos() {
         </Card>
 
         {/* Table */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-0 overflow-x-auto">
+        <Card>
+          <CardContent className="p-0">
           <Table className="min-w-[1200px]">
             <TableHeader>
               <TableRow>

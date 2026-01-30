@@ -11,7 +11,7 @@ const TableScrollArea = React.forwardRef<
   <ScrollAreaPrimitive.Root
     ref={ref}
     className={cn("relative overflow-hidden w-full", className)}
-    type="hover"
+    type="always"
     {...props}
   >
     <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
@@ -20,9 +20,9 @@ const TableScrollArea = React.forwardRef<
     <ScrollAreaPrimitive.ScrollAreaScrollbar
       orientation="horizontal"
       forceMount
-      className="flex h-3 touch-none select-none flex-col border-t border-t-transparent p-[2px] transition-colors"
+      className="flex h-4 touch-none select-none flex-col border-t border-t-transparent p-[3px] transition-colors"
     >
-      <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-muted-foreground/40 hover:bg-muted-foreground/60 transition-colors" />
+      <ScrollAreaPrimitive.ScrollAreaThumb className="relative flex-1 rounded-full bg-muted-foreground/50 hover:bg-muted-foreground/70 transition-colors" />
     </ScrollAreaPrimitive.ScrollAreaScrollbar>
     <ScrollAreaPrimitive.Corner />
   </ScrollAreaPrimitive.Root>
