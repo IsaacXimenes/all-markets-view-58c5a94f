@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { ResponsiveCardGrid, ResponsiveFilterGrid, ResponsiveTableContainer } from '@/components/ui/ResponsiveContainers';
 
 import { toast } from 'sonner';
 import { Download, Package, Edit, AlertTriangle, DollarSign, Layers, Hash, TrendingUp, X } from 'lucide-react';
@@ -179,7 +180,7 @@ export default function EstoqueAcessorios() {
     <EstoqueLayout title="Gerenciamento de Acessórios">
       <div className="space-y-6">
         {/* Cards de Estatísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <ResponsiveCardGrid cols={4}>
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -235,7 +236,7 @@ export default function EstoqueAcessorios() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </ResponsiveCardGrid>
 
         {/* Filtros */}
         <Card>
@@ -246,7 +247,7 @@ export default function EstoqueAcessorios() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <ResponsiveFilterGrid cols={4}>
               <div>
                 <Label>Descrição</Label>
                 <Input
@@ -294,14 +295,14 @@ export default function EstoqueAcessorios() {
                   Exportar CSV
                 </Button>
               </div>
-            </div>
+            </ResponsiveFilterGrid>
           </CardContent>
         </Card>
 
         {/* Tabela de Acessórios */}
         <Card>
           <CardContent className="pt-6">
-            <div className="overflow-x-auto">
+            <ResponsiveTableContainer>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -392,7 +393,7 @@ export default function EstoqueAcessorios() {
                   )}
                 </TableBody>
               </Table>
-            </div>
+            </ResponsiveTableContainer>
           </CardContent>
         </Card>
 

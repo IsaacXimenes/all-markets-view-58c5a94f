@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ResponsiveCardGrid, ResponsiveFilterGrid, ResponsiveTableContainer } from '@/components/ui/ResponsiveContainers';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -349,8 +350,9 @@ export default function EstoqueProdutosPendentes() {
       </Card>
 
       {/* Dashboard Cards - Sticky */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-7 gap-4 mb-6 sticky top-0 z-10 bg-background py-2">
-        <Card>
+      <div className="mb-6 sticky top-0 z-10 bg-background py-2">
+        <ResponsiveCardGrid cols={6}>
+          <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary/10">
@@ -430,9 +432,10 @@ export default function EstoqueProdutosPendentes() {
                 <p className="text-sm text-muted-foreground">Devolvido</p>
                 <p className="text-2xl font-bold text-gray-600">{stats.devolvidos}</p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </ResponsiveCardGrid>
       </div>
 
       {/* Filtros - Igual à aba Produtos + Fornecedor */}
@@ -444,7 +447,7 @@ export default function EstoqueProdutosPendentes() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4">
+          <ResponsiveFilterGrid cols={6}>
             <div>
               <Label htmlFor="imei">IMEI</Label>
               <InputComMascara
@@ -536,7 +539,7 @@ export default function EstoqueProdutosPendentes() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          </ResponsiveFilterGrid>
           <div className="flex gap-2 mt-4">
             <Button variant="outline" onClick={handleLimpar}>
               Limpar

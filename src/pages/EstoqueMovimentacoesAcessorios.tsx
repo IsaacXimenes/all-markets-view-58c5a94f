@@ -14,6 +14,7 @@ import { Download, Plus, CheckCircle, Clock, Eye, Edit, Package, X } from 'lucid
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { ResponsiveTableContainer } from '@/components/ui/ResponsiveContainers';
 
 interface MovimentacaoAcessorio {
   id: string;
@@ -418,7 +419,7 @@ export default function EstoqueMovimentacoesAcessorios() {
           </div>
         </div>
 
-        <div className="rounded-md border">
+        <ResponsiveTableContainer>
           <Table>
             <TableHeader>
               <TableRow>
@@ -514,7 +515,7 @@ export default function EstoqueMovimentacoesAcessorios() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </ResponsiveTableContainer>
 
         {/* Dialog de Confirmação de Recebimento */}
         <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
