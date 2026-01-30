@@ -100,7 +100,6 @@ import GarantiaContatosAtivosEditar from "./pages/GarantiaContatosAtivosEditar";
 import OSAnaliseGarantia from "./pages/OSAnaliseGarantia";
 import CadastrosPlanosGarantia from "./pages/CadastrosPlanosGarantia";
 import VendasEditar from "./pages/VendasEditar";
-import { MobilePreviewContainer } from "./components/layout/MobilePreviewContainer";
 
 const queryClient = new QueryClient();
 
@@ -124,7 +123,6 @@ const App = () => (
         <Sonner />
         
         <BrowserRouter>
-          <MobilePreviewContainer />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/performance" element={<Performance />} />

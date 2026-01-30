@@ -40,8 +40,8 @@ import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { getTaxasEntregaAtivas, TaxaEntrega } from '@/utils/taxasEntregaApi';
-import { useIsMobilePreview } from '@/hooks/useMobilePreviewMode';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Alias para compatibilidade
 const formatCurrency = formatarMoeda;
@@ -50,7 +50,7 @@ const TIMER_DURATION = 1800; // 30 minutos em segundos
 const DRAFT_KEY = 'draft_venda_nova';
 
 export default function VendasNova() {
-  const isMobilePreview = useIsMobilePreview();
+  const isMobilePreview = useIsMobile();
   const navigate = useNavigate();
   const { obterLojasAtivas, obterLojasTipoLoja, obterVendedores, obterMotoboys, obterLojaById, obterNomeLoja, obterNomeColaborador, obterLojaMatriz, obterLojaOnline } = useCadastroStore();
   
