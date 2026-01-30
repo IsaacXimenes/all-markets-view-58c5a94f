@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { cn } from '@/lib/utils';
 import { useSidebarState } from '@/hooks/useSidebarState';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -11,16 +12,27 @@ interface PageLayoutProps {
 
 export function PageLayout({ children, title }: PageLayoutProps) {
   const [isSidebarCollapsed, toggleSidebar] = useSidebarState(false);
+  const isMobile = useIsMobile();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   return (
     <div className="min-h-screen flex">
-      <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
+      <Sidebar 
+        isCollapsed={isSidebarCollapsed} 
+        onToggle={toggleSidebar}
+        isMobile={isMobile}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
       
       <div className={cn(
         "flex-1 flex flex-col transition-all duration-300",
-        isSidebarCollapsed ? "ml-16" : "ml-64 xl:ml-72"
+        isMobile ? "ml-0" : (isSidebarCollapsed ? "ml-16" : "ml-64 xl:ml-72")
       )}>
-        <Navbar />
+        <Navbar 
+          isMobile={isMobile}
+          onMenuClick={() => setIsSidebarOpen(true)}
+        />
         
         <main className="flex-1 transition-all duration-300">
           <div className="w-full max-w-full p-3 sm:p-4 lg:p-6 xl:p-8 2xl:p-10 animate-fade-in">

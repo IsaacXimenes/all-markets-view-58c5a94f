@@ -5,12 +5,16 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Link, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
   isCollapsed: boolean;
   onToggle: () => void;
   className?: string;
+  isMobile?: boolean;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 interface NavItem {
@@ -19,27 +23,36 @@ interface NavItem {
   href: string;
 }
 
-export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
+const navItems: NavItem[] = [
+  { title: 'Painel', icon: Home, href: '/' },
+  { title: 'Recursos Humanos', icon: Users, href: '/rh' },
+  { title: 'Financeiro', icon: Banknote, href: '/financeiro/conferencia' },
+  { title: 'Estoque', icon: Package, href: '/estoque' },
+  { title: 'Vendas', icon: ShoppingCart, href: '/vendas' },
+  { title: 'Garantias', icon: Shield, href: '/garantias/nova' },
+  { title: 'Assistência', icon: Wrench, href: '/os/produtos-analise' },
+  { title: 'Relatórios', icon: BarChart3, href: '/relatorios' },
+  { title: 'Cadastros', icon: Database, href: '/cadastros' },
+  { title: 'Configurações', icon: Settings, href: '/settings' },
+];
+
+function SidebarContent({ 
+  isCollapsed, 
+  onToggle, 
+  onNavigate,
+  showToggle = true 
+}: { 
+  isCollapsed: boolean; 
+  onToggle: () => void;
+  onNavigate?: () => void;
+  showToggle?: boolean;
+}) {
   const location = useLocation();
-  
-  const navItems: NavItem[] = [
-    { title: 'Painel', icon: Home, href: '/' },
-    { title: 'Recursos Humanos', icon: Users, href: '/rh' },
-    { title: 'Financeiro', icon: Banknote, href: '/financeiro/conferencia' },
-    { title: 'Estoque', icon: Package, href: '/estoque' },
-    { title: 'Vendas', icon: ShoppingCart, href: '/vendas' },
-    { title: 'Garantias', icon: Shield, href: '/garantias/nova' },
-    { title: 'Assistência', icon: Wrench, href: '/os/produtos-analise' },
-    { title: 'Relatórios', icon: BarChart3, href: '/relatorios' },
-    { title: 'Cadastros', icon: Database, href: '/cadastros' },
-    { title: 'Configurações', icon: Settings, href: '/settings' },
-  ];
 
   const isActiveModule = (href: string) => {
     if (href === '/') {
       return location.pathname === '/';
     }
-    // Handle modules with specific default routes
     if (href === '/financeiro/conferencia') {
       return location.pathname.startsWith('/financeiro');
     }
@@ -53,11 +66,7 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
   };
 
   return (
-    <aside className={cn(
-      "bg-sidebar text-sidebar-foreground relative transition-all duration-300 ease-in-out flex flex-col border-r border-sidebar-border fixed top-0 left-0 h-screen z-50",
-      isCollapsed ? "w-16" : "w-64 xl:w-72",
-      className
-    )}>
+    <>
       <div className="flex h-16 items-center justify-center border-b border-sidebar-border">
         <h2 className={cn(
           "font-semibold tracking-tight transition-opacity duration-200",
@@ -66,17 +75,19 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
           Navegação
         </h2>
         
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggle}
-          className={cn(
-            "absolute right-2 text-sidebar-foreground h-8 w-8",
-            isCollapsed ? "right-2" : "right-4"
-          )}
-        >
-          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </Button>
+        {showToggle && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggle}
+            className={cn(
+              "absolute right-2 text-sidebar-foreground h-8 w-8",
+              isCollapsed ? "right-2" : "right-4"
+            )}
+          >
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
+        )}
       </div>
       
       <ScrollArea className="flex-1 py-4">
@@ -87,6 +98,7 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
               <Link
                 key={index}
                 to={item.href}
+                onClick={onNavigate}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 transition-all duration-200 relative",
                   isActive 
@@ -117,7 +129,6 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
       </ScrollArea>
       
       <div className="p-4 border-t border-sidebar-border">
-
         <div className={cn(
           "transition-opacity duration-200 rounded-md bg-sidebar-accent/50 p-2 text-xs text-sidebar-accent-foreground",
           isCollapsed ? "opacity-0" : "opacity-100"
@@ -127,6 +138,39 @@ export function Sidebar({ isCollapsed, onToggle, className }: SidebarProps) {
           <p className="text-[10px]">Pedidos: 47 hoje</p>
         </div>
       </div>
+    </>
+  );
+}
+
+export function Sidebar({ isCollapsed, onToggle, className, isMobile, isOpen, onClose }: SidebarProps) {
+  // Mobile: renderizar como Sheet/Drawer
+  if (isMobile) {
+    return (
+      <Sheet open={isOpen} onOpenChange={(open) => !open && onClose?.()}>
+        <SheetContent side="left" className="p-0 w-64 bg-sidebar text-sidebar-foreground">
+          <SidebarContent 
+            isCollapsed={false} 
+            onToggle={onToggle}
+            onNavigate={onClose}
+            showToggle={false}
+          />
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  // Desktop: sidebar fixa normal
+  return (
+    <aside className={cn(
+      "bg-sidebar text-sidebar-foreground relative transition-all duration-300 ease-in-out flex flex-col border-r border-sidebar-border fixed top-0 left-0 h-screen z-50",
+      isCollapsed ? "w-16" : "w-64 xl:w-72",
+      className
+    )}>
+      <SidebarContent 
+        isCollapsed={isCollapsed} 
+        onToggle={onToggle}
+        showToggle={true}
+      />
     </aside>
   );
 }

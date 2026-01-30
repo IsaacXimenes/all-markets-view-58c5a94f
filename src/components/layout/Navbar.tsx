@@ -1,19 +1,34 @@
 import React from 'react';
-import { User } from 'lucide-react';
+import { User, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { GlobalSearch } from '@/components/layout/GlobalSearch';
 
 interface NavbarProps {
   className?: string;
+  isMobile?: boolean;
+  onMenuClick?: () => void;
 }
 
-export function Navbar({ className }: NavbarProps) {
+export function Navbar({ className, isMobile, onMenuClick }: NavbarProps) {
   return (
     <header className={cn("bg-background/95 backdrop-blur-sm sticky top-0 z-30 border-b", className)}>
       <div className="container flex items-center justify-between h-16 px-4">
         <div className="flex items-center gap-2 lg:gap-4">
+          {/* Botão hambúrguer - só em mobile */}
+          {isMobile && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onMenuClick}
+              className="shrink-0"
+            >
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Abrir menu</span>
+            </Button>
+          )}
           <GlobalSearch />
         </div>
         
