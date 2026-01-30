@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -15,10 +15,13 @@ import { formatCurrency } from '@/utils/formatUtils';
 import { getGarantiasExpirandoEm7Dias, getGarantiasExpirandoEm30Dias } from '@/utils/garantiasApi';
 import { getPercentualComissao, LOJA_ONLINE_ID } from '@/utils/calculoComissaoVenda';
 import { useSidebarState } from '@/hooks/useSidebarState';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export function Dashboard() {
   const navigate = useNavigate();
   const [isSidebarCollapsed, toggleSidebar] = useSidebarState();
+  const isMobile = useIsMobile();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Dados reais do sistema
   const vendas = getVendas();
@@ -57,13 +60,22 @@ export function Dashboard() {
   
   return (
     <div className="min-h-screen flex">
-      <Sidebar isCollapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
+      <Sidebar 
+        isCollapsed={isSidebarCollapsed} 
+        onToggle={toggleSidebar}
+        isMobile={isMobile}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+      />
       
       <div className={cn(
         "flex-1 flex flex-col transition-all duration-300",
-        isSidebarCollapsed ? "ml-16" : "ml-64 xl:ml-72"
+        isMobile ? "ml-0" : (isSidebarCollapsed ? "ml-16" : "ml-64 xl:ml-72")
       )}>
-        <Navbar />
+        <Navbar 
+          isMobile={isMobile}
+          onMenuClick={() => setIsSidebarOpen(true)}
+        />
         
         <main className="flex-1 transition-all duration-300 overflow-hidden">
           <div className="w-full max-w-full h-full p-3 sm:p-4 lg:p-6 xl:p-8 flex flex-col animate-fade-in">
@@ -192,11 +204,11 @@ export function Dashboard() {
                       <div className="space-y-2">
                         {vendas.slice(0, 5).map(venda => (
                           <div key={venda.id} className="flex justify-between items-center p-2 bg-muted/30 rounded">
-                            <div>
-                              <p className="font-medium text-sm">{venda.clienteNome}</p>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm truncate">{venda.clienteNome}</p>
                               <p className="text-xs text-muted-foreground">{new Date(venda.dataHora).toLocaleDateString('pt-BR')}</p>
                             </div>
-                            <span className="font-semibold text-primary">{formatCurrency(venda.total)}</span>
+                            <span className="font-semibold text-primary shrink-0 ml-2">{formatCurrency(venda.total)}</span>
                           </div>
                         ))}
                       </div>
