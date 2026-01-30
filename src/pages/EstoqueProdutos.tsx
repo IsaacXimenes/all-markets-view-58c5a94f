@@ -180,14 +180,14 @@ export default function EstoqueProdutos() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-3 xl:gap-4 items-end">
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:[grid-template-columns:repeat(auto-fit,minmax(160px,1fr))]">
           <div>
             <p className="text-xs text-muted-foreground mb-1">IMEI</p>
             <Input
               placeholder="WW-XXXXXX-YYYYYY-Z"
               value={imeiFilter}
               onChange={(e) => setImeiFilter(formatIMEI(e.target.value))}
-              className="w-[180px]"
+              className="w-full"
             />
           </div>
 
@@ -197,7 +197,7 @@ export default function EstoqueProdutos() {
               placeholder="Modelo"
               value={modeloFilter}
               onChange={(e) => setModeloFilter(e.target.value)}
-              className="w-[180px]"
+              className="w-full"
             />
           </div>
 
@@ -213,7 +213,7 @@ export default function EstoqueProdutos() {
           <div>
             <p className="text-xs text-muted-foreground mb-1">Tipo</p>
             <Select value={tipoFilter} onValueChange={setTipoFilter}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -227,7 +227,7 @@ export default function EstoqueProdutos() {
           <div>
             <p className="text-xs text-muted-foreground mb-1">Origem</p>
             <Select value={origemFilter} onValueChange={setOrigemFilter}>
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Todas" />
               </SelectTrigger>
               <SelectContent>
@@ -239,7 +239,7 @@ export default function EstoqueProdutos() {
             </Select>
           </div>
 
-          <div className="flex items-center space-x-2 h-10">
+          <div className="flex items-center space-x-2 h-10 self-end">
             <Checkbox 
               id="naoConferidos" 
               checked={somenteNaoConferidos}
@@ -250,7 +250,7 @@ export default function EstoqueProdutos() {
             </label>
           </div>
 
-          <div className="ml-auto flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 sm:col-span-2 lg:col-span-1 self-end">
             <Button 
               onClick={() => {
                 setLojaFilter('todas');
@@ -261,19 +261,21 @@ export default function EstoqueProdutos() {
                 setSomenteNaoConferidos(false);
               }} 
               variant="ghost"
+              className="w-full sm:w-auto"
             >
               <X className="mr-2 h-4 w-4" />
-              Limpar Filtros
+              Limpar
             </Button>
-            <Button onClick={handleExport} variant="outline">
+            <Button onClick={handleExport} variant="outline" className="w-full sm:w-auto">
               <Download className="mr-2 h-4 w-4" />
-              Exportar CSV
+              CSV
             </Button>
           </div>
         </div>
 
-        <div className="rounded-md border overflow-x-auto">
-          <Table>
+        <Card className="overflow-hidden">
+          <CardContent className="p-0 overflow-x-auto">
+          <Table className="min-w-[1200px]">
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
@@ -430,7 +432,8 @@ export default function EstoqueProdutos() {
               })}
             </TableBody>
           </Table>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Modal Informar Valor Recomendado */}
