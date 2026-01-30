@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ResponsiveCardGrid, ResponsiveFilterGrid } from '@/components/ui/ResponsiveContainers';
 import { 
   getNotasParaEstoque, 
   NotaEntrada,
@@ -161,7 +162,7 @@ export default function EstoqueNotasPendencias() {
     <EstoqueLayout title="Notas Pendentes">
       <div className="space-y-6">
         {/* Cards de Resumo */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+        <ResponsiveCardGrid cols={6}>
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
@@ -228,7 +229,7 @@ export default function EstoqueNotasPendencias() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </ResponsiveCardGrid>
 
         {/* Filtros */}
         <Card>
@@ -239,7 +240,7 @@ export default function EstoqueNotasPendencias() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            <ResponsiveFilterGrid cols={6}>
               <div>
                 <Label htmlFor="dataInicio">Data Início</Label>
                 <Input
@@ -309,7 +310,7 @@ export default function EstoqueNotasPendencias() {
                   onChange={(e) => setFilters({ ...filters, palavraChave: e.target.value })}
                 />
               </div>
-            </div>
+            </ResponsiveFilterGrid>
             <div className="flex justify-end mt-4">
               <Button variant="outline" onClick={handleLimpar}>
                 <X className="h-4 w-4 mr-2" />

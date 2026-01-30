@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { ResponsiveTableContainer } from '@/components/ui/ResponsiveContainers';
 
 export default function EstoqueMovimentacoes() {
   const { obterLojasTipoLoja, obterColaboradoresAtivos, obterLojaById, obterNomeLoja } = useCadastroStore();
@@ -464,7 +465,7 @@ export default function EstoqueMovimentacoes() {
           </div>
         </div>
 
-        <div className="rounded-md border">
+        <ResponsiveTableContainer>
           <Table>
             <TableHeader>
               <TableRow>
@@ -560,7 +561,7 @@ export default function EstoqueMovimentacoes() {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </ResponsiveTableContainer>
 
         {/* Dialog de Confirmação de Recebimento */}
         <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
