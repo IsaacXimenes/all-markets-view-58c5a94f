@@ -1,9 +1,18 @@
+/* ============================================
+   1. IMPORTS E TAILWIND DIRECTIVES
+   ============================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ============================================
+   2. CSS VARIABLES (Design Tokens)
+   - Cores do tema claro
+   - Cores do tema escuro
+   ============================================ */
 
 @layer base {
   :root {
@@ -96,6 +105,13 @@
   }
 }
 
+/* ============================================
+   3. BASE STYLES
+   - Reset e estilos globais
+   - Tipografia base
+   - Layout base
+   ============================================ */
+
 @layer base {
   * {
     @apply border-border;
@@ -111,6 +127,22 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
+  /* Root container - layout base (migrado do App.css) */
+  #root {
+    width: 100%;
+    min-height: 100vh;
+  }
+}
+
+/* ============================================
+   4. UTILITY CLASSES
+   - Glass morphism
+   - Scrollbar styles
+   - Loading states
+   - Status colors
+   ============================================ */
+
+@layer base {
   /* Glass morphism */
   .glass {
     @apply bg-white/10 backdrop-blur-lg border border-white/20 shadow-glass;
@@ -175,24 +207,6 @@
     display: none;
   }
 
-  /* Classes utilitárias para responsividade (legacy) */
-  .responsive-grid-cards {
-    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4;
-  }
-
-  .responsive-grid-filters {
-    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4;
-  }
-
-  .responsive-padding {
-    @apply p-3 sm:p-4 lg:p-6 xl:p-8;
-  }
-
-  /* Container responsivo para conteúdo principal */
-  .responsive-container {
-    @apply w-full max-w-full px-3 sm:px-4 lg:px-6 xl:px-8 2xl:px-10;
-  }
-
   /* Scrollbar sempre visível para containers de tabela */
   .scrollbar-visible {
     -webkit-overflow-scrolling: touch;
@@ -217,8 +231,36 @@
 }
 
 /* ============================================
-   CSS Container Queries - Grids Responsivos
-   Responde ao tamanho do container, não viewport
+   5. LEGACY UTILITIES (para remoção futura)
+   - Classes viewport-based (deprecated)
+   - Usar Container Queries quando possível
+   ============================================ */
+
+@layer base {
+  /* Classes utilitárias para responsividade (legacy - preferir Container Queries) */
+  .responsive-grid-cards {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4;
+  }
+
+  .responsive-grid-filters {
+    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4;
+  }
+
+  .responsive-padding {
+    @apply p-3 sm:p-4 lg:p-6 xl:p-8;
+  }
+
+  /* Container responsivo para conteúdo principal */
+  .responsive-container {
+    @apply w-full max-w-full px-3 sm:px-4 lg:px-6 xl:px-8 2xl:px-10;
+  }
+}
+
+/* ============================================
+   6. LAYOUT RESPONSIVO (Container Queries)
+   - Cards grid
+   - Filters grid
+   - Page layout
    ============================================ */
 
 /* Container para Cards */
@@ -323,8 +365,9 @@
 }
 
 /* ============================================
-   Container Query para Layout Principal
-   Resolve o problema do Mobile Preview
+   7. PAGE LAYOUT (Container Query)
+   - Resolve o problema do Mobile Preview
+   - Remove margin da sidebar em containers estreitos
    ============================================ */
 
 .page-layout-wrapper {
