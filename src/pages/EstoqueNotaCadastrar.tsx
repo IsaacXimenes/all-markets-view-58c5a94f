@@ -10,7 +10,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Lock, AlertCircle, Info, FileText } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ArrowLeft, Lock, AlertCircle, Info, FileText, Zap } from 'lucide-react';
 import { getNotasCompra } from '@/utils/estoqueApi';
 import { 
   criarNotaEntrada, 
@@ -32,8 +33,10 @@ export default function EstoqueNotaCadastrar() {
   // Informações da Nota
   const [fornecedor, setFornecedor] = useState('');
   const [dataEntrada, setDataEntrada] = useState('');
-  const [qtdInformada, setQtdInformada] = useState<number>(0);
   const [valorTotal, setValorTotal] = useState<number>(0);
+  
+  // Flag de Urgência
+  const [urgente, setUrgente] = useState(false);
   
   // Pagamento
   const [formaPagamento, setFormaPagamento] = useState<'Dinheiro' | 'Pix' | ''>('');
@@ -104,11 +107,11 @@ export default function EstoqueNotaCadastrar() {
       data: dataEntrada,
       fornecedor, // Passa o nome do fornecedor diretamente
       tipoPagamento: tipoPagamento as TipoPagamentoNota,
-      qtdInformada: qtdInformada || undefined,
       valorTotal: valorTotal || undefined,
       formaPagamento: formaPagamento || undefined,
       responsavel: 'Usuário Estoque', // TODO: obter do contexto de autenticação
-      observacoes: observacaoPagamento || undefined
+      observacoes: observacaoPagamento || undefined,
+      urgente: urgente
     });
 
     // Mensagem de sucesso
@@ -190,18 +193,6 @@ export default function EstoqueNotaCadastrar() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="qtdInformada">Qtd de Aparelhos Informada</Label>
-                <Input 
-                  id="qtdInformada" 
-                  type="number"
-                  min="0"
-                  value={qtdInformada || ''}
-                  onChange={(e) => setQtdInformada(parseInt(e.target.value) || 0)}
-                  placeholder="Quantidade esperada na nota"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Referência para controle de cadastro</p>
-              </div>
-              <div>
                 <Label htmlFor="valorTotal">Valor Total da Nota</Label>
                 <InputComMascara
                   mascara="moeda"
@@ -210,6 +201,19 @@ export default function EstoqueNotaCadastrar() {
                   placeholder="R$ 0,00"
                 />
                 <p className="text-xs text-muted-foreground mt-1">Valor previsto da nota fiscal</p>
+              </div>
+              <div className="flex items-center gap-3 mt-6">
+                <Checkbox
+                  id="urgente"
+                  checked={urgente}
+                  onCheckedChange={(checked) => setUrgente(checked as boolean)}
+                />
+                <div className="flex items-center gap-2">
+                  <Zap className={`h-4 w-4 ${urgente ? 'text-destructive' : 'text-muted-foreground'}`} />
+                  <Label htmlFor="urgente" className={`cursor-pointer ${urgente ? 'text-destructive font-medium' : ''}`}>
+                    Solicitação de Urgência
+                  </Label>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -257,7 +261,6 @@ export default function EstoqueNotaCadastrar() {
                       <div className="flex flex-col items-center gap-2">
                         <AlertCircle className="h-6 w-6" />
                         <span>Nenhum produto cadastrado nesta etapa</span>
-                        <span className="text-xs">Quantidade informada: {qtdInformada || 0} aparelhos</span>
                       </div>
                     </TableCell>
                   </TableRow>

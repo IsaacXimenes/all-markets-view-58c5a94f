@@ -133,6 +133,9 @@ export interface NotaEntrada {
   
   // Forma de pagamento preferida (informativo)
   formaPagamento?: 'Dinheiro' | 'Pix';
+  
+  // Flag de urgência
+  urgente?: boolean;
 }
 
 // ============= ARMAZENAMENTO =============
@@ -312,6 +315,7 @@ export const criarNotaEntrada = (dados: {
   formaPagamento?: 'Dinheiro' | 'Pix';
   responsavel: string;
   observacoes?: string;
+  urgente?: boolean;
 }): NotaEntrada => {
   // Gerar número da nota usando contador auto-incremental
   const numeroNota = gerarNumeroNotaAutoIncremental();
@@ -361,7 +365,8 @@ export const criarNotaEntrada = (dados: {
     dataCriacao: new Date().toISOString(),
     responsavelCriacao: dados.responsavel,
     observacoes: dados.observacoes,
-    formaPagamento: dados.formaPagamento
+    formaPagamento: dados.formaPagamento,
+    urgente: dados.urgente || false
   };
   
   // Registrar criação na timeline

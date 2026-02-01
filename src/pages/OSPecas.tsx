@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getPecas, Peca, exportPecasToCSV, addPeca } from '@/utils/pecasApi';
+import { getPecas, Peca, exportPecasToCSV, addPeca, initializePecasWithLojaIds } from '@/utils/pecasApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { getProdutosCadastro } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -16,14 +16,33 @@ import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { getPecasCadastro } from '@/pages/CadastrosPecas';
 import { Download, Eye, Plus, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useEffect } from 'react';
 
 export default function OSPecas() {
   const { toast } = useToast();
-  const [pecas, setPecas] = useState<Peca[]>(getPecas());
   const { obterLojasTipoLoja, obterNomeLoja } = useCadastroStore();
   const lojas = obterLojasTipoLoja();
+  
+  // Inicializar peças com IDs válidos de loja
+  useEffect(() => {
+    const lojaIds = lojas.map(l => l.id);
+    if (lojaIds.length > 0) {
+      initializePecasWithLojaIds(lojaIds);
+    }
+  }, [lojas]);
+  
+  const [pecas, setPecas] = useState<Peca[]>(getPecas());
   const pecasCadastradas = getPecasCadastro();
   const produtosCadastrados = getProdutosCadastro();
+  
+  // Atualizar lista quando peças são inicializadas
+  useEffect(() => {
+    const lojaIds = lojas.map(l => l.id);
+    if (lojaIds.length > 0) {
+      initializePecasWithLojaIds(lojaIds);
+      setPecas(getPecas());
+    }
+  }, [lojas]);
 
   // Filtros
   const [filtroData, setFiltroData] = useState('');

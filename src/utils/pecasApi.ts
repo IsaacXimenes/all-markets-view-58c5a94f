@@ -15,11 +15,15 @@ export interface Peca {
 }
 
 // Mock de peças
-let pecas: Peca[] = [
+// Os IDs de loja serão inicializados dinamicamente para corresponder aos UUIDs do CadastroStore
+// A função initializePecasWithLojaIds deve ser chamada após o CadastroStore ser inicializado
+let pecas: Peca[] = [];
+
+// Dados base das peças (sem lojaId definido)
+const pecasBase: Omit<Peca, 'lojaId'>[] = [
   {
     id: 'PEC-0001',
     descricao: 'Tela LCD iPhone 14 Pro Max',
-    lojaId: 'LOJA-001',
     modelo: 'iPhone 14 Pro Max',
     valorCusto: 450.00,
     valorRecomendado: 650.00,
@@ -32,7 +36,6 @@ let pecas: Peca[] = [
   {
     id: 'PEC-0002',
     descricao: 'Bateria iPhone 13',
-    lojaId: 'LOJA-001',
     modelo: 'iPhone 13',
     valorCusto: 120.00,
     valorRecomendado: 200.00,
@@ -45,7 +48,6 @@ let pecas: Peca[] = [
   {
     id: 'PEC-0003',
     descricao: 'Câmera Traseira iPhone 15',
-    lojaId: 'LOJA-002',
     modelo: 'iPhone 15',
     valorCusto: 280.00,
     valorRecomendado: 400.00,
@@ -57,7 +59,6 @@ let pecas: Peca[] = [
   {
     id: 'PEC-0004',
     descricao: 'Conector de Carga iPhone 12',
-    lojaId: 'LOJA-001',
     modelo: 'iPhone 12',
     valorCusto: 80.00,
     valorRecomendado: 150.00,
@@ -70,7 +71,6 @@ let pecas: Peca[] = [
   {
     id: 'PEC-0005',
     descricao: 'Alto-falante iPhone 14',
-    lojaId: 'LOJA-002',
     modelo: 'iPhone 14',
     valorCusto: 55.00,
     valorRecomendado: 100.00,
@@ -80,6 +80,16 @@ let pecas: Peca[] = [
     status: 'Disponível'
   }
 ];
+
+// Função para inicializar peças com IDs de loja válidos do CadastroStore
+export const initializePecasWithLojaIds = (lojaIds: string[]): void => {
+  if (pecas.length > 0) return; // Já inicializado
+  
+  pecas = pecasBase.map((peca, index) => ({
+    ...peca,
+    lojaId: lojaIds[index % lojaIds.length] || lojaIds[0] || ''
+  }));
+};
 
 let nextPecaId = 6;
 

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { getColaboradoresByPermissao, getLojas } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { 
   getRegistrosAnaliseGarantia, aprovarAnaliseGarantia, 
   RegistroAnaliseGarantia 
@@ -23,8 +23,9 @@ import { addOrdemServico } from '@/utils/assistenciaApi';
 
 export default function OSAnaliseGarantia() {
   const [registros, setRegistros] = useState<RegistroAnaliseGarantia[]>(getRegistrosAnaliseGarantia());
-  const tecnicos = getColaboradoresByPermissao('Assistência');
-  const lojas = getLojas();
+  const { obterTecnicos, obterLojasTipoLoja, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
+  const tecnicos = obterTecnicos();
+  const lojas = obterLojasTipoLoja();
   
   // Filtros
   const [filtroOrigem, setFiltroOrigem] = useState<string>('todos');
@@ -34,6 +35,7 @@ export default function OSAnaliseGarantia() {
   const [showAprovarModal, setShowAprovarModal] = useState(false);
   const [registroSelecionado, setRegistroSelecionado] = useState<RegistroAnaliseGarantia | null>(null);
   const [tecnicoSelecionado, setTecnicoSelecionado] = useState('');
+  const [lojaSelecionada, setLojaSelecionada] = useState('');
   const [dataHoraAprovacao] = useState(new Date().toISOString());
   
   // Modal detalhes
@@ -99,6 +101,7 @@ export default function OSAnaliseGarantia() {
   const handleAbrirAprovar = (registro: RegistroAnaliseGarantia) => {
     setRegistroSelecionado(registro);
     setTecnicoSelecionado('');
+    setLojaSelecionada(lojas[0]?.id || '');
     setShowAprovarModal(true);
   };
 
@@ -112,6 +115,11 @@ export default function OSAnaliseGarantia() {
       toast.error('Selecione um técnico');
       return;
     }
+    
+    if (!lojaSelecionada) {
+      toast.error('Selecione uma loja');
+      return;
+    }
 
     const tecnico = tecnicos.find(t => t.id === tecnicoSelecionado);
     const registroAprovado = aprovarAnaliseGarantia(registroSelecionado.id, {
@@ -121,16 +129,14 @@ export default function OSAnaliseGarantia() {
       usuarioAprovacao: 'Usuário Sistema'
     });
 
-    // Criar OS na tela de Assistência
+    // Criar OS na tela de Assistência com IDs corretos do CadastroStore
     if (registroAprovado) {
-      const primeiraLoja = lojas[0];
-      
       addOrdemServico({
         dataHora: new Date().toISOString(),
         clienteId: '',
         setor: registroAprovado.origem === 'Garantia' ? 'GARANTIA' : 'ASSISTÊNCIA',
-        tecnicoId: tecnicoSelecionado,
-        lojaId: primeiraLoja?.id || '',
+        tecnicoId: tecnicoSelecionado, // UUID do técnico selecionado
+        lojaId: lojaSelecionada, // UUID da loja selecionada
         status: 'Em serviço',
         pecas: [],
         pagamentos: [],
@@ -299,6 +305,17 @@ export default function OSAnaliseGarantia() {
               </Select>
             </div>
             <div className="space-y-2">
+              <Label>Loja *</Label>
+              <Select value={lojaSelecionada} onValueChange={setLojaSelecionada}>
+                <SelectTrigger><SelectValue placeholder="Selecione uma loja..." /></SelectTrigger>
+                <SelectContent>
+                  {lojas.map(l => (
+                    <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>Data/Hora</Label>
               <Input 
                 value={format(new Date(dataHoraAprovacao), 'dd/MM/yyyy HH:mm')} 
@@ -353,7 +370,7 @@ export default function OSAnaliseGarantia() {
                 {detalheRegistro.tecnicoId && (
                   <div>
                     <Label className="text-xs text-muted-foreground">Técnico</Label>
-                    <p>{detalheRegistro.tecnicoNome}</p>
+                    <p>{detalheRegistro.tecnicoNome || obterNomeColaborador(detalheRegistro.tecnicoId)}</p>
                   </div>
                 )}
                 {detalheRegistro.dataAprovacao && (

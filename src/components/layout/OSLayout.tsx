@@ -10,7 +10,6 @@ interface OSLayoutProps {
 const tabs = [
   { name: 'Histórico de Assistência', href: '/os/historico-assistencia', icon: ClipboardList },
   { name: 'Assistência', href: '/os/assistencia', icon: Wrench },
-  { name: 'Lista de Reparos', href: '/os/produtos-analise', icon: Package },
   { name: 'Estoque - Assistência', href: '/os/pecas', icon: Package },
   { name: 'Solicitações de Peças', href: '/os/solicitacoes-pecas', icon: ShoppingCart },
   { name: 'Análise de Tratativas', href: '/os/analise-garantia', icon: ClipboardList },

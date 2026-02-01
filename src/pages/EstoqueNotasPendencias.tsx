@@ -25,7 +25,6 @@ import {
   Package,
   ClipboardCheck,
   Plus,
-  Zap,
   Archive
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -326,16 +325,8 @@ export default function EstoqueNotasPendencias() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <CardTitle>Notas Pendentes</CardTitle>
               <div className="flex gap-2">
-                <Button onClick={handleRefresh} variant="outline">
+              <Button onClick={handleRefresh} variant="outline">
                   Atualizar
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="border-destructive/50 text-destructive hover:bg-destructive/10"
-                  onClick={() => navigate('/estoque/notas-urgencia')}
-                >
-                  <Zap className="h-4 w-4 mr-2" />
-                  Lançamento Urgência
                 </Button>
                 <Button onClick={() => navigate('/estoque/nota/cadastrar')}>
                   <Plus className="h-4 w-4 mr-2" />

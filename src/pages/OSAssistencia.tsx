@@ -166,6 +166,7 @@ export default function OSAssistencia() {
   };
 
   const getValorProduto = (os: OrdemServico) => {
+    // Verificar se tem valor de produto de origem (venda)
     if (os.origemOS === 'Venda' && os.valorProdutoOrigem) {
       return (
         <span className="font-medium text-green-600">
@@ -173,6 +174,25 @@ export default function OSAssistencia() {
         </span>
       );
     }
+    
+    // Para produtos de Trade-In (Base de Troca), buscar valor nos produtos pendentes
+    if (os.origemOS === 'Estoque' || os.origemOS === 'Garantia') {
+      // Buscar produto pendente relacionado pelo IMEI
+      const imeiOS = os.imeiAparelho || os.pecas.find(p => p.imei)?.imei;
+      if (imeiOS) {
+        const produtoTroca = produtosPendentes.find(p => 
+          p.imei === imeiOS && p.origemEntrada === 'Base de Troca'
+        );
+        if (produtoTroca && produtoTroca.valorOrigem) {
+          return (
+            <span className="font-medium text-purple-600">
+              {formatCurrency(produtoTroca.valorOrigem)}
+            </span>
+          );
+        }
+      }
+    }
+    
     return <span className="text-muted-foreground">-</span>;
   };
 

@@ -22,7 +22,8 @@ import {
   Warehouse,
   Landmark,
   CreditCard,
-  Clock
+  Clock,
+  Zap
 } from 'lucide-react';
 
 interface TabelaNotasPendenciasProps {
@@ -211,6 +212,7 @@ export function TabelaNotasPendencias({
             <TableHead>Data/Hora</TableHead>
             <TableHead>Nº Nota</TableHead>
             <TableHead>Fornecedor</TableHead>
+            <TableHead>Urgência</TableHead>
             <TableHead>Tipo Pag.</TableHead>
             <TableHead>Atuação Atual</TableHead>
             <TableHead>Status</TableHead>
@@ -225,7 +227,7 @@ export function TabelaNotasPendencias({
         <TableBody>
           {notas.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                 Nenhuma nota pendente encontrada
               </TableCell>
             </TableRow>
@@ -245,6 +247,16 @@ export function TabelaNotasPendencias({
                   </TableCell>
                   <TableCell className="font-mono text-xs">{nota.numeroNota}</TableCell>
                   <TableCell>{getNomeFornecedor(nota.fornecedor)}</TableCell>
+                  <TableCell>
+                    {nota.urgente ? (
+                      <Badge variant="destructive" className="gap-1">
+                        <Zap className="h-3 w-3" />
+                        Urgente
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">-</span>
+                    )}
+                  </TableCell>
                   <TableCell>{getTipoPagamentoBadge(nota.tipoPagamento)}</TableCell>
                   <TableCell>{getAtuacaoBadge(nota.atuacaoAtual)}</TableCell>
                   <TableCell>{getStatusBadge(nota.status)}</TableCell>
