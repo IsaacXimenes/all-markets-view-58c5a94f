@@ -27,12 +27,12 @@ export interface RemuneracaoMotoboy {
   dataPagamento?: string;
 }
 
-// Mock data de demandas
+// Mock data de demandas - IDs atualizados para UUIDs reais do useCadastroStore
 const demandas: DemandaMotoboy[] = [
   {
     id: 'DEM-001',
-    motoboyId: 'COL-018',
-    motoboyNome: 'Roberto Motoboy',
+    motoboyId: 'a962efd4', // João Vitor Rezende Andrade de Souza
+    motoboyNome: 'João Vitor Rezende Andrade de Souza',
     data: '2026-01-28',
     tipo: 'Entrega',
     descricao: 'Entrega iPhone 15 Pro Max - Cliente João Silva',
@@ -43,8 +43,8 @@ const demandas: DemandaMotoboy[] = [
   },
   {
     id: 'DEM-002',
-    motoboyId: 'COL-018',
-    motoboyNome: 'Roberto Motoboy',
+    motoboyId: 'a962efd4', // João Vitor Rezende Andrade de Souza
+    motoboyNome: 'João Vitor Rezende Andrade de Souza',
     data: '2026-01-28',
     tipo: 'Coleta',
     descricao: 'Coleta aparelho para garantia',
@@ -55,8 +55,8 @@ const demandas: DemandaMotoboy[] = [
   },
   {
     id: 'DEM-003',
-    motoboyId: 'COL-018',
-    motoboyNome: 'Roberto Motoboy',
+    motoboyId: 'a962efd4', // João Vitor Rezende Andrade de Souza
+    motoboyNome: 'João Vitor Rezende Andrade de Souza',
     data: '2026-01-29',
     tipo: 'Movimentação',
     descricao: 'Movimentação estoque entre lojas',
@@ -67,8 +67,8 @@ const demandas: DemandaMotoboy[] = [
   },
   {
     id: 'DEM-004',
-    motoboyId: 'COL-019',
-    motoboyNome: 'Carlos Motoboy',
+    motoboyId: '3b3afac0', // Samuel Silva dos Santos Nonato
+    motoboyNome: 'Samuel Silva dos Santos Nonato',
     data: '2026-01-29',
     tipo: 'Entrega',
     descricao: 'Entrega MacBook Air - Cliente Maria Santos',
@@ -79,8 +79,8 @@ const demandas: DemandaMotoboy[] = [
   },
   {
     id: 'DEM-005',
-    motoboyId: 'COL-019',
-    motoboyNome: 'Carlos Motoboy',
+    motoboyId: '3b3afac0', // Samuel Silva dos Santos Nonato
+    motoboyNome: 'Samuel Silva dos Santos Nonato',
     data: '2026-01-30',
     tipo: 'Entrega',
     descricao: 'Entrega Apple Watch - Cliente Pedro Lima',
@@ -91,8 +91,8 @@ const demandas: DemandaMotoboy[] = [
   },
   {
     id: 'DEM-006',
-    motoboyId: 'COL-018',
-    motoboyNome: 'Roberto Motoboy',
+    motoboyId: 'a962efd4', // João Vitor Rezende Andrade de Souza
+    motoboyNome: 'João Vitor Rezende Andrade de Souza',
     data: '2026-01-30',
     tipo: 'Entrega',
     descricao: 'Entrega AirPods Pro',
@@ -103,12 +103,12 @@ const demandas: DemandaMotoboy[] = [
   }
 ];
 
-// Mock de remunerações calculadas
+// Mock de remunerações calculadas - IDs atualizados para UUIDs reais do useCadastroStore
 let remuneracoes: RemuneracaoMotoboy[] = [
   {
     id: 'REM-001',
-    motoboyId: 'COL-018',
-    motoboyNome: 'Roberto Motoboy',
+    motoboyId: 'a962efd4', // João Vitor Rezende Andrade de Souza
+    motoboyNome: 'João Vitor Rezende Andrade de Souza',
     competencia: 'JAN-2026',
     periodoInicio: '2026-01-01',
     periodoFim: '2026-01-15',
@@ -119,8 +119,8 @@ let remuneracoes: RemuneracaoMotoboy[] = [
   },
   {
     id: 'REM-002',
-    motoboyId: 'COL-019',
-    motoboyNome: 'Carlos Motoboy',
+    motoboyId: '3b3afac0', // Samuel Silva dos Santos Nonato
+    motoboyNome: 'Samuel Silva dos Santos Nonato',
     competencia: 'JAN-2026',
     periodoInicio: '2026-01-01',
     periodoFim: '2026-01-15',
@@ -131,8 +131,8 @@ let remuneracoes: RemuneracaoMotoboy[] = [
   },
   {
     id: 'REM-003',
-    motoboyId: 'COL-018',
-    motoboyNome: 'Roberto Motoboy',
+    motoboyId: 'a962efd4', // João Vitor Rezende Andrade de Souza
+    motoboyNome: 'João Vitor Rezende Andrade de Souza',
     competencia: 'JAN-2026',
     periodoInicio: '2026-01-16',
     periodoFim: '2026-01-31',
@@ -142,8 +142,8 @@ let remuneracoes: RemuneracaoMotoboy[] = [
   },
   {
     id: 'REM-004',
-    motoboyId: 'COL-019',
-    motoboyNome: 'Carlos Motoboy',
+    motoboyId: '3b3afac0', // Samuel Silva dos Santos Nonato
+    motoboyNome: 'Samuel Silva dos Santos Nonato',
     competencia: 'JAN-2026',
     periodoInicio: '2026-01-16',
     periodoFim: '2026-01-31',

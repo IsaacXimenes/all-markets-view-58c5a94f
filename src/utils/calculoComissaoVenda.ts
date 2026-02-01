@@ -1,11 +1,11 @@
 // Cálculo de Comissão de Venda baseado na origem (Loja Física vs Online - Digital)
 
-import { getLojaById } from './cadastrosApi';
-
 export interface CalculoComissaoVendaInput {
   lojaVendaId: string;
   lucroResidual: number;
   colaboradorId?: string;
+  // Função para buscar loja por ID (injetada pelo componente/hook que usa)
+  getLojaById?: (id: string) => { id: string; nome: string } | undefined;
 }
 
 export interface ResultadoComissaoVenda {
@@ -16,8 +16,8 @@ export interface ResultadoComissaoVenda {
   lucroResidual: number; // Lucro residual original (não alterado)
 }
 
-// ID fixo da loja online
-export const LOJA_ONLINE_ID = 'LOJA-ONLINE';
+// ID fixo da loja online - UUID real do useCadastroStore
+export const LOJA_ONLINE_ID = 'fcc78c1a'; // Loja - Online
 
 // Percentuais de comissão
 const COMISSAO_LOJA_FISICA = 10; // 10%
@@ -37,17 +37,20 @@ const COMISSAO_LOJA_ONLINE = 6;  // 6%
  * @throws Error se lojaVendaId não existe
  */
 export function calcularComissaoVenda(input: CalculoComissaoVendaInput): ResultadoComissaoVenda {
-  const { lojaVendaId, lucroResidual } = input;
+  const { lojaVendaId, lucroResidual, getLojaById } = input;
 
   // Validação: lucro residual não pode ser negativo
   if (lucroResidual < 0) {
     throw new Error('Lucro residual não pode ser negativo');
   }
 
-  // Buscar loja
-  const loja = getLojaById(lojaVendaId);
-  if (!loja) {
-    throw new Error('Loja de venda não encontrada');
+  // Buscar loja (usa função injetada ou retorna nome genérico)
+  let lojaNome = 'Loja Desconhecida';
+  if (getLojaById) {
+    const loja = getLojaById(lojaVendaId);
+    if (loja) {
+      lojaNome = loja.nome;
+    }
   }
 
   // Determinar percentual de comissão baseado na origem
@@ -59,7 +62,7 @@ export function calcularComissaoVenda(input: CalculoComissaoVendaInput): Resulta
 
   return {
     lojaVendaId,
-    lojaVendaNome: loja.nome,
+    lojaVendaNome: lojaNome,
     percentualComissao,
     valorComissao,
     lucroResidual
