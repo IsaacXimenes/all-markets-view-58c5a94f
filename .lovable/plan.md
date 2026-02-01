@@ -1,167 +1,172 @@
 
-# Plano de Implementação: Correções em Múltiplos Módulos
+# Plano de Correção: Referências de Lojas e Colaboradores no Sistema
 
-## Resumo das Alterações Solicitadas
+## Diagnóstico do Problema
 
-O usuário identificou 8 correções/melhorias em diferentes módulos do sistema.
+O sistema possui **duas fontes de dados conflitantes**:
+
+1. **useCadastroStore (Zustand)** - Fonte única de verdade com UUIDs reais:
+   - Lojas: `3ac7e00c`, `db894e7d`, `3cfbf69f`, etc.
+   - Colaboradores: `b467c728`, `143ac0c2`, etc.
+
+2. **cadastrosApi.ts + APIs mockadas** - Dados antigos com IDs sequenciais:
+   - Lojas: `LOJA-001`, `LOJA-002`, etc.
+   - Colaboradores: `COL-001`, `COL-005`, etc.
+
+### Erros Identificados
+
+| Local | Problema |
+|-------|----------|
+| RH > Lojas da Rede > Ver Quadro Completo | `LojaRH.tsx` usa `getLojaById()` do `cadastrosApi.ts` que não encontra UUIDs |
+| RH > Adiantamentos | Dados mockados usam `LOJA-001`, `COL-005` que não existem no `useCadastroStore` |
+| 14+ arquivos de APIs | Dados mockados com IDs antigos (`LOJA-00X`, `COL-00X`) |
 
 ---
 
-## 1. VENDAS - Redimensionar Modal de Itens
+## Solução: Migração Completa para useCadastroStore
 
-**Arquivo:** `src/pages/VendasNova.tsx`
+### Parte 1: Corrigir LojaRH.tsx
 
-**Problema:** O modal de seleção de produtos (linha 2570) está com tamanho `max-w-4xl`, que pode ser pequeno para visualizar todos os dados.
+**Arquivo:** `src/pages/LojaRH.tsx`
 
-**Solução:** Aumentar o tamanho do modal para `max-w-6xl` ou `max-w-7xl` para melhor visualização da tabela de produtos.
+**Problema:** Usa `getLojaById`, `getColaboradoresByLoja`, `addColaborador`, `updateColaborador`, `deleteColaborador` do `cadastrosApi.ts`.
 
-**Alteração:**
+**Solução:** Migrar para `useCadastroStore`:
+
 ```typescript
-// De:
-<DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+// ANTES:
+import { getLojaById, getColaboradoresByLoja, ... } from '@/utils/cadastrosApi';
+const loja = getLojaById(id || '');
 
-// Para:
-<DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
+// DEPOIS:
+import { useCadastroStore } from '@/store/cadastroStore';
+const { obterLojaById, obterColaboradoresPorLoja, ... } = useCadastroStore();
+const loja = obterLojaById(id || '');
 ```
 
 ---
 
-## 2. ASSISTÊNCIA - Remover Aba "Lista de Reparos"
+### Parte 2: Corrigir adiantamentosApi.ts
 
-**Arquivo:** `src/components/layout/OSLayout.tsx`
+**Arquivo:** `src/utils/adiantamentosApi.ts`
 
-**Problema:** A aba "Lista de Reparos" (linha 13) precisa ser removida do layout de navegação.
+**Problema:** Dados mockados usam `lojaId: 'LOJA-001'`, `colaboradorId: 'COL-005'`.
 
-**Solução:** Remover a entrada correspondente do array `tabs`.
+**Solução:** Substituir por UUIDs reais do `dados_mockados_sistema.json`:
 
-**Alteração:**
-```typescript
-// Remover esta linha:
-{ name: 'Lista de Reparos', href: '/os/produtos-analise', icon: Package },
-```
-
----
-
-## 3. ASSISTÊNCIA > Estoque Assistência - Coluna Loja
-
-**Arquivo:** `src/pages/OSPecas.tsx`
-
-**Problema:** A coluna "Loja" está exibindo o ID da loja (ex: LOJA-001) em vez do nome.
-
-**Análise:** O código já usa `getLojaNome(peca.lojaId)` que chama `obterNomeLoja()` do CadastroStore. O problema está nos dados mockados em `src/utils/pecasApi.ts` que usam IDs como "LOJA-001" em vez dos UUIDs reais do CadastroStore.
-
-**Solução:** Atualizar os dados mockados em `pecasApi.ts` para usar UUIDs válidos do CadastroStore.
+| ID Antigo | UUID Real | Nome |
+|-----------|-----------|------|
+| LOJA-001 | `db894e7d` | Loja - JK Shopping |
+| LOJA-002 | `3ac7e00c` | Loja - Matriz |
+| LOJA-003 | `5b9446d5` | Loja - Shopping Sul |
+| COL-001 | `b467c728` | Anna Beatriz (Gestor) |
+| COL-005 | `143ac0c2` | Antonio Sousa (Vendedor) |
 
 ---
 
-## 4. ASSISTÊNCIA > Análise de Tratativas - Colunas Técnico e Loja
+### Parte 3: Corrigir valesApi.ts
 
-**Arquivo:** `src/pages/OSAnaliseGarantia.tsx`
+**Arquivo:** `src/utils/valesApi.ts`
 
-**Problema:** 
-1. Usa `getColaboradoresByPermissao` e `getLojas` da API antiga (`cadastrosApi`)
-2. Ao aprovar uma OS, os dados são enviados com IDs antigos para a tela de Assistência
+**Problema:** Mesmo problema - IDs antigos nos dados mockados.
 
-**Solução:** 
-1. Substituir importações da API antiga pelo `useCadastroStore`
-2. Usar `obterNomeLoja()` e `obterNomeColaborador()` para exibição
-3. Passar UUIDs corretos ao criar a OS
-
-**Alterações principais:**
-- Linha 17: Substituir `import { getColaboradoresByPermissao, getLojas }` por `useCadastroStore`
-- Linha 26-27: Usar `obterTecnicos()` e `obterLojasTipoLoja()` do store
-- Linha 126-133: Usar IDs corretos do store ao chamar `addOrdemServico`
+**Solução:** Atualizar para UUIDs reais.
 
 ---
 
-## 5. ASSISTÊNCIA > Card Produtos de Troca - Coluna Valor Produto
+### Parte 4: Atualizar Demais APIs com IDs Antigos
 
-**Arquivo:** `src/pages/OSAssistencia.tsx`
+Os seguintes arquivos também precisam de correção dos dados mockados:
 
-**Problema:** O card de "Produtos de Troca (Trade-In)" exibe o valor total (R$5.000,00), mas o usuário quer ver esse valor também na coluna "Valor Produto" da tabela.
-
-**Análise:** A tabela já tem uma coluna "Valor Produto" (linha 394) que usa a função `getValorProduto(os)` (linhas 168-177). Para produtos de Trade-In, essa função retorna "-" se `origemOS` não for 'Venda'.
-
-**Solução:** Modificar a função `getValorProduto` para também considerar produtos de origem "Base de Troca" ou buscar o valor dos produtos pendentes relacionados.
-
----
-
-## 6. ESTOQUE - Remover Aba "Notas Urgência"
-
-**Arquivo:** `src/components/layout/EstoqueLayout.tsx`
-
-**Problema:** A aba "Notas Urgência" precisa ser removida.
-
-**Solução:** Remover a entrada correspondente do array `tabs`.
-
-**Alteração:**
-```typescript
-// Remover esta linha:
-{ name: 'Notas Urgência', href: '/estoque/notas-urgencia', icon: Zap },
-```
+| Arquivo | Campos Afetados |
+|---------|-----------------|
+| `conferenciaGestorApi.ts` | lojaId, vendedorId, gestorConferencia, financeiroResponsavel |
+| `fiadoApi.ts` | lojaId |
+| `comissaoPorLojaApi.ts` | lojaId |
+| `lotesPagamentoApi.ts` | responsavelId |
+| `osApi.ts` | lojaId, tecnicoId |
+| `garantiasApi.ts` | lojaId, vendedorId |
+| `vendasApi.ts` | lojaId, vendedorId |
+| `financeApi.ts` | lojaId |
+| `motoboyApi.ts` | colaboradorId |
+| `salarioColaboradorApi.ts` | colaboradorId, lojaId |
+| `comissoesApi.ts` | colaboradorId, lojaId |
 
 ---
 
-## 7. ESTOQUE > Notas Pendentes - Flag de Urgência
+## Mapeamento de IDs (Referência)
 
-**Arquivos:** 
-- `src/pages/EstoqueNotaCadastrar.tsx`
-- `src/utils/notaEntradaFluxoApi.ts`
-- `src/components/estoque/TabelaNotasPendencias.tsx`
+### Lojas (dados_mockados_sistema.json)
 
-**Problema:** Ao cadastrar nova nota, deve haver uma flag "Solicitação de Urgência" e o registro deve carregar essa identificação.
+| UUID | Nome | Tipo |
+|------|------|------|
+| `3ac7e00c` | Loja - Matriz | Loja |
+| `db894e7d` | Loja - JK Shopping | Loja |
+| `fcc78c1a` | Loja - Online | Loja |
+| `5b9446d5` | Loja - Shopping Sul | Loja |
+| `0d06e7db` | Loja - Águas Lindas Shopping | Loja |
+| `3cfbf69f` | Assistência - SIA | Assistência |
+| `94dbe2b1` | Assistência - Shopping JK | Assistência |
+| `ba1802b9` | Assistência - Shopping Sul | Assistência |
+| `be961085` | Assistência - Águas Lindas | Assistência |
+| `dcc6547f` | Estoque - SIA | Estoque |
+| `4adb691a` | Estoque - Shopping JK | Estoque |
+| `92bb2771` | Estoque - Shopping Sul | Estoque |
+| `511db41c` | Estoque - Águas Lindas Shopping | Estoque |
+| `ddc3594f` | Financeiro | Financeiro |
+| `9880b788` | Acesso Geral | Administrativo |
+| `b63a9380` | Marketing | Administrativo |
+| `c520475b` | Motoboy | Administrativo |
 
-**Solução:**
+### Colaboradores (primeiros do JSON)
 
-1. **Interface NotaEntrada** (notaEntradaFluxoApi.ts):
-   - Adicionar campo `urgente: boolean`
-
-2. **Formulário de Cadastro** (EstoqueNotaCadastrar.tsx):
-   - Adicionar checkbox "Solicitação de Urgência" no formulário
-   - Passar o valor para `criarNotaEntrada`
-
-3. **Tabela** (TabelaNotasPendencias.tsx):
-   - Exibir badge/ícone de urgência nas notas marcadas
-
-4. **Remover botão** (EstoqueNotasPendencias.tsx):
-   - Remover o botão "Lançamento Urgência" que redirecionava para `/estoque/notas-urgencia`
-
----
-
-## 8. ESTOQUE > Notas Pendentes - Remover Campo "QTD de Aparelhos Informada"
-
-**Arquivo:** `src/pages/EstoqueNotaCadastrar.tsx`
-
-**Problema:** O campo "Qtd de Aparelhos Informada" (linhas 193-203) deve ser removido do formulário de cadastro de nova nota.
-
-**Solução:** Remover o campo do formulário e ajustar o grid para ocupar o espaço corretamente.
+| UUID | Nome | Cargo | Loja |
+|------|------|-------|------|
+| `b467c728` | Anna Beatriz Borges | Gestor(a) | Assistência - SIA |
+| `143ac0c2` | Antonio Sousa Silva | Vendedor(a) | Loja - Online |
+| (buscar mais no JSON conforme necessário) |
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Alterações |
+### Prioridade Alta (Erros Visíveis)
+
+| Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/VendasNova.tsx` | Aumentar tamanho do modal de produtos |
-| `src/components/layout/OSLayout.tsx` | Remover aba "Lista de Reparos" |
-| `src/components/layout/EstoqueLayout.tsx` | Remover aba "Notas Urgência" |
-| `src/pages/OSAnaliseGarantia.tsx` | Usar CadastroStore para técnicos e lojas |
-| `src/pages/OSAssistencia.tsx` | Ajustar função getValorProduto para Trade-In |
-| `src/utils/pecasApi.ts` | Corrigir lojaId nos dados mockados |
-| `src/pages/EstoqueNotaCadastrar.tsx` | Adicionar flag urgência, remover campo QTD |
-| `src/utils/notaEntradaFluxoApi.ts` | Adicionar campo `urgente` na interface |
-| `src/components/estoque/TabelaNotasPendencias.tsx` | Exibir indicador de urgência |
-| `src/pages/EstoqueNotasPendencias.tsx` | Remover botão "Lançamento Urgência" |
+| `src/pages/LojaRH.tsx` | Migrar de `cadastrosApi` para `useCadastroStore` |
+| `src/utils/adiantamentosApi.ts` | Atualizar IDs mockados para UUIDs |
+| `src/utils/valesApi.ts` | Atualizar IDs mockados para UUIDs |
+
+### Prioridade Média (Dados Mockados)
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/utils/conferenciaGestorApi.ts` | Atualizar IDs mockados |
+| `src/utils/fiadoApi.ts` | Atualizar IDs mockados |
+| `src/utils/comissaoPorLojaApi.ts` | Atualizar IDs mockados |
+| `src/utils/lotesPagamentoApi.ts` | Atualizar IDs mockados |
+
+### Prioridade Baixa (Verificar Uso)
+
+- Verificar e atualizar demais APIs conforme necessário
 
 ---
 
 ## Ordem de Implementação
 
-1. Remover abas (OSLayout e EstoqueLayout)
-2. Redimensionar modal de Vendas
-3. Corrigir dados mockados de peças (pecasApi.ts)
-4. Corrigir OSAnaliseGarantia para usar CadastroStore
-5. Ajustar coluna Valor Produto em OSAssistencia
-6. Implementar flag de urgência no cadastro de notas
-7. Remover campo QTD de Aparelhos Informada
-8. Remover botão "Lançamento Urgência"
+1. **LojaRH.tsx** - Corrigir erro "Loja não encontrada"
+2. **adiantamentosApi.ts** - Corrigir colunas de Loja e Colaborador em RH > Adiantamentos
+3. **valesApi.ts** - Corrigir RH > Vales (mesmo padrão)
+4. **conferenciaGestorApi.ts** - Corrigir conferência de gestor
+5. **fiadoApi.ts** - Corrigir módulo financeiro
+6. **comissaoPorLojaApi.ts** - Corrigir comissões
+7. **lotesPagamentoApi.ts** - Corrigir lotes de pagamento
+
+---
+
+## Benefícios da Correção
+
+1. **Consistência** - Todas as referências usam a mesma fonte de dados
+2. **Manutenibilidade** - Alterações em lojas/colaboradores refletem em todo o sistema
+3. **Eliminação de erros** - "Loja não encontrada" e IDs exibidos em vez de nomes serão corrigidos
