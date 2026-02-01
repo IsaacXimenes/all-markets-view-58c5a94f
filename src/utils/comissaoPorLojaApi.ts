@@ -27,17 +27,19 @@ const STORAGE_KEY = 'thiago_imports_comissao_por_loja';
 const HISTORICO_KEY = 'thiago_imports_historico_comissao_por_loja';
 
 // Inicializar dados mockados
+// Mapeamento de IDs - UUIDs reais do useCadastroStore:
+// Lojas: db894e7d (JK Shopping), 3ac7e00c (Matriz), 5b9446d5 (Shopping Sul), fcc78c1a (Online)
 const inicializarComissoesPorLoja = (): ComissaoPorLoja[] => {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
     return JSON.parse(stored);
   }
   
-  // Dados iniciais mockados
+  // Dados iniciais mockados com UUIDs reais
   const comissoesIniciais: ComissaoPorLoja[] = [
     { 
       id: 'CPL-001', 
-      lojaId: 'LOJA-001', 
+      lojaId: 'db894e7d', // Loja - JK Shopping
       cargoId: 'CARGO-001', // Gerente
       percentualComissao: 3.5, 
       createdAt: new Date().toISOString(),
@@ -45,7 +47,7 @@ const inicializarComissoesPorLoja = (): ComissaoPorLoja[] => {
     },
     { 
       id: 'CPL-002', 
-      lojaId: 'LOJA-002', 
+      lojaId: '3ac7e00c', // Loja - Matriz
       cargoId: 'CARGO-001', 
       percentualComissao: 3.0, 
       createdAt: new Date().toISOString(),
@@ -53,7 +55,7 @@ const inicializarComissoesPorLoja = (): ComissaoPorLoja[] => {
     },
     { 
       id: 'CPL-003', 
-      lojaId: 'LOJA-001', 
+      lojaId: 'db894e7d', // Loja - JK Shopping
       cargoId: 'CARGO-002', // Supervisor
       percentualComissao: 2.0, 
       createdAt: new Date().toISOString(),

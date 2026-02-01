@@ -24,15 +24,19 @@ export interface Vale {
   historico: HistoricoAlteracao[];
 }
 
-// Mock Data
+// Mock Data - UUIDs reais do useCadastroStore
+// Mapeamento de IDs:
+// Lojas: db894e7d (JK Shopping), 3ac7e00c (Matriz), 5b9446d5 (Shopping Sul), fcc78c1a (Online)
+// Colaboradores: b467c728 (Anna Beatriz), 143ac0c2 (Antonio Sousa), 428d37c2 (Bruno Alves), 6dcbc817 (Caua Victor)
+
 let vales: Vale[] = [
   {
     id: 'VALE-001',
     dataLancamento: '2026-01-10T10:30:00',
-    lancadoPor: 'COL-001',
-    lancadoPorNome: 'Lucas Mendes',
-    lojaId: 'LOJA-001',
-    colaboradorId: 'COL-004',
+    lancadoPor: 'b467c728', // Anna Beatriz Borges
+    lancadoPorNome: 'Anna Beatriz Borges',
+    lojaId: 'db894e7d', // Loja - JK Shopping
+    colaboradorId: '6dcbc817', // Caua Victor Costa dos Santos
     observacao: 'Vale emergência - Despesa médica',
     valorFinal: 600,
     quantidadeVezes: 3,
@@ -40,8 +44,8 @@ let vales: Vale[] = [
     historico: [
       {
         dataHora: '2026-01-10T10:30:00',
-        usuarioId: 'COL-001',
-        usuarioNome: 'Lucas Mendes',
+        usuarioId: 'b467c728',
+        usuarioNome: 'Anna Beatriz Borges',
         campoAlterado: '-',
         valorAnterior: '-',
         valorNovo: '-',
@@ -52,10 +56,10 @@ let vales: Vale[] = [
   {
     id: 'VALE-002',
     dataLancamento: '2026-01-08T14:15:00',
-    lancadoPor: 'COL-002',
-    lancadoPorNome: 'Fernanda Lima',
-    lojaId: 'LOJA-002',
-    colaboradorId: 'COL-007',
+    lancadoPor: '428d37c2', // Bruno Alves Peres
+    lancadoPorNome: 'Bruno Alves Peres',
+    lojaId: '3ac7e00c', // Loja - Matriz
+    colaboradorId: '143ac0c2', // Antonio Sousa Silva
     observacao: 'Vale para material escolar',
     valorFinal: 400,
     quantidadeVezes: 2,
@@ -63,8 +67,8 @@ let vales: Vale[] = [
     historico: [
       {
         dataHora: '2026-01-08T14:15:00',
-        usuarioId: 'COL-002',
-        usuarioNome: 'Fernanda Lima',
+        usuarioId: '428d37c2',
+        usuarioNome: 'Bruno Alves Peres',
         campoAlterado: '-',
         valorAnterior: '-',
         valorNovo: '-',
@@ -75,10 +79,10 @@ let vales: Vale[] = [
   {
     id: 'VALE-003',
     dataLancamento: '2025-12-15T09:45:00',
-    lancadoPor: 'COL-001',
-    lancadoPorNome: 'Lucas Mendes',
-    lojaId: 'LOJA-003',
-    colaboradorId: 'COL-008',
+    lancadoPor: 'b467c728', // Anna Beatriz Borges
+    lancadoPorNome: 'Anna Beatriz Borges',
+    lojaId: '5b9446d5', // Loja - Shopping Sul
+    colaboradorId: '9812948d', // Gustavo de Souza dos Santos
     observacao: 'Vale para viagem familiar',
     valorFinal: 1200,
     quantidadeVezes: 4,
@@ -86,8 +90,8 @@ let vales: Vale[] = [
     historico: [
       {
         dataHora: '2025-12-15T09:45:00',
-        usuarioId: 'COL-001',
-        usuarioNome: 'Lucas Mendes',
+        usuarioId: 'b467c728',
+        usuarioNome: 'Anna Beatriz Borges',
         campoAlterado: '-',
         valorAnterior: '-',
         valorNovo: '-',

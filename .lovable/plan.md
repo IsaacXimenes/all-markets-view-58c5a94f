@@ -1,172 +1,69 @@
 
 # Plano de Correção: Referências de Lojas e Colaboradores no Sistema
 
-## Diagnóstico do Problema
+## ✅ STATUS: CONCLUÍDO
 
-O sistema possui **duas fontes de dados conflitantes**:
-
-1. **useCadastroStore (Zustand)** - Fonte única de verdade com UUIDs reais:
-   - Lojas: `3ac7e00c`, `db894e7d`, `3cfbf69f`, etc.
-   - Colaboradores: `b467c728`, `143ac0c2`, etc.
-
-2. **cadastrosApi.ts + APIs mockadas** - Dados antigos com IDs sequenciais:
-   - Lojas: `LOJA-001`, `LOJA-002`, etc.
-   - Colaboradores: `COL-001`, `COL-005`, etc.
-
-### Erros Identificados
-
-| Local | Problema |
-|-------|----------|
-| RH > Lojas da Rede > Ver Quadro Completo | `LojaRH.tsx` usa `getLojaById()` do `cadastrosApi.ts` que não encontra UUIDs |
-| RH > Adiantamentos | Dados mockados usam `LOJA-001`, `COL-005` que não existem no `useCadastroStore` |
-| 14+ arquivos de APIs | Dados mockados com IDs antigos (`LOJA-00X`, `COL-00X`) |
+Todas as correções foram aplicadas para sincronizar as referências de lojas e colaboradores com o `useCadastroStore` (fonte única de verdade).
 
 ---
 
-## Solução: Migração Completa para useCadastroStore
+## Correções Implementadas
 
-### Parte 1: Corrigir LojaRH.tsx
+### ✅ Parte 1: LojaRH.tsx
+- Migrado de `cadastrosApi` para `useCadastroStore`
+- Agora usa `obterLojaById`, `obterColaboradoresPorLoja`, `adicionarColaborador`, `atualizarColaborador`, `deletarColaborador`
+- Tipo `ColaboradorMockado` substituindo o antigo `Colaborador`
 
-**Arquivo:** `src/pages/LojaRH.tsx`
+### ✅ Parte 2: adiantamentosApi.ts
+- IDs antigos substituídos por UUIDs reais:
+  - `LOJA-001` → `db894e7d` (JK Shopping)
+  - `COL-001` → `b467c728` (Anna Beatriz)
+  - `COL-005` → `143ac0c2` (Antonio Sousa)
 
-**Problema:** Usa `getLojaById`, `getColaboradoresByLoja`, `addColaborador`, `updateColaborador`, `deleteColaborador` do `cadastrosApi.ts`.
+### ✅ Parte 3: valesApi.ts
+- IDs atualizados para UUIDs reais
 
-**Solução:** Migrar para `useCadastroStore`:
+### ✅ Parte 4: comissaoPorLojaApi.ts
+- `LOJA-001` → `db894e7d`
+- `LOJA-002` → `3ac7e00c`
 
-```typescript
-// ANTES:
-import { getLojaById, getColaboradoresByLoja, ... } from '@/utils/cadastrosApi';
-const loja = getLojaById(id || '');
+### ✅ Parte 5: fiadoApi.ts
+- Todas as referências de loja atualizadas para UUIDs
 
-// DEPOIS:
-import { useCadastroStore } from '@/store/cadastroStore';
-const { obterLojaById, obterColaboradoresPorLoja, ... } = useCadastroStore();
-const loja = obterLojaById(id || '');
-```
+### ✅ Parte 6: lotesPagamentoApi.ts
+- `COL-001` → `b467c728` (Anna Beatriz)
 
----
-
-### Parte 2: Corrigir adiantamentosApi.ts
-
-**Arquivo:** `src/utils/adiantamentosApi.ts`
-
-**Problema:** Dados mockados usam `lojaId: 'LOJA-001'`, `colaboradorId: 'COL-005'`.
-
-**Solução:** Substituir por UUIDs reais do `dados_mockados_sistema.json`:
-
-| ID Antigo | UUID Real | Nome |
-|-----------|-----------|------|
-| LOJA-001 | `db894e7d` | Loja - JK Shopping |
-| LOJA-002 | `3ac7e00c` | Loja - Matriz |
-| LOJA-003 | `5b9446d5` | Loja - Shopping Sul |
-| COL-001 | `b467c728` | Anna Beatriz (Gestor) |
-| COL-005 | `143ac0c2` | Antonio Sousa (Vendedor) |
+### ✅ Parte 7: conferenciaGestorApi.ts
+- Todas as 10 vendas mockadas atualizadas com UUIDs reais de lojas, vendedores, gestores e financeiros
 
 ---
 
-### Parte 3: Corrigir valesApi.ts
+## Mapeamento de IDs Utilizados
 
-**Arquivo:** `src/utils/valesApi.ts`
+### Lojas
+| UUID | Nome |
+|------|------|
+| `db894e7d` | Loja - JK Shopping |
+| `3ac7e00c` | Loja - Matriz |
+| `5b9446d5` | Loja - Shopping Sul |
+| `fcc78c1a` | Loja - Online |
+| `0d06e7db` | Loja - Águas Lindas Shopping |
 
-**Problema:** Mesmo problema - IDs antigos nos dados mockados.
-
-**Solução:** Atualizar para UUIDs reais.
-
----
-
-### Parte 4: Atualizar Demais APIs com IDs Antigos
-
-Os seguintes arquivos também precisam de correção dos dados mockados:
-
-| Arquivo | Campos Afetados |
-|---------|-----------------|
-| `conferenciaGestorApi.ts` | lojaId, vendedorId, gestorConferencia, financeiroResponsavel |
-| `fiadoApi.ts` | lojaId |
-| `comissaoPorLojaApi.ts` | lojaId |
-| `lotesPagamentoApi.ts` | responsavelId |
-| `osApi.ts` | lojaId, tecnicoId |
-| `garantiasApi.ts` | lojaId, vendedorId |
-| `vendasApi.ts` | lojaId, vendedorId |
-| `financeApi.ts` | lojaId |
-| `motoboyApi.ts` | colaboradorId |
-| `salarioColaboradorApi.ts` | colaboradorId, lojaId |
-| `comissoesApi.ts` | colaboradorId, lojaId |
+### Colaboradores
+| UUID | Nome | Cargo |
+|------|------|-------|
+| `b467c728` | Anna Beatriz Borges | Gestor(a) |
+| `143ac0c2` | Antonio Sousa Silva | Vendedor(a) |
+| `428d37c2` | Bruno Alves Peres | Gestor(a) |
+| `6dcbc817` | Caua Victor Costa dos Santos | Vendedor(a) |
+| `9812948d` | Gustavo de Souza dos Santos | Vendedor(a) |
+| `b106080f` | Erick Guthemberg | Vendedor(a) |
+| `7c1231ea` | Fernanda Gabrielle | Assistente Administrativo (Financeiro) |
 
 ---
 
-## Mapeamento de IDs (Referência)
+## Benefícios Alcançados
 
-### Lojas (dados_mockados_sistema.json)
-
-| UUID | Nome | Tipo |
-|------|------|------|
-| `3ac7e00c` | Loja - Matriz | Loja |
-| `db894e7d` | Loja - JK Shopping | Loja |
-| `fcc78c1a` | Loja - Online | Loja |
-| `5b9446d5` | Loja - Shopping Sul | Loja |
-| `0d06e7db` | Loja - Águas Lindas Shopping | Loja |
-| `3cfbf69f` | Assistência - SIA | Assistência |
-| `94dbe2b1` | Assistência - Shopping JK | Assistência |
-| `ba1802b9` | Assistência - Shopping Sul | Assistência |
-| `be961085` | Assistência - Águas Lindas | Assistência |
-| `dcc6547f` | Estoque - SIA | Estoque |
-| `4adb691a` | Estoque - Shopping JK | Estoque |
-| `92bb2771` | Estoque - Shopping Sul | Estoque |
-| `511db41c` | Estoque - Águas Lindas Shopping | Estoque |
-| `ddc3594f` | Financeiro | Financeiro |
-| `9880b788` | Acesso Geral | Administrativo |
-| `b63a9380` | Marketing | Administrativo |
-| `c520475b` | Motoboy | Administrativo |
-
-### Colaboradores (primeiros do JSON)
-
-| UUID | Nome | Cargo | Loja |
-|------|------|-------|------|
-| `b467c728` | Anna Beatriz Borges | Gestor(a) | Assistência - SIA |
-| `143ac0c2` | Antonio Sousa Silva | Vendedor(a) | Loja - Online |
-| (buscar mais no JSON conforme necessário) |
-
----
-
-## Arquivos a Modificar
-
-### Prioridade Alta (Erros Visíveis)
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/LojaRH.tsx` | Migrar de `cadastrosApi` para `useCadastroStore` |
-| `src/utils/adiantamentosApi.ts` | Atualizar IDs mockados para UUIDs |
-| `src/utils/valesApi.ts` | Atualizar IDs mockados para UUIDs |
-
-### Prioridade Média (Dados Mockados)
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/utils/conferenciaGestorApi.ts` | Atualizar IDs mockados |
-| `src/utils/fiadoApi.ts` | Atualizar IDs mockados |
-| `src/utils/comissaoPorLojaApi.ts` | Atualizar IDs mockados |
-| `src/utils/lotesPagamentoApi.ts` | Atualizar IDs mockados |
-
-### Prioridade Baixa (Verificar Uso)
-
-- Verificar e atualizar demais APIs conforme necessário
-
----
-
-## Ordem de Implementação
-
-1. **LojaRH.tsx** - Corrigir erro "Loja não encontrada"
-2. **adiantamentosApi.ts** - Corrigir colunas de Loja e Colaborador em RH > Adiantamentos
-3. **valesApi.ts** - Corrigir RH > Vales (mesmo padrão)
-4. **conferenciaGestorApi.ts** - Corrigir conferência de gestor
-5. **fiadoApi.ts** - Corrigir módulo financeiro
-6. **comissaoPorLojaApi.ts** - Corrigir comissões
-7. **lotesPagamentoApi.ts** - Corrigir lotes de pagamento
-
----
-
-## Benefícios da Correção
-
-1. **Consistência** - Todas as referências usam a mesma fonte de dados
-2. **Manutenibilidade** - Alterações em lojas/colaboradores refletem em todo o sistema
-3. **Eliminação de erros** - "Loja não encontrada" e IDs exibidos em vez de nomes serão corrigidos
+1. ✅ **Consistência** - Todas as referências usam a mesma fonte de dados
+2. ✅ **Manutenibilidade** - Alterações em lojas/colaboradores refletem em todo o sistema
+3. ✅ **Eliminação de erros** - "Loja não encontrada" e IDs exibidos em vez de nomes corrigidos

@@ -68,23 +68,26 @@ const calcularSLA = (dataRegistro: string): number => {
 };
 
 // Dados mockados: 4 "Conferência - Gestor", 3 "Conferência - Financeiro", 3 "Concluído"
+// UUIDs reais do useCadastroStore:
+// Lojas: db894e7d (JK Shopping), 3ac7e00c (Matriz), 5b9446d5 (Shopping Sul), fcc78c1a (Online), 0d06e7db (Águas Lindas)
+// Colaboradores: b467c728 (Anna Beatriz), 143ac0c2 (Antonio Sousa), 428d37c2 (Bruno Alves), 6dcbc817 (Caua Victor), 9812948d (Gustavo)
 let vendasConferencia: VendaConferencia[] = [
   // 4 Vendas "Conferência - Gestor"
   {
     id: 'CONF-001',
     vendaId: 'VEN-0001',
     dataRegistro: new Date(Date.now() - 0 * 24 * 60 * 60 * 1000).toISOString(),
-    lojaId: 'LOJA-001',
-    lojaNome: 'Thiago Imports Centro',
-    vendedorId: 'COL-004',
-    vendedorNome: 'Juliana Costa',
+    lojaId: 'db894e7d', // Loja - JK Shopping
+    lojaNome: 'Loja - JK Shopping',
+    vendedorId: '6dcbc817', // Caua Victor Costa dos Santos
+    vendedorNome: 'Caua Victor Costa dos Santos',
     clienteNome: 'Ricardo Mendes',
     valorTotal: 15800.00,
     tipoVenda: 'Normal',
     status: 'Conferência - Gestor',
     slaDias: 0,
     timeline: [
-      { id: 'TL-001', tipo: 'registro', titulo: 'Venda Registrada', descricao: 'Venda registrada pelo vendedor', dataHora: new Date(Date.now() - 0 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Juliana Costa' }
+      { id: 'TL-001', tipo: 'registro', titulo: 'Venda Registrada', descricao: 'Venda registrada pelo vendedor', dataHora: new Date(Date.now() - 0 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Caua Victor Costa dos Santos' }
     ],
     dadosVenda: {
       clienteCpf: '789.123.456-00', clienteTelefone: '(11) 99999-8888', clienteEmail: 'ricardo@email.com', clienteCidade: 'São Paulo', origemVenda: 'Loja Física',
@@ -97,17 +100,17 @@ let vendasConferencia: VendaConferencia[] = [
     id: 'CONF-002',
     vendaId: 'VEN-0002',
     dataRegistro: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    lojaId: 'LOJA-002',
-    lojaNome: 'Thiago Imports Norte',
-    vendedorId: 'COL-003',
-    vendedorNome: 'Roberto Alves',
+    lojaId: '3ac7e00c', // Loja - Matriz
+    lojaNome: 'Loja - Matriz',
+    vendedorId: '143ac0c2', // Antonio Sousa Silva
+    vendedorNome: 'Antonio Sousa Silva',
     clienteNome: 'Fernanda Lima',
     valorTotal: 8900.00,
     tipoVenda: 'Digital',
     status: 'Conferência - Gestor',
     slaDias: 1,
     timeline: [
-      { id: 'TL-002', tipo: 'registro', titulo: 'Venda Digital Registrada', descricao: 'Venda digital enviada para finalização', dataHora: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Roberto Alves' }
+      { id: 'TL-002', tipo: 'registro', titulo: 'Venda Digital Registrada', descricao: 'Venda digital enviada para finalização', dataHora: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Antonio Sousa Silva' }
     ],
     dadosVenda: {
       clienteCpf: '456.789.123-11', clienteTelefone: '(11) 99999-7777', clienteEmail: 'fernanda@email.com', clienteCidade: 'Guarulhos', origemVenda: 'WhatsApp',
@@ -120,17 +123,17 @@ let vendasConferencia: VendaConferencia[] = [
     id: 'CONF-003',
     vendaId: 'VEN-0003',
     dataRegistro: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    lojaId: 'LOJA-003',
-    lojaNome: 'Thiago Imports Sul',
-    vendedorId: 'COL-004',
-    vendedorNome: 'Juliana Costa',
+    lojaId: '5b9446d5', // Loja - Shopping Sul
+    lojaNome: 'Loja - Shopping Sul',
+    vendedorId: '9812948d', // Gustavo de Souza dos Santos
+    vendedorNome: 'Gustavo de Souza dos Santos',
     clienteNome: 'Bruno Santos',
     valorTotal: 2350.00,
     tipoVenda: 'Acessórios',
     status: 'Conferência - Gestor',
     slaDias: 2,
     timeline: [
-      { id: 'TL-003', tipo: 'registro', titulo: 'Venda de Acessórios Registrada', descricao: 'Venda de acessórios registrada', dataHora: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Juliana Costa' }
+      { id: 'TL-003', tipo: 'registro', titulo: 'Venda de Acessórios Registrada', descricao: 'Venda de acessórios registrada', dataHora: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Gustavo de Souza dos Santos' }
     ],
     dadosVenda: {
       clienteCpf: '321.654.987-22', clienteTelefone: '(11) 99999-6666', clienteEmail: 'bruno@email.com', clienteCidade: 'São Paulo', origemVenda: 'Loja Física',
@@ -142,17 +145,17 @@ let vendasConferencia: VendaConferencia[] = [
     id: 'CONF-004',
     vendaId: 'VEN-0004',
     dataRegistro: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-    lojaId: 'LOJA-004',
-    lojaNome: 'Thiago Imports Shopping',
-    vendedorId: 'COL-001',
-    vendedorNome: 'Lucas Mendes',
+    lojaId: '0d06e7db', // Loja - Águas Lindas Shopping
+    lojaNome: 'Loja - Águas Lindas Shopping',
+    vendedorId: 'b106080f', // Erick Guthemberg Ferreira da Silva
+    vendedorNome: 'Erick Guthemberg Ferreira da Silva',
     clienteNome: 'Carla Oliveira',
     valorTotal: 22500.00,
     tipoVenda: 'Normal',
     status: 'Conferência - Gestor',
     slaDias: 4,
     timeline: [
-      { id: 'TL-004', tipo: 'registro', titulo: 'Venda Registrada', descricao: 'Venda de alto valor registrada', dataHora: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Lucas Mendes' }
+      { id: 'TL-004', tipo: 'registro', titulo: 'Venda Registrada', descricao: 'Venda de alto valor registrada', dataHora: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Erick Guthemberg Ferreira da Silva' }
     ],
     dadosVenda: {
       clienteCpf: '654.321.987-33', clienteTelefone: '(11) 99999-5555', clienteEmail: 'carla@email.com', clienteCidade: 'Osasco', origemVenda: 'Online',
@@ -166,22 +169,22 @@ let vendasConferencia: VendaConferencia[] = [
     id: 'CONF-005',
     vendaId: 'VEN-0005',
     dataRegistro: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    lojaId: 'LOJA-001',
-    lojaNome: 'Thiago Imports Centro',
-    vendedorId: 'COL-004',
-    vendedorNome: 'Juliana Costa',
+    lojaId: 'db894e7d', // Loja - JK Shopping
+    lojaNome: 'Loja - JK Shopping',
+    vendedorId: '6dcbc817', // Caua Victor Costa dos Santos
+    vendedorNome: 'Caua Victor Costa dos Santos',
     clienteNome: 'Amanda Rodrigues',
     valorTotal: 9800.00,
     tipoVenda: 'Normal',
     status: 'Conferência - Financeiro',
     slaDias: 0,
-    gestorConferencia: 'COL-001',
-    gestorNome: 'Lucas Mendes',
+    gestorConferencia: 'b467c728', // Anna Beatriz Borges
+    gestorNome: 'Anna Beatriz Borges',
     observacaoGestor: 'Valores conferidos, documentação em ordem.',
     dataConferencia: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
     timeline: [
-      { id: 'TL-005-1', tipo: 'registro', titulo: 'Venda Registrada', descricao: 'Venda registrada pelo vendedor', dataHora: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Juliana Costa' },
-      { id: 'TL-005-2', tipo: 'conferencia_gestor', titulo: 'Conferência do Gestor', descricao: 'Venda validada pelo gestor', dataHora: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Lucas Mendes', observacao: 'Valores conferidos, documentação em ordem.' },
+      { id: 'TL-005-1', tipo: 'registro', titulo: 'Venda Registrada', descricao: 'Venda registrada pelo vendedor', dataHora: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Caua Victor Costa dos Santos' },
+      { id: 'TL-005-2', tipo: 'conferencia_gestor', titulo: 'Conferência do Gestor', descricao: 'Venda validada pelo gestor', dataHora: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Anna Beatriz Borges', observacao: 'Valores conferidos, documentação em ordem.' },
       { id: 'TL-005-3', tipo: 'envio_financeiro', titulo: 'Enviada ao Financeiro', descricao: 'Venda migrada para conferência financeira', dataHora: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString() }
     ],
     dadosVenda: {
@@ -194,22 +197,22 @@ let vendasConferencia: VendaConferencia[] = [
     id: 'CONF-006',
     vendaId: 'VEN-0006',
     dataRegistro: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-    lojaId: 'LOJA-002',
-    lojaNome: 'Thiago Imports Norte',
-    vendedorId: 'COL-003',
-    vendedorNome: 'Roberto Alves',
+    lojaId: '3ac7e00c', // Loja - Matriz
+    lojaNome: 'Loja - Matriz',
+    vendedorId: '143ac0c2', // Antonio Sousa Silva
+    vendedorNome: 'Antonio Sousa Silva',
     clienteNome: 'Diego Martins',
     valorTotal: 5600.00,
     tipoVenda: 'Digital',
     status: 'Conferência - Financeiro',
     slaDias: 0,
-    gestorConferencia: 'COL-002',
-    gestorNome: 'Fernanda Lima',
+    gestorConferencia: '428d37c2', // Bruno Alves Peres
+    gestorNome: 'Bruno Alves Peres',
     observacaoGestor: 'Conferido. Pagamento confirmado no sistema.',
     dataConferencia: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
     timeline: [
-      { id: 'TL-006-1', tipo: 'registro', titulo: 'Venda Digital Registrada', descricao: 'Venda digital enviada para finalização', dataHora: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Roberto Alves' },
-      { id: 'TL-006-2', tipo: 'conferencia_gestor', titulo: 'Conferência do Gestor', descricao: 'Venda validada pelo gestor', dataHora: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Fernanda Lima', observacao: 'Conferido. Pagamento confirmado no sistema.' },
+      { id: 'TL-006-1', tipo: 'registro', titulo: 'Venda Digital Registrada', descricao: 'Venda digital enviada para finalização', dataHora: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Antonio Sousa Silva' },
+      { id: 'TL-006-2', tipo: 'conferencia_gestor', titulo: 'Conferência do Gestor', descricao: 'Venda validada pelo gestor', dataHora: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Bruno Alves Peres', observacao: 'Conferido. Pagamento confirmado no sistema.' },
       { id: 'TL-006-3', tipo: 'envio_financeiro', titulo: 'Enviada ao Financeiro', descricao: 'Venda migrada para conferência financeira', dataHora: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() }
     ],
     dadosVenda: {
@@ -221,22 +224,22 @@ let vendasConferencia: VendaConferencia[] = [
     id: 'CONF-007',
     vendaId: 'VEN-0007',
     dataRegistro: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-    lojaId: 'LOJA-003',
-    lojaNome: 'Thiago Imports Sul',
-    vendedorId: 'COL-005',
-    vendedorNome: 'Marcos Silva',
+    lojaId: '5b9446d5', // Loja - Shopping Sul
+    lojaNome: 'Loja - Shopping Sul',
+    vendedorId: '9812948d', // Gustavo de Souza dos Santos
+    vendedorNome: 'Gustavo de Souza dos Santos',
     clienteNome: 'Letícia Souza',
     valorTotal: 3200.00,
     tipoVenda: 'Acessórios',
     status: 'Conferência - Financeiro',
     slaDias: 0,
-    gestorConferencia: 'COL-001',
-    gestorNome: 'Lucas Mendes',
+    gestorConferencia: 'b467c728', // Anna Beatriz Borges
+    gestorNome: 'Anna Beatriz Borges',
     observacaoGestor: '',
     dataConferencia: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
     timeline: [
-      { id: 'TL-007-1', tipo: 'registro', titulo: 'Venda de Acessórios Registrada', descricao: 'Venda de acessórios registrada', dataHora: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Marcos Silva' },
-      { id: 'TL-007-2', tipo: 'conferencia_gestor', titulo: 'Conferência do Gestor', descricao: 'Venda validada pelo gestor', dataHora: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Lucas Mendes' },
+      { id: 'TL-007-1', tipo: 'registro', titulo: 'Venda de Acessórios Registrada', descricao: 'Venda de acessórios registrada', dataHora: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Gustavo de Souza dos Santos' },
+      { id: 'TL-007-2', tipo: 'conferencia_gestor', titulo: 'Conferência do Gestor', descricao: 'Venda validada pelo gestor', dataHora: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Anna Beatriz Borges' },
       { id: 'TL-007-3', tipo: 'envio_financeiro', titulo: 'Enviada ao Financeiro', descricao: 'Venda migrada para conferência financeira', dataHora: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString() }
     ],
     dadosVenda: {
@@ -250,27 +253,27 @@ let vendasConferencia: VendaConferencia[] = [
     id: 'CONF-008',
     vendaId: 'VEN-0008',
     dataRegistro: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
-    lojaId: 'LOJA-004',
-    lojaNome: 'Thiago Imports Shopping',
-    vendedorId: 'COL-004',
-    vendedorNome: 'Juliana Costa',
+    lojaId: '0d06e7db', // Loja - Águas Lindas Shopping
+    lojaNome: 'Loja - Águas Lindas Shopping',
+    vendedorId: '6dcbc817', // Caua Victor Costa dos Santos
+    vendedorNome: 'Caua Victor Costa dos Santos',
     clienteNome: 'Rafael Costa',
     valorTotal: 18500.00,
     tipoVenda: 'Normal',
     status: 'Concluído',
     slaDias: 0,
-    gestorConferencia: 'COL-002',
-    gestorNome: 'Fernanda Lima',
+    gestorConferencia: '428d37c2', // Bruno Alves Peres
+    gestorNome: 'Bruno Alves Peres',
     observacaoGestor: 'Venda conferida. Cliente VIP.',
     dataConferencia: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(),
-    financeiroResponsavel: 'COL-006',
-    financeiroNome: 'Carlos Eduardo',
+    financeiroResponsavel: '7c1231ea', // Fernanda Gabrielle (Financeiro)
+    financeiroNome: 'Fernanda Gabrielle Silva de Lima',
     dataFinalizacao: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     timeline: [
-      { id: 'TL-008-1', tipo: 'registro', titulo: 'Venda Registrada', descricao: 'Venda de alto valor registrada', dataHora: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Juliana Costa' },
-      { id: 'TL-008-2', tipo: 'conferencia_gestor', titulo: 'Conferência do Gestor', descricao: 'Venda validada pelo gestor', dataHora: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Fernanda Lima', observacao: 'Venda conferida. Cliente VIP.' },
+      { id: 'TL-008-1', tipo: 'registro', titulo: 'Venda Registrada', descricao: 'Venda de alto valor registrada', dataHora: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Caua Victor Costa dos Santos' },
+      { id: 'TL-008-2', tipo: 'conferencia_gestor', titulo: 'Conferência do Gestor', descricao: 'Venda validada pelo gestor', dataHora: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Bruno Alves Peres', observacao: 'Venda conferida. Cliente VIP.' },
       { id: 'TL-008-3', tipo: 'envio_financeiro', titulo: 'Enviada ao Financeiro', descricao: 'Venda migrada para conferência financeira', dataHora: new Date(Date.now() - 11 * 24 * 60 * 60 * 1000).toISOString() },
-      { id: 'TL-008-4', tipo: 'finalizado', titulo: 'Concluído', descricao: 'Venda finalizada pelo financeiro', dataHora: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Carlos Eduardo' }
+      { id: 'TL-008-4', tipo: 'finalizado', titulo: 'Concluído', descricao: 'Venda finalizada pelo financeiro', dataHora: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Fernanda Gabrielle' }
     ],
     dadosVenda: {
       clienteCpf: '444.555.666-88', clienteTelefone: '(11) 99999-0000', clienteEmail: 'rafael@email.com', clienteCidade: 'São Paulo', origemVenda: 'Online',
@@ -282,27 +285,27 @@ let vendasConferencia: VendaConferencia[] = [
     id: 'CONF-009',
     vendaId: 'VEN-0009',
     dataRegistro: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-    lojaId: 'LOJA-005',
-    lojaNome: 'Thiago Imports Oeste',
-    vendedorId: 'COL-001',
-    vendedorNome: 'Lucas Mendes',
+    lojaId: 'fcc78c1a', // Loja - Online
+    lojaNome: 'Loja - Online',
+    vendedorId: '143ac0c2', // Antonio Sousa Silva
+    vendedorNome: 'Antonio Sousa Silva',
     clienteNome: 'Gabriela Pereira',
     valorTotal: 7200.00,
     tipoVenda: 'Normal',
     status: 'Concluído',
     slaDias: 0,
-    gestorConferencia: 'COL-001',
-    gestorNome: 'Lucas Mendes',
+    gestorConferencia: 'b467c728', // Anna Beatriz Borges
+    gestorNome: 'Anna Beatriz Borges',
     observacaoGestor: 'Trade-in verificado presencialmente.',
     dataConferencia: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString(),
-    financeiroResponsavel: 'COL-006',
-    financeiroNome: 'Carlos Eduardo',
+    financeiroResponsavel: '7c1231ea', // Fernanda Gabrielle (Financeiro)
+    financeiroNome: 'Fernanda Gabrielle Silva de Lima',
     dataFinalizacao: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
     timeline: [
-      { id: 'TL-009-1', tipo: 'registro', titulo: 'Venda Registrada', descricao: 'Venda com trade-in registrada', dataHora: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Lucas Mendes' },
-      { id: 'TL-009-2', tipo: 'conferencia_gestor', titulo: 'Conferência do Gestor', descricao: 'Venda validada pelo gestor', dataHora: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Lucas Mendes', observacao: 'Trade-in verificado presencialmente.' },
+      { id: 'TL-009-1', tipo: 'registro', titulo: 'Venda Registrada', descricao: 'Venda com trade-in registrada', dataHora: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Antonio Sousa Silva' },
+      { id: 'TL-009-2', tipo: 'conferencia_gestor', titulo: 'Conferência do Gestor', descricao: 'Venda validada pelo gestor', dataHora: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Anna Beatriz Borges', observacao: 'Trade-in verificado presencialmente.' },
       { id: 'TL-009-3', tipo: 'envio_financeiro', titulo: 'Enviada ao Financeiro', descricao: 'Venda migrada para conferência financeira', dataHora: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000).toISOString() },
-      { id: 'TL-009-4', tipo: 'finalizado', titulo: 'Concluído', descricao: 'Venda finalizada pelo financeiro', dataHora: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Carlos Eduardo' }
+      { id: 'TL-009-4', tipo: 'finalizado', titulo: 'Concluído', descricao: 'Venda finalizada pelo financeiro', dataHora: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Fernanda Gabrielle' }
     ],
     dadosVenda: {
       clienteCpf: '555.666.777-99', clienteTelefone: '(11) 98888-9999', clienteEmail: 'gabriela@email.com', clienteCidade: 'São Paulo', origemVenda: 'Indicação',
@@ -315,27 +318,27 @@ let vendasConferencia: VendaConferencia[] = [
     id: 'CONF-010',
     vendaId: 'VEN-0010',
     dataRegistro: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000).toISOString(),
-    lojaId: 'LOJA-001',
-    lojaNome: 'Thiago Imports Centro',
-    vendedorId: 'COL-003',
-    vendedorNome: 'Roberto Alves',
+    lojaId: 'db894e7d', // Loja - JK Shopping
+    lojaNome: 'Loja - JK Shopping',
+    vendedorId: '9812948d', // Gustavo de Souza dos Santos
+    vendedorNome: 'Gustavo de Souza dos Santos',
     clienteNome: 'Marina Oliveira',
     valorTotal: 12500.00,
     tipoVenda: 'Normal',
     status: 'Concluído',
     slaDias: 0,
-    gestorConferencia: 'COL-002',
-    gestorNome: 'Fernanda Lima',
+    gestorConferencia: '428d37c2', // Bruno Alves Peres
+    gestorNome: 'Bruno Alves Peres',
     observacaoGestor: 'Documentação completa. Aprovado.',
     dataConferencia: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-    financeiroResponsavel: 'COL-006',
-    financeiroNome: 'Carlos Eduardo',
+    financeiroResponsavel: '7c1231ea', // Fernanda Gabrielle (Financeiro)
+    financeiroNome: 'Fernanda Gabrielle Silva de Lima',
     dataFinalizacao: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
     timeline: [
-      { id: 'TL-010-1', tipo: 'registro', titulo: 'Venda Registrada', descricao: 'Venda registrada pelo vendedor', dataHora: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Roberto Alves' },
-      { id: 'TL-010-2', tipo: 'conferencia_gestor', titulo: 'Conferência do Gestor', descricao: 'Venda validada pelo gestor', dataHora: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Fernanda Lima', observacao: 'Documentação completa. Aprovado.' },
+      { id: 'TL-010-1', tipo: 'registro', titulo: 'Venda Registrada', descricao: 'Venda registrada pelo vendedor', dataHora: new Date(Date.now() - 16 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Gustavo de Souza dos Santos' },
+      { id: 'TL-010-2', tipo: 'conferencia_gestor', titulo: 'Conferência do Gestor', descricao: 'Venda validada pelo gestor', dataHora: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Bruno Alves Peres', observacao: 'Documentação completa. Aprovado.' },
       { id: 'TL-010-3', tipo: 'envio_financeiro', titulo: 'Enviada ao Financeiro', descricao: 'Venda migrada para conferência financeira', dataHora: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString() },
-      { id: 'TL-010-4', tipo: 'finalizado', titulo: 'Concluído', descricao: 'Venda finalizada pelo financeiro', dataHora: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Carlos Eduardo' }
+      { id: 'TL-010-4', tipo: 'finalizado', titulo: 'Concluído', descricao: 'Venda finalizada pelo financeiro', dataHora: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), responsavel: 'Fernanda Gabrielle' }
     ],
     dadosVenda: {
       clienteCpf: '666.777.888-00', clienteTelefone: '(11) 97777-8888', clienteEmail: 'marina@email.com', clienteCidade: 'São Paulo', origemVenda: 'Loja Física',

@@ -35,15 +35,16 @@ export interface PagamentoLote {
   status: 'Pendente' | 'Pago';
 }
 
-// Dados mockados
+// Dados mockados - UUIDs reais do useCadastroStore
+// Colaboradores: b467c728 (Anna Beatriz - Gestor), 428d37c2 (Bruno Alves - Gestor)
 let lotes: LotePagamento[] = [
   {
     id: 'LOTE-2025-0001',
     dataAbertura: '2025-01-06T08:00:00',
     status: 'Aberto',
     solicitacoes: ['SOL-001', 'SOL-002'],
-    responsavelId: 'COL-001',
-    responsavelNome: 'Gestor Principal',
+    responsavelId: 'b467c728', // Anna Beatriz Borges
+    responsavelNome: 'Anna Beatriz Borges',
     totalValor: 350.00,
     timeline: [
       {

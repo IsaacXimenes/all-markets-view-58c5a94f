@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { getLojaById, getColaboradoresByLoja, Colaborador, getCargoNome, getCargos, addColaborador, updateColaborador, deleteColaborador } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
+import { getCargos, getCargoNome } from '@/utils/cadastrosApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,15 +13,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Plus, Download, Eye, Edit, Trash2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { ColaboradorMockado } from '@/types/mockData';
 
 export default function LojaRH() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const loja = getLojaById(id || '');
+  
+  // Usar useCadastroStore como fonte única de verdade
+  const { 
+    obterLojaById, 
+    obterColaboradoresPorLoja, 
+    adicionarColaborador, 
+    atualizarColaborador, 
+    deletarColaborador 
+  } = useCadastroStore();
+  
+  const loja = obterLojaById(id || '');
   const cargos = getCargos();
-  const [employees, setEmployees] = useState<Colaborador[]>(getColaboradoresByLoja(id || ''));
+  
+  // Obter colaboradores da loja usando o store
+  const colaboradoresLoja = useMemo(() => {
+    return obterColaboradoresPorLoja(id || '');
+  }, [id, obterColaboradoresPorLoja]);
+  
+  const [employees, setEmployees] = useState<ColaboradorMockado[]>(colaboradoresLoja);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<Colaborador | null>(null);
+  const [editingEmployee, setEditingEmployee] = useState<ColaboradorMockado | null>(null);
   const [form, setForm] = useState({
     nome: '',
     cpf: '',
@@ -31,6 +49,11 @@ export default function LojaRH() {
     email: '',
     telefone: ''
   });
+
+  // Atualizar lista quando colaboradores mudam
+  React.useEffect(() => {
+    setEmployees(colaboradoresLoja);
+  }, [colaboradoresLoja]);
 
   if (!loja) {
     return (
@@ -64,16 +87,16 @@ export default function LojaRH() {
     setEditingEmployee(null);
   };
 
-  const handleOpenDialog = (employee?: Colaborador) => {
+  const handleOpenDialog = (employee?: ColaboradorMockado) => {
     if (employee) {
       setEditingEmployee(employee);
       setForm({
         nome: employee.nome,
         cpf: employee.cpf,
         cargo: employee.cargo,
-        salario: employee.salario?.toString() || '',
-        dataAdmissao: employee.dataAdmissao,
-        dataNascimento: employee.dataNascimento || '',
+        salario: employee.salario_fixo?.toString() || '',
+        dataAdmissao: employee.data_admissao,
+        dataNascimento: '',
         email: employee.email,
         telefone: employee.telefone
       });
@@ -88,9 +111,9 @@ export default function LojaRH() {
     const rows = employees.map(emp => [
       emp.nome,
       emp.cpf,
-      getCargoNome(emp.cargo),
-      new Date(emp.dataAdmissao).toLocaleDateString('pt-BR'),
-      emp.salario ? `R$ ${emp.salario.toFixed(2)}` : '-'
+      emp.cargo,
+      new Date(emp.data_admissao).toLocaleDateString('pt-BR'),
+      emp.salario_fixo ? `R$ ${emp.salario_fixo.toFixed(2)}` : '-'
     ]);
 
     const csvContent = [
@@ -121,32 +144,36 @@ export default function LojaRH() {
       nome: form.nome,
       cpf: form.cpf,
       cargo: form.cargo,
-      loja: id!,
-      dataAdmissao: form.dataAdmissao || new Date().toISOString().split('T')[0],
-      dataNascimento: form.dataNascimento || undefined,
+      loja_id: id!,
+      data_admissao: form.dataAdmissao || new Date().toISOString().split('T')[0],
       email: form.email,
       telefone: form.telefone,
-      modeloPagamento: 'MP-002',
-      salario: form.salario ? parseFloat(form.salario) : undefined,
-      status: 'Ativo' as const
+      salario_fixo: form.salario ? parseFloat(form.salario) : 0,
+      ajuda_custo: 0,
+      comissao: 0,
+      eh_gestor: form.cargo.toLowerCase().includes('gestor'),
+      eh_vendedor: form.cargo.toLowerCase().includes('vendedor'),
+      eh_estoquista: form.cargo.toLowerCase().includes('estoquista'),
+      ativo: true
     };
 
     if (editingEmployee) {
-      updateColaborador(editingEmployee.id, employeeData);
+      atualizarColaborador(editingEmployee.id, employeeData);
       toast.success('Funcionário atualizado com sucesso!');
     } else {
-      addColaborador(employeeData);
+      adicionarColaborador(employeeData);
       toast.success('Funcionário adicionado com sucesso!');
     }
 
-    setEmployees(getColaboradoresByLoja(id!));
+    // Atualizar lista local
+    setEmployees(obterColaboradoresPorLoja(id!));
     setIsDialogOpen(false);
     resetForm();
   };
 
   const handleDeleteEmployee = (empId: string) => {
-    deleteColaborador(empId);
-    setEmployees(getColaboradoresByLoja(id!));
+    deletarColaborador(empId);
+    setEmployees(obterColaboradoresPorLoja(id!));
     toast.success('Funcionário removido com sucesso!');
   };
 
@@ -201,7 +228,7 @@ export default function LojaRH() {
                       </SelectTrigger>
                       <SelectContent>
                         {cargos.map(cargo => (
-                          <SelectItem key={cargo.id} value={cargo.id}>{cargo.funcao}</SelectItem>
+                          <SelectItem key={cargo.id} value={cargo.funcao}>{cargo.funcao}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -272,10 +299,10 @@ export default function LojaRH() {
                       </TableCell>
                       <TableCell className="font-medium">{employee.nome}</TableCell>
                       <TableCell className="text-muted-foreground">{employee.cpf}</TableCell>
-                      <TableCell>{getCargoNome(employee.cargo)}</TableCell>
-                      <TableCell>{new Date(employee.dataAdmissao).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>{employee.cargo}</TableCell>
+                      <TableCell>{new Date(employee.data_admissao).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell className="text-right font-medium">
-                        {employee.salario ? `R$ ${employee.salario.toLocaleString('pt-BR')}` : '-'}
+                        {employee.salario_fixo ? `R$ ${employee.salario_fixo.toLocaleString('pt-BR')}` : '-'}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">

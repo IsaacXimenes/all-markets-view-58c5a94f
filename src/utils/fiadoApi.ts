@@ -21,7 +21,8 @@ export interface ParcelaFiado {
   diaSemana?: number; // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab
 }
 
-// Mock data com exemplos
+// Mock data com exemplos - UUIDs reais do useCadastroStore
+// Lojas: db894e7d (JK Shopping), 3ac7e00c (Matriz), 5b9446d5 (Shopping Sul)
 let parcelasFiado: ParcelaFiado[] = [
   // Venda 1 - Cliente com parcelas em dia
   {
@@ -29,8 +30,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0050',
     clienteId: 'CLI-001',
     clienteNome: 'João Silva',
-    lojaId: 'LOJA-001',
-    lojaNome: 'Thiago Imports - Centro',
+    lojaId: 'db894e7d', // Loja - JK Shopping
+    lojaNome: 'Loja - JK Shopping',
     numeroParcela: 1,
     totalParcelas: 3,
     valorParcela: 500,
@@ -45,8 +46,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0050',
     clienteId: 'CLI-001',
     clienteNome: 'João Silva',
-    lojaId: 'LOJA-001',
-    lojaNome: 'Thiago Imports - Centro',
+    lojaId: 'db894e7d', // Loja - JK Shopping
+    lojaNome: 'Loja - JK Shopping',
     numeroParcela: 2,
     totalParcelas: 3,
     valorParcela: 500,
@@ -61,8 +62,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0050',
     clienteId: 'CLI-001',
     clienteNome: 'João Silva',
-    lojaId: 'LOJA-001',
-    lojaNome: 'Thiago Imports - Centro',
+    lojaId: 'db894e7d', // Loja - JK Shopping
+    lojaNome: 'Loja - JK Shopping',
     numeroParcela: 3,
     totalParcelas: 3,
     valorParcela: 500,
@@ -75,8 +76,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0055',
     clienteId: 'CLI-003',
     clienteNome: 'Carlos Oliveira',
-    lojaId: 'LOJA-002',
-    lojaNome: 'Thiago Imports - Shopping',
+    lojaId: '3ac7e00c', // Loja - Matriz
+    lojaNome: 'Loja - Matriz',
     numeroParcela: 1,
     totalParcelas: 5,
     valorParcela: 400,
@@ -91,8 +92,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0055',
     clienteId: 'CLI-003',
     clienteNome: 'Carlos Oliveira',
-    lojaId: 'LOJA-002',
-    lojaNome: 'Thiago Imports - Shopping',
+    lojaId: '3ac7e00c', // Loja - Matriz
+    lojaNome: 'Loja - Matriz',
     numeroParcela: 2,
     totalParcelas: 5,
     valorParcela: 400,
@@ -104,8 +105,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0055',
     clienteId: 'CLI-003',
     clienteNome: 'Carlos Oliveira',
-    lojaId: 'LOJA-002',
-    lojaNome: 'Thiago Imports - Shopping',
+    lojaId: '3ac7e00c', // Loja - Matriz
+    lojaNome: 'Loja - Matriz',
     numeroParcela: 3,
     totalParcelas: 5,
     valorParcela: 400,
@@ -117,8 +118,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0055',
     clienteId: 'CLI-003',
     clienteNome: 'Carlos Oliveira',
-    lojaId: 'LOJA-002',
-    lojaNome: 'Thiago Imports - Shopping',
+    lojaId: '3ac7e00c', // Loja - Matriz
+    lojaNome: 'Loja - Matriz',
     numeroParcela: 4,
     totalParcelas: 5,
     valorParcela: 400,
@@ -130,8 +131,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0055',
     clienteId: 'CLI-003',
     clienteNome: 'Carlos Oliveira',
-    lojaId: 'LOJA-002',
-    lojaNome: 'Thiago Imports - Shopping',
+    lojaId: '3ac7e00c', // Loja - Matriz
+    lojaNome: 'Loja - Matriz',
     numeroParcela: 5,
     totalParcelas: 5,
     valorParcela: 400,
@@ -144,8 +145,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0060',
     clienteId: 'CLI-005',
     clienteNome: 'Ana Paula Ferreira',
-    lojaId: 'LOJA-001',
-    lojaNome: 'Thiago Imports - Centro',
+    lojaId: 'db894e7d', // Loja - JK Shopping
+    lojaNome: 'Loja - JK Shopping',
     numeroParcela: 1,
     totalParcelas: 2,
     valorParcela: 750,
@@ -157,8 +158,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0060',
     clienteId: 'CLI-005',
     clienteNome: 'Ana Paula Ferreira',
-    lojaId: 'LOJA-001',
-    lojaNome: 'Thiago Imports - Centro',
+    lojaId: 'db894e7d', // Loja - JK Shopping
+    lojaNome: 'Loja - JK Shopping',
     numeroParcela: 2,
     totalParcelas: 2,
     valorParcela: 750,
@@ -171,8 +172,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0062',
     clienteId: 'CLI-007',
     clienteNome: 'Roberto Mendes',
-    lojaId: 'LOJA-001',
-    lojaNome: 'Thiago Imports - Centro',
+    lojaId: '5b9446d5', // Loja - Shopping Sul
+    lojaNome: 'Loja - Shopping Sul',
     numeroParcela: 1,
     totalParcelas: 4,
     valorParcela: 325,
@@ -184,8 +185,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0062',
     clienteId: 'CLI-007',
     clienteNome: 'Roberto Mendes',
-    lojaId: 'LOJA-001',
-    lojaNome: 'Thiago Imports - Centro',
+    lojaId: '5b9446d5', // Loja - Shopping Sul
+    lojaNome: 'Loja - Shopping Sul',
     numeroParcela: 2,
     totalParcelas: 4,
     valorParcela: 325,
@@ -197,8 +198,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0062',
     clienteId: 'CLI-007',
     clienteNome: 'Roberto Mendes',
-    lojaId: 'LOJA-001',
-    lojaNome: 'Thiago Imports - Centro',
+    lojaId: '5b9446d5', // Loja - Shopping Sul
+    lojaNome: 'Loja - Shopping Sul',
     numeroParcela: 3,
     totalParcelas: 4,
     valorParcela: 325,
@@ -210,8 +211,8 @@ let parcelasFiado: ParcelaFiado[] = [
     vendaId: 'VEN-2025-0062',
     clienteId: 'CLI-007',
     clienteNome: 'Roberto Mendes',
-    lojaId: 'LOJA-001',
-    lojaNome: 'Thiago Imports - Centro',
+    lojaId: '5b9446d5', // Loja - Shopping Sul
+    lojaNome: 'Loja - Shopping Sul',
     numeroParcela: 4,
     totalParcelas: 4,
     valorParcela: 325,

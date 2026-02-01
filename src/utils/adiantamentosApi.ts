@@ -24,15 +24,19 @@ export interface Adiantamento {
   historico: HistoricoAlteracao[];
 }
 
-// Mock Data
+// Mock Data - UUIDs reais do useCadastroStore
+// Mapeamento de IDs:
+// Lojas: db894e7d (JK Shopping), 3ac7e00c (Matriz), 5b9446d5 (Shopping Sul), fcc78c1a (Online)
+// Colaboradores: b467c728 (Anna Beatriz), 143ac0c2 (Antonio Sousa), 428d37c2 (Bruno Alves), 6dcbc817 (Caua Victor)
+
 let adiantamentos: Adiantamento[] = [
   {
     id: 'ADT-001',
     dataLancamento: '2026-01-12T11:00:00',
-    lancadoPor: 'COL-001',
-    lancadoPorNome: 'Lucas Mendes',
-    lojaId: 'LOJA-001',
-    colaboradorId: 'COL-005',
+    lancadoPor: 'b467c728', // Anna Beatriz Borges
+    lancadoPorNome: 'Anna Beatriz Borges',
+    lojaId: 'db894e7d', // Loja - JK Shopping
+    colaboradorId: '143ac0c2', // Antonio Sousa Silva
     observacao: 'Adiantamento para reforma residencial',
     valorFinal: 1500,
     quantidadeVezes: 5,
@@ -40,8 +44,8 @@ let adiantamentos: Adiantamento[] = [
     historico: [
       {
         dataHora: '2026-01-12T11:00:00',
-        usuarioId: 'COL-001',
-        usuarioNome: 'Lucas Mendes',
+        usuarioId: 'b467c728',
+        usuarioNome: 'Anna Beatriz Borges',
         campoAlterado: '-',
         valorAnterior: '-',
         valorNovo: '-',
@@ -52,10 +56,10 @@ let adiantamentos: Adiantamento[] = [
   {
     id: 'ADT-002',
     dataLancamento: '2026-01-05T16:30:00',
-    lancadoPor: 'COL-002',
-    lancadoPorNome: 'Fernanda Lima',
-    lojaId: 'LOJA-002',
-    colaboradorId: 'COL-006',
+    lancadoPor: '428d37c2', // Bruno Alves Peres
+    lancadoPorNome: 'Bruno Alves Peres',
+    lojaId: '3ac7e00c', // Loja - Matriz
+    colaboradorId: '6dcbc817', // Caua Victor Costa dos Santos
     observacao: 'Adiantamento salarial - 50%',
     valorFinal: 1100,
     quantidadeVezes: 1,
@@ -63,8 +67,8 @@ let adiantamentos: Adiantamento[] = [
     historico: [
       {
         dataHora: '2026-01-05T16:30:00',
-        usuarioId: 'COL-002',
-        usuarioNome: 'Fernanda Lima',
+        usuarioId: '428d37c2',
+        usuarioNome: 'Bruno Alves Peres',
         campoAlterado: '-',
         valorAnterior: '-',
         valorNovo: '-',
@@ -75,10 +79,10 @@ let adiantamentos: Adiantamento[] = [
   {
     id: 'ADT-003',
     dataLancamento: '2025-12-20T08:20:00',
-    lancadoPor: 'COL-003',
-    lancadoPorNome: 'Roberto Alves',
-    lojaId: 'LOJA-003',
-    colaboradorId: 'COL-009',
+    lancadoPor: 'b467c728', // Anna Beatriz Borges
+    lancadoPorNome: 'Anna Beatriz Borges',
+    lojaId: '5b9446d5', // Loja - Shopping Sul
+    colaboradorId: '9812948d', // Gustavo de Souza dos Santos
     observacao: 'Adiantamento para compra de veículo',
     valorFinal: 3000,
     quantidadeVezes: 10,
@@ -86,8 +90,8 @@ let adiantamentos: Adiantamento[] = [
     historico: [
       {
         dataHora: '2025-12-20T08:20:00',
-        usuarioId: 'COL-003',
-        usuarioNome: 'Roberto Alves',
+        usuarioId: 'b467c728',
+        usuarioNome: 'Anna Beatriz Borges',
         campoAlterado: '-',
         valorAnterior: '-',
         valorNovo: '-',
