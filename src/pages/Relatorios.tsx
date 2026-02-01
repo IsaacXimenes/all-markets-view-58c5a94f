@@ -9,7 +9,7 @@ import { BarChart3, Download, FileSpreadsheet, Store, Wrench, MessageSquareWarni
 import { getVendas } from '@/utils/vendasApi';
 import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 import { getOrdensServico } from '@/utils/assistenciaApi';
-import { getFeedbacks, getTodosColaboradoresParaFeedback } from '@/utils/feedbackApi';
+import { getFeedbacks, getTodosColaboradoresParaFeedbackFromStore } from '@/utils/feedbackApi';
 import { getGarantias, getTratativasByGarantiaId, exportGarantiasToCSV } from '@/utils/garantiasApi';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -18,12 +18,13 @@ import { useCadastroStore } from '@/store/cadastroStore';
 
 
 export default function Relatorios() {
-  const { obterLojasAtivas, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
+  const { obterLojasAtivas, obterNomeLoja, obterNomeColaborador, obterColaboradoresAtivos } = useCadastroStore();
   const lojas = obterLojasAtivas();
   const vendas = getVendas();
   const ordensServico = getOrdensServico();
   const feedbacks = getFeedbacks();
-  const colaboradores = getTodosColaboradoresParaFeedback();
+  const colaboradoresStore = obterColaboradoresAtivos();
+  const colaboradores = getTodosColaboradoresParaFeedbackFromStore(colaboradoresStore, obterNomeLoja);
   const garantias = getGarantias();
 
   const [dataInicio, setDataInicio] = useState('');

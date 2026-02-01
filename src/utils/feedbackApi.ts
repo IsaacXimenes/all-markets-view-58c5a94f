@@ -1,6 +1,5 @@
 // API de Feedback para Recursos Humanos - Mock Data
-
-import { getColaboradores, getCargoNome, getLojaById, Colaborador } from '@/utils/cadastrosApi';
+// Usa useCadastroStore como fonte de verdade para Lojas e Colaboradores
 
 export interface FeedbackRegistro {
   id: string;
@@ -80,15 +79,6 @@ let feedbacks: FeedbackRegistro[] = [
 // Contador para IDs
 let feedbackIdCounter = 6;
 
-// Converter Colaborador para ColaboradorFeedback
-const toColaboradorFeedback = (col: Colaborador): ColaboradorFeedback => ({
-  id: col.id,
-  nome: col.nome,
-  cargo: getCargoNome(col.cargo),
-  loja: getLojaById(col.loja)?.nome || col.loja,
-  cpf: col.cpf
-});
-
 // API Functions
 export const getFeedbacks = () => [...feedbacks].sort((a, b) => b.dataHora.getTime() - a.dataHora.getTime());
 
@@ -98,15 +88,43 @@ export const getFeedbacksByColaborador = (colaboradorId: string) =>
   feedbacks.filter(f => f.colaboradorId === colaboradorId)
     .sort((a, b) => b.dataHora.getTime() - a.dataHora.getTime());
 
-export const getColaboradoresComFeedback = (): ColaboradorFeedback[] => {
+// Função que recebe colaboradores do store e retorna os que têm feedback
+export const getColaboradoresComFeedbackFromStore = (colaboradoresStore: Array<{
+  id: string;
+  nome: string;
+  cargo: string;
+  loja_id: string;
+  cpf: string;
+  ativo: boolean;
+}>, obterNomeLoja: (id: string) => string): ColaboradorFeedback[] => {
   const idsComFeedback = new Set(feedbacks.map(f => f.colaboradorId));
-  const colaboradores = getColaboradores().filter(c => idsComFeedback.has(c.id));
-  return colaboradores.map(toColaboradorFeedback);
+  const colaboradores = colaboradoresStore.filter(c => idsComFeedback.has(c.id) && c.ativo);
+  return colaboradores.map(col => ({
+    id: col.id,
+    nome: col.nome,
+    cargo: col.cargo,
+    loja: obterNomeLoja(col.loja_id),
+    cpf: col.cpf
+  }));
 };
 
-export const getTodosColaboradoresParaFeedback = (): ColaboradorFeedback[] => {
-  const colaboradores = getColaboradores().filter(c => c.status === 'Ativo');
-  return colaboradores.map(toColaboradorFeedback);
+// Função que recebe colaboradores do store e retorna todos para feedback
+export const getTodosColaboradoresParaFeedbackFromStore = (colaboradoresStore: Array<{
+  id: string;
+  nome: string;
+  cargo: string;
+  loja_id: string;
+  cpf: string;
+  ativo: boolean;
+}>, obterNomeLoja: (id: string) => string): ColaboradorFeedback[] => {
+  const colaboradores = colaboradoresStore.filter(c => c.ativo);
+  return colaboradores.map(col => ({
+    id: col.id,
+    nome: col.nome,
+    cargo: col.cargo,
+    loja: obterNomeLoja(col.loja_id),
+    cpf: col.cpf
+  }));
 };
 
 export const getUltimaNotificacao = (colaboradorId: string): Date | null => {
