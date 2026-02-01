@@ -408,14 +408,14 @@ let garantias: GarantiaItem[] = [
 ];
 
 let tratativas: TratativaGarantia[] = [
-  // 2 Direcionado Apple (Concluído)
+  // 2 Direcionado Apple (Concluído) - IDs atualizados para UUIDs reais
   {
     id: 'TRAT-0001',
     garantiaId: 'GAR-0001',
     tipo: 'Direcionado Apple',
     dataHora: '2025-01-20T10:30:00',
-    usuarioId: 'COL-001',
-    usuarioNome: 'Lucas Mendes',
+    usuarioId: 'b467c728', // Anna Beatriz Borges
+    usuarioNome: 'Anna Beatriz Borges',
     descricao: 'Cliente orientado a procurar Apple Store mais próxima para acionamento de garantia.',
     status: 'Concluído'
   },
@@ -424,8 +424,8 @@ let tratativas: TratativaGarantia[] = [
     garantiaId: 'GAR-0002',
     tipo: 'Direcionado Apple',
     dataHora: '2025-01-18T14:00:00',
-    usuarioId: 'COL-002',
-    usuarioNome: 'Fernanda Lima',
+    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+    usuarioNome: 'Fernanda Gabrielle Silva de Lima',
     descricao: 'Problema na câmera. Cliente direcionado para Apple para reparo sob garantia.',
     status: 'Concluído'
   },
@@ -435,8 +435,8 @@ let tratativas: TratativaGarantia[] = [
     garantiaId: 'GAR-0006',
     tipo: 'Encaminhado Assistência',
     dataHora: '2024-12-10T09:00:00',
-    usuarioId: 'COL-001',
-    usuarioNome: 'Lucas Mendes',
+    usuarioId: 'b467c728', // Anna Beatriz Borges
+    usuarioNome: 'Anna Beatriz Borges',
     descricao: 'Tela com manchas. Encaminhado para assistência técnica interna.',
     osId: 'OS-0050',
     status: 'Concluído'
@@ -446,8 +446,8 @@ let tratativas: TratativaGarantia[] = [
     garantiaId: 'GAR-0007',
     tipo: 'Encaminhado Assistência',
     dataHora: '2025-01-02T11:30:00',
-    usuarioId: 'COL-003',
-    usuarioNome: 'Roberto Alves',
+    usuarioId: '6dcbc817', // Caua Victor Costa dos Santos
+    usuarioNome: 'Caua Victor Costa dos Santos',
     descricao: 'Bateria não carrega corretamente. Em análise na assistência.',
     osId: 'OS-0051',
     status: 'Em Andamento'
@@ -458,8 +458,8 @@ let tratativas: TratativaGarantia[] = [
     garantiaId: 'GAR-0005',
     tipo: 'Assistência + Empréstimo',
     dataHora: '2024-12-20T14:35:00',
-    usuarioId: 'COL-002',
-    usuarioNome: 'Fernanda Lima',
+    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+    usuarioNome: 'Fernanda Gabrielle Silva de Lima',
     descricao: 'Problema no microfone. Cliente recebeu aparelho emprestado enquanto aguarda reparo.',
     aparelhoEmprestadoId: 'PROD-0100',
     aparelhoEmprestadoModelo: 'iPhone 13',
@@ -472,8 +472,8 @@ let tratativas: TratativaGarantia[] = [
     garantiaId: 'GAR-0006',
     tipo: 'Assistência + Empréstimo',
     dataHora: '2024-11-25T10:00:00',
-    usuarioId: 'COL-001',
-    usuarioNome: 'Lucas Mendes',
+    usuarioId: 'b467c728', // Anna Beatriz Borges
+    usuarioNome: 'Anna Beatriz Borges',
     descricao: 'Alto-falante com ruído. Cliente utilizou aparelho emprestado por 5 dias.',
     aparelhoEmprestadoId: 'PROD-0101',
     aparelhoEmprestadoModelo: 'iPhone 12',
@@ -487,8 +487,8 @@ let tratativas: TratativaGarantia[] = [
     garantiaId: 'GAR-0002',
     tipo: 'Troca Direta',
     dataHora: '2025-01-22T16:00:00',
-    usuarioId: 'COL-003',
-    usuarioNome: 'Roberto Alves',
+    usuarioId: '6dcbc817', // Caua Victor Costa dos Santos
+    usuarioNome: 'Caua Victor Costa dos Santos',
     descricao: 'Defeito de fabricação identificado. Realizada troca direta por novo aparelho.',
     aparelhoTrocaId: 'PROD-0102',
     aparelhoTrocaModelo: 'iPhone 15 Pro',
@@ -500,8 +500,8 @@ let tratativas: TratativaGarantia[] = [
     garantiaId: 'GAR-0006',
     tipo: 'Troca Direta',
     dataHora: '2024-12-15T09:30:00',
-    usuarioId: 'COL-002',
-    usuarioNome: 'Fernanda Lima',
+    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+    usuarioNome: 'Fernanda Gabrielle Silva de Lima',
     descricao: 'Problema recorrente após reparo. Cliente optou por troca direta.',
     aparelhoTrocaId: 'PROD-0103',
     aparelhoTrocaModelo: 'iPhone SE 2022',
@@ -511,7 +511,7 @@ let tratativas: TratativaGarantia[] = [
 ];
 
 let timeline: TimelineGarantia[] = [
-  // Timeline para GAR-0005 (Empréstimo ativo)
+  // Timeline para GAR-0005 (Empréstimo ativo) - IDs atualizados para UUIDs reais
   {
     id: 'TL-0001',
     garantiaId: 'GAR-0005',
@@ -519,8 +519,8 @@ let timeline: TimelineGarantia[] = [
     tipo: 'registro_venda',
     titulo: 'Venda registrada',
     descricao: 'Venda VEN-2025-0005 realizada com garantia Thiago Imports (12 meses)',
-    usuarioId: 'COL-004',
-    usuarioNome: 'Carlos Santos'
+    usuarioId: 'b106080f', // Erick Guthemberg Ferreira da Silva
+    usuarioNome: 'Erick Guthemberg Ferreira da Silva'
   },
   {
     id: 'TL-0002',
@@ -529,8 +529,8 @@ let timeline: TimelineGarantia[] = [
     tipo: 'abertura_garantia',
     titulo: 'Garantia acionada',
     descricao: 'Cliente relatou problema no microfone durante ligações',
-    usuarioId: 'COL-002',
-    usuarioNome: 'Fernanda Lima'
+    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+    usuarioNome: 'Fernanda Gabrielle Silva de Lima'
   },
   {
     id: 'TL-0003',
@@ -539,8 +539,8 @@ let timeline: TimelineGarantia[] = [
     tipo: 'tratativa',
     titulo: 'Tratativa: Assistência + Empréstimo',
     descricao: 'Definida tratativa com aparelho emprestado',
-    usuarioId: 'COL-002',
-    usuarioNome: 'Fernanda Lima'
+    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+    usuarioNome: 'Fernanda Gabrielle Silva de Lima'
   },
   {
     id: 'TL-0004',
@@ -549,8 +549,8 @@ let timeline: TimelineGarantia[] = [
     tipo: 'os_criada',
     titulo: 'OS criada: OS-0052',
     descricao: 'Ordem de serviço criada para reparo do microfone',
-    usuarioId: 'COL-002',
-    usuarioNome: 'Fernanda Lima'
+    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+    usuarioNome: 'Fernanda Gabrielle Silva de Lima'
   },
   {
     id: 'TL-0005',
@@ -559,8 +559,8 @@ let timeline: TimelineGarantia[] = [
     tipo: 'emprestimo',
     titulo: 'Aparelho emprestado',
     descricao: 'iPhone 13 (IMEI: 999000111222333) emprestado ao cliente',
-    usuarioId: 'COL-002',
-    usuarioNome: 'Fernanda Lima'
+    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+    usuarioNome: 'Fernanda Gabrielle Silva de Lima'
   },
   // Timeline para GAR-0006 (Concluída)
   {
@@ -570,8 +570,8 @@ let timeline: TimelineGarantia[] = [
     tipo: 'registro_venda',
     titulo: 'Venda registrada',
     descricao: 'Venda VEN-2024-0050 realizada com garantia Thiago Imports (12 meses)',
-    usuarioId: 'COL-004',
-    usuarioNome: 'Carlos Santos'
+    usuarioId: '1b9137c8', // Evelyn Cordeiro de Oliveira
+    usuarioNome: 'Evelyn Cordeiro de Oliveira'
   },
   {
     id: 'TL-0007',
@@ -580,8 +580,8 @@ let timeline: TimelineGarantia[] = [
     tipo: 'troca',
     titulo: 'Troca realizada',
     descricao: 'Aparelho trocado por iPhone SE 2022 (IMEI: 999000111222336)',
-    usuarioId: 'COL-002',
-    usuarioNome: 'Fernanda Lima'
+    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+    usuarioNome: 'Fernanda Gabrielle Silva de Lima'
   },
   {
     id: 'TL-0008',
@@ -590,8 +590,8 @@ let timeline: TimelineGarantia[] = [
     tipo: 'conclusao',
     titulo: 'Garantia concluída',
     descricao: 'Tratativa finalizada com sucesso',
-    usuarioId: 'COL-002',
-    usuarioNome: 'Fernanda Lima'
+    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+    usuarioNome: 'Fernanda Gabrielle Silva de Lima'
   }
 ];
 

@@ -25,52 +25,52 @@ export interface ColaboradorFeedback {
   cpf: string;
 }
 
-// Mock de feedbacks
+// Mock de feedbacks - IDs atualizados para UUIDs reais do useCadastroStore
 let feedbacks: FeedbackRegistro[] = [
   {
     id: 'FB-0001',
-    colaboradorId: 'COL-001',
+    colaboradorId: 'b467c728', // Anna Beatriz Borges
     tipo: 'Advertência',
     texto: 'Atraso recorrente nos últimos 3 dias. Colaborador foi orientado sobre a importância da pontualidade.',
-    gestorId: 'COL-002',
-    gestorNome: 'Fernanda Lima',
+    gestorId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+    gestorNome: 'Fernanda Gabrielle Silva de Lima',
     dataHora: new Date('2025-01-10T09:30:00'),
   },
   {
     id: 'FB-0002',
-    colaboradorId: 'COL-001',
+    colaboradorId: 'b467c728', // Anna Beatriz Borges
     tipo: 'Advertência (2)',
     texto: 'Segunda advertência por atraso. Colaborador assinou termo de compromisso.',
-    gestorId: 'COL-002',
-    gestorNome: 'Fernanda Lima',
+    gestorId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+    gestorNome: 'Fernanda Gabrielle Silva de Lima',
     dataHora: new Date('2025-01-15T14:00:00'),
     referenciaAnterior: 'FB-0001'
   },
   {
     id: 'FB-0003',
-    colaboradorId: 'COL-003',
+    colaboradorId: '6dcbc817', // Caua Victor Costa dos Santos
     tipo: 'Advertência',
     texto: 'Uso indevido de celular durante atendimento ao cliente.',
-    gestorId: 'COL-002',
-    gestorNome: 'Fernanda Lima',
+    gestorId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+    gestorNome: 'Fernanda Gabrielle Silva de Lima',
     dataHora: new Date('2025-01-12T16:45:00'),
   },
   {
     id: 'FB-0004',
-    colaboradorId: 'COL-004',
+    colaboradorId: '143ac0c2', // Antonio Sousa Silva Filho
     tipo: 'Advertência',
     texto: 'Falta não justificada no dia 05/01/2025.',
-    gestorId: 'COL-005',
-    gestorNome: 'Marcos Silva',
+    gestorId: '428d37c2', // Bruno Alves Peres
+    gestorNome: 'Bruno Alves Peres',
     dataHora: new Date('2025-01-08T10:00:00'),
   },
   {
     id: 'FB-0005',
-    colaboradorId: 'COL-001',
+    colaboradorId: 'b467c728', // Anna Beatriz Borges
     tipo: 'Suspensão',
     texto: 'Terceira ocorrência de atraso. Suspensão de 1 dia aplicada conforme regulamento interno.',
-    gestorId: 'COL-002',
-    gestorNome: 'Fernanda Lima',
+    gestorId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+    gestorNome: 'Fernanda Gabrielle Silva de Lima',
     dataHora: new Date('2025-01-20T11:15:00'),
     referenciaAnterior: 'FB-0002'
   },
@@ -168,11 +168,11 @@ export const isUsuarioGestor = (cargoNome: string): boolean => {
     cargoNome.toLowerCase().includes('supervisor'));
 };
 
-// Usuário logado mockado (gestor)
+// Usuário logado mockado (gestor) - UUID real do useCadastroStore
 export const getUsuarioLogado = () => ({
-  id: 'COL-002',
-  nome: 'Fernanda Lima',
-  cargo: 'Gerente Financeiro',
+  id: '7c1231ea', // Fernanda Gabrielle Silva de Lima
+  nome: 'Fernanda Gabrielle Silva de Lima',
+  cargo: 'Assistente Administrativo',
   isGestor: true
 });
 

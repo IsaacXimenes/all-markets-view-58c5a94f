@@ -79,7 +79,7 @@ let produtosPendentes: ProdutoPendente[] = [
     valorCustoOriginal: 3100.00,
     valorOrigem: 3100.00,
     saudeBateria: 86,
-    loja: 'Loja Centro',
+    loja: 'db894e7d', // Loja - JK Shopping
     dataEntrada: '2025-12-13', // 1 dia atrás - SLA normal
     timeline: [
       {
@@ -109,7 +109,7 @@ let produtosPendentes: ProdutoPendente[] = [
     valorCustoOriginal: 3500.00,
     valorOrigem: 3500.00,
     saudeBateria: 91,
-    loja: 'Loja Shopping',
+    loja: '3ac7e00c', // Loja - Matriz
     dataEntrada: '2025-12-10', // 4 dias atrás - SLA amarelo
     timeline: [
       {
@@ -139,7 +139,7 @@ let produtosPendentes: ProdutoPendente[] = [
     valorCustoOriginal: 1800.00,
     valorOrigem: 1800.00,
     saudeBateria: 72,
-    loja: 'Loja Norte',
+    loja: '5b9446d5', // Loja - Shopping Sul
     dataEntrada: '2025-12-08', // 6 dias atrás - SLA vermelho
     timeline: [
       {
@@ -170,7 +170,7 @@ let produtosPendentes: ProdutoPendente[] = [
     valorCustoOriginal: 1500.00,
     valorOrigem: 1500.00,
     saudeBateria: 78,
-    loja: 'Loja Sul',
+    loja: '0d06e7db', // Loja - Águas Lindas Shopping
     dataEntrada: '2025-12-09', // 5 dias atrás - SLA vermelho
     parecerEstoque: {
       id: 'PE-003',
@@ -215,7 +215,7 @@ let produtosPendentes: ProdutoPendente[] = [
     valorCustoOriginal: 2200.00,
     valorOrigem: 2200.00,
     saudeBateria: 82,
-    loja: 'Loja Oeste',
+    loja: 'fcc78c1a', // Loja - Online
     dataEntrada: '2025-12-11', // 3 dias atrás - SLA amarelo
     parecerEstoque: {
       id: 'PE-004',
