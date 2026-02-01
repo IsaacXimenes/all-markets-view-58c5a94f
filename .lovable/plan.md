@@ -1,274 +1,257 @@
 
-
-# Plano: Correções e Melhorias em Múltiplos Módulos
-
-## Resumo das Solicitações
-
-O usuário identificou diversas melhorias e correções necessárias em 5 módulos do sistema:
+# Plano de Implementação: Correção RH Feedback + Nova Aba "Movimentações - Matriz"
 
 ---
 
-## 1. MÓDULO CADASTROS - Acessórios
+## Parte 1: Correção do Modal "Registrar FeedBack" no RH
 
-### 1.1 Adicionar Campo "Limite Mínimo" no Cadastro de Acessórios
+### Problema Identificado
+No modal de registro de feedback (RHFeedback.tsx), quando o usuário seleciona um colaborador, a loja exibida vem do `feedbackApi.ts` que usa a API antiga (`cadastrosApi`). O campo de loja não está usando o `useCadastroStore` centralizado.
 
-**Arquivo:** `src/pages/CadastrosAcessorios.tsx`
+### Solução
+Corrigir o `feedbackApi.ts` para utilizar os dados do `useCadastroStore` em vez do `cadastrosApi` antigo.
 
-**Mudanças:**
-- Adicionar campo `limiteMinimo` na interface `AcessorioCadastro`
-- Adicionar coluna "Limite Mín." na tabela
-- Adicionar campo no formulário de criação/edição
-- Atualizar dados mockados com valores de limite
-- Atualizar função de exportação CSV
+### Arquivos a Modificar
 
-**Interface atualizada:**
-```typescript
-export interface AcessorioCadastro {
-  id: string;
-  marca: string;
-  categoria: string;
-  produto: string;
-  limiteMinimo: number; // NOVO CAMPO
-}
-```
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/utils/feedbackApi.ts` | Substituir uso de `cadastrosApi` pelo `useCadastroStore` |
+| `src/pages/RHFeedback.tsx` | Ajustar se necessário para garantir nomenclatura correta |
+
+### Detalhes Técnicos
+
+**feedbackApi.ts - Mudanças:**
+- Remover importações do `cadastrosApi` (linhas 3-4)
+- Criar funções que recebem os dados das lojas e colaboradores como parâmetro
+- Ou: criar um wrapper que usa os dados do localStorage diretamente
 
 ---
 
-## 2. MÓDULO FINANCEIRO
+## Parte 2: Nova Aba "Movimentações - Matriz" no Estoque
 
-### 2.1 Despesas Fixas/Variáveis - Competência como Seleção
-
-**Arquivos:** 
-- `src/pages/FinanceiroDespesasFixas.tsx`
-- `src/pages/FinanceiroDespesasVariaveis.tsx`
-
-**Mudanças:**
-- Substituir `Input` de texto por `Select` com lista de meses
-- Gerar lista dinâmica de competências (ex: FEV-2026, MAR-2026, etc.)
-- Manter formato padrão "MMM-YYYY"
-
-### 2.2 Despesas - Opção para Mudar Competência em Lote
-
-**Mudanças:**
-- Adicionar botão "Mudar Competência" na tabela de despesas lançadas
-- Abrir modal para selecionar despesas e nova competência
-- Aplicar alteração em lote para despesas selecionadas
-
-### 2.3 Fiado - Controle Semanal
-
-**Arquivo:** `src/pages/FinanceiroFiado.tsx` e `src/utils/fiadoApi.ts`
-
-**Mudanças:**
-- Adicionar campo `tipoRecorrencia: 'Mensal' | 'Semanal'` nas parcelas
-- Ao selecionar "Semanal", mostrar campo para escolher dia da semana (Segunda, Terça, etc.)
-- Adicionar campo "Data Inicial de Pagamento"
-- Lógica de geração de parcelas: ao invés de +30 dias, calcular próxima ocorrência do dia da semana selecionado (+7 dias)
-
-**Exemplo de lógica:**
-```text
-Fiado 8x Semanal, Quarta-feira, início 05/02/2026
-→ Parcelas: 05/02, 12/02, 19/02, 26/02, 05/03, 12/03, 19/03, 26/03
-```
-
----
-
-## 3. MÓDULO GARANTIAS
-
-### 3.1 Nomenclatura das Lojas
-
-**Arquivo:** `src/pages/GarantiasNova.tsx`
-
-**Problema:** Usando nomenclatura antiga "THIAGO IMPORTS NORTE"
-**Solução:** Já está usando `obterNomeLoja()` do CadastroStore. Verificar se os dados mockados estão atualizados.
-
-### 3.2 Incluir Acessórios (JBL) em Garantia
-
-**Arquivo:** `src/pages/GarantiasNovaManual.tsx`
-
-**Mudanças:**
-- Adicionar opção de tipo "Acessório" no formulário
-- Ao selecionar "Acessório", mostrar campo para buscar acessórios do Cadastros
-- Adaptar campos de garantia para acessórios (sem IMEI, usar código do produto)
-
-### 3.3 Tratativa "Troca Direta" - Layout igual Vendas
-
-**Arquivo:** `src/pages/GarantiasNovaManual.tsx`
-
-**Mudanças:**
-- Ao selecionar "Troca Direta", abrir modal/seção com:
-  - Busca de aparelhos no estoque (igual tela de Vendas)
-  - Filtros: IMEI, Modelo, Loja (SIA como padrão + outras)
-  - Tabela com aparelhos disponíveis
-  - Botão "Solicitar Movimentação" se aparelho estiver em outra loja
-  - Exibir informações completas: IMEI, Modelo, Cor, Bateria, Custo, Loja
-
-### 3.4 Tratativa "Assistência + Empréstimo" - Mesmo Layout
-
-**Arquivo:** `src/pages/GarantiasNovaManual.tsx`
-
-**Mudanças:**
-- Replicar o mesmo layout de seleção de aparelhos do item anterior
-- Aparelho de empréstimo vinculado ao estoque com possibilidade de movimentação
-
-### 3.5 Garantia Padrão "Garantia - Thiago Imports"
-
-**Arquivo:** `src/pages/GarantiasNovaManual.tsx`
-
-**Mudanças:**
-- Alterar valor inicial de `tipoGarantia` de `'Garantia - Apple'` para `'Garantia - Thiago Imports'`
-
----
-
-## 4. MÓDULO ESTOQUE
-
-### 4.1 Movimentações - Nomenclatura das Lojas
-
-**Arquivo:** `src/pages/EstoqueMovimentacoes.tsx`
-
-**Problema:** Colunas Origem/Destino mostrando nomenclatura antiga "LOJA CENTRO"
-**Verificação:** O código já usa `getLojaNome()` que chama `obterNomeLoja()`. Verificar dados mockados.
-
-### 4.2 Aparelhos - Máscara de Moeda no Valor Recomendado
-
-**Arquivo:** `src/pages/EstoqueProdutos.tsx` (modal de alterar valor)
-
-**Mudanças:**
-- Usar `InputComMascara` com máscara "moeda" no campo de valor recomendado
-- Exibir valores formatados: R$ 12.600,00 ao invés de 12600
-
-### 4.3 Acessórios - Nomenclatura das Lojas
-
-**Arquivo:** `src/pages/EstoqueAcessorios.tsx`
-
-**Problema:** Coluna Loja mostrando "LOJA-001"
-**Verificação:** Já usa `getLojaNome(lojaId)`. Verificar dados mockados.
-
-### 4.4 Aparelhos Pendentes - Autocomplete no Filtro de Fornecedor
-
-**Arquivo:** `src/pages/EstoqueProdutosPendentes.tsx`
-
-**Mudanças:**
-- Criar componente `AutocompleteFornecedor` (se não existir)
-- Substituir `Select` de fornecedor por `AutocompleteFornecedor`
-- Permitir digitação para busca
-
-### 4.5 Aparelhos Pendentes - Nomenclatura das Lojas
-
-**Arquivo:** `src/pages/EstoqueProdutosPendentes.tsx`
-
-**Verificação:** Já usa `getLojaNome()`. Verificar dados mockados.
-
----
-
-## 5. MÓDULO RECURSOS HUMANOS
-
-### 5.1 Feedback - Ajustar Coluna Loja
-
-**Arquivo:** `src/pages/RHFeedback.tsx`
-
-**Problema:** Usando `getLojas()` do cadastrosApi antigo
-**Solução:** Usar `useCadastroStore().obterNomeLoja()` para exibir nomes corretos
-
-### 5.2 Feedback - Anexar Documento
-
-**Arquivo:** `src/pages/RHFeedback.tsx`
-
-**Mudanças:**
-- Adicionar campo de upload de arquivo no modal de registro
-- Armazenar referência do arquivo no objeto de feedback
-- Exibir link/preview do documento anexado nos detalhes
-- Suportar formatos: PDF, imagens (JPG, PNG)
-
-### 5.3 Vales - Ajustar Colunas Loja e Colaborador
-
-**Arquivo:** `src/pages/RHVales.tsx`
-
-**Verificação:** Já usa `getLojaNome()` e `getColaboradorNome()` do CadastroStore. Verificar tabela.
-
-### 5.4 Adiantamentos - Ajustar Colunas Loja e Colaborador
-
-**Arquivo:** `src/pages/RHAdiantamentos.tsx`
-
-**Verificação:** Já usa `getLojaNome()` e `getColaboradorNome()` do CadastroStore. Verificar tabela.
-
-### 5.5 Nova Aba: Remuneração dos Motoboy
-
-**Novos arquivos:**
-- `src/pages/RHMotoboyRemuneracao.tsx`
-- `src/utils/motoboyApi.ts`
-
-**Funcionalidades:**
-- Listar todos os Motoboys ativos (filtrar colaboradores por cargo)
-- Colunas: Nome, Competência, Valor Final, Qtd Demandas
-- Pagamento quinzenal baseado em períodos selecionados
-- Filtros: Colaborador, Período Início, Período Fim, Competência
-- Exportação CSV
-
-**Atualizar layout:**
-- `src/components/layout/RHLayout.tsx` - Adicionar nova aba "Remuneração Motoboy"
-
----
-
-## Detalhes Técnicos
+### Objetivo
+Criar um sistema de controle de saída de aparelhos da Matriz para outras lojas, com timer de 22 horas para conferência de retorno.
 
 ### Arquivos a Criar
 
 | Arquivo | Descrição |
 |---------|-----------|
-| `src/pages/RHMotoboyRemuneracao.tsx` | Nova aba de remuneração de motoboys |
-| `src/utils/motoboyApi.ts` | API mockada para demandas/entregas de motoboys |
+| `src/pages/EstoqueMovimentacoesMatriz.tsx` | Nova página com layout em 3 quadros |
 
 ### Arquivos a Modificar
 
-| Arquivo | Alterações |
-|---------|------------|
-| `src/pages/CadastrosAcessorios.tsx` | Adicionar campo limiteMinimo |
-| `src/pages/FinanceiroDespesasFixas.tsx` | Select de competência + alteração em lote |
-| `src/pages/FinanceiroDespesasVariaveis.tsx` | Select de competência + alteração em lote |
-| `src/pages/FinanceiroFiado.tsx` | Suporte a parcelas semanais |
-| `src/utils/fiadoApi.ts` | Lógica de geração de parcelas semanais |
-| `src/pages/GarantiasNovaManual.tsx` | Garantia padrão + Acessórios + Layout tratativas |
-| `src/pages/EstoqueProdutos.tsx` | Máscara moeda no valor recomendado |
-| `src/pages/EstoqueProdutosPendentes.tsx` | AutocompleteFornecedor |
-| `src/pages/RHFeedback.tsx` | Nomenclatura loja + Upload de documento |
-| `src/components/layout/RHLayout.tsx` | Nova aba Motoboy |
-| `src/App.tsx` | Nova rota /rh/motoboy-remuneracao |
-
-### Componentes a Verificar/Criar
-
-| Componente | Status |
-|------------|--------|
-| `AutocompleteFornecedor` | Já existe em `src/components/AutocompleteFornecedor.tsx` |
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/utils/estoqueApi.ts` | Adicionar interfaces e funções para movimentações da Matriz |
+| `src/components/layout/EstoqueLayout.tsx` | Adicionar nova aba "Movimentações - Matriz" |
+| `src/App.tsx` | Adicionar rota `/estoque/movimentacoes-matriz` |
 
 ---
 
-## Priorização Sugerida
+## Detalhes Técnicos - Movimentações Matriz
 
-1. **Alta prioridade** (correções de nomenclatura - impacto visual):
-   - Verificar e corrigir dados mockados de lojas em todos os módulos
-   - Garantir uso consistente do CadastroStore
+### 1. Novas Interfaces (estoqueApi.ts)
 
-2. **Média prioridade** (novas funcionalidades):
-   - Campo limite mínimo em Acessórios
-   - Select de competência em Despesas
-   - Controle semanal de Fiado
-   - Upload de documento em Feedback
+```typescript
+// Interface para item individual da movimentação
+interface MovimentacaoMatrizItem {
+  aparelhoId: string;
+  imei: string;
+  modelo: string;
+  cor: string;
+  statusItem: 'Enviado' | 'Devolvido' | 'Vendido';
+  dataHoraRetorno?: string;
+  responsavelRetorno?: string;
+}
 
-3. **Baixa prioridade** (funcionalidades maiores):
-   - Nova aba Remuneração Motoboy
-   - Layout completo de seleção de aparelhos em Garantias
+// Interface principal da movimentação
+interface MovimentacaoMatriz {
+  id: string;
+  dataHoraLancamento: string;
+  responsavelLancamento: string;
+  lojaOrigemId: string; // Sempre Matriz
+  lojaDestinoId: string;
+  statusMovimentacao: 'Aguardando Retorno' | 'Concluída' | 'Retorno Atrasado';
+  dataHoraLimiteRetorno: string; // +22 horas
+  itens: MovimentacaoMatrizItem[];
+  timeline: TimelineEntry[];
+}
+```
+
+### 2. Novas Funções (estoqueApi.ts)
+
+| Função | Descrição |
+|--------|-----------|
+| `criarMovimentacaoMatriz()` | Registra nova movimentação, atualiza `lojaAtualId` dos produtos |
+| `registrarRetornoItemMatriz()` | Marca item como devolvido, atualiza produto |
+| `getMovimentacoesMatriz()` | Lista movimentações com filtros |
+| `getMovimentacaoMatrizById()` | Detalhes de uma movimentação |
+| `verificarRetornosAtrasados()` | Atualiza status para 'Retorno Atrasado' |
+
+### 3. Modificar Interface Produto
+
+Adicionar campo `lojaAtualId` ao tipo `Produto`:
+```typescript
+interface Produto {
+  // ... campos existentes ...
+  lojaAtualId?: string; // Loja onde o produto está fisicamente
+}
+```
+
+### 4. Estender TimelineEntry
+
+Adicionar novos tipos:
+```typescript
+tipo: '...' | 'saida_matriz' | 'retorno_matriz' | 'venda_matriz';
+```
 
 ---
 
-## Próximos Passos
+## Layout da Página EstoqueMovimentacoesMatriz.tsx
 
-Após aprovação, implementarei as mudanças na seguinte ordem:
+### Estrutura Visual (3 Quadros)
 
-1. Correções de nomenclatura (verificação de dados mockados)
-2. Cadastros > Acessórios (campo limite mínimo)
-3. Financeiro > Despesas (select competência)
-4. Financeiro > Fiado (controle semanal)
-5. RH > Feedback (upload documento)
-6. RH > Nova aba Motoboy
-7. Garantias > Tratativas (layouts expandidos)
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ QUADRO 1: Cabeçalho da Movimentação (Auto-preenchido)           │
+│ ┌─────────────┬─────────────────────┬───────────────────────┐   │
+│ │ ID Mov.     │ Data/Hora Lanç.     │ Responsável           │   │
+│ │ MM-XXXXX    │ 01/02/2026 14:30    │ João Silva            │   │
+│ └─────────────┴─────────────────────┴───────────────────────┘   │
+├─────────────────────────────────────────────────────────────────┤
+│ QUADRO 2: Lançamento de Aparelhos (Saída da Matriz)             │
+│ ┌───────────────────────────────────────────────────────────┐   │
+│ │ Loja Destino: [Select - Lojas exceto Matriz]              │   │
+│ │                                                           │   │
+│ │ [Buscar IMEI/Modelo...] [Adicionar +]                     │   │
+│ │                                                           │   │
+│ │ ┌─────────────┬────────────────┬──────┬────────┐          │   │
+│ │ │ IMEI        │ Modelo         │ Cor  │ Ação   │          │   │
+│ │ ├─────────────┼────────────────┼──────┼────────┤          │   │
+│ │ │ 35-2123...  │ iPhone 15 Pro  │ Preto│ [X]    │          │   │
+│ │ │ 35-2124...  │ iPhone 14      │ Azul │ [X]    │          │   │
+│ │ └─────────────┴────────────────┴──────┴────────┘          │   │
+│ │                                                           │   │
+│ │ [Registrar Lançamento]                                    │   │
+│ └───────────────────────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────────────────────┤
+│ QUADRO 3: Aparelhos em Retorno (Conferência)                    │
+│ ┌───────────────────────────────────────────────────────────┐   │
+│ │ Status: Aguardando Retorno          Timer: 18:45:32 🟢    │   │
+│ │                                                           │   │
+│ │ [Detalhar] [Editar - Conferir Retorno]                    │   │
+│ │                                                           │   │
+│ │ ┌─────────────┬────────────────┬──────┬──────────┬──────┐ │   │
+│ │ │ IMEI        │ Modelo         │ Cor  │ Status   │ Ação │ │   │
+│ │ ├─────────────┼────────────────┼──────┼──────────┼──────┤ │   │
+│ │ │ 35-2123...  │ iPhone 15 Pro  │ Preto│ Enviado  │[Dev] │ │   │
+│ │ │ 35-2124...  │ iPhone 14      │ Azul │ Devolvido│  -   │ │   │
+│ │ └─────────────┴────────────────┴──────┴──────────┴──────┘ │   │
+│ └───────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Timer de 22 Horas - Lógica
+
+### Cores do Timer
+| Tempo Restante | Cor | Classe CSS |
+|----------------|-----|------------|
+| > 4 horas | Verde | `text-green-500` |
+| 1-4 horas | Amarelo | `text-yellow-500` |
+| < 1 hora | Vermelho | `text-red-500` |
+| Expirado | Vermelho + Piscando | `text-red-600 animate-pulse` |
+
+### Implementação
+```typescript
+const calcularTempoRestante = (dataLimite: string) => {
+  const agora = new Date();
+  const limite = new Date(dataLimite);
+  const diff = limite.getTime() - agora.getTime();
+  
+  if (diff <= 0) return { expirado: true, texto: '00:00:00', cor: 'red' };
+  
+  const horas = Math.floor(diff / (1000 * 60 * 60));
+  const minutos = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const segundos = Math.floor((diff % (1000 * 60)) / 1000);
+  
+  return {
+    expirado: false,
+    texto: `${horas.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`,
+    cor: horas > 4 ? 'green' : horas >= 1 ? 'yellow' : 'red'
+  };
+};
+```
+
+---
+
+## Fluxo de Dados
+
+### Lançamento da Movimentação
+1. Usuário seleciona loja destino
+2. Busca aparelhos disponíveis na Matriz
+3. Adiciona aparelhos à lista
+4. Clica "Registrar Lançamento"
+5. Sistema:
+   - Cria `MovimentacaoMatriz`
+   - Atualiza `lojaAtualId` de cada produto para loja destino
+   - Adiciona timeline `saida_matriz`
+   - Inicia timer de 22 horas
+
+### Conferência de Retorno
+1. Usuário clica "Editar" na movimentação
+2. Visualiza lista de itens
+3. Para cada item retornado, clica "Produto Devolvido"
+4. Sistema:
+   - Atualiza `statusItem` para 'Devolvido'
+   - Atualiza `lojaAtualId` do produto para Matriz
+   - Adiciona timeline `retorno_matriz`
+5. Quando todos devolvidos/vendidos: status = 'Concluída'
+
+---
+
+## Atualização do EstoqueLayout.tsx
+
+Adicionar nova aba:
+```typescript
+const tabs = [
+  // ... tabs existentes ...
+  { name: 'Movimentações - Matriz', href: '/estoque/movimentacoes-matriz', icon: Building },
+];
+```
+
+---
+
+## Nova Rota (App.tsx)
+
+```typescript
+import EstoqueMovimentacoesMatriz from './pages/EstoqueMovimentacoesMatriz';
+
+// Na seção de rotas:
+<Route path="/estoque/movimentacoes-matriz" element={<EstoqueMovimentacoesMatriz />} />
+```
+
+---
+
+## Regras de Negócio Implementadas
+
+1. **Matriz como Origem Fixa**: A loja de origem é sempre a Matriz
+2. **Transferência Imediata**: `lojaAtualId` muda no momento do lançamento
+3. **Timer de 22h**: Prazo fixo a partir do lançamento
+4. **Status Automático**: 'Retorno Atrasado' quando timer expira
+5. **Rastreamento Individual**: Cada aparelho tem seu próprio status
+6. **Integração com Vendas**: Se vendido na loja destino, status = 'Vendido'
+
+---
+
+## Ordem de Implementação
+
+1. Correção do feedbackApi.ts (Parte 1)
+2. Adicionar interfaces em estoqueApi.ts
+3. Adicionar funções de CRUD em estoqueApi.ts
+4. Criar EstoqueMovimentacoesMatriz.tsx
+5. Atualizar EstoqueLayout.tsx
+6. Adicionar rota em App.tsx
+7. Testar fluxo completo
 
