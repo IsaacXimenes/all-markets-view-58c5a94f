@@ -31,7 +31,7 @@ import {
 import {
   getFeedbacks,
   getFeedbacksByColaborador,
-  getTodosColaboradoresParaFeedback,
+  getTodosColaboradoresParaFeedbackFromStore,
   addFeedback,
   getUsuarioLogado,
   exportFeedbacksToCSV,
@@ -56,8 +56,9 @@ export default function RHFeedback() {
   const [arquivoFeedback, setArquivoFeedback] = useState<File | null>(null);
 
   const usuarioLogado = getUsuarioLogado();
-  const { obterNomeLoja } = useCadastroStore();
-  const todosColaboradores = getTodosColaboradoresParaFeedback();
+  const { obterNomeLoja, obterColaboradoresAtivos } = useCadastroStore();
+  const colaboradoresStore = obterColaboradoresAtivos();
+  const todosColaboradores = getTodosColaboradoresParaFeedbackFromStore(colaboradoresStore, obterNomeLoja);
 
   // Feedbacks filtrados para tabela principal
   const feedbacksFiltrados = useMemo(() => {

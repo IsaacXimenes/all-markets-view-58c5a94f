@@ -12,7 +12,7 @@ export interface HistoricoValorRecomendado {
 export interface TimelineEntry {
   id: string;
   data: string;
-  tipo: 'entrada' | 'validacao' | 'pagamento' | 'discrepancia' | 'alerta_sla' | 'parecer_estoque' | 'parecer_assistencia' | 'despesa' | 'liberacao';
+  tipo: 'entrada' | 'validacao' | 'pagamento' | 'discrepancia' | 'alerta_sla' | 'parecer_estoque' | 'parecer_assistencia' | 'despesa' | 'liberacao' | 'saida_matriz' | 'retorno_matriz' | 'venda_matriz';
   titulo: string;
   descricao: string;
   responsavel?: string;
@@ -35,6 +35,7 @@ export interface Produto {
   vendaRecomendada?: number;
   saudeBateria: number;
   loja: string;
+  lojaAtualId?: string; // Loja onde o produto está fisicamente (para movimentações Matriz)
   estoqueConferido: boolean;
   assistenciaConferida: boolean;
   condicao: string;
@@ -48,6 +49,32 @@ export interface Produto {
   bloqueadoEmVendaId?: string; // ID da venda quando produto está bloqueado (sinal)
   statusMovimentacao?: 'Em movimentação' | null; // Status quando produto está em trânsito
   movimentacaoId?: string; // ID da movimentação ativa
+}
+
+// ============= INTERFACES MOVIMENTAÇÃO MATRIZ =============
+
+// Interface para item individual da movimentação matriz
+export interface MovimentacaoMatrizItem {
+  aparelhoId: string;
+  imei: string;
+  modelo: string;
+  cor: string;
+  statusItem: 'Enviado' | 'Devolvido' | 'Vendido';
+  dataHoraRetorno?: string;
+  responsavelRetorno?: string;
+}
+
+// Interface principal da movimentação matriz
+export interface MovimentacaoMatriz {
+  id: string;
+  dataHoraLancamento: string;
+  responsavelLancamento: string;
+  lojaOrigemId: string; // Sempre Matriz
+  lojaDestinoId: string;
+  statusMovimentacao: 'Aguardando Retorno' | 'Concluída' | 'Retorno Atrasado';
+  dataHoraLimiteRetorno: string; // +22 horas
+  itens: MovimentacaoMatrizItem[];
+  timeline: TimelineEntry[];
 }
 
 // Produto individual dentro de uma nota
@@ -675,6 +702,12 @@ let movimentacoes: Movimentacao[] = [
   }
 ];
 
+// ============= DADOS MOCKADOS - MOVIMENTAÇÕES MATRIZ =============
+let movimentacoesMatriz: MovimentacaoMatriz[] = [];
+
+// Contadores para IDs
+let movMatrizIdCounter = 1;
+
 // Inicializar status de movimentação nos produtos que têm movimentações pendentes
 const initializeMovimentacaoStatus = () => {
   movimentacoes.forEach(mov => {
@@ -1203,4 +1236,263 @@ export const sincronizarValidacaoComFinanceiro = (
     responsavel,
     aparelhoInfo
   });
+};
+
+// ============= FUNÇÕES MOVIMENTAÇÃO MATRIZ =============
+
+// Obter ID da Matriz
+export const getMatrizLojaId = (): string => {
+  return LOJAS_IDS.MATRIZ;
+};
+
+// Gerar ID único para movimentação matriz
+const generateMovMatrizId = (): string => {
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
+  const id = `MM-${dateStr}-${String(movMatrizIdCounter++).padStart(4, '0')}`;
+  return id;
+};
+
+// Obter todas as movimentações matriz
+export const getMovimentacoesMatriz = (filtros?: {
+  status?: string;
+  lojaDestinoId?: string;
+  dataInicio?: string;
+  dataFim?: string;
+}): MovimentacaoMatriz[] => {
+  // Verificar retornos atrasados antes de retornar
+  verificarRetornosAtrasados();
+  
+  let result = [...movimentacoesMatriz];
+  
+  if (filtros?.status) {
+    result = result.filter(m => m.statusMovimentacao === filtros.status);
+  }
+  
+  if (filtros?.lojaDestinoId) {
+    result = result.filter(m => m.lojaDestinoId === filtros.lojaDestinoId);
+  }
+  
+  if (filtros?.dataInicio) {
+    result = result.filter(m => m.dataHoraLancamento >= filtros.dataInicio!);
+  }
+  
+  if (filtros?.dataFim) {
+    result = result.filter(m => m.dataHoraLancamento <= filtros.dataFim!);
+  }
+  
+  return result.sort((a, b) => 
+    new Date(b.dataHoraLancamento).getTime() - new Date(a.dataHoraLancamento).getTime()
+  );
+};
+
+// Obter movimentação matriz por ID
+export const getMovimentacaoMatrizById = (id: string): MovimentacaoMatriz | null => {
+  return movimentacoesMatriz.find(m => m.id === id) || null;
+};
+
+// Criar nova movimentação matriz
+export const criarMovimentacaoMatriz = (dados: {
+  lojaDestinoId: string;
+  responsavelLancamento: string;
+  itens: Array<{ aparelhoId: string; imei: string; modelo: string; cor: string }>;
+}): MovimentacaoMatriz => {
+  const agora = new Date();
+  const dataHoraLancamento = agora.toISOString();
+  
+  // Calcular limite de retorno (+22 horas)
+  const limite = new Date(agora.getTime() + 22 * 60 * 60 * 1000);
+  const dataHoraLimiteRetorno = limite.toISOString();
+  
+  const novaMovimentacao: MovimentacaoMatriz = {
+    id: generateMovMatrizId(),
+    dataHoraLancamento,
+    responsavelLancamento: dados.responsavelLancamento,
+    lojaOrigemId: LOJAS_IDS.MATRIZ,
+    lojaDestinoId: dados.lojaDestinoId,
+    statusMovimentacao: 'Aguardando Retorno',
+    dataHoraLimiteRetorno,
+    itens: dados.itens.map(item => ({
+      ...item,
+      statusItem: 'Enviado' as const
+    })),
+    timeline: [{
+      id: `TL-${Date.now()}`,
+      data: dataHoraLancamento,
+      tipo: 'saida_matriz' as const,
+      titulo: 'Saída da Matriz',
+      descricao: `${dados.itens.length} aparelho(s) enviado(s) para loja de destino`,
+      responsavel: dados.responsavelLancamento
+    }]
+  };
+  
+  // Atualizar lojaAtualId de cada produto
+  dados.itens.forEach(item => {
+    const produto = produtos.find(p => p.id === item.aparelhoId);
+    if (produto) {
+      produto.lojaAtualId = dados.lojaDestinoId;
+      
+      // Adicionar entrada na timeline do produto
+      if (!produto.timeline) produto.timeline = [];
+      produto.timeline.unshift({
+        id: `TL-PROD-${Date.now()}-${item.aparelhoId}`,
+        data: dataHoraLancamento,
+        tipo: 'saida_matriz',
+        titulo: 'Saída para Loja',
+        descricao: `Produto enviado da Matriz para loja de destino`,
+        responsavel: dados.responsavelLancamento
+      });
+    }
+  });
+  
+  movimentacoesMatriz.push(novaMovimentacao);
+  return novaMovimentacao;
+};
+
+// Registrar retorno de item da movimentação matriz
+export const registrarRetornoItemMatriz = (
+  movimentacaoId: string,
+  aparelhoId: string,
+  responsavelRetorno: string
+): { sucesso: boolean; mensagem: string; movimentacao?: MovimentacaoMatriz } => {
+  const movimentacao = movimentacoesMatriz.find(m => m.id === movimentacaoId);
+  if (!movimentacao) {
+    return { sucesso: false, mensagem: 'Movimentação não encontrada' };
+  }
+  
+  const item = movimentacao.itens.find(i => i.aparelhoId === aparelhoId);
+  if (!item) {
+    return { sucesso: false, mensagem: 'Item não encontrado na movimentação' };
+  }
+  
+  if (item.statusItem === 'Devolvido') {
+    return { sucesso: false, mensagem: 'Item já foi devolvido' };
+  }
+  
+  if (item.statusItem === 'Vendido') {
+    return { sucesso: false, mensagem: 'Item foi vendido na loja destino' };
+  }
+  
+  const agora = new Date().toISOString();
+  
+  // Atualizar item
+  item.statusItem = 'Devolvido';
+  item.dataHoraRetorno = agora;
+  item.responsavelRetorno = responsavelRetorno;
+  
+  // Atualizar produto - voltar para Matriz
+  const produto = produtos.find(p => p.id === aparelhoId);
+  if (produto) {
+    produto.lojaAtualId = LOJAS_IDS.MATRIZ;
+    
+    // Adicionar entrada na timeline do produto
+    if (!produto.timeline) produto.timeline = [];
+    produto.timeline.unshift({
+      id: `TL-PROD-${Date.now()}-${aparelhoId}-ret`,
+      data: agora,
+      tipo: 'retorno_matriz',
+      titulo: 'Retorno à Matriz',
+      descricao: `Produto devolvido à Matriz`,
+      responsavel: responsavelRetorno
+    });
+  }
+  
+  // Adicionar entrada na timeline da movimentação
+  movimentacao.timeline.unshift({
+    id: `TL-${Date.now()}-ret`,
+    data: agora,
+    tipo: 'retorno_matriz',
+    titulo: 'Item Devolvido',
+    descricao: `${item.modelo} ${item.cor} (IMEI: ${item.imei}) devolvido`,
+    responsavel: responsavelRetorno
+  });
+  
+  // Verificar se todos os itens foram devolvidos/vendidos
+  const todosFinalizados = movimentacao.itens.every(
+    i => i.statusItem === 'Devolvido' || i.statusItem === 'Vendido'
+  );
+  
+  if (todosFinalizados) {
+    movimentacao.statusMovimentacao = 'Concluída';
+    movimentacao.timeline.unshift({
+      id: `TL-${Date.now()}-conc`,
+      data: agora,
+      tipo: 'retorno_matriz',
+      titulo: 'Movimentação Concluída',
+      descricao: 'Todos os itens foram devolvidos ou vendidos',
+      responsavel: responsavelRetorno
+    });
+  }
+  
+  return { sucesso: true, mensagem: 'Retorno registrado com sucesso', movimentacao };
+};
+
+// Verificar e atualizar retornos atrasados
+export const verificarRetornosAtrasados = (): void => {
+  const agora = new Date();
+  
+  movimentacoesMatriz.forEach(mov => {
+    if (mov.statusMovimentacao === 'Aguardando Retorno') {
+      const limite = new Date(mov.dataHoraLimiteRetorno);
+      if (agora > limite) {
+        mov.statusMovimentacao = 'Retorno Atrasado';
+        mov.timeline.unshift({
+          id: `TL-${Date.now()}-atraso`,
+          data: agora.toISOString(),
+          tipo: 'alerta_sla',
+          titulo: 'Retorno Atrasado',
+          descricao: 'O prazo de 22 horas para retorno expirou',
+          responsavel: 'Sistema'
+        });
+      }
+    }
+  });
+};
+
+// Marcar item como vendido (integração com vendas)
+export const marcarItemVendidoMatriz = (
+  imei: string
+): { sucesso: boolean; movimentacaoId?: string } => {
+  // Procurar em movimentações ativas se este IMEI está em alguma
+  for (const mov of movimentacoesMatriz) {
+    if (mov.statusMovimentacao !== 'Concluída') {
+      const item = mov.itens.find(i => i.imei === imei && i.statusItem === 'Enviado');
+      if (item) {
+        item.statusItem = 'Vendido';
+        
+        mov.timeline.unshift({
+          id: `TL-${Date.now()}-venda`,
+          data: new Date().toISOString(),
+          tipo: 'venda_matriz',
+          titulo: 'Item Vendido',
+          descricao: `${item.modelo} ${item.cor} vendido na loja destino`,
+          responsavel: 'Sistema'
+        });
+        
+        // Verificar se todos finalizados
+        const todosFinalizados = mov.itens.every(
+          i => i.statusItem === 'Devolvido' || i.statusItem === 'Vendido'
+        );
+        
+        if (todosFinalizados) {
+          mov.statusMovimentacao = 'Concluída';
+        }
+        
+        return { sucesso: true, movimentacaoId: mov.id };
+      }
+    }
+  }
+  
+  return { sucesso: false };
+};
+
+// Obter produtos disponíveis na Matriz para movimentação
+export const getProdutosDisponivelMatriz = (): Produto[] => {
+  return produtos.filter(p => 
+    p.loja === LOJAS_IDS.MATRIZ && 
+    !p.lojaAtualId && 
+    !p.statusMovimentacao &&
+    !p.bloqueadoEmVendaId &&
+    p.statusNota === 'Concluído'
+  );
 };

@@ -1,6 +1,6 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { TabsNavigation } from '@/components/layout/TabsNavigation';
-import { LayoutDashboard, Package, FileText, ArrowRightLeft, Clock, Headphones, Zap } from 'lucide-react';
+import { LayoutDashboard, Package, FileText, ArrowRightLeft, Clock, Headphones, Zap, Building } from 'lucide-react';
 
 interface EstoqueLayoutProps {
   children: React.ReactNode;
@@ -15,7 +15,8 @@ const tabs = [
   { name: 'Notas - Pendências', href: '/estoque/notas-pendencias', icon: FileText },
   { name: 'Notas Urgência', href: '/estoque/notas-urgencia', icon: Zap },
   { name: 'Movimentações - Aparelhos', href: '/estoque/movimentacoes', icon: ArrowRightLeft },
-  { name: 'Movimentações - Acessórios', href: '/estoque/movimentacoes-acessorios', icon: ArrowRightLeft }
+  { name: 'Movimentações - Acessórios', href: '/estoque/movimentacoes-acessorios', icon: ArrowRightLeft },
+  { name: 'Movimentações - Matriz', href: '/estoque/movimentacoes-matriz', icon: Building }
 ];
 
 export function EstoqueLayout({ children, title }: EstoqueLayoutProps) {
