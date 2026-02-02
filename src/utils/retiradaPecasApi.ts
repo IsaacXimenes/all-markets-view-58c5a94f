@@ -3,6 +3,7 @@
 import { Produto, getProdutoById, updateProduto } from './estoqueApi';
 import { addPeca } from './pecasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
+import { addNotification } from './notificationsApi';
 
 // ============= INTERFACES =============
 
@@ -157,6 +158,14 @@ export const solicitarRetiradaPecas = (
     responsavel
   });
   
+  // Notificar Assistência sobre nova demanda
+  addNotification({
+    type: 'retirada_pecas',
+    title: 'Nova Solicitação de Retirada de Peças',
+    description: `Aparelho IMEI ${produto.imei} (${produto.modelo}) aguardando desmonte. Motivo: ${motivo}`,
+    targetUsers: [] // Todos os técnicos da assistência
+  });
+  
   return { 
     sucesso: true, 
     mensagem: 'Solicitação de retirada de peças criada com sucesso', 
@@ -206,6 +215,14 @@ export const iniciarDesmonte = (
       responsavel: tecnicoResponsavel
     });
   }
+  
+  // Notificar Estoque sobre início do desmonte
+  addNotification({
+    type: 'retirada_pecas',
+    title: 'Desmonte Iniciado',
+    description: `Técnico ${tecnicoResponsavel} iniciou o desmonte do aparelho IMEI ${retirada.imeiOriginal}`,
+    targetUsers: []
+  });
   
   return { sucesso: true, mensagem: 'Desmonte iniciado com sucesso', retirada };
 };
@@ -380,6 +397,14 @@ export const finalizarDesmonte = (
       });
     }
   }
+  
+  // Notificar Estoque sobre conclusão do desmonte
+  addNotification({
+    type: 'retirada_pecas',
+    title: 'Desmonte Finalizado',
+    description: `Aparelho IMEI ${retirada.imeiOriginal} desmontado. ${pecasGeradas} peça(s) gerada(s) e adicionadas ao estoque da assistência.`,
+    targetUsers: []
+  });
   
   return { 
     sucesso: true, 
