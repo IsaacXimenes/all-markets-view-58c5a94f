@@ -4,12 +4,14 @@ import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Upload, Printer, Clock, Package, Wrench, CheckCircle, AlertCircle, DollarSign, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Upload, Printer, Clock, Package, Wrench, CheckCircle, AlertCircle, DollarSign, AlertTriangle, Scissors } from 'lucide-react';
 import { getProdutos, Produto, TimelineEntry } from '@/utils/estoqueApi';
 import { getHistoricoGarantiasByIMEI } from '@/utils/garantiasApi';
 import { cn } from '@/lib/utils';
 import QRCode from 'qrcode';
 import { formatIMEI } from '@/utils/imeiMask';
+import { ModalRetiradaPecas } from '@/components/estoque/ModalRetiradaPecas';
+import { verificarDisponibilidadeRetirada } from '@/utils/retiradaPecasApi';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -20,6 +22,7 @@ export default function EstoqueProdutoDetalhes() {
   const navigate = useNavigate();
   const [produto, setProduto] = useState<Produto | null>(null);
   const [qrCode, setQrCode] = useState('');
+  const [showModalRetirada, setShowModalRetirada] = useState(false);
 
   useEffect(() => {
     const produtoEncontrado = getProdutos().find(p => p.id === id);
@@ -35,6 +38,9 @@ export default function EstoqueProdutoDetalhes() {
         .then(url => setQrCode(url));
     }
   }, [produto]);
+  
+  // Verificar disponibilidade para retirada de peças
+  const disponibilidadeRetirada = produto ? verificarDisponibilidadeRetirada(produto.id) : { disponivel: false };
 
   if (!produto) {
     return (
@@ -137,10 +143,23 @@ export default function EstoqueProdutoDetalhes() {
   return (
     <EstoqueLayout title="Detalhes do Produto">
       <div className="space-y-6">
-        <Button variant="ghost" onClick={() => navigate('/estoque/produtos')}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Voltar para Produtos
-        </Button>
+        <div className="flex justify-between items-center">
+          <Button variant="ghost" onClick={() => navigate('/estoque/produtos')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Voltar para Produtos
+          </Button>
+          
+          {disponibilidadeRetirada.disponivel && (
+            <Button 
+              variant="outline" 
+              className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+              onClick={() => setShowModalRetirada(true)}
+            >
+              <Scissors className="mr-2 h-4 w-4" />
+              Retirada de Peças
+            </Button>
+          )}
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Imagem e QR Code */}
@@ -389,6 +408,17 @@ export default function EstoqueProdutoDetalhes() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Modal Retirada de Peças */}
+      <ModalRetiradaPecas
+        open={showModalRetirada}
+        onOpenChange={setShowModalRetirada}
+        produto={produto}
+        onSuccess={() => {
+          setShowModalRetirada(false);
+          navigate('/estoque/produtos');
+        }}
+      />
     </EstoqueLayout>
   );
 }

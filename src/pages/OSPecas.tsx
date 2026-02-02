@@ -99,6 +99,8 @@ export default function OSPecas() {
         return <Badge variant="outline" className="border-purple-500 text-purple-600">Manual</Badge>;
       case 'Solicitação':
         return <Badge variant="outline" className="border-green-500 text-green-600">Solicitação</Badge>;
+      case 'Retirada de Peça':
+        return <Badge variant="outline" className="border-orange-500 text-orange-600 bg-orange-50 dark:bg-orange-950/30">Retirada de Peça</Badge>;
       default:
         return <Badge variant="outline">{origem}</Badge>;
     }
