@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Phone3D } from './Phone3D';
 import { LoginForm } from './LoginForm';
 import { BiometricTransition } from './BiometricTransition';
-import logoThiago from '@/assets/thiago-imports-logo.png';
 import { cn } from '@/lib/utils';
 
 export const LoginCard = () => {
@@ -30,30 +29,16 @@ export const LoginCard = () => {
           )}
         >
           <div className="flex flex-col lg:flex-row min-h-[600px]">
-            {/* Left Panel - Branding & Phone */}
+            {/* Left Panel - Phone & Description */}
             <div className="flex-1 flex flex-col items-center justify-center p-8 lg:p-12 bg-white order-2 lg:order-1">
-              {/* Logo */}
-              <div className="mb-6">
-                <img
-                  src={logoThiago}
-                  alt="Thiago Imports"
-                  className="h-12 w-auto object-contain"
-                />
-              </div>
-
-              {/* Brand Name */}
-              <h2 className="text-2xl font-bold text-foreground mb-8 tracking-tight">
-                THIAGO IMPORTS
-              </h2>
-
               {/* 3D Phone */}
               <div className="flex-1 flex items-center justify-center py-4">
                 <Phone3D />
               </div>
 
               {/* Description */}
-              <p className="text-gray-500 text-center text-sm max-w-xs mt-6 leading-relaxed">
-                Sua plataforma completa de gestão de importações. Acesse sua conta para continuar.
+              <p className="text-muted-foreground text-center text-sm max-w-xs mt-6 leading-relaxed">
+                Sua plataforma completa de gestão. Acesse sua conta para continuar.
               </p>
             </div>
 
