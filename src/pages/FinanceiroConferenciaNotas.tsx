@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { getNotasCompra, finalizarNota, NotaCompra } from '@/utils/estoqueApi';
+import { getNotasCompra, finalizarNota, NotaCompra, migrarAparelhoNovoParaEstoque } from '@/utils/estoqueApi';
 import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
 import { Eye, CheckCircle, Download, Filter, X, Check, FileText, Clock, CheckCircle2, FileSearch } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -201,22 +201,46 @@ export default function FinanceiroConferenciaNotas() {
       };
       localStorage.setItem(`nota_timeline_${notaSelecionada.id}`, JSON.stringify([newEntry, ...timeline]));
       
-      // NOVO: Migrar aparelhos para Aparelhos Pendentes (Triagem)
-      const aparelhos = notaFinalizada.produtos.filter(p => 
+      // NOVO: Separar aparelhos por tipo (Novo vs Seminovo)
+      const todosAparelhos = notaFinalizada.produtos.filter(p => 
         p.tipoProduto === 'Aparelho' || !p.tipoProduto // fallback para aparelho se não definido
       );
       
-      let qtdAparelhosMigrados = 0;
-      if (aparelhos.length > 0) {
-        const produtosMigrados = migrarProdutosNotaParaPendentes(
-          aparelhos,
+      // Filtrar aparelhos NOVOS - vão direto para estoque
+      const aparelhosNovos = todosAparelhos.filter(p => p.tipo === 'Novo');
+      
+      // Filtrar aparelhos SEMI-NOVOS - vão para triagem
+      // Se tipo não estiver definido, assume Semi-novo por segurança
+      const aparelhosSeminovos = todosAparelhos.filter(p => p.tipo !== 'Novo');
+      
+      // Migrar aparelhos NOVOS direto para estoque
+      let qtdNovos = 0;
+      for (const aparelho of aparelhosNovos) {
+        migrarAparelhoNovoParaEstoque(
+          aparelho,
           notaFinalizada.id,
           notaFinalizada.fornecedor,
           lojaDestino,
           responsavelFinanceiro
         );
-        qtdAparelhosMigrados = produtosMigrados.length;
-        console.log(`[FINANCEIRO] ${qtdAparelhosMigrados} aparelho(s) migrado(s) para Aparelhos Pendentes`);
+        qtdNovos++;
+      }
+      if (qtdNovos > 0) {
+        console.log(`[FINANCEIRO] ${qtdNovos} aparelho(s) NOVO(s) adicionado(s) diretamente ao estoque`);
+      }
+      
+      // Migrar aparelhos SEMI-NOVOS para triagem (Aparelhos Pendentes)
+      let qtdSeminovos = 0;
+      if (aparelhosSeminovos.length > 0) {
+        const produtosMigrados = migrarProdutosNotaParaPendentes(
+          aparelhosSeminovos,
+          notaFinalizada.id,
+          notaFinalizada.fornecedor,
+          lojaDestino,
+          responsavelFinanceiro
+        );
+        qtdSeminovos = produtosMigrados.length;
+        console.log(`[FINANCEIRO] ${qtdSeminovos} aparelho(s) SEMI-NOVO(s) enviado(s) para triagem`);
       }
       
       // NOVO: Adicionar acessórios diretamente ao estoque
@@ -237,10 +261,13 @@ export default function FinanceiroConferenciaNotas() {
       
       setDialogOpen(false);
       
-      // Mensagem de sucesso detalhada
+      // Mensagem de sucesso detalhada com separação Novo vs Seminovo
       let mensagem = `✅ Nota ${notaFinalizada.id} liberada!`;
-      if (qtdAparelhosMigrados > 0) {
-        mensagem += ` ${qtdAparelhosMigrados} aparelho(s) enviado(s) para triagem.`;
+      if (qtdNovos > 0) {
+        mensagem += ` ${qtdNovos} aparelho(s) NOVO(s) adicionado(s) ao estoque.`;
+      }
+      if (qtdSeminovos > 0) {
+        mensagem += ` ${qtdSeminovos} aparelho(s) SEMI-NOVO(s) enviado(s) para triagem.`;
       }
       if (qtdAcessoriosAdicionados > 0) {
         mensagem += ` ${qtdAcessoriosAdicionados} acessório(s) adicionado(s) ao estoque.`;

@@ -920,6 +920,67 @@ export const addProdutoMigrado = (produto: Produto): Produto => {
   return produto;
 };
 
+// ============= MIGRAÇÃO DE APARELHO NOVO PARA ESTOQUE =============
+// Função específica para aparelhos NOVOS - vão direto para estoque (sem triagem)
+
+export const migrarAparelhoNovoParaEstoque = (
+  produto: ProdutoNota,
+  notaId: string,
+  fornecedor: string,
+  lojaDestino: string,
+  responsavel: string
+): Produto => {
+  // Verificar duplicata por IMEI
+  const jaExiste = produtos.find(p => p.imei === produto.imei);
+  if (jaExiste) {
+    console.warn(`[ESTOQUE API] Produto com IMEI ${produto.imei} já existe no estoque. Atualizando...`);
+    return jaExiste;
+  }
+  
+  const newId = generateProductId();
+  
+  const novoProduto: Produto = {
+    id: newId,
+    imei: produto.imei,
+    marca: produto.marca,
+    modelo: produto.modelo,
+    cor: produto.cor,
+    tipo: 'Novo',
+    quantidade: 1,
+    valorCusto: produto.valorUnitario,
+    valorVendaSugerido: produto.valorUnitario * 1.8, // Margem sugerida padrão
+    vendaRecomendada: undefined, // Pendente definição pelo gestor
+    saudeBateria: produto.saudeBateria || 100,
+    loja: lojaDestino,
+    estoqueConferido: true, // Já conferido pela nota
+    assistenciaConferida: true, // Não precisa passar pela assistência
+    condicao: 'Lacrado',
+    historicoCusto: [{
+      data: new Date().toISOString().split('T')[0],
+      fornecedor: fornecedor,
+      valor: produto.valorUnitario
+    }],
+    historicoValorRecomendado: [],
+    statusNota: 'Concluído',
+    origemEntrada: 'Fornecedor',
+    timeline: [{
+      id: `TL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      data: new Date().toISOString(),
+      tipo: 'entrada',
+      titulo: 'Entrada Direta via Nota de Compra',
+      descricao: `Aparelho NOVO ${newId} adicionado ao estoque via nota ${notaId} - Fornecedor: ${fornecedor}`,
+      responsavel
+    }]
+  };
+  
+  produtos.push(novoProduto);
+  registerProductId(newId);
+  
+  console.log(`[ESTOQUE API] Aparelho NOVO ${produto.marca} ${produto.modelo} (IMEI: ${produto.imei}) adicionado diretamente ao estoque com ID ${newId}`);
+  
+  return novoProduto;
+};
+
 // Bloquear produtos em uma venda com sinal
 export const bloquearProdutosEmVenda = (vendaId: string, produtoIds: string[]): boolean => {
   let sucesso = true;
