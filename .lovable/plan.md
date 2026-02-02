@@ -1,131 +1,199 @@
 
-# Plano: Menu de LogOff + Ajustes na Tela de Login
+# Plano: Correção do Fluxo de Migração de Aparelhos (Novo vs. Seminovo)
 
-## Visao Geral
+## Diagnóstico do Problema
 
-Implementar tres melhorias:
-1. Adicionar menu dropdown no icone do usuario (Navbar) com opcao de LogOff
-2. Simplificar painel esquerdo da tela de login (remover logo e texto "Thiago Imports")
-3. Suavizar a animacao de flutuacao do celular 3D
+Após análise detalhada do código, identifiquei que o sistema **não está diferenciando** aparelhos "Novo" de "Semi-novo" ao finalizar notas de entrada.
+
+### Comportamento Atual (Incorreto)
+- **Todos os aparelhos** são enviados para `Estoque > Produtos Pendentes` (triagem)
+- Não há verificação do campo `tipo` ou `categoria` do produto
+
+### Comportamento Esperado (Regra de Negócio)
+| Tipo do Aparelho | Destino Correto |
+|------------------|-----------------|
+| **Novo** | Estoque > Produtos (disponível para venda imediata) |
+| **Semi-novo** | Estoque > Produtos Pendentes (triagem/análise) |
 
 ---
 
-## Alteracoes Detalhadas
+## Arquivos Afetados
 
-### 1. Menu de LogOff no Navbar
+| Arquivo | Problema |
+|---------|----------|
+| `src/pages/FinanceiroConferenciaNotas.tsx` | Linhas 205-220: Envia todos aparelhos para pendentes |
+| `src/utils/notaEntradaFluxoApi.ts` | Função `finalizarConferencia`: Não migra produtos |
 
-**Arquivo:** `src/components/layout/Navbar.tsx`
+---
 
-Transformar o Avatar em um trigger de DropdownMenu:
+## Solução Proposta
 
-| Antes | Depois |
-|-------|--------|
-| Avatar simples sem interacao | Avatar clicavel que abre menu dropdown |
+### Alteração 1: FinanceiroConferenciaNotas.tsx
 
-**Estrutura do Menu:**
+Modificar a lógica de migração (linhas 204-220) para:
+
+1. **Filtrar aparelhos "Novo"** e chamar `addProdutoMigrado()` para envio direto ao estoque principal
+2. **Filtrar aparelhos "Semi-novo"** e chamar `migrarProdutosNotaParaPendentes()` para envio à triagem
 
 ```text
-+------------------+
-| Minha Conta      |  <- Label (usuario logado)
-|------------------|
-| Sair             |  <- LogOff (icone LogOut)
-+------------------+
+ANTES (Incorreto):
+┌─────────────────────────────────────────────────────────────┐
+│  Todos os Aparelhos → migrarProdutosNotaParaPendentes()     │
+│                       (Estoque > Produtos Pendentes)        │
+└─────────────────────────────────────────────────────────────┘
+
+DEPOIS (Correto):
+┌─────────────────────────────────────────────────────────────┐
+│  Aparelhos "Novo" → addProdutoMigrado()                     │
+│                     (Estoque > Produtos - Qtd disponível)   │
+├─────────────────────────────────────────────────────────────┤
+│  Aparelhos "Semi-novo" → migrarProdutosNotaParaPendentes()  │
+│                          (Estoque > Produtos Pendentes)     │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Funcionamento:**
-- Clicar no Avatar abre o dropdown
-- Opcao "Sair" chama `logout()` do authStore
-- Apos logout, usuario e redirecionado automaticamente para `/login` (via ProtectedRoute)
+### Alteração 2: Criar função de migração para aparelhos novos
+
+Criar função `migrarAparelhoNovoParaEstoque()` em `estoqueApi.ts` que:
+- Recebe dados do produto da nota
+- Gera ID único (PROD-XXXX)
+- Adiciona ao array de produtos com `statusNota: 'Concluído'`
+- Registra na timeline
+- Define `vendaRecomendada` como pendente (null)
+
+### Alteração 3: notaEntradaFluxoApi.ts (Opcional)
+
+Se a nota for finalizada pelo Estoque (após conferência 100% + pagamento 100% antecipado), a mesma lógica de migração deve ser aplicada na função `finalizarConferencia`.
 
 ---
 
-### 2. Simplificar Tela de Login
+## Detalhes Técnicos
 
-**Arquivo:** `src/components/login/LoginCard.tsx`
-
-| Remover | Manter/Alterar |
-|---------|----------------|
-| Logo (imagem) | Celular 3D |
-| Texto "THIAGO IMPORTS" | Texto de descricao simplificado |
-| "de importacoes" no texto | Manter apenas "Sua plataforma completa de gestao" |
-
-**Texto Final:**
-> "Sua plataforma completa de gestao. Acesse sua conta para continuar."
-
----
-
-### 3. Suavizar Animacao do Celular
-
-**Arquivo:** `tailwind.config.ts`
-
-Ajustar keyframe `float` para movimento mais suave:
-
-| Antes | Depois |
-|-------|--------|
-| `translateY(-5px)` em 50% | `translateY(-8px)` em 50% |
-| Duracao: 3s | Duracao: 6s |
-| Timing: ease-in-out | Timing: ease-in-out (mantido) |
-
-A animacao mais lenta e com amplitude ligeiramente maior cria uma sensacao de flutuacao mais suave e elegante.
-
----
-
-## Arquivos a Modificar
-
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/components/layout/Navbar.tsx` | Adicionar DropdownMenu com opcao LogOff |
-| `src/components/login/LoginCard.tsx` | Remover logo, texto "THIAGO IMPORTS" e "de importacoes" |
-| `tailwind.config.ts` | Ajustar keyframe `float` para movimento mais suave |
-
----
-
-## Imports Necessarios (Navbar.tsx)
+### Nova Função: migrarAparelhoNovoParaEstoque
 
 ```typescript
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/authStore';
-import { LogOut } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+export const migrarAparelhoNovoParaEstoque = (
+  produto: ProdutoNota,
+  notaId: string,
+  fornecedor: string,
+  lojaDestino: string,
+  responsavel: string
+): Produto => {
+  const newId = generateProductId();
+  
+  const novoProduto: Produto = {
+    id: newId,
+    imei: produto.imei,
+    marca: produto.marca,
+    modelo: produto.modelo,
+    cor: produto.cor,
+    tipo: 'Novo',
+    quantidade: 1,
+    valorCusto: produto.valorUnitario,
+    valorVendaSugerido: produto.valorUnitario * 1.8,
+    vendaRecomendada: undefined, // Pendente
+    saudeBateria: 100,
+    loja: lojaDestino,
+    estoqueConferido: true,
+    assistenciaConferida: true,
+    condicao: 'Lacrado',
+    historicoCusto: [{
+      data: new Date().toISOString().split('T')[0],
+      fornecedor: fornecedor,
+      valor: produto.valorUnitario
+    }],
+    historicoValorRecomendado: [],
+    statusNota: 'Concluído',
+    origemEntrada: 'Fornecedor'
+  };
+  
+  produtos.push(novoProduto);
+  registerProductId(newId);
+  
+  return novoProduto;
+};
+```
+
+### Lógica de Separação em FinanceiroConferenciaNotas.tsx
+
+```typescript
+// Separar aparelhos por tipo
+const aparelhosNovos = notaFinalizada.produtos.filter(p => 
+  (p.tipoProduto === 'Aparelho' || !p.tipoProduto) && 
+  p.tipo === 'Novo'
+);
+
+const aparelhosSeminovos = notaFinalizada.produtos.filter(p => 
+  (p.tipoProduto === 'Aparelho' || !p.tipoProduto) && 
+  p.tipo === 'Seminovo'
+);
+
+// Migrar aparelhos NOVOS direto para estoque
+let qtdNovos = 0;
+for (const aparelho of aparelhosNovos) {
+  migrarAparelhoNovoParaEstoque(
+    aparelho,
+    notaFinalizada.id,
+    notaFinalizada.fornecedor,
+    lojaDestino,
+    responsavelFinanceiro
+  );
+  qtdNovos++;
+}
+
+// Migrar aparelhos SEMI-NOVOS para triagem
+let qtdSeminovos = 0;
+if (aparelhosSeminovos.length > 0) {
+  const migrados = migrarProdutosNotaParaPendentes(
+    aparelhosSeminovos,
+    notaFinalizada.id,
+    notaFinalizada.fornecedor,
+    lojaDestino,
+    responsavelFinanceiro
+  );
+  qtdSeminovos = migrados.length;
+}
 ```
 
 ---
 
-## Fluxo de LogOff
+## Imports Necessários
+
+Adicionar em `FinanceiroConferenciaNotas.tsx`:
+```typescript
+import { migrarAparelhoNovoParaEstoque } from '@/utils/estoqueApi';
+```
+
+---
+
+## Mensagem de Sucesso Atualizada
+
+A mensagem toast será atualizada para refletir a separação:
 
 ```text
-[Usuario clica no Avatar]
-         |
-         v
-[Dropdown abre com opcoes]
-         |
-         v
-[Usuario clica em "Sair"]
-         |
-         v
-[authStore.logout() chamado]
-         |
-         v
-[isAuthenticated = false]
-         |
-         v
-[ProtectedRoute detecta]
-         |
-         v
-[Redireciona para /login]
+✅ Nota NC-2025-0001 liberada!
+   3 aparelho(s) NOVO(s) adicionado(s) ao estoque.
+   2 aparelho(s) SEMI-NOVO(s) enviado(s) para triagem.
+   5 acessório(s) adicionado(s) ao estoque.
 ```
+
+---
+
+## Verificação de Campo de Categoria
+
+O sistema usa o campo `tipo` (ou `categoria` em algumas interfaces) para identificar a condição do produto:
+- `tipo: 'Novo'` → Aparelho novo/lacrado
+- `tipo: 'Seminovo'` → Aparelho usado (semi-novo)
+
+Caso o campo não esteja preenchido, o sistema assumirá **Semi-novo** por segurança (forçar passagem pela triagem).
 
 ---
 
 ## Resultado Esperado
 
-1. **Navbar:** Avatar com dropdown funcional, opcao "Sair" que desloga e retorna ao login
-2. **Login:** Painel esquerdo mais limpo, apenas com celular 3D e texto simplificado
-3. **Animacao:** Celular flutua de forma mais suave e elegante (6 segundos de ciclo)
+Após a implementação:
+
+1. **Aparelhos "Novo"** cadastrados em notas de entrada irão diretamente para `Estoque > Produtos` com quantidade disponível
+2. **Aparelhos "Semi-novo"** continuarão indo para `Estoque > Produtos Pendentes` para análise e parecer do estoque
+3. Rastreabilidade mantida com IDs PROD-XXXX únicos e persistentes
+4. Timeline registra origem da entrada corretamente
