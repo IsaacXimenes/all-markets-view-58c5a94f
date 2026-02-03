@@ -1506,8 +1506,13 @@ export const criarMovimentacaoMatriz = (dados: {
   const agora = new Date();
   const dataHoraLancamento = agora.toISOString();
   
-  // Calcular limite de retorno (+22 horas)
-  const limite = new Date(agora.getTime() + 22 * 60 * 60 * 1000);
+  // Calcular limite de retorno: às 22:00 do mesmo dia
+  const limite = new Date(agora);
+  limite.setHours(22, 0, 0, 0); // Define para 22:00 do mesmo dia
+  // Se já passou das 22h, usa 22h do dia seguinte
+  if (agora.getHours() >= 22) {
+    limite.setDate(limite.getDate() + 1);
+  }
   const dataHoraLimiteRetorno = limite.toISOString();
   
   const novaMovimentacao: MovimentacaoMatriz = {
