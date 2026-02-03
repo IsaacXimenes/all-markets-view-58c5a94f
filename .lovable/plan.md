@@ -1,199 +1,62 @@
 
-# Plano: Correção do Fluxo de Migração de Aparelhos (Novo vs. Seminovo)
 
-## Diagnóstico do Problema
+# Plano: Adicionar Background na Tela de Login
 
-Após análise detalhada do código, identifiquei que o sistema **não está diferenciando** aparelhos "Novo" de "Semi-novo" ao finalizar notas de entrada.
-
-### Comportamento Atual (Incorreto)
-- **Todos os aparelhos** são enviados para `Estoque > Produtos Pendentes` (triagem)
-- Não há verificação do campo `tipo` ou `categoria` do produto
-
-### Comportamento Esperado (Regra de Negócio)
-| Tipo do Aparelho | Destino Correto |
-|------------------|-----------------|
-| **Novo** | Estoque > Produtos (disponível para venda imediata) |
-| **Semi-novo** | Estoque > Produtos Pendentes (triagem/análise) |
+## Objetivo
+Adicionar a imagem enviada (Thiago Imports com pessoa segurando celulares) como plano de fundo da tela de login, posicionada **atrás** do card branco que contém o celular 3D e o formulário.
 
 ---
 
-## Arquivos Afetados
-
-| Arquivo | Problema |
-|---------|----------|
-| `src/pages/FinanceiroConferenciaNotas.tsx` | Linhas 205-220: Envia todos aparelhos para pendentes |
-| `src/utils/notaEntradaFluxoApi.ts` | Função `finalizarConferencia`: Não migra produtos |
-
----
-
-## Solução Proposta
-
-### Alteração 1: FinanceiroConferenciaNotas.tsx
-
-Modificar a lógica de migração (linhas 204-220) para:
-
-1. **Filtrar aparelhos "Novo"** e chamar `addProdutoMigrado()` para envio direto ao estoque principal
-2. **Filtrar aparelhos "Semi-novo"** e chamar `migrarProdutosNotaParaPendentes()` para envio à triagem
+## Resultado Visual Esperado
 
 ```text
-ANTES (Incorreto):
-┌─────────────────────────────────────────────────────────────┐
-│  Todos os Aparelhos → migrarProdutosNotaParaPendentes()     │
-│                       (Estoque > Produtos Pendentes)        │
-└─────────────────────────────────────────────────────────────┘
-
-DEPOIS (Correto):
-┌─────────────────────────────────────────────────────────────┐
-│  Aparelhos "Novo" → addProdutoMigrado()                     │
-│                     (Estoque > Produtos - Qtd disponível)   │
-├─────────────────────────────────────────────────────────────┤
-│  Aparelhos "Semi-novo" → migrarProdutosNotaParaPendentes()  │
-│                          (Estoque > Produtos Pendentes)     │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Alteração 2: Criar função de migração para aparelhos novos
-
-Criar função `migrarAparelhoNovoParaEstoque()` em `estoqueApi.ts` que:
-- Recebe dados do produto da nota
-- Gera ID único (PROD-XXXX)
-- Adiciona ao array de produtos com `statusNota: 'Concluído'`
-- Registra na timeline
-- Define `vendaRecomendada` como pendente (null)
-
-### Alteração 3: notaEntradaFluxoApi.ts (Opcional)
-
-Se a nota for finalizada pelo Estoque (após conferência 100% + pagamento 100% antecipado), a mesma lógica de migração deve ser aplicada na função `finalizarConferencia`.
-
----
-
-## Detalhes Técnicos
-
-### Nova Função: migrarAparelhoNovoParaEstoque
-
-```typescript
-export const migrarAparelhoNovoParaEstoque = (
-  produto: ProdutoNota,
-  notaId: string,
-  fornecedor: string,
-  lojaDestino: string,
-  responsavel: string
-): Produto => {
-  const newId = generateProductId();
-  
-  const novoProduto: Produto = {
-    id: newId,
-    imei: produto.imei,
-    marca: produto.marca,
-    modelo: produto.modelo,
-    cor: produto.cor,
-    tipo: 'Novo',
-    quantidade: 1,
-    valorCusto: produto.valorUnitario,
-    valorVendaSugerido: produto.valorUnitario * 1.8,
-    vendaRecomendada: undefined, // Pendente
-    saudeBateria: 100,
-    loja: lojaDestino,
-    estoqueConferido: true,
-    assistenciaConferida: true,
-    condicao: 'Lacrado',
-    historicoCusto: [{
-      data: new Date().toISOString().split('T')[0],
-      fornecedor: fornecedor,
-      valor: produto.valorUnitario
-    }],
-    historicoValorRecomendado: [],
-    statusNota: 'Concluído',
-    origemEntrada: 'Fornecedor'
-  };
-  
-  produtos.push(novoProduto);
-  registerProductId(newId);
-  
-  return novoProduto;
-};
-```
-
-### Lógica de Separação em FinanceiroConferenciaNotas.tsx
-
-```typescript
-// Separar aparelhos por tipo
-const aparelhosNovos = notaFinalizada.produtos.filter(p => 
-  (p.tipoProduto === 'Aparelho' || !p.tipoProduto) && 
-  p.tipo === 'Novo'
-);
-
-const aparelhosSeminovos = notaFinalizada.produtos.filter(p => 
-  (p.tipoProduto === 'Aparelho' || !p.tipoProduto) && 
-  p.tipo === 'Seminovo'
-);
-
-// Migrar aparelhos NOVOS direto para estoque
-let qtdNovos = 0;
-for (const aparelho of aparelhosNovos) {
-  migrarAparelhoNovoParaEstoque(
-    aparelho,
-    notaFinalizada.id,
-    notaFinalizada.fornecedor,
-    lojaDestino,
-    responsavelFinanceiro
-  );
-  qtdNovos++;
-}
-
-// Migrar aparelhos SEMI-NOVOS para triagem
-let qtdSeminovos = 0;
-if (aparelhosSeminovos.length > 0) {
-  const migrados = migrarProdutosNotaParaPendentes(
-    aparelhosSeminovos,
-    notaFinalizada.id,
-    notaFinalizada.fornecedor,
-    lojaDestino,
-    responsavelFinanceiro
-  );
-  qtdSeminovos = migrados.length;
-}
++--------------------------------------------------+
+|                                                  |
+|     [IMAGEM DE FUNDO - THIAGO IMPORTS]          |
+|                                                  |
+|       +----------------------------------+       |
+|       |                                  |       |
+|       |    CARD BRANCO (centralizado)    |       |
+|       |    - Celular 3D | Formulário     |       |
+|       |                                  |       |
+|       +----------------------------------+       |
+|                                                  |
++--------------------------------------------------+
 ```
 
 ---
 
-## Imports Necessários
+## Etapas de Implementação
 
-Adicionar em `FinanceiroConferenciaNotas.tsx`:
-```typescript
-import { migrarAparelhoNovoParaEstoque } from '@/utils/estoqueApi';
+### 1. Copiar a imagem para o projeto
+- Copiar a imagem enviada para `src/assets/login-background.jpg`
+- Isso permite usar import ES6 para melhor bundling e otimização
+
+### 2. Modificar `LoginCard.tsx`
+- Importar a imagem de background
+- Alterar o container externo de `bg-white` para usar a imagem de fundo
+- Aplicar estilos para:
+  - `background-image` com a imagem
+  - `background-size: cover` para cobrir toda a tela
+  - `background-position: center` para centralizar
+  - `background-repeat: no-repeat`
+- O card branco interno permanece inalterado, flutuando sobre o background
+
+---
+
+## Detalhes Tecicos
+
+**Arquivo modificado:** `src/components/login/LoginCard.tsx`
+
+**Mudancas no codigo:**
+- Linha 22: Trocar `bg-white` por classes de background-image inline style
+- Adicionar import da imagem no topo do arquivo
+- Manter o card branco com sua sombra atual para dar contraste com o fundo
+
+**Estrutura apos a mudanca:**
+```
+div (min-h-screen, background-image)
+  └── div (card branco com sombra - permanece igual)
+        └── conteudo do login
 ```
 
----
-
-## Mensagem de Sucesso Atualizada
-
-A mensagem toast será atualizada para refletir a separação:
-
-```text
-✅ Nota NC-2025-0001 liberada!
-   3 aparelho(s) NOVO(s) adicionado(s) ao estoque.
-   2 aparelho(s) SEMI-NOVO(s) enviado(s) para triagem.
-   5 acessório(s) adicionado(s) ao estoque.
-```
-
----
-
-## Verificação de Campo de Categoria
-
-O sistema usa o campo `tipo` (ou `categoria` em algumas interfaces) para identificar a condição do produto:
-- `tipo: 'Novo'` → Aparelho novo/lacrado
-- `tipo: 'Seminovo'` → Aparelho usado (semi-novo)
-
-Caso o campo não esteja preenchido, o sistema assumirá **Semi-novo** por segurança (forçar passagem pela triagem).
-
----
-
-## Resultado Esperado
-
-Após a implementação:
-
-1. **Aparelhos "Novo"** cadastrados em notas de entrada irão diretamente para `Estoque > Produtos` com quantidade disponível
-2. **Aparelhos "Semi-novo"** continuarão indo para `Estoque > Produtos Pendentes` para análise e parecer do estoque
-3. Rastreabilidade mantida com IDs PROD-XXXX únicos e persistentes
-4. Timeline registra origem da entrada corretamente
