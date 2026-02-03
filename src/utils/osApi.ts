@@ -459,8 +459,21 @@ export const salvarParecerEstoque = (
 
     return { produto, migrado: true, produtoMigrado };
   } else {
-    // Encaminhado para assistência
+    // Encaminhado para assistência - criar registro na Análise de Tratativas
     produto.statusGeral = 'Em Análise Assistência';
+    
+    // Adicionar à Análise de Tratativas
+    try {
+      const { encaminharParaAnaliseGarantia } = require('./garantiasApi');
+      encaminharParaAnaliseGarantia(
+        produto.id,
+        'Estoque',
+        `${produto.marca} ${produto.modelo} - ${produto.cor} (IMEI: ${produto.imei})`
+      );
+    } catch (error) {
+      console.warn('[salvarParecerEstoque] Erro ao encaminhar para análise:', error);
+    }
+    
     return { produto, migrado: false };
   }
 };

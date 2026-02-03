@@ -158,9 +158,9 @@ export default function EstoqueProdutoPendenteDetalhes() {
       } else {
         toast({
           title: "Parecer salvo!",
-          description: `Produto ${id} encaminhado para a Lista de Reparos (OS).`,
+          description: `Produto ${id} encaminhado para Análise de Tratativas.`,
         });
-        navigate('/os/produtos-analise');
+        navigate('/os/analise-garantia');
       }
     }
   };
