@@ -53,7 +53,7 @@ export const LoginForm = ({ onLoginSuccess, className }: LoginFormProps) => {
     <div className={cn('w-full max-w-sm', className)}>
       {/* Header */}
       <div className="mb-10">
-        <p className="text-black text-sm mb-1 font-medium">Sistema de gestão</p>
+        <p className="text-black text-base mb-1 font-bold">Sistema de gestão</p>
         <h1 className="text-3xl font-semibold" style={{ color: '#F7BB05' }}>Thiago Imports</h1>
       </div>
 
