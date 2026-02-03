@@ -1,6 +1,5 @@
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
-import phoneWallpaper from '@/assets/phone-wallpaper.png';
 
 interface Phone3DProps {
   className?: string;
@@ -72,18 +71,24 @@ export const Phone3D = ({ className, isAnimating, animationPhase = 'idle' }: Pho
           {/* Screen */}
           <div
             className="absolute inset-1 rounded-[2.3rem] overflow-hidden"
+            style={{
+              background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
+            }}
           >
-            {/* Wallpaper Image */}
-            <img 
-              src={phoneWallpaper} 
-              alt="Wallpaper" 
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-
             {/* Clock Display */}
             <div className="absolute top-16 left-1/2 -translate-x-1/2 text-center z-10">
-              <div className="text-white text-4xl font-light tracking-wider drop-shadow-lg">{formatTime(currentTime)}</div>
-              <div className="text-white/80 text-sm mt-1 drop-shadow-lg">{formatDate(currentTime)}</div>
+              <div 
+                className="text-white text-4xl tracking-wider drop-shadow-lg"
+                style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", system-ui, sans-serif', fontWeight: 700 }}
+              >
+                {formatTime(currentTime)}
+              </div>
+              <div 
+                className="text-white/80 text-sm mt-1 drop-shadow-lg"
+                style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", system-ui, sans-serif', fontWeight: 400 }}
+              >
+                {formatDate(currentTime)}
+              </div>
             </div>
 
             {/* Face ID Scan Animation */}
