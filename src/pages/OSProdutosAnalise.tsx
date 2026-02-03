@@ -32,9 +32,10 @@ import {
 import { Eye, Wrench, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, FileText } from 'lucide-react';
 import { getProdutosParaAnaliseOS, ProdutoPendente, calcularSLA, updateProdutoPendente } from '@/utils/osApi';
 import { getLojas, getLojaById, getColaboradoresByPermissao } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-
+import { formatIMEI } from '@/utils/imeiMask';
 import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 
 export default function OSProdutosAnalise() {
@@ -42,6 +43,9 @@ export default function OSProdutosAnalise() {
   const [produtos, setProdutos] = useState<ProdutoPendente[]>([]);
   const lojas = getLojas();
   const tecnicos = getColaboradoresByPermissao('Assistência');
+  
+  // Usar o store centralizado para nome das lojas
+  const { obterNomeLoja, obterLojaById } = useCadastroStore();
 
   // Modal de detalhamento/parecer
   const [showModalParecer, setShowModalParecer] = useState(false);
@@ -55,8 +59,15 @@ export default function OSProdutosAnalise() {
   });
 
   const getLojaNome = (lojaId: string) => {
-    const loja = getLojaById(lojaId);
-    return loja?.nome || lojaId;
+    // Primeiro tenta pelo store centralizado
+    const loja = obterLojaById(lojaId);
+    if (loja) return loja.nome;
+    // Fallback para o método do store
+    const nomeLoja = obterNomeLoja(lojaId);
+    if (nomeLoja !== lojaId) return nomeLoja;
+    // Fallback final pela API
+    const lojaApi = getLojaById(lojaId);
+    return lojaApi?.nome || lojaId;
   };
 
   // Filtros
@@ -368,7 +379,7 @@ export default function OSProdutosAnalise() {
                   filteredProdutos.map((produto) => (
                     <TableRow key={produto.id} className={getSLARowClass(produto.dataEntrada)}>
                       <TableCell className="font-mono text-xs font-medium text-primary">{produto.id}</TableCell>
-                      <TableCell className="font-mono text-xs">{produto.imei}</TableCell>
+                      <TableCell className="font-mono text-xs">{formatIMEI(produto.imei)}</TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{produto.marca}</div>

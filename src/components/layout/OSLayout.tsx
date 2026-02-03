@@ -1,6 +1,6 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { TabsNavigation } from '@/components/layout/TabsNavigation';
-import { Wrench, ClipboardList, Package, ShoppingCart, Scissors } from 'lucide-react';
+import { Wrench, ClipboardList, Package, ShoppingCart, Scissors, Eye } from 'lucide-react';
 
 interface OSLayoutProps {
   children: React.ReactNode;
@@ -8,6 +8,7 @@ interface OSLayoutProps {
 }
 
 const tabs = [
+  { name: 'Produtos para Análise', href: '/os/produtos-analise', icon: Eye },
   { name: 'Histórico de Assistência', href: '/os/historico-assistencia', icon: ClipboardList },
   { name: 'Assistência', href: '/os/assistencia', icon: Wrench },
   { name: 'Estoque - Assistência', href: '/os/pecas', icon: Package },

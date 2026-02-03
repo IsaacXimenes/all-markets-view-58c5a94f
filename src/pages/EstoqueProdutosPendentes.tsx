@@ -33,6 +33,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Eye, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, Wrench, RotateCcw, Undo2, DollarSign, CheckSquare } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { getProdutosPendentes, ProdutoPendente, calcularSLA } from '@/utils/osApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { getFornecedores } from '@/utils/cadastrosApi';
@@ -57,6 +58,9 @@ export default function EstoqueProdutosPendentes() {
   const navigate = useNavigate();
   const { obterLojasTipoLoja, obterLojaById, obterNomeLoja, obterEstoquistas } = useCadastroStore();
   const [produtosPendentes, setProdutosPendentes] = useState<ProdutoPendente[]>([]);
+  
+  // Estado para linha selecionada (destaque visual)
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
   
   // Estados para validação em lote
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -575,14 +579,14 @@ export default function EstoqueProdutosPendentes() {
                       onCheckedChange={handleSelectAllFiltered}
                     />
                   </TableHead>
+                  <TableHead>Produto</TableHead>
+                  <TableHead>Loja</TableHead>
+                  <TableHead>Valor Origem</TableHead>
                   <TableHead>ID</TableHead>
                   <TableHead>IMEI</TableHead>
-                  <TableHead>Produto</TableHead>
                   <TableHead>Origem</TableHead>
                   <TableHead>Nota de Origem</TableHead>
                   <TableHead>Fornecedor</TableHead>
-                  <TableHead>Loja</TableHead>
-                  <TableHead>Valor Origem</TableHead>
                   <TableHead>Saúde Bat.</TableHead>
                   <TableHead>SLA</TableHead>
                   <TableHead>Parecer Estoque</TableHead>
@@ -599,21 +603,30 @@ export default function EstoqueProdutosPendentes() {
                   </TableRow>
                 ) : (
                   filteredProdutos.map((produto) => (
-                    <TableRow key={produto.id} className={getStatusRowClass(produto, produto.dataEntrada)}>
-                      <TableCell>
+                    <TableRow 
+                      key={produto.id} 
+                      className={cn(
+                        getStatusRowClass(produto, produto.dataEntrada),
+                        selectedRowId === produto.id && 'bg-muted/80 border-l-4 border-black'
+                      )}
+                      onClick={() => setSelectedRowId(prev => prev === produto.id ? null : produto.id)}
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox 
                           checked={selectedProducts.includes(produto.imei)}
                           onCheckedChange={() => handleSelectProduct(produto.id, produto.imei)}
                         />
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{produto.id}</TableCell>
-                      <TableCell className="font-mono text-xs">{formatIMEI(produto.imei)}</TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{produto.modelo}</div>
                           <div className="text-xs text-muted-foreground">{produto.cor}</div>
                         </div>
                       </TableCell>
+                      <TableCell>{getLojaNome(produto.loja)}</TableCell>
+                      <TableCell className="font-medium text-primary">{formatCurrency(produto.valorOrigem || produto.valorCusto)}</TableCell>
+                      <TableCell className="font-mono text-xs">{produto.id}</TableCell>
+                      <TableCell className="font-mono text-xs">{formatIMEI(produto.imei)}</TableCell>
                       <TableCell>{getOrigemBadge(produto.origemEntrada)}</TableCell>
                       <TableCell>
                         {(produto as any).notaOrigemId ? (
@@ -667,8 +680,6 @@ export default function EstoqueProdutosPendentes() {
                       <TableCell className="text-sm">
                         {getFornecedorNome((produto as any).fornecedor || (produto as any).fornecedorId || '')}
                       </TableCell>
-                      <TableCell>{getLojaNome(produto.loja)}</TableCell>
-                      <TableCell className="font-medium text-primary">{formatCurrency(produto.valorOrigem || produto.valorCusto)}</TableCell>
                       <TableCell>
                         <span className={
                           produto.saudeBateria < 70 ? 'font-semibold text-destructive' :
