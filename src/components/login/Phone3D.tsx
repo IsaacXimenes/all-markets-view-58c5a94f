@@ -70,21 +70,18 @@ export const Phone3D = ({ className, isAnimating, animationPhase = 'idle' }: Pho
 
           {/* Screen */}
           <div
-            className="absolute inset-1 rounded-[2.3rem] overflow-hidden"
-            style={{
-              background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
-            }}
+            className="absolute inset-1 rounded-[2.3rem] overflow-hidden bg-white"
           >
             {/* Clock Display */}
             <div className="absolute top-16 left-1/2 -translate-x-1/2 text-center z-10">
               <div 
-                className="text-white text-4xl tracking-wider drop-shadow-lg"
+                className="text-black text-4xl tracking-wider"
                 style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", system-ui, sans-serif', fontWeight: 700 }}
               >
                 {formatTime(currentTime)}
               </div>
               <div 
-                className="text-white/80 text-sm mt-1 drop-shadow-lg"
+                className="text-black/70 text-sm mt-1"
                 style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", system-ui, sans-serif', fontWeight: 400 }}
               >
                 {formatDate(currentTime)}
