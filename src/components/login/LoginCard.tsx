@@ -31,15 +31,16 @@ export const LoginCard = () => {
       >
         <div
           className={cn(
-            'w-full max-w-5xl bg-white rounded-3xl overflow-hidden',
-            'shadow-[0_25px_80px_-20px_rgba(0,0,0,0.15)]',
+            'w-full max-w-5xl rounded-3xl overflow-hidden',
+            'bg-white/20 backdrop-blur-xl border border-white/30',
+            'shadow-[0_25px_80px_-20px_rgba(0,0,0,0.25)]',
             'transition-all duration-300',
             !showContent && 'opacity-0 scale-95'
           )}
         >
           <div className="flex flex-col lg:flex-row min-h-[600px]">
             {/* Left Panel - Phone & Description */}
-            <div className="flex-1 flex flex-col items-center justify-center p-8 lg:p-12 bg-white order-2 lg:order-1">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 lg:p-12 order-2 lg:order-1">
               {/* 3D Phone */}
               <div className="flex-1 flex items-center justify-center py-4">
                 <Phone3D />
@@ -52,7 +53,7 @@ export const LoginCard = () => {
             </div>
 
             {/* Right Panel - Login Form */}
-            <div className="flex-1 flex items-center justify-center p-8 lg:p-12 bg-gray-50/50 order-1 lg:order-2">
+            <div className="flex-1 flex items-center justify-center p-8 lg:p-12 order-1 lg:order-2">
               <LoginForm onLoginSuccess={handleLoginSuccess} />
             </div>
           </div>
