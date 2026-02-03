@@ -31,14 +31,14 @@ export const LoginCard = () => {
       >
         <div
           className={cn(
-            'w-full max-w-5xl rounded-3xl overflow-hidden',
+            'w-full max-w-3xl rounded-3xl overflow-hidden',
             'bg-white/20 backdrop-blur-xl border border-white/30',
             'shadow-[0_25px_80px_-20px_rgba(0,0,0,0.25)]',
-            'transition-all duration-300',
-            !showContent && 'opacity-0 scale-95'
+            'transition-all duration-300 scale-[0.85]',
+            !showContent && 'opacity-0 scale-75'
           )}
         >
-          <div className="flex flex-col lg:flex-row min-h-[600px]">
+          <div className="flex flex-col lg:flex-row min-h-[420px]">
             {/* Left Panel - Phone & Description */}
             <div className="flex-1 flex flex-col items-center justify-center p-8 lg:p-12 order-2 lg:order-1">
               {/* 3D Phone */}
