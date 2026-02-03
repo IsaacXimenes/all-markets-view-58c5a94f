@@ -21,7 +21,7 @@ export const LoginCard = () => {
   return (
     <>
       <div 
-        className="min-h-screen w-full flex items-center justify-center p-4 md:p-8 overflow-y-auto"
+        className="h-screen w-full flex items-center justify-center p-4 md:p-8 overflow-hidden"
         style={{
           backgroundImage: `url(${loginBackground})`,
           backgroundSize: 'cover',
