@@ -3,6 +3,7 @@ import { Phone3D } from './Phone3D';
 import { LoginForm } from './LoginForm';
 import { BiometricTransition } from './BiometricTransition';
 import { cn } from '@/lib/utils';
+import loginBackground from '@/assets/login-background.jpg';
 
 export const LoginCard = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -19,7 +20,15 @@ export const LoginCard = () => {
 
   return (
     <>
-      <div className="min-h-screen w-full flex items-center justify-center bg-white p-4 md:p-8">
+      <div 
+        className="min-h-screen w-full flex items-center justify-center p-4 md:p-8"
+        style={{
+          backgroundImage: `url(${loginBackground})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
         <div
           className={cn(
             'w-full max-w-5xl bg-white rounded-3xl overflow-hidden',
