@@ -1,4 +1,6 @@
 import { cn } from '@/lib/utils';
+import { useState, useEffect } from 'react';
+import phoneWallpaper from '@/assets/phone-wallpaper.png';
 
 interface Phone3DProps {
   className?: string;
@@ -7,11 +9,34 @@ interface Phone3DProps {
 }
 
 export const Phone3D = ({ className, isAnimating, animationPhase = 'idle' }: Phone3DProps) => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDate = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long' 
+    };
+    const formatted = date.toLocaleDateString('pt-BR', options);
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  };
+
   return (
     <div
       className={cn(
         'relative transition-all duration-500 ease-out',
-        !isAnimating && 'animate-float',
         animationPhase === 'centering' && 'scale-150',
         animationPhase === 'expanding' && 'scale-[20] opacity-0',
         className
@@ -47,24 +72,18 @@ export const Phone3D = ({ className, isAnimating, animationPhase = 'idle' }: Pho
           {/* Screen */}
           <div
             className="absolute inset-1 rounded-[2.3rem] overflow-hidden"
-            style={{
-              background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%)',
-            }}
           >
-            {/* Screen Content - Gradient Wallpaper */}
-            <div className="absolute inset-0 opacity-50">
-              <div
-                className="absolute inset-0"
-                style={{
-                  background: 'radial-gradient(circle at 30% 20%, rgba(99, 102, 241, 0.3) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(168, 85, 247, 0.2) 0%, transparent 50%)',
-                }}
-              />
-            </div>
+            {/* Wallpaper Image */}
+            <img 
+              src={phoneWallpaper} 
+              alt="Wallpaper" 
+              className="absolute inset-0 w-full h-full object-cover"
+            />
 
             {/* Clock Display */}
-            <div className="absolute top-16 left-1/2 -translate-x-1/2 text-center">
-              <div className="text-white text-4xl font-light tracking-wider">09:41</div>
-              <div className="text-gray-400 text-sm mt-1">Domingo, 2 de Fevereiro</div>
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 text-center z-10">
+              <div className="text-white text-4xl font-light tracking-wider drop-shadow-lg">{formatTime(currentTime)}</div>
+              <div className="text-white/80 text-sm mt-1 drop-shadow-lg">{formatDate(currentTime)}</div>
             </div>
 
             {/* Face ID Scan Animation */}
@@ -96,7 +115,7 @@ export const Phone3D = ({ className, isAnimating, animationPhase = 'idle' }: Pho
 
             {/* Screen Reflection */}
             <div
-              className="absolute inset-0 pointer-events-none"
+              className="absolute inset-0 pointer-events-none z-10"
               style={{
                 background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%, transparent 100%)',
               }}
