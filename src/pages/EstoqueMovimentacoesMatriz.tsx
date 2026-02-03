@@ -518,7 +518,7 @@ export default function EstoqueMovimentacoesMatriz() {
                         <p className="font-medium">{movimentacaoSelecionada.responsavelLancamento}</p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Timer:</span>
+                        <span className="text-muted-foreground">Tempo para Retorno:</span>
                         <div className="mt-1">
                           {movimentacaoSelecionada.statusMovimentacao !== 'Concluída' ? (
                             <TimerRegressivo dataLimite={movimentacaoSelecionada.dataHoraLimiteRetorno} />
@@ -531,66 +531,132 @@ export default function EstoqueMovimentacoesMatriz() {
                   </CardContent>
                 </Card>
                 
-                {/* Filtro para conferência */}
-                {isConferenciaMode && (
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      className="pl-10"
-                      placeholder="Filtrar por IMEI ou Modelo..."
-                      value={buscaConferencia}
-                      onChange={(e) => setBuscaConferencia(e.target.value)}
-                    />
+                {/* Modo Conferência - Formato de Lista como seleção */}
+                {isConferenciaMode ? (
+                  <div className="space-y-4">
+                    {/* Filtro para conferência */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        className="pl-10"
+                        placeholder="Filtrar por IMEI ou Modelo..."
+                        value={buscaConferencia}
+                        onChange={(e) => setBuscaConferencia(e.target.value)}
+                      />
+                    </div>
+                    
+                    {/* Resumo de status */}
+                    <div className="flex items-center gap-4 p-3 rounded-md bg-muted/50">
+                      <span className="text-sm font-medium">Resumo:</span>
+                      <Badge variant="destructive" className="gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        {movimentacaoSelecionada.itens.filter(i => i.statusItem === 'Enviado').length} Pendente(s)
+                      </Badge>
+                      <Badge className="gap-1 bg-green-500">
+                        <CheckCircle className="h-3 w-3" />
+                        {movimentacaoSelecionada.itens.filter(i => i.statusItem === 'Devolvido').length} Devolvido(s)
+                      </Badge>
+                      {movimentacaoSelecionada.itens.filter(i => i.statusItem === 'Vendido').length > 0 && (
+                        <Badge className="gap-1 bg-blue-500">
+                          {movimentacaoSelecionada.itens.filter(i => i.statusItem === 'Vendido').length} Vendido(s)
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    {/* Lista de aparelhos no formato card (igual seleção) */}
+                    <ScrollArea className="h-[350px]">
+                      <div className="space-y-2">
+                        {/* Primeiro os NÃO devolvidos (pendentes) */}
+                        {itensFiltradosConferencia
+                          .sort((a, b) => {
+                            // Prioridade: Enviado primeiro, depois Devolvido, depois Vendido
+                            const ordem = { 'Enviado': 0, 'Devolvido': 1, 'Vendido': 2 };
+                            return ordem[a.statusItem] - ordem[b.statusItem];
+                          })
+                          .map(item => {
+                            const isPendente = item.statusItem === 'Enviado';
+                            const isDevolvido = item.statusItem === 'Devolvido';
+                            const isVendido = item.statusItem === 'Vendido';
+                            
+                            return (
+                              <div 
+                                key={item.aparelhoId}
+                                className={`flex items-center justify-between p-3 border rounded-md transition-colors ${
+                                  isPendente 
+                                    ? 'bg-destructive/10 border-destructive/50 ring-1 ring-destructive/30' 
+                                    : isDevolvido 
+                                      ? 'bg-green-500/10 border-green-500/30' 
+                                      : 'bg-blue-500/10 border-blue-500/30'
+                                }`}
+                              >
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-medium">{item.modelo}</p>
+                                    <Badge variant="outline">{item.cor}</Badge>
+                                    {getStatusItemBadge(item.statusItem)}
+                                  </div>
+                                  <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                                    <span className="font-mono">IMEI: {item.imei}</span>
+                                    {item.dataHoraRetorno && (
+                                      <span>Devolvido em {format(new Date(item.dataHoraRetorno), "dd/MM 'às' HH:mm")}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {isPendente ? (
+                                    <Button 
+                                      size="sm"
+                                      onClick={() => handleRegistrarRetorno(item.aparelhoId)}
+                                      className="gap-1"
+                                    >
+                                      <CheckCircle className="h-4 w-4" />
+                                      Confirmar Devolução
+                                    </Button>
+                                  ) : (
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                      {isDevolvido && <CheckCircle className="h-4 w-4 text-green-500" />}
+                                      {isVendido && <Package className="h-4 w-4 text-blue-500" />}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </ScrollArea>
                   </div>
-                )}
-                
-                {/* Lista de itens */}
-                <div className="rounded-md border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>IMEI</TableHead>
-                        <TableHead>Modelo</TableHead>
-                        <TableHead>Cor</TableHead>
-                        <TableHead>Status</TableHead>
-                        {isConferenciaMode && <TableHead className="text-center">Ação</TableHead>}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {itensFiltradosConferencia.map(item => (
-                        <TableRow key={item.aparelhoId}>
-                          <TableCell className="font-mono text-xs">{item.imei}</TableCell>
-                          <TableCell>{item.modelo}</TableCell>
-                          <TableCell>{item.cor}</TableCell>
-                          <TableCell>
-                            {getStatusItemBadge(item.statusItem)}
-                            {item.dataHoraRetorno && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {format(new Date(item.dataHoraRetorno), 'dd/MM HH:mm')}
-                              </p>
-                            )}
-                          </TableCell>
-                          {isConferenciaMode && (
-                            <TableCell className="text-center">
-                              {item.statusItem === 'Enviado' ? (
-                                <Button 
-                                  size="sm"
-                                  onClick={() => handleRegistrarRetorno(item.aparelhoId)}
-                                  className="gap-1"
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                  Devolvido
-                                </Button>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">-</span>
+                ) : (
+                  // Modo Visualização - Tabela simples
+                  <div className="rounded-md border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>IMEI</TableHead>
+                          <TableHead>Modelo</TableHead>
+                          <TableHead>Cor</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {movimentacaoSelecionada.itens.map(item => (
+                          <TableRow key={item.aparelhoId}>
+                            <TableCell className="font-mono text-xs">{item.imei}</TableCell>
+                            <TableCell>{item.modelo}</TableCell>
+                            <TableCell>{item.cor}</TableCell>
+                            <TableCell>
+                              {getStatusItemBadge(item.statusItem)}
+                              {item.dataHoraRetorno && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {format(new Date(item.dataHoraRetorno), 'dd/MM HH:mm')}
+                                </p>
                               )}
                             </TableCell>
-                          )}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
                 
                 {/* Timeline */}
                 <div className="space-y-2">
