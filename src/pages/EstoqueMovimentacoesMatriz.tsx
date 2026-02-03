@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,22 +10,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { ResponsiveTableContainer, ResponsiveFilterGrid } from '@/components/ui/ResponsiveContainers';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
-  Building, 
   Plus, 
-  X, 
   Clock, 
   CheckCircle, 
   AlertTriangle,
   Eye,
   Edit,
   Search,
-  ArrowRight,
   Package,
   Timer,
   Download
@@ -32,17 +29,10 @@ import {
 import { useCadastroStore } from '@/store/cadastroStore';
 import { 
   getMovimentacoesMatriz,
-  getMovimentacaoMatrizById,
-  criarMovimentacaoMatriz,
   registrarRetornoItemMatriz,
-  getProdutosDisponivelMatriz,
-  getMatrizLojaId,
-  getEstoqueSiaId,
   MovimentacaoMatriz,
-  MovimentacaoMatrizItem,
-  Produto
+  MovimentacaoMatrizItem
 } from '@/utils/estoqueApi';
-import { getStatusRowClass } from '@/utils/statusColors';
 
 // Componente Timer
 const TimerRegressivo = ({ dataLimite }: { dataLimite: string }) => {
@@ -87,19 +77,9 @@ const TimerRegressivo = ({ dataLimite }: { dataLimite: string }) => {
 };
 
 export default function EstoqueMovimentacoesMatriz() {
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const { obterNomeLoja, obterColaboradoresAtivos, obterNomeColaborador } = useCadastroStore();
-  
-  // IDs fixos para origem e destino
-  const estoqueSiaId = getEstoqueSiaId();
-  const matrizId = getMatrizLojaId();
-  
-  // Estados do modal nova movimentação
-  const [isNovaMovimentacaoOpen, setIsNovaMovimentacaoOpen] = useState(false);
-  const [buscaProduto, setBuscaProduto] = useState('');
-  const [itensParaEnviar, setItensParaEnviar] = useState<Array<{ aparelhoId: string; imei: string; modelo: string; cor: string }>>([]);
-  const [responsavelLancamento, setResponsavelLancamento] = useState('');
-  const [isModalSelecionarOpen, setIsModalSelecionarOpen] = useState(false);
+  const { obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   
   // Estados da tabela e filtros
   const [filtroStatus, setFiltroStatus] = useState<string>('');
@@ -110,6 +90,7 @@ export default function EstoqueMovimentacoesMatriz() {
   const [isDetalheDialogOpen, setIsDetalheDialogOpen] = useState(false);
   const [isConferenciaMode, setIsConferenciaMode] = useState(false);
   const [buscaConferencia, setBuscaConferencia] = useState('');
+  const [responsavelConferencia, setResponsavelConferencia] = useState('');
   
   // Refresh
   const [refreshKey, setRefreshKey] = useState(0);
@@ -119,25 +100,6 @@ export default function EstoqueMovimentacoesMatriz() {
     setMovimentacoes(getMovimentacoesMatriz());
   }, [refreshKey]);
   
-  // Produtos disponíveis no Estoque - SIA
-  const produtosDisponiveis = useMemo(() => {
-    const disponiveis = getProdutosDisponivelMatriz();
-    if (!buscaProduto) return disponiveis;
-    
-    const termo = buscaProduto.toLowerCase();
-    return disponiveis.filter(p => 
-      p.imei.toLowerCase().includes(termo) ||
-      p.modelo.toLowerCase().includes(termo)
-    );
-  }, [buscaProduto, refreshKey]);
-  
-  // Colaboradores para responsável
-  const colaboradores = obterColaboradoresAtivos();
-  
-  // Nomes das lojas fixas
-  const nomeOrigem = obterNomeLoja(estoqueSiaId) || 'Estoque - SIA';
-  const nomeDestino = obterNomeLoja(matrizId) || 'Loja - Matriz';
-  
   // Filtrar movimentações
   const movimentacoesFiltradas = useMemo(() => {
     let resultado = movimentacoes;
@@ -146,56 +108,6 @@ export default function EstoqueMovimentacoesMatriz() {
     }
     return resultado;
   }, [movimentacoes, filtroStatus]);
-  
-  // Adicionar produto à lista
-  const handleAdicionarProduto = (produto: Produto) => {
-    if (itensParaEnviar.some(i => i.aparelhoId === produto.id)) {
-      toast({ title: 'Atenção', description: 'Produto já adicionado à lista', variant: 'destructive' });
-      return;
-    }
-    
-    setItensParaEnviar(prev => [...prev, {
-      aparelhoId: produto.id,
-      imei: produto.imei,
-      modelo: produto.modelo,
-      cor: produto.cor
-    }]);
-    setBuscaProduto('');
-  };
-  
-  // Remover produto da lista
-  const handleRemoverProduto = (aparelhoId: string) => {
-    setItensParaEnviar(prev => prev.filter(i => i.aparelhoId !== aparelhoId));
-  };
-  
-  // Registrar lançamento
-  const handleRegistrarLancamento = () => {
-    if (!responsavelLancamento) {
-      toast({ title: 'Erro', description: 'Selecione o responsável pelo lançamento', variant: 'destructive' });
-      return;
-    }
-    if (itensParaEnviar.length === 0) {
-      toast({ title: 'Erro', description: 'Adicione pelo menos um aparelho', variant: 'destructive' });
-      return;
-    }
-    
-    const novaMovimentacao = criarMovimentacaoMatriz({
-      lojaDestinoId: matrizId,
-      responsavelLancamento: obterNomeColaborador(responsavelLancamento),
-      itens: itensParaEnviar
-    });
-    
-    toast({ 
-      title: 'Sucesso', 
-      description: `Movimentação ${novaMovimentacao.id} registrada com ${itensParaEnviar.length} aparelho(s)` 
-    });
-    
-    // Limpar formulário e fechar modal
-    setItensParaEnviar([]);
-    setResponsavelLancamento('');
-    setIsNovaMovimentacaoOpen(false);
-    setRefreshKey(prev => prev + 1);
-  };
   
   // Abrir detalhes da movimentação
   const handleAbrirDetalhes = (mov: MovimentacaoMatriz, conferir: boolean = false) => {
@@ -211,7 +123,7 @@ export default function EstoqueMovimentacoesMatriz() {
     const resultado = registrarRetornoItemMatriz(
       movimentacaoSelecionada.id,
       aparelhoId,
-      obterNomeColaborador(responsavelLancamento) || 'Sistema'
+      obterNomeColaborador(responsavelConferencia) || 'Sistema'
     );
     
     if (resultado.sucesso) {
@@ -231,7 +143,7 @@ export default function EstoqueMovimentacoesMatriz() {
       case 'Aguardando Retorno':
         return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" /> Aguardando</Badge>;
       case 'Concluída':
-        return <Badge className="gap-1 bg-green-500"><CheckCircle className="h-3 w-3" /> Concluída</Badge>;
+        return <Badge className="gap-1 bg-green-600 hover:bg-green-600"><CheckCircle className="h-3 w-3" /> Concluída</Badge>;
       case 'Retorno Atrasado':
         return <Badge variant="destructive" className="gap-1 animate-pulse"><AlertTriangle className="h-3 w-3" /> Atrasado</Badge>;
     }
@@ -243,24 +155,26 @@ export default function EstoqueMovimentacoesMatriz() {
       case 'Enviado':
         return <Badge variant="outline">Enviado</Badge>;
       case 'Devolvido':
-        return <Badge className="bg-green-500">Devolvido</Badge>;
+        return <Badge className="bg-green-600 hover:bg-green-600">Devolvido</Badge>;
       case 'Vendido':
-        return <Badge className="bg-blue-500">Vendido</Badge>;
+        return <Badge className="bg-blue-600 hover:bg-blue-600">Vendido</Badge>;
     }
   };
   
-  // Cor da linha baseada no status
-  const getRowStatusClass = (status: MovimentacaoMatriz['statusMovimentacao']) => {
-    switch (status) {
-      case 'Aguardando Retorno':
-        return 'bg-yellow-500/10';
-      case 'Concluída':
-        return 'bg-green-500/10';
-      case 'Retorno Atrasado':
-        return 'bg-red-500/10';
-      default:
-        return '';
+  // Cor da linha baseada no status - vermelho se tem pendência (Aguardando ou Atrasado)
+  const getRowStatusClass = (mov: MovimentacaoMatriz) => {
+    const temPendencia = mov.itens.some(i => i.statusItem === 'Enviado');
+    
+    if (mov.statusMovimentacao === 'Concluída') {
+      return 'bg-green-500/10';
     }
+    
+    // Se tem pendência (itens não devolvidos), linha vermelha
+    if (temPendencia) {
+      return 'bg-red-500/10';
+    }
+    
+    return '';
   };
   
   // Itens filtrados para conferência
@@ -278,13 +192,6 @@ export default function EstoqueMovimentacoesMatriz() {
   // Limpar filtros
   const handleLimparFiltros = () => {
     setFiltroStatus('');
-  };
-  
-  // Limpar formulário de nova movimentação
-  const handleLimparNovaMovimentacao = () => {
-    setItensParaEnviar([]);
-    setResponsavelLancamento('');
-    setBuscaProduto('');
   };
 
   return (
@@ -319,7 +226,7 @@ export default function EstoqueMovimentacoesMatriz() {
                   <Download className="h-4 w-4" />
                   CSV
                 </Button>
-                <Button onClick={() => setIsNovaMovimentacaoOpen(true)} className="gap-2">
+                <Button onClick={() => navigate('/estoque/movimentacoes-matriz/nova')} className="gap-2">
                   <Plus className="h-4 w-4" />
                   Nova Movimentação
                 </Button>
@@ -357,7 +264,7 @@ export default function EstoqueMovimentacoesMatriz() {
                   const itensVendidos = mov.itens.filter(i => i.statusItem === 'Vendido').length;
                   
                   return (
-                    <TableRow key={mov.id} className={getRowStatusClass(mov.statusMovimentacao)}>
+                    <TableRow key={mov.id} className={getRowStatusClass(mov)}>
                       <TableCell className="font-mono font-medium">{mov.id}</TableCell>
                       <TableCell>
                         {format(new Date(mov.dataHoraLancamento), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
@@ -412,118 +319,6 @@ export default function EstoqueMovimentacoesMatriz() {
         </ResponsiveTableContainer>
       </div>
       
-      {/* Modal Nova Movimentação */}
-      <Dialog open={isNovaMovimentacaoOpen} onOpenChange={setIsNovaMovimentacaoOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Nova Movimentação - Estoque SIA → Loja Matriz
-            </DialogTitle>
-          </DialogHeader>
-          
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-4">
-              {/* Origem e Destino fixos */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Origem (Fixo)</Label>
-                  <div className="h-10 px-3 py-2 border rounded-md bg-muted flex items-center">
-                    <Building className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="font-medium">{nomeOrigem}</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Destino (Fixo)</Label>
-                  <div className="h-10 px-3 py-2 border rounded-md bg-muted flex items-center">
-                    <ArrowRight className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span className="font-medium">{nomeDestino}</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Responsável pelo Lançamento</Label>
-                  <Select value={responsavelLancamento} onValueChange={setResponsavelLancamento}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o responsável" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {colaboradores.map(col => (
-                        <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <Separator />
-              
-              {/* Selecionar aparelhos */}
-              <div className="space-y-2">
-                <Label>Selecionar Aparelhos do Estoque - SIA</Label>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start gap-2"
-                  onClick={() => setIsModalSelecionarOpen(true)}
-                >
-                  <Search className="h-4 w-4" />
-                  Buscar Aparelho no Estoque
-                  {produtosDisponiveis.length > 0 && (
-                    <Badge variant="secondary" className="ml-auto">{produtosDisponiveis.length} disponíveis</Badge>
-                  )}
-                </Button>
-              </div>
-              
-              {/* Lista de itens selecionados */}
-              {itensParaEnviar.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Aparelhos Selecionados ({itensParaEnviar.length})</Label>
-                  <ScrollArea className="h-[200px]">
-                    <div className="space-y-2">
-                      {itensParaEnviar.map(item => (
-                        <div 
-                          key={item.aparelhoId}
-                          className="flex items-center justify-between p-3 border rounded-md bg-primary/5"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium">{item.modelo}</p>
-                              <Badge variant="outline">{item.cor}</Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground font-mono">IMEI: {item.imei}</p>
-                          </div>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            className="text-destructive"
-                            onClick={() => handleRemoverProduto(item.aparelhoId)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-          
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { setIsNovaMovimentacaoOpen(false); handleLimparNovaMovimentacao(); }}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleRegistrarLancamento}
-              disabled={!responsavelLancamento || itensParaEnviar.length === 0}
-              className="gap-2"
-            >
-              <ArrowRight className="h-4 w-4" />
-              Registrar Lançamento
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
       {/* Modal de Detalhes/Conferência */}
       <Dialog open={isDetalheDialogOpen} onOpenChange={setIsDetalheDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -568,7 +363,7 @@ export default function EstoqueMovimentacoesMatriz() {
                           {movimentacaoSelecionada.statusMovimentacao !== 'Concluída' ? (
                             <TimerRegressivo dataLimite={movimentacaoSelecionada.dataHoraLimiteRetorno} />
                           ) : (
-                            <span className="text-green-500 font-medium">Finalizado</span>
+                            <span className="text-green-600 font-medium">Finalizado</span>
                           )}
                         </div>
                       </div>
@@ -597,12 +392,12 @@ export default function EstoqueMovimentacoesMatriz() {
                         <AlertTriangle className="h-3 w-3" />
                         {movimentacaoSelecionada.itens.filter(i => i.statusItem === 'Enviado').length} Pendente(s)
                       </Badge>
-                      <Badge className="gap-1 bg-green-500">
+                      <Badge className="gap-1 bg-green-600 hover:bg-green-600">
                         <CheckCircle className="h-3 w-3" />
                         {movimentacaoSelecionada.itens.filter(i => i.statusItem === 'Devolvido').length} Devolvido(s)
                       </Badge>
                       {movimentacaoSelecionada.itens.filter(i => i.statusItem === 'Vendido').length > 0 && (
-                        <Badge className="gap-1 bg-blue-500">
+                        <Badge className="gap-1 bg-blue-600 hover:bg-blue-600">
                           {movimentacaoSelecionada.itens.filter(i => i.statusItem === 'Vendido').length} Vendido(s)
                         </Badge>
                       )}
@@ -628,8 +423,8 @@ export default function EstoqueMovimentacoesMatriz() {
                                   isPendente 
                                     ? 'bg-destructive/10 border-destructive/50 ring-1 ring-destructive/30' 
                                     : isDevolvido 
-                                      ? 'bg-green-500/10 border-green-500/30' 
-                                      : 'bg-blue-500/10 border-blue-500/30'
+                                      ? 'bg-green-500/10 border-green-600/30' 
+                                      : 'bg-blue-500/10 border-blue-600/30'
                                 }`}
                               >
                                 <div className="flex-1">
@@ -657,8 +452,8 @@ export default function EstoqueMovimentacoesMatriz() {
                                     </Button>
                                   ) : (
                                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                      {isDevolvido && <CheckCircle className="h-4 w-4 text-green-500" />}
-                                      {isVendido && <Package className="h-4 w-4 text-blue-500" />}
+                                      {isDevolvido && <CheckCircle className="h-4 w-4 text-green-600" />}
+                                      {isVendido && <Package className="h-4 w-4 text-blue-600" />}
                                     </div>
                                   )}
                                 </div>
@@ -725,107 +520,6 @@ export default function EstoqueMovimentacoesMatriz() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDetalheDialogOpen(false)}>
               Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Modal Selecionar Aparelhos */}
-      <Dialog open={isModalSelecionarOpen} onOpenChange={setIsModalSelecionarOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Selecionar Aparelhos - {nomeOrigem}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            {/* Busca */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                className="pl-10"
-                placeholder="Buscar por IMEI ou modelo..."
-                value={buscaProduto}
-                onChange={(e) => setBuscaProduto(e.target.value)}
-              />
-            </div>
-            
-            {/* Lista de produtos */}
-            <ScrollArea className="h-[400px]">
-              {produtosDisponiveis.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Nenhum aparelho disponível no {nomeOrigem}</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {produtosDisponiveis.map(produto => {
-                    const jaSelecionado = itensParaEnviar.some(i => i.aparelhoId === produto.id);
-                    return (
-                      <div 
-                        key={produto.id}
-                        className={`flex items-center justify-between p-3 border rounded-md cursor-pointer transition-colors ${
-                          jaSelecionado 
-                            ? 'bg-primary/10 border-primary' 
-                            : 'hover:bg-muted'
-                        }`}
-                        onClick={() => !jaSelecionado && handleAdicionarProduto(produto)}
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium">{produto.marca} {produto.modelo}</p>
-                            <Badge variant="outline">{produto.cor}</Badge>
-                            <Badge variant={produto.tipo === 'Novo' ? 'default' : 'secondary'}>
-                              {produto.tipo}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                            <span className="font-mono">IMEI: {produto.imei}</span>
-                            <span>Custo: R$ {produto.valorCusto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                            <span>Bateria: {produto.saudeBateria}%</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {jaSelecionado ? (
-                            <Badge className="bg-primary">Selecionado</Badge>
-                          ) : (
-                            <Button size="sm" variant="ghost">
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </ScrollArea>
-            
-            {/* Resumo dos selecionados */}
-            {itensParaEnviar.length > 0 && (
-              <div className="flex items-center justify-between pt-2 border-t">
-                <span className="text-sm text-muted-foreground">
-                  {itensParaEnviar.length} aparelho(s) selecionado(s)
-                </span>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setItensParaEnviar([])}
-                >
-                  Limpar Seleção
-                </Button>
-              </div>
-            )}
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsModalSelecionarOpen(false); setBuscaProduto(''); }}>
-              Cancelar
-            </Button>
-            <Button onClick={() => { setIsModalSelecionarOpen(false); setBuscaProduto(''); }}>
-              Confirmar Seleção
             </Button>
           </DialogFooter>
         </DialogContent>
