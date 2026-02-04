@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
+import { useAuthStore } from '@/store/authStore';
 import { formatCurrency } from '@/utils/formatUtils';
 import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { CreditCard, AlertTriangle } from 'lucide-react';
@@ -52,16 +53,21 @@ export function ModalFinalizarPagamento({
   onConfirm
 }: ModalFinalizarPagamentoProps) {
   const { obterFinanceiros } = useCadastroStore();
+  const user = useAuthStore((state) => state.user);
   const contasFinanceiras = getContasFinanceiras().filter(c => c.status === 'Ativo');
   const colaboradoresFinanceiros = obterFinanceiros();
   
-  // Usuário logado simulado (primeiro financeiro disponível ou padrão)
+  // Usuário logado - usa dados do authStore
   const usuarioLogado = useMemo(() => {
+    if (user?.colaborador?.nome) {
+      return user.colaborador.nome;
+    }
+    // Fallback para primeiro financeiro se authStore não tiver colaborador
     if (colaboradoresFinanceiros.length > 0) {
       return colaboradoresFinanceiros[0].nome;
     }
     return 'Usuário Financeiro';
-  }, [colaboradoresFinanceiros]);
+  }, [user, colaboradoresFinanceiros]);
 
   const [form, setForm] = useState<DadosPagamento>({
     contaPagamento: '',

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FinanceiroLayout } from '@/components/layout/FinanceiroLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +40,17 @@ export default function FinanceiroNotasPendencias() {
   const [dialogPagamento, setDialogPagamento] = useState(false);
   
   const fornecedoresList = getFornecedores();
+
+  // Auto-refresh ao ganhar foco da janela
+  const refreshData = useCallback(() => {
+    setNotas(getNotasParaFinanceiro());
+  }, []);
+
+  useEffect(() => {
+    const handleFocus = () => refreshData();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refreshData]);
   
   // Filtros
   const [filters, setFilters] = useState({
@@ -178,8 +189,8 @@ export default function FinanceiroNotasPendencias() {
     valorTotal: notaSelecionada.valorTotal,
     valorConferido: notaSelecionada.valorConferido,
     valorPendente: notaSelecionada.valorPendente,
-    percentualConferencia: notaSelecionada.qtdInformada > 0 
-      ? Math.round((notaSelecionada.qtdConferida / notaSelecionada.qtdInformada) * 100) 
+    percentualConferencia: notaSelecionada.qtdCadastrada > 0 
+      ? Math.round((notaSelecionada.qtdConferida / notaSelecionada.qtdCadastrada) * 100) 
       : 0,
     statusPagamento: notaSelecionada.valorPago >= notaSelecionada.valorTotal ? 'Pago' : 
                       notaSelecionada.valorPago > 0 ? 'Parcial' : 'Aguardando',
@@ -206,8 +217,8 @@ export default function FinanceiroNotasPendencias() {
     notaId: notaSelecionada.id,
     valorTotal: notaSelecionada.valorTotal,
     valorPendente: notaSelecionada.valorPendente,
-    percentualConferencia: notaSelecionada.qtdInformada > 0 
-      ? Math.round((notaSelecionada.qtdConferida / notaSelecionada.qtdInformada) * 100) 
+    percentualConferencia: notaSelecionada.qtdCadastrada > 0 
+      ? Math.round((notaSelecionada.qtdConferida / notaSelecionada.qtdCadastrada) * 100) 
       : 0,
     qtdInformada: notaSelecionada.qtdInformada,
     qtdConferida: notaSelecionada.qtdConferida
