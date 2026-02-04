@@ -198,10 +198,10 @@ export function TabelaNotasPendencias({
     }
   };
 
-  // Calcular percentual de conferência
+  // Calcular percentual de conferência (usa qtdCadastrada como base)
   const calcularPercentualConferencia = (nota: NotaEntrada): number => {
-    if (nota.qtdInformada === 0) return 0;
-    return Math.round((nota.qtdConferida / nota.qtdInformada) * 100);
+    if (nota.qtdCadastrada === 0) return 0;
+    return Math.round((nota.qtdConferida / nota.qtdCadastrada) * 100);
   };
 
   return (

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,6 +34,17 @@ export default function EstoqueNotasPendencias() {
   const [notas, setNotas] = useState<NotaEntrada[]>(getNotasParaEstoque());
   
   const fornecedoresList = getFornecedores();
+
+  // Auto-refresh ao ganhar foco da janela
+  const refreshData = useCallback(() => {
+    setNotas(getNotasParaEstoque());
+  }, []);
+
+  useEffect(() => {
+    const handleFocus = () => refreshData();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refreshData]);
   
   // Filtros
   const [filters, setFilters] = useState({
