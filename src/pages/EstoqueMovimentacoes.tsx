@@ -26,6 +26,7 @@ export default function EstoqueMovimentacoes() {
   const [origemFilter, setOrigemFilter] = useState<string>('todas');
   const [destinoFilter, setDestinoFilter] = useState<string>('todas');
   const [statusFilter, setStatusFilter] = useState<string>('todos');
+  const [imeiFilter, setImeiFilter] = useState<string>('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [movimentacaoParaConfirmar, setMovimentacaoParaConfirmar] = useState<string | null>(null);
@@ -112,6 +113,7 @@ export default function EstoqueMovimentacoes() {
     if (origemFilter !== 'todas' && m.origem !== origemFilter) return false;
     if (destinoFilter !== 'todas' && m.destino !== destinoFilter) return false;
     if (statusFilter !== 'todos' && m.status !== statusFilter) return false;
+    if (imeiFilter && !m.imei.includes(imeiFilter.replace(/\D/g, ''))) return false;
     return true;
   });
 
@@ -311,12 +313,20 @@ export default function EstoqueMovimentacoes() {
             </SelectContent>
           </Select>
 
+          <Input
+            placeholder="Filtrar por IMEI..."
+            value={imeiFilter}
+            onChange={(e) => setImeiFilter(e.target.value)}
+            className="w-[180px]"
+          />
+
           <Button 
             variant="ghost" 
             onClick={() => {
               setOrigemFilter('todas');
               setDestinoFilter('todas');
               setStatusFilter('todos');
+              setImeiFilter('');
             }}
           >
             <X className="mr-2 h-4 w-4" />
@@ -469,9 +479,9 @@ export default function EstoqueMovimentacoes() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>IMEI</TableHead>
                 <TableHead>Modelo</TableHead>
+                <TableHead>IMEI</TableHead>
+                <TableHead>ID</TableHead>
                 <TableHead>Responsável</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Origem</TableHead>
@@ -490,9 +500,9 @@ export default function EstoqueMovimentacoes() {
                     mov.status === 'Recebido' && 'bg-green-500/10'
                   )}
                 >
-                  <TableCell className="font-mono text-xs">{mov.id}</TableCell>
-                  <TableCell className="font-mono text-xs">{formatIMEI(mov.imei)}</TableCell>
                   <TableCell>{mov.produto}</TableCell>
+                  <TableCell className="font-mono text-xs">{formatIMEI(mov.imei)}</TableCell>
+                  <TableCell className="font-mono text-xs">{mov.id}</TableCell>
                   <TableCell>{mov.responsavel}</TableCell>
                   <TableCell>{new Date(mov.data).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell>{getLojaNome(mov.origem)}</TableCell>
@@ -605,7 +615,7 @@ export default function EstoqueMovimentacoes() {
 
         {/* Modal de Busca de Produto */}
         <Dialog open={showProdutoModal} onOpenChange={setShowProdutoModal}>
-          <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>Buscar Produto no Estoque</DialogTitle>
             </DialogHeader>

@@ -32,7 +32,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Eye, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, Wrench, RotateCcw, Undo2, DollarSign, CheckSquare } from 'lucide-react';
+import { Eye, Clock, AlertTriangle, CheckCircle, Package, Filter, Download, AlertCircle, Wrench, RotateCcw, Undo2, DollarSign, CheckSquare, Scissors } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getProdutosPendentes, ProdutoPendente, calcularSLA } from '@/utils/osApi';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -42,8 +42,8 @@ import { toast } from 'sonner';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 import { InputComMascara } from '@/components/ui/InputComMascara';
 import { getPendenciaPorNota } from '@/utils/pendenciasFinanceiraApi';
-import { validarAparelhosEmLote } from '@/utils/estoqueApi';
-
+import { validarAparelhosEmLote, Produto } from '@/utils/estoqueApi';
+import { ModalRetiradaPecas } from '@/components/estoque/ModalRetiradaPecas';
 import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 
 // Tipos de status disponíveis
@@ -69,6 +69,10 @@ export default function EstoqueProdutosPendentes() {
     responsavel: '',
     observacoes: ''
   });
+  
+  // Estados para retirada de peças
+  const [showRetiradaModal, setShowRetiradaModal] = useState(false);
+  const [produtoRetirada, setProdutoRetirada] = useState<ProdutoPendente | null>(null);
   
   // Usar lojas do store centralizado (apenas tipo 'Loja')
   const lojas = obterLojasTipoLoja();
@@ -190,13 +194,13 @@ export default function EstoqueProdutosPendentes() {
   };
 
   const getSLABadge = (dataEntrada: string) => {
-    const { dias, cor } = calcularSLA(dataEntrada);
+    const { texto, cor } = calcularSLA(dataEntrada);
     
     if (cor === 'vermelho') {
       return (
         <div className="flex items-center gap-1 bg-red-500/20 text-red-600 px-2 py-1 rounded text-xs font-medium">
           <AlertCircle className="h-3 w-3" />
-          {dias} dias
+          {texto}
         </div>
       );
     }
@@ -204,14 +208,14 @@ export default function EstoqueProdutosPendentes() {
       return (
         <div className="flex items-center gap-1 bg-yellow-500/20 text-yellow-600 px-2 py-1 rounded text-xs font-medium">
           <AlertTriangle className="h-3 w-3" />
-          {dias} dias
+          {texto}
         </div>
       );
     }
     return (
       <div className="flex items-center gap-1 text-muted-foreground text-xs">
         <Clock className="h-3 w-3" />
-        {dias} dias
+        {texto}
       </div>
     );
   };
@@ -705,6 +709,20 @@ export default function EstoqueProdutosPendentes() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-1 justify-end">
+                          {/* Botão Retirada de Peças */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setProdutoRetirada(produto);
+                              setShowRetiradaModal(true);
+                            }}
+                            title="Retirada de Peças"
+                            className="text-orange-500 hover:text-orange-600 hover:bg-orange-500/10"
+                          >
+                            <Scissors className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -806,6 +824,38 @@ export default function EstoqueProdutosPendentes() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal de Retirada de Peças */}
+      <ModalRetiradaPecas
+        open={showRetiradaModal}
+        onOpenChange={setShowRetiradaModal}
+        produto={produtoRetirada ? {
+          id: produtoRetirada.id,
+          imei: produtoRetirada.imei,
+          marca: produtoRetirada.marca,
+          modelo: produtoRetirada.modelo,
+          cor: produtoRetirada.cor,
+          tipo: produtoRetirada.tipo as 'Novo' | 'Seminovo',
+          quantidade: 1,
+          valorCusto: produtoRetirada.valorCusto,
+          valorVendaSugerido: produtoRetirada.valorCusto * 1.5,
+          saudeBateria: produtoRetirada.saudeBateria,
+          loja: produtoRetirada.loja,
+          estoqueConferido: false,
+          assistenciaConferida: false,
+          condicao: produtoRetirada.condicao === 'Semi-novo' ? 'Seminovo' : 'Lacrado',
+          historicoCusto: [],
+          historicoValorRecomendado: [],
+          statusNota: 'Pendente',
+          origemEntrada: produtoRetirada.origemEntrada
+        } as Produto : null}
+        onSuccess={() => {
+          // Recarregar dados
+          const data = getProdutosPendentes();
+          setProdutosPendentes(data);
+          setProdutoRetirada(null);
+        }}
+      />
     </EstoqueLayout>
   );
 }

@@ -406,9 +406,9 @@ export default function EstoqueNotaCadastrarProdutos() {
                     <TableHead>Modelo *</TableHead>
                     <TableHead className="text-muted-foreground">IMEI</TableHead>
                     <TableHead className="text-muted-foreground">Cor</TableHead>
-                    <TableHead className="text-muted-foreground">Categoria</TableHead>
+                    <TableHead className="text-muted-foreground min-w-[120px]">Categoria</TableHead>
                     <TableHead>Qtd *</TableHead>
-                    <TableHead>Custo Unit. *</TableHead>
+                    <TableHead className="min-w-[130px]">Custo Unit. *</TableHead>
                     <TableHead>Custo Total</TableHead>
                     <TableHead></TableHead>
                   </TableRow>

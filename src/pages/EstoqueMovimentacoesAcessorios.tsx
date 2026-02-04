@@ -423,9 +423,9 @@ export default function EstoqueMovimentacoesAcessorios() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Acessório</TableHead>
                 <TableHead>ID</TableHead>
                 <TableHead>Data</TableHead>
-                <TableHead>Acessório</TableHead>
                 <TableHead>Qtd</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead>Destino</TableHead>
@@ -444,9 +444,9 @@ export default function EstoqueMovimentacoesAcessorios() {
                     mov.status === 'Recebido' && 'bg-green-500/10'
                   )}
                 >
+                  <TableCell>{mov.acessorio}</TableCell>
                   <TableCell className="font-mono text-xs">{mov.id}</TableCell>
                   <TableCell>{new Date(mov.data).toLocaleDateString('pt-BR')}</TableCell>
-                  <TableCell>{mov.acessorio}</TableCell>
                   <TableCell>{mov.quantidade}</TableCell>
                   <TableCell>{getLojaNome(mov.origem)}</TableCell>
                   <TableCell>{getLojaNome(mov.destino)}</TableCell>

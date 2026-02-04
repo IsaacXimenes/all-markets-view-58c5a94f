@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import {
   Clock
 } from 'lucide-react';
 import { useCadastroStore } from '@/store/cadastroStore';
+import { useAuthStore } from '@/store/authStore';
 import { 
   criarMovimentacaoMatriz,
   getProdutosDisponivelMatriz,
@@ -34,6 +35,7 @@ export default function EstoqueNovaMovimentacaoMatriz() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { obterNomeLoja, obterColaboradoresAtivos, obterNomeColaborador } = useCadastroStore();
+  const { user } = useAuthStore();
   
   // IDs fixos para origem e destino
   const estoqueSiaId = getEstoqueSiaId();
@@ -44,6 +46,13 @@ export default function EstoqueNovaMovimentacaoMatriz() {
   const [itensParaEnviar, setItensParaEnviar] = useState<Array<{ aparelhoId: string; imei: string; modelo: string; cor: string }>>([]);
   const [responsavelLancamento, setResponsavelLancamento] = useState('');
   const [isModalSelecionarOpen, setIsModalSelecionarOpen] = useState(false);
+  
+  // Preencher automaticamente o responsável com o usuário logado
+  useEffect(() => {
+    if (user?.colaborador?.id && !responsavelLancamento) {
+      setResponsavelLancamento(user.colaborador.id);
+    }
+  }, [user, responsavelLancamento]);
   
   // Produtos disponíveis no Estoque - SIA
   const produtosDisponiveis = useMemo(() => {

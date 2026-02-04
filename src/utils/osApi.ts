@@ -282,12 +282,19 @@ export const getProdutosMigrados = (): Produto[] => {
   return [...produtosMigrados];
 };
 
-// Calcular SLA em dias
-export const calcularSLA = (dataEntrada: string): { dias: number; cor: 'normal' | 'amarelo' | 'vermelho' } => {
+// Calcular SLA em dias e horas
+export const calcularSLA = (dataEntrada: string): { 
+  dias: number; 
+  horas: number; 
+  texto: string; 
+  cor: 'normal' | 'amarelo' | 'vermelho' 
+} => {
   const hoje = new Date();
   const entrada = new Date(dataEntrada);
   const diffTime = Math.abs(hoje.getTime() - entrada.getTime());
-  const dias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  const dias = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const horas = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   
   let cor: 'normal' | 'amarelo' | 'vermelho' = 'normal';
   if (dias >= 5) {
@@ -296,7 +303,11 @@ export const calcularSLA = (dataEntrada: string): { dias: number; cor: 'normal' 
     cor = 'amarelo';
   }
   
-  return { dias, cor };
+  const texto = dias > 0 
+    ? `${dias} dia${dias > 1 ? 's' : ''} e ${horas}h`
+    : `${horas}h`;
+  
+  return { dias, horas, texto, cor };
 };
 
 // Migrar produto para o estoque PRINCIPAL (via estoqueApi)
