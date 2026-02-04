@@ -44,6 +44,7 @@ import {
 } from '@/utils/fluxoVendasApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { useCadastroStore } from '@/store/cadastroStore';
+import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { toast } from 'sonner';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
@@ -82,6 +83,8 @@ export default function VendasConferenciaGestor() {
   const [filtroLoja, setFiltroLoja] = useState('todas');
   const [filtroResponsavel, setFiltroResponsavel] = useState('todos');
   const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [filtroContaDestino, setFiltroContaDestino] = useState('todas');
+  const [contasFinanceiras] = useState(() => getContasFinanceiras());
   
   // Modal de recusa
   const [modalRecusar, setModalRecusar] = useState(false);
@@ -117,6 +120,13 @@ export default function VendasConferenciaGestor() {
     if (filtroStatus !== 'todos') {
       resultado = resultado.filter(v => v.statusFluxo === filtroStatus);
     }
+    
+    // Filtro por conta destino
+    if (filtroContaDestino !== 'todas') {
+      resultado = resultado.filter(v => 
+        v.pagamentos?.some(p => p.contaDestino === filtroContaDestino)
+      );
+    }
 
     // Ordenação: Pendentes primeiro
     resultado.sort((a, b) => {
@@ -133,7 +143,7 @@ export default function VendasConferenciaGestor() {
     });
 
     return resultado;
-  }, [vendas, filtroDataInicio, filtroDataFim, filtroLoja, filtroResponsavel, filtroStatus]);
+  }, [vendas, filtroDataInicio, filtroDataFim, filtroLoja, filtroResponsavel, filtroStatus, filtroContaDestino]);
 
   // Calcular somatórios por método de pagamento - DINÂMICO baseado nas vendas filtradas
   // Separado por Pendente (Conferência Gestor, Devolvido pelo Financeiro) e Conferido (Conferência Financeiro, Finalizado)
@@ -190,6 +200,7 @@ export default function VendasConferenciaGestor() {
     setFiltroLoja('todas');
     setFiltroResponsavel('todos');
     setFiltroStatus('todos');
+    setFiltroContaDestino('todas');
   };
 
   const handleExportar = () => {
@@ -567,7 +578,7 @@ export default function VendasConferenciaGestor() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
                 <div>
                   <label className="text-sm text-muted-foreground mb-1 block">Data Início</label>
                   <Input 
@@ -614,6 +625,25 @@ export default function VendasConferenciaGestor() {
                       <SelectItem value="Devolvido pelo Financeiro">Devolvido pelo Financeiro</SelectItem>
                       <SelectItem value="Conferência Financeiro">Conferência Financeiro</SelectItem>
                       <SelectItem value="Finalizado">Finalizado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1 block">Conta Destino</label>
+                  <Select value={filtroContaDestino} onValueChange={setFiltroContaDestino}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todas as Contas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todas">Todas as Contas</SelectItem>
+                      {contasFinanceiras.filter(c => c.status === 'Ativo').map(conta => {
+                        const lojaNome = conta.lojaVinculada ? obterNomeLoja(conta.lojaVinculada) : '';
+                        return (
+                          <SelectItem key={conta.id} value={conta.id}>
+                            {lojaNome ? `${lojaNome} - ${conta.nome}` : conta.nome}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>

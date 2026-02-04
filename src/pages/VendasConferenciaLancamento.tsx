@@ -639,17 +639,33 @@ export default function VendasConferenciaLancamento() {
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             )}
-                            {venda.statusFluxo !== 'Feito Sinal' && venda.statusFluxo !== 'Conferência Gestor' && venda.statusFluxo !== 'Conferência Financeiro' && venda.statusFluxo !== 'Finalizado' && (
-                              <Button 
-                                size="sm"
-                                onClick={() => handleAbrirModalAprovar(venda)}
-                                title="Aprovar lançamento"
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <Check className="h-4 w-4 mr-1" />
-                                Conferir
-                              </Button>
-                            )}
+                            {(() => {
+                              // Função para verificar se venda pode ser aprovada
+                              const podeAprovarVenda = () => {
+                                // Se for Feito Sinal, verificar se pagamentos completam o valor
+                                if (venda.statusFluxo === 'Feito Sinal') {
+                                  const totalPagamentos = venda.pagamentos?.reduce((acc, p) => acc + p.valor, 0) || 0;
+                                  return totalPagamentos >= venda.total;
+                                }
+                                
+                                // Para outros status, manter lógica atual
+                                return venda.statusFluxo !== 'Conferência Gestor' && 
+                                       venda.statusFluxo !== 'Conferência Financeiro' && 
+                                       venda.statusFluxo !== 'Finalizado';
+                              };
+
+                              return podeAprovarVenda() ? (
+                                <Button 
+                                  size="sm"
+                                  onClick={() => handleAbrirModalAprovar(venda)}
+                                  title="Aprovar lançamento"
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <Check className="h-4 w-4 mr-1" />
+                                  Conferir
+                                </Button>
+                              ) : null;
+                            })()}
                           </div>
                         </TableCell>
                       </TableRow>

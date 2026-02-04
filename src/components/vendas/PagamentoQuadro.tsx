@@ -39,6 +39,9 @@ interface NovoPagamentoState extends Partial<Pagamento> {
   boletoValorFinalCliente?: number;
   boletoValorVenda?: number;
   boletoNumeroParcelas?: number;
+  // Campos específicos para Fiado
+  fiadoTipoRecorrencia?: 'Mensal' | 'Semanal';
+  fiadoIntervaloDias?: number;
 }
 
 // Função para obter parcelamentos da máquina ou usar valores padrão
@@ -648,24 +651,78 @@ export function PagamentoQuadro({
             {novoPagamento.meioPagamento === 'Fiado' && (
               <>
                 <div>
-                  <label className="text-sm font-medium">Data Base para Pagamento *</label>
+                  <label className="text-sm font-medium">Tipo de Recorrência *</label>
                   <Select 
-                    value={String(novoPagamento.fiadoDataBase || 5)} 
-                    onValueChange={(v) => setNovoPagamento({ ...novoPagamento, fiadoDataBase: Number(v) })}
+                    value={novoPagamento.fiadoTipoRecorrencia || 'Mensal'} 
+                    onValueChange={(v) => setNovoPagamento({ 
+                      ...novoPagamento, 
+                      fiadoTipoRecorrencia: v as 'Mensal' | 'Semanal',
+                      fiadoDataBase: v === 'Semanal' ? undefined : novoPagamento.fiadoDataBase,
+                      fiadoIntervaloDias: v === 'Semanal' ? 7 : undefined
+                    })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione o dia" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {[1, 5, 10, 15, 20, 25, 28].map(dia => (
-                        <SelectItem key={dia} value={String(dia)}>Dia {dia}</SelectItem>
-                      ))}
+                      <SelectItem value="Mensal">Mensal (dia fixo do mês)</SelectItem>
+                      <SelectItem value="Semanal">Semanal (intervalo em dias)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Dia do mês em que as parcelas vencerão
-                  </p>
                 </div>
+                
+                {/* Campos para Mensal */}
+                {(novoPagamento.fiadoTipoRecorrencia || 'Mensal') === 'Mensal' && (
+                  <div>
+                    <label className="text-sm font-medium">Dia do Mês *</label>
+                    <Select 
+                      value={String(novoPagamento.fiadoDataBase || 5)} 
+                      onValueChange={(v) => setNovoPagamento({ ...novoPagamento, fiadoDataBase: Number(v) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o dia" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 5, 10, 15, 20, 25, 28].map(dia => (
+                          <SelectItem key={dia} value={String(dia)}>Dia {dia}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Dia do mês em que as parcelas vencerão
+                    </p>
+                  </div>
+                )}
+                
+                {/* Campos para Semanal */}
+                {novoPagamento.fiadoTipoRecorrencia === 'Semanal' && (
+                  <div>
+                    <label className="text-sm font-medium">Intervalo de Dias *</label>
+                    <Select 
+                      value={String(novoPagamento.fiadoIntervaloDias || 7)} 
+                      onValueChange={(v) => setNovoPagamento({ ...novoPagamento, fiadoIntervaloDias: Number(v) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="7">A cada 7 dias</SelectItem>
+                        <SelectItem value="14">A cada 14 dias</SelectItem>
+                        <SelectItem value="15">A cada 15 dias</SelectItem>
+                        <SelectItem value="21">A cada 21 dias</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Primeira parcela em {(() => {
+                        const dias = novoPagamento.fiadoIntervaloDias || 7;
+                        const data = new Date();
+                        data.setDate(data.getDate() + dias);
+                        return data.toLocaleDateString('pt-BR');
+                      })()}
+                    </p>
+                  </div>
+                )}
+                
                 <div>
                   <label className="text-sm font-medium">Número de Parcelas *</label>
                   <Select 
@@ -815,13 +872,16 @@ export function PagamentoQuadro({
                   <SelectValue placeholder="Selecione a conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  {contasFinanceiras.filter(c => c.status === 'Ativo').map(conta => {
-                    const lojaNome = conta.lojaVinculada ? obterNomeLoja(conta.lojaVinculada) : '';
-                    const displayName = lojaNome ? `${lojaNome} - ${conta.nome}` : conta.nome;
-                    return (
-                      <SelectItem key={conta.id} value={conta.id}>{displayName}</SelectItem>
-                    );
-                  })}
+                  {contasFinanceiras
+                    .filter(c => c.status === 'Ativo')
+                    .filter(c => !lojaVendaId || c.lojaVinculada === lojaVendaId)
+                    .map(conta => {
+                      const lojaNome = conta.lojaVinculada ? obterNomeLoja(conta.lojaVinculada) : '';
+                      const displayName = lojaNome ? `${lojaNome} - ${conta.nome}` : conta.nome;
+                      return (
+                        <SelectItem key={conta.id} value={conta.id}>{displayName}</SelectItem>
+                      );
+                    })}
                 </SelectContent>
               </Select>
             </div>

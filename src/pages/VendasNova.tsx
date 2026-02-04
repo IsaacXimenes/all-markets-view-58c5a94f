@@ -15,8 +15,9 @@ import QRCode from 'qrcode';
 import { 
   ShoppingCart, Search, Plus, X, Eye, Clock, Trash2, 
   User, Package, CreditCard, Truck, FileText, AlertTriangle, Check, Shield, Save,
-  Headphones, ArrowLeftRight, Star, ChevronLeft
+  Headphones, ArrowLeftRight, Star, ChevronLeft, Camera
 } from 'lucide-react';
+import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 import { format, addMonths, addDays } from 'date-fns';
 
 import { 
@@ -122,6 +123,7 @@ export default function VendasNova() {
   const [novoTradeIn, setNovoTradeIn] = useState<Partial<ItemTradeIn>>({});
   const [tipoOperacaoTroca, setTipoOperacaoTroca] = useState<'Upgrade' | 'Downgrade'>('Upgrade');
   const [chavePix, setChavePix] = useState('');
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   
   // Pagamentos
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
@@ -1956,7 +1958,17 @@ export default function VendasNova() {
                 <label className="text-sm font-medium">Tipo de Retirada</label>
                 <Select 
                   value={tipoRetirada} 
-                  onValueChange={(v) => setTipoRetirada(v as any)}
+                  onValueChange={(v) => {
+                    setTipoRetirada(v as any);
+                    // Zerar valores de entrega quando não for "Entrega"
+                    if (v !== 'Entrega') {
+                      setTaxaEntrega(0);
+                      setLocalEntregaId('');
+                      setLocalEntregaNome('');
+                      setValorRecomendadoEntrega(0);
+                      setMotoboyId('');
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -2860,20 +2872,31 @@ export default function VendasNova() {
             </div>
             <div>
               <label className="text-sm font-medium">IMEI</label>
-              <Input 
-                value={novoTradeIn.imei || ''}
-                onChange={(e) => {
-                  const formatted = e.target.value.replace(/\D/g, '').slice(0, 15);
-                  let masked = '';
-                  for (let i = 0; i < formatted.length; i++) {
-                    if (i === 2 || i === 8 || i === 14) masked += '-';
-                    masked += formatted[i];
-                  }
-                  setNovoTradeIn({ ...novoTradeIn, imei: masked });
-                }}
-                placeholder="00-000000-000000-0"
-                maxLength={18}
-              />
+              <div className="flex gap-2">
+                <Input 
+                  value={novoTradeIn.imei || ''}
+                  onChange={(e) => {
+                    const formatted = e.target.value.replace(/\D/g, '').slice(0, 15);
+                    let masked = '';
+                    for (let i = 0; i < formatted.length; i++) {
+                      if (i === 2 || i === 8 || i === 14) masked += '-';
+                      masked += formatted[i];
+                    }
+                    setNovoTradeIn({ ...novoTradeIn, imei: masked });
+                  }}
+                  placeholder="00-000000-000000-0"
+                  maxLength={18}
+                  className="flex-1"
+                />
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  onClick={() => setShowBarcodeScanner(true)}
+                  title="Escanear código de barras"
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium">Valor de Compra Usado *</label>
@@ -2914,6 +2937,22 @@ export default function VendasNova() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal Barcode Scanner */}
+      <BarcodeScanner
+        open={showBarcodeScanner}
+        onScan={(imei) => {
+          // Formatar IMEI com máscara
+          let masked = '';
+          for (let i = 0; i < imei.length && i < 15; i++) {
+            if (i === 2 || i === 8 || i === 14) masked += '-';
+            masked += imei[i];
+          }
+          setNovoTradeIn({ ...novoTradeIn, imei: masked });
+          setShowBarcodeScanner(false);
+        }}
+        onClose={() => setShowBarcodeScanner(false)}
+      />
 
       <Dialog open={showConfirmacaoModal} onOpenChange={setShowConfirmacaoModal}>
         <DialogContent>
@@ -3111,64 +3150,67 @@ export default function VendasNova() {
 
       {/* Modal Selecionar Acessórios */}
       <Dialog open={showAcessorioModal} onOpenChange={setShowAcessorioModal}>
-        <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-6xl max-h-[85vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Selecionar Acessórios</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="flex-1 overflow-hidden flex flex-col space-y-4">
             <Input 
               placeholder="Buscar acessório..."
               value={buscaAcessorio}
               onChange={(e) => setBuscaAcessorio(e.target.value)}
+              className="flex-shrink-0"
             />
             
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead className="text-center">Qtd Disp.</TableHead>
-                  <TableHead className="text-right">Valor Custo</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {acessoriosFiltrados.map(acessorio => (
-                  <TableRow key={acessorio.id} className={acessorio.quantidade < 10 ? 'bg-destructive/10' : ''}>
-                    <TableCell className="font-mono text-sm">{acessorio.id}</TableCell>
-                    <TableCell className="font-medium">{acessorio.descricao}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{acessorio.categoria}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={acessorio.quantidade < 10 ? "destructive" : "secondary"}>
-                        {acessorio.quantidade}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(acessorio.valorCusto)}</TableCell>
-                    <TableCell>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleAddAcessorio(acessorio)}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Adicionar
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {acessoriosFiltrados.length === 0 && (
+            <div className="flex-1 overflow-y-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Nenhum acessório encontrado.
-                    </TableCell>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead className="text-center">Qtd Disp.</TableHead>
+                    <TableHead className="text-right">Valor Custo</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {acessoriosFiltrados.map(acessorio => (
+                    <TableRow key={acessorio.id} className={acessorio.quantidade < 10 ? 'bg-destructive/10' : ''}>
+                      <TableCell className="font-mono text-sm">{acessorio.id}</TableCell>
+                      <TableCell className="font-medium">{acessorio.descricao}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{acessorio.categoria}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={acessorio.quantidade < 10 ? "destructive" : "secondary"}>
+                          {acessorio.quantidade}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">{formatCurrency(acessorio.valorCusto)}</TableCell>
+                      <TableCell>
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleAddAcessorio(acessorio)}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Adicionar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {acessoriosFiltrados.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Nenhum acessório encontrado.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0">
             <Button variant="outline" onClick={() => setShowAcessorioModal(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>

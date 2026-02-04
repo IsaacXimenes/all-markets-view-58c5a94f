@@ -379,16 +379,14 @@ export default function Vendas() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Modelo</TableHead>
+                  <TableHead>Loja</TableHead>
+                  <TableHead>IMEI</TableHead>
                   <TableHead>ID Venda</TableHead>
                   <TableHead>Data/Hora</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Modelo</TableHead>
-                  <TableHead>IMEI</TableHead>
                   <TableHead>Resp. Venda</TableHead>
-                  <TableHead>Loja</TableHead>
-                  <TableHead>Resp. Loja</TableHead>
                   <TableHead className="text-right">V. Custo</TableHead>
-                  <TableHead className="text-right">V. Recomendado</TableHead>
                   <TableHead className="text-right">V. Venda</TableHead>
                   <TableHead className="text-right">Lucro</TableHead>
                   <TableHead className="text-right">Margem %</TableHead>
@@ -432,21 +430,17 @@ export default function Vendas() {
                   
                   return (
                     <TableRow key={venda.id} className={getRowBgClass()}>
+                      <TableCell className="max-w-[200px] truncate" title={modelos}>{modelos || '-'}</TableCell>
+                      <TableCell>{getLojaName(venda.lojaVenda)}</TableCell>
+                      <TableCell className="font-mono text-xs min-w-[160px]" title={imeis}>{imeis || '-'}</TableCell>
                       <TableCell className="font-medium">{venda.id}</TableCell>
                       <TableCell className="whitespace-nowrap">
                         {new Date(venda.dataHora).toLocaleString('pt-BR')}
                       </TableCell>
                       <TableCell className="font-medium">{venda.clienteNome}</TableCell>
-                      <TableCell className="max-w-[200px] truncate" title={modelos}>{modelos || '-'}</TableCell>
-                      <TableCell className="font-mono text-xs min-w-[160px]" title={imeis}>{imeis || '-'}</TableCell>
                       <TableCell>{getColaboradorNome(venda.vendedor)}</TableCell>
-                      <TableCell>{getLojaName(venda.lojaVenda)}</TableCell>
-                      <TableCell className="text-muted-foreground">{getResponsavelLoja(venda.lojaVenda)}</TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {formatCurrency(calc.valorCusto)}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {formatCurrency(calc.valorRecomendado)}
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(calc.valorVenda)}
