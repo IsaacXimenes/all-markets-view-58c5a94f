@@ -1642,6 +1642,70 @@ export const registrarRetornoItemMatriz = (
   return { sucesso: true, mensagem: 'Retorno registrado com sucesso', movimentacao };
 };
 
+// Desfazer retorno de item da movimentação matriz (voltar para Pendente)
+export const desfazerRetornoItemMatriz = (
+  movimentacaoId: string,
+  aparelhoId: string,
+  responsavel: string
+): { sucesso: boolean; mensagem: string; movimentacao?: MovimentacaoMatriz } => {
+  const movimentacao = movimentacoesMatriz.find(m => m.id === movimentacaoId);
+  if (!movimentacao) {
+    return { sucesso: false, mensagem: 'Movimentação não encontrada' };
+  }
+  
+  const item = movimentacao.itens.find(i => i.aparelhoId === aparelhoId);
+  if (!item) {
+    return { sucesso: false, mensagem: 'Item não encontrado na movimentação' };
+  }
+  
+  if (item.statusItem !== 'Devolvido') {
+    return { sucesso: false, mensagem: 'Item não está com status Devolvido' };
+  }
+  
+  const agora = new Date().toISOString();
+  
+  // Reverter item para Enviado
+  item.statusItem = 'Enviado';
+  item.dataHoraRetorno = undefined;
+  item.responsavelRetorno = undefined;
+  
+  // Atualizar produto - voltar para loja destino
+  const produto = produtos.find(p => p.id === aparelhoId);
+  if (produto) {
+    produto.lojaAtualId = movimentacao.lojaDestinoId;
+    produto.statusMovimentacao = 'Em movimentação';
+    produto.movimentacaoId = movimentacaoId;
+    
+    // Adicionar entrada na timeline do produto
+    if (!produto.timeline) produto.timeline = [];
+    produto.timeline.unshift({
+      id: `TL-PROD-${Date.now()}-${aparelhoId}-undo`,
+      data: agora,
+      tipo: 'saida_matriz',
+      titulo: 'Conferência Desfeita',
+      descricao: `Conferência de retorno desfeita - produto retornou ao status "Em movimentação"`,
+      responsavel
+    });
+  }
+  
+  // Adicionar entrada na timeline da movimentação
+  movimentacao.timeline.unshift({
+    id: `TL-${Date.now()}-undo`,
+    data: agora,
+    tipo: 'saida_matriz',
+    titulo: 'Conferência Desfeita',
+    descricao: `${item.modelo} ${item.cor} (IMEI: ${item.imei}) retornado para Pendentes`,
+    responsavel
+  });
+  
+  // Se a movimentação estava Concluída, voltar para Aguardando Retorno
+  if (movimentacao.statusMovimentacao === 'Concluída') {
+    movimentacao.statusMovimentacao = 'Aguardando Retorno';
+  }
+  
+  return { sucesso: true, mensagem: 'Conferência desfeita com sucesso', movimentacao };
+};
+
 // Verificar e atualizar retornos atrasados
 export const verificarRetornosAtrasados = (): void => {
   const agora = new Date();

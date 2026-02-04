@@ -26,6 +26,7 @@ import { useCadastroStore } from '@/store/cadastroStore';
 import { 
   getMovimentacaoMatrizById,
   registrarRetornoItemMatriz,
+  desfazerRetornoItemMatriz,
   MovimentacaoMatriz,
   MovimentacaoMatrizItem
 } from '@/utils/estoqueApi';
@@ -135,12 +136,18 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
   const handleDesfazerConferencia = (aparelhoId: string) => {
     if (!movimentacao) return;
     
-    // Por enquanto, apenas mostrar toast - função completa requer implementação no API
-    toast({ 
-      title: 'Ação não disponível', 
-      description: 'Funcionalidade de desfazer conferência em desenvolvimento', 
-      variant: 'destructive' 
-    });
+    const resultado = desfazerRetornoItemMatriz(
+      movimentacao.id,
+      aparelhoId,
+      'Sistema'
+    );
+    
+    if (resultado.sucesso) {
+      toast({ title: 'Sucesso', description: 'Conferência desfeita - item retornou para Pendentes' });
+      setMovimentacao(resultado.movimentacao!);
+    } else {
+      toast({ title: 'Erro', description: resultado.mensagem, variant: 'destructive' });
+    }
   };
   
   if (isLoading) {
