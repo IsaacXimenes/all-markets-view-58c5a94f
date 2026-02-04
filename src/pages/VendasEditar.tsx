@@ -529,8 +529,12 @@ export default function VendasEditar() {
   }, [tradeIns]);
 
   // Validar antes de salvar
+  // Para vendas com sinal (Fiado), verificar se os pagamentos cobrem o total
   const canSubmit = useMemo(() => {
     const motoboyValido = tipoRetirada !== 'Entrega' || !!motoboyId;
+    
+    // Tolerância maior para arredondamentos (1 centavo)
+    const pagamentoCompleto = Math.abs(valorPendente) <= 0.01 || valorPendente <= 0;
     
     return (
       lojaVenda &&
@@ -539,7 +543,7 @@ export default function VendasEditar() {
       origemVenda &&
       localRetirada &&
       (itens.length > 0 || acessoriosVenda.length > 0) &&
-      valorPendente <= 0.01 && // Tolerância de centavo
+      pagamentoCompleto &&
       !tradeInNaoValidado &&
       motoboyValido
     );
@@ -583,7 +587,8 @@ export default function VendasEditar() {
     
     // Determinar novo status
     let novoStatus = vendaOriginal.statusAtual;
-    if (isSinalVenda && valorPendente <= 0.01) {
+    // Se é venda com sinal e pagamento foi completado, mudar para Aguardando Conferência
+    if (isSinalVenda && (Math.abs(valorPendente) <= 0.01 || valorPendente <= 0)) {
       novoStatus = 'Aguardando Conferência';
     }
     
