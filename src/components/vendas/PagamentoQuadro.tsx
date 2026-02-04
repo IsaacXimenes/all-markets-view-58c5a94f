@@ -86,13 +86,21 @@ export function PagamentoQuadro({
   const [pagamentos, setPagamentos] = useState<Pagamento[]>(pagamentosIniciais);
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
   const [novoPagamento, setNovoPagamento] = useState<NovoPagamentoState>({});
-
-  // Sincronizar pagamentos iniciais
+  
+  // Sincronizar pagamentos iniciais quando o componente recebe novos valores iniciais
+  // Usa o ID do primeiro pagamento como "key" para detectar mudanças relevantes
+  const [lastSyncedId, setLastSyncedId] = useState<string | null>(
+    pagamentosIniciais.length > 0 ? pagamentosIniciais[0].id : null
+  );
+  
   useEffect(() => {
-    if (pagamentosIniciais.length > 0 && pagamentos.length === 0) {
+    const currentFirstId = pagamentosIniciais.length > 0 ? pagamentosIniciais[0].id : null;
+    // Só sincroniza na montagem inicial, não quando pagamentos são adicionados internamente
+    if (currentFirstId && lastSyncedId === null) {
       setPagamentos(pagamentosIniciais);
+      setLastSyncedId(currentFirstId);
     }
-  }, [pagamentosIniciais]);
+  }, [pagamentosIniciais, lastSyncedId]);
 
   // Notificar mudanças nos pagamentos
   useEffect(() => {
