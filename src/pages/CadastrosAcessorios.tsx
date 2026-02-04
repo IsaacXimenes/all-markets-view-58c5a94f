@@ -55,6 +55,37 @@ export const exportAcessoriosCadastroToCSV = (data: AcessorioCadastro[], filenam
   link.click();
 };
 
+// Função para buscar limite mínimo de um produto por nome/modelo
+// Utilizada pelo módulo de Estoque para sincronização de alertas
+export const getLimiteMinimo = (produtoOuModelo: string): number | null => {
+  const termo = produtoOuModelo.toLowerCase().trim();
+  
+  // Buscar por produto exato ou por correspondência parcial (modelo)
+  const acessorio = acessoriosCadastro.find(a => 
+    a.produto.toLowerCase() === termo ||
+    a.produto.toLowerCase().includes(termo) ||
+    termo.includes(a.produto.toLowerCase())
+  );
+  
+  return acessorio ? acessorio.limiteMinimo : null;
+};
+
+// Função para verificar se um produto está abaixo do limite mínimo
+export const verificarEstoqueBaixo = (produtoOuModelo: string, quantidadeAtual: number): boolean => {
+  const limite = getLimiteMinimo(produtoOuModelo);
+  if (limite === null) return false;
+  return quantidadeAtual <= limite;
+};
+
+// Função para obter todos os limites mínimos como mapa
+export const getLimitesMinimosMap = (): Map<string, number> => {
+  const mapa = new Map<string, number>();
+  acessoriosCadastro.forEach(a => {
+    mapa.set(a.produto.toLowerCase(), a.limiteMinimo);
+  });
+  return mapa;
+};
+
 export default function CadastrosAcessorios() {
   const { toast } = useToast();
   const [acessorios, setAcessorios] = useState(getAcessoriosCadastro());

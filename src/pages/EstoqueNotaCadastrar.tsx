@@ -24,6 +24,7 @@ import { InputComMascara } from '@/components/ui/InputComMascara';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { formatCurrency } from '@/utils/formatUtils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { BufferAnexos, AnexoTemporario } from '@/components/estoque/BufferAnexos';
 
 // Número da nota será gerado automaticamente pela API
 
@@ -45,6 +46,9 @@ export default function EstoqueNotaCadastrar() {
   
   // Atuação Atual (somente leitura, calculado automaticamente)
   const [atuacaoAtual, setAtuacaoAtual] = useState<AtuacaoAtual | ''>('');
+  
+  // Buffer de anexos temporários
+  const [anexos, setAnexos] = useState<AnexoTemporario[]>([]);
 
   // Atualizar atuação automaticamente quando tipo de pagamento muda
   useEffect(() => {
@@ -55,14 +59,6 @@ export default function EstoqueNotaCadastrar() {
     }
   }, [tipoPagamento]);
 
-  // Atualizar atuação automaticamente quando tipo de pagamento muda
-  useEffect(() => {
-    if (tipoPagamento) {
-      setAtuacaoAtual(definirAtuacaoInicial(tipoPagamento));
-    } else {
-      setAtuacaoAtual('');
-    }
-  }, [tipoPagamento]);
 
   const handleValorTotalChange = (formatted: string, raw: string | number) => {
     const valor = typeof raw === 'number' ? raw : parseFloat(String(raw)) || 0;
@@ -411,6 +407,14 @@ export default function EstoqueNotaCadastrar() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Buffer de Anexos */}
+        <BufferAnexos 
+          anexos={anexos}
+          onAnexosChange={setAnexos}
+          maxFiles={10}
+          maxSizeMB={5}
+        />
 
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={() => navigate('/estoque/notas-compra')}>

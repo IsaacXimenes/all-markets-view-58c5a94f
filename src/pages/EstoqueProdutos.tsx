@@ -22,6 +22,7 @@ import { InputComMascara } from '@/components/ui/InputComMascara';
 import { ResponsiveCardGrid, ResponsiveFilterGrid } from '@/components/ui/ResponsiveContainers';
 import { ModalRetiradaPecas } from '@/components/estoque/ModalRetiradaPecas';
 import { verificarDisponibilidadeRetirada } from '@/utils/retiradaPecasApi';
+import { verificarEstoqueBaixo, getLimiteMinimo } from '@/pages/CadastrosAcessorios';
 
 import { formatCurrency, exportToCSV, parseMoeda } from '@/utils/formatUtils';
 
@@ -71,11 +72,15 @@ export default function EstoqueProdutos() {
   });
 
   // Stats dinâmicos baseados nos filtros
+  // Calcular produtos com estoque baixo baseado no limite configurado em Cadastros > Acessórios
+  const produtosEstoqueBaixo = produtosFiltrados.filter(p => verificarEstoqueBaixo(p.modelo, p.quantidade));
+  
   const statsFiltrados = {
     totalProdutos: produtosFiltrados.length,
     valorTotalEstoque: produtosFiltrados.reduce((acc, p) => acc + p.valorCusto * p.quantidade, 0),
     produtosBateriaFraca: produtosFiltrados.filter(p => p.saudeBateria < 85).length,
-    notasPendentes: stats.notasPendentes
+    notasPendentes: stats.notasPendentes,
+    produtosEstoqueBaixo: produtosEstoqueBaixo.length
   };
 
   const handleExport = () => {
@@ -125,7 +130,7 @@ export default function EstoqueProdutos() {
     <EstoqueLayout title="Gerenciamento de Produtos">
       <div className="space-y-4 sm:space-y-6 min-w-0">
         {/* Dashboard Cards */}
-        <ResponsiveCardGrid cols={4}>
+        <ResponsiveCardGrid cols={5}>
           <Card className="overflow-hidden min-w-0">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-3 min-w-0">
@@ -168,15 +173,30 @@ export default function EstoqueProdutos() {
             </CardContent>
           </Card>
 
-          <Card className={cn("overflow-hidden min-w-0", statsFiltrados.notasPendentes > 0 && 'bg-red-500/10')}>
+          {/* Card de Estoque Baixo - Sincronizado com Cadastros > Acessórios */}
+          <Card className={cn("overflow-hidden min-w-0", statsFiltrados.produtosEstoqueBaixo > 0 && 'bg-destructive/10')}>
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="p-2 rounded-lg bg-red-500/10 flex-shrink-0">
-                  <FileWarning className={cn("h-5 w-5", statsFiltrados.notasPendentes > 0 ? 'text-red-500' : 'text-muted-foreground')} />
+                <div className="p-2 rounded-lg bg-destructive/10 flex-shrink-0">
+                  <AlertCircle className={cn("h-5 w-5", statsFiltrados.produtosEstoqueBaixo > 0 ? 'text-destructive' : 'text-muted-foreground')} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground truncate">Estoque Baixo</p>
+                  <p className={cn("text-xl sm:text-2xl font-bold", statsFiltrados.produtosEstoqueBaixo > 0 && 'text-destructive')}>{statsFiltrados.produtosEstoqueBaixo}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className={cn("overflow-hidden min-w-0", statsFiltrados.notasPendentes > 0 && 'bg-amber-500/10')}>
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 rounded-lg bg-amber-500/10 flex-shrink-0">
+                  <FileWarning className={cn("h-5 w-5", statsFiltrados.notasPendentes > 0 ? 'text-amber-500' : 'text-muted-foreground')} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-xs sm:text-sm text-muted-foreground truncate">Notas Pendentes</p>
-                  <p className={cn("text-xl sm:text-2xl font-bold", statsFiltrados.notasPendentes > 0 && 'text-red-500')}>{statsFiltrados.notasPendentes}</p>
+                  <p className={cn("text-xl sm:text-2xl font-bold", statsFiltrados.notasPendentes > 0 && 'text-amber-500')}>{statsFiltrados.notasPendentes}</p>
                 </div>
               </div>
             </CardContent>
@@ -323,6 +343,13 @@ export default function EstoqueProdutos() {
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium">{produto.modelo}</span>
+                        {/* Badge de Estoque Baixo - Sincronizado com Cadastros > Acessórios */}
+                        {verificarEstoqueBaixo(produto.modelo, produto.quantidade) && (
+                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                            <AlertCircle className="h-3 w-3 mr-0.5" />
+                            Estoque Baixo
+                          </Badge>
+                        )}
                         {produto.statusMovimentacao === 'Em movimentação' && (
                           <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-300">
                             <ArrowRightLeft className="h-3 w-3 mr-1" />

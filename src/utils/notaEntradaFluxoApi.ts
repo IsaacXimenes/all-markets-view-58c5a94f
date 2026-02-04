@@ -3,6 +3,8 @@
 // CONCEITO: Lançamento Inicial (nota sem produtos) → Atuação Atual governa o fluxo
 
 import { addNotification } from './notificationsApi';
+import { migrarAparelhoNovoParaEstoque, ProdutoNota, ESTOQUE_SIA_LOJA_ID } from './estoqueApi';
+import { migrarProdutosNotaParaPendentes } from './osApi';
 
 // ============= TIPOS E INTERFACES =============
 
@@ -996,6 +998,109 @@ export const finalizarConferencia = (
   
   // Retornar cópia profunda para forçar re-render do React
   return JSON.parse(JSON.stringify(notaOriginal));
+};
+
+// ============= MIGRAÇÃO DE PRODUTOS POR CATEGORIA (NOVO VS SEMI-NOVO) =============
+
+/**
+ * Migra produtos conferidos para seus destinos corretos baseado na categoria:
+ * - Novo: Vai direto para Estoque > Produtos (disponível para venda)
+ * - Seminovo: Vai para Estoque > Produtos Pendentes (triagem necessária)
+ */
+export const migrarProdutosConferidosPorCategoria = (
+  nota: NotaEntrada,
+  responsavel: string,
+  lojaDestino?: string
+): { novos: number; seminovos: number } => {
+  const loja = lojaDestino || ESTOQUE_SIA_LOJA_ID;
+  let novos = 0;
+  let seminovos = 0;
+  
+  // Filtrar apenas produtos conferidos que ainda não foram migrados
+  const produtosConferidos = nota.produtos.filter(p => 
+    p.statusConferencia === 'Conferido' && 
+    p.tipoProduto === 'Aparelho'
+  );
+  
+  // Separar por categoria
+  const aparelhosNovos = produtosConferidos.filter(p => p.categoria === 'Novo');
+  const aparelhosSeminovos = produtosConferidos.filter(p => p.categoria === 'Seminovo');
+  
+  // Migrar aparelhos NOVOS direto para estoque disponível
+  for (const produto of aparelhosNovos) {
+    try {
+      const produtoNota: ProdutoNota = {
+        marca: produto.marca,
+        modelo: produto.modelo,
+        cor: produto.cor || 'Não informada',
+        imei: produto.imei || '',
+        tipo: 'Novo',
+        tipoProduto: 'Aparelho',
+        quantidade: produto.quantidade,
+        valorUnitario: produto.custoUnitario,
+        valorTotal: produto.custoTotal,
+        saudeBateria: produto.percentualBateria || 100,
+        capacidade: produto.capacidade
+      };
+      
+      migrarAparelhoNovoParaEstoque(
+        produtoNota,
+        nota.id,
+        nota.fornecedor,
+        loja,
+        responsavel
+      );
+      novos++;
+      
+      console.log(`[NOTA ENTRADA] Produto NOVO ${produto.modelo} migrado para estoque disponível`);
+    } catch (error) {
+      console.error(`[NOTA ENTRADA] Erro ao migrar produto NOVO ${produto.id}:`, error);
+    }
+  }
+  
+  // Migrar aparelhos SEMI-NOVOS para Produtos Pendentes
+  if (aparelhosSeminovos.length > 0) {
+    const produtosParaMigrar: ProdutoNota[] = aparelhosSeminovos.map(p => ({
+      marca: p.marca,
+      modelo: p.modelo,
+      cor: p.cor || 'Não informada',
+      imei: p.imei || '',
+      tipo: 'Seminovo' as const,
+      tipoProduto: 'Aparelho',
+      quantidade: p.quantidade,
+      valorUnitario: p.custoUnitario,
+      valorTotal: p.custoTotal,
+      saudeBateria: p.percentualBateria || 100,
+      capacidade: p.capacidade
+    }));
+    
+    const migrados = migrarProdutosNotaParaPendentes(
+      produtosParaMigrar,
+      nota.id,
+      nota.fornecedor,
+      loja,
+      responsavel,
+      'Fornecedor'
+    );
+    
+    seminovos = migrados.length;
+    console.log(`[NOTA ENTRADA] ${seminovos} produtos SEMI-NOVOS migrados para pendentes`);
+  }
+  
+  // Registrar migração na timeline da nota
+  if (novos > 0 || seminovos > 0) {
+    registrarTimeline(
+      nota,
+      responsavel,
+      'Estoque',
+      `Produtos migrados: ${novos} novo(s) para estoque, ${seminovos} seminovo(s) para pendentes`,
+      nota.status,
+      undefined,
+      `Migração automática baseada na categoria dos produtos`
+    );
+  }
+  
+  return { novos, seminovos };
 };
 
 // ============= FUNÇÕES DE FINALIZAÇÃO =============
