@@ -3111,7 +3111,7 @@ export default function VendasNova() {
 
       {/* Modal Selecionar Acessórios */}
       <Dialog open={showAcessorioModal} onOpenChange={setShowAcessorioModal}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Selecionar Acessórios</DialogTitle>
           </DialogHeader>
