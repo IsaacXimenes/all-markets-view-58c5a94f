@@ -51,6 +51,13 @@ export interface Produto {
   movimentacaoId?: string; // ID da movimentação ativa
   statusRetiradaPecas?: 'Pendente Assistência' | 'Em Desmonte' | 'Concluída' | 'Cancelada' | null; // Status do fluxo de retirada de peças
   retiradaPecasId?: string; // ID da retirada de peças ativa
+  // Campos para controle de empréstimo via Garantia/Assistência
+  statusEmprestimo?: 'Empréstimo - Assistência' | null; // Status quando aparelho está emprestado
+  emprestimoGarantiaId?: string; // ID da garantia vinculada
+  emprestimoClienteId?: string; // ID do cliente com o aparelho
+  emprestimoClienteNome?: string; // Nome do cliente
+  emprestimoOsId?: string; // ID da OS vinculada (se houver)
+  emprestimoDataHora?: string; // Data/hora do empréstimo
 }
 
 // ============= INTERFACES MOVIMENTAÇÃO MATRIZ =============

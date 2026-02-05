@@ -16,7 +16,9 @@ import {
   FileText, Package, Clock, Award, Smartphone, Wrench, ArrowRightLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { getLojas, getProdutosCadastro, getClientes, addCliente, Cliente } from '@/utils/cadastrosApi';
+import { getProdutosCadastro, getClientes, addCliente, Cliente, calcularTipoPessoa } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { addGarantia, addTimelineEntry, addTratativa } from '@/utils/garantiasApi';
 import { getPlanosPorModelo, PlanoGarantia, formatCurrency } from '@/utils/planosGarantiaApi';
 import { getProdutos, updateProduto, addMovimentacao, Produto } from '@/utils/estoqueApi';
@@ -25,7 +27,8 @@ import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 
 export default function GarantiasNovaManual() {
   const navigate = useNavigate();
-  const lojas = getLojas();
+  const { obterLojasTipoLoja, obterLojaById } = useCadastroStore();
+  const lojas = obterLojasTipoLoja(); // Apenas lojas tipo 'Loja' sincronizadas com Cadastros
   const produtos = getProdutosCadastro();
   const [clientes, setClientes] = useState<Cliente[]>(getClientes());
   
@@ -136,16 +139,14 @@ export default function GarantiasNovaManual() {
     );
   }, [buscaAparelho]);
 
-  // Filtered clients
+  // Filtered clients - incluir todos para permitir ver bloqueados
   const clientesFiltrados = useMemo(() => {
-    if (!buscaCliente) return clientes.filter(c => c.status === 'Ativo');
+    if (!buscaCliente) return clientes;
     const busca = buscaCliente.toLowerCase();
     return clientes.filter(c => 
-      c.status === 'Ativo' && (
-        c.nome.toLowerCase().includes(busca) ||
-        c.cpf.includes(busca) ||
-        c.telefone.includes(busca)
-      )
+      c.nome.toLowerCase().includes(busca) ||
+      c.cpf.includes(busca) ||
+      c.telefone.includes(busca)
     );
   }, [clientes, buscaCliente]);
 
@@ -160,6 +161,11 @@ export default function GarantiasNovaManual() {
   }, [formData.dataInicioGarantia, formData.mesesGarantia, formData.dataFimGarantia, formData.modoManual]);
 
   const handleSelectCliente = (cliente: Cliente) => {
+    // Bloquear seleção de clientes inativos
+    if (cliente.status === 'Inativo') {
+      toast.error('Este cliente está bloqueado e não pode ser selecionado.');
+      return;
+    }
     setFormData(prev => ({
       ...prev,
       clienteId: cliente.id,
@@ -169,6 +175,23 @@ export default function GarantiasNovaManual() {
     }));
     setShowClienteModal(false);
     setBuscaCliente('');
+  };
+  
+  // Helper para formatar CPF/CNPJ
+  const formatCpfCnpj = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      return numbers
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    } else {
+      return numbers
+        .replace(/(\d{2})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1/$2')
+        .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+    }
   };
 
   const handleAddCliente = () => {
@@ -325,9 +348,14 @@ export default function GarantiasNovaManual() {
 
       // Ações específicas por tipo
       if (tipoTratativa === 'Assistência + Empréstimo' && aparelhoSelecionado) {
+        // Atualizar produto com status de empréstimo (NÃO alterar origemEntrada)
         updateProduto(aparelhoSelecionado.id, { 
           quantidade: 0,
-          origemEntrada: 'Emprestado - Garantia'
+          statusEmprestimo: 'Empréstimo - Assistência',
+          emprestimoGarantiaId: novaGarantia.id,
+          emprestimoClienteId: formData.clienteId,
+          emprestimoClienteNome: formData.clienteNome,
+          emprestimoDataHora: new Date().toISOString()
         });
         addMovimentacao({
           data: new Date().toISOString(),
@@ -360,7 +388,10 @@ export default function GarantiasNovaManual() {
     navigate(`/garantias/${novaGarantia.id}`);
   };
 
-  const getLojaName = (id: string) => lojas.find(l => l.id === id)?.nome || id;
+  const getLojaName = (id: string) => {
+    const loja = obterLojaById(id);
+    return loja?.nome || id;
+  };
 
   return (
     <GarantiasLayout title="Nova Garantia Manual">
@@ -404,19 +435,13 @@ export default function GarantiasNovaManual() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Loja *</p>
-                  <Select 
-                    value={formData.lojaVenda} 
-                    onValueChange={(v) => setFormData(prev => ({ ...prev, lojaVenda: v }))}
-                  >
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {lojas.map(l => (
-                        <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <AutocompleteLoja
+                    value={formData.lojaVenda}
+                    onChange={(v) => setFormData(prev => ({ ...prev, lojaVenda: v }))}
+                    apenasLojasTipoLoja={true}
+                    placeholder="Selecione a loja"
+                    className="h-9"
+                  />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Status Garantia</p>
@@ -825,16 +850,16 @@ export default function GarantiasNovaManual() {
         </div>
       </div>
 
-      {/* Modal Buscar Cliente */}
+      {/* Modal Buscar Cliente - Padronizado com VendasNova */}
       <Dialog open={showClienteModal} onOpenChange={setShowClienteModal}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Buscar Cliente</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="flex gap-2">
               <Input
-                placeholder="Buscar por nome, CPF ou telefone..."
+                placeholder="Buscar por nome ou CPF..."
                 value={buscaCliente}
                 onChange={(e) => setBuscaCliente(e.target.value)}
                 className="flex-1"
@@ -844,34 +869,73 @@ export default function GarantiasNovaManual() {
                 Novo Cliente
               </Button>
             </div>
-            <div className="border rounded-lg max-h-[300px] overflow-auto">
+            <div className="border rounded-lg max-h-[400px] overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>CPF/CNPJ</TableHead>
                     <TableHead>Nome</TableHead>
-                    <TableHead>CPF</TableHead>
+                    <TableHead>Tipo Pessoa</TableHead>
+                    <TableHead>Tipo Cliente</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Telefone</TableHead>
-                    <TableHead>Cidade</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {clientesFiltrados.slice(0, 20).map(cliente => (
-                    <TableRow key={cliente.id}>
-                      <TableCell className="font-medium">{cliente.nome}</TableCell>
-                      <TableCell>{cliente.cpf}</TableCell>
-                      <TableCell>{cliente.telefone}</TableCell>
-                      <TableCell>{cliente.cidade}</TableCell>
-                      <TableCell>
-                        <Button size="sm" onClick={() => handleSelectCliente(cliente)}>
-                          Selecionar
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {clientesFiltrados.slice(0, 20).map(cliente => {
+                    const tipoPessoa = calcularTipoPessoa(cliente.cpf);
+                    const tipoPessoaAbrev = tipoPessoa === 'Pessoa Física' ? 'PF' : 'PJ';
+                    const isBloqueado = cliente.status === 'Inativo';
+                    
+                    return (
+                      <TableRow key={cliente.id} className={isBloqueado ? 'opacity-60' : ''}>
+                        <TableCell className="font-mono text-sm">{formatCpfCnpj(cliente.cpf)}</TableCell>
+                        <TableCell className="font-medium">{cliente.nome}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={tipoPessoaAbrev === 'PF' 
+                            ? 'bg-blue-500/10 text-blue-600 border-blue-500/30' 
+                            : 'bg-purple-500/10 text-purple-600 border-purple-500/30'
+                          }>
+                            {tipoPessoaAbrev}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={
+                            cliente.tipoCliente === 'VIP' 
+                              ? 'bg-amber-500/10 text-amber-600 border-amber-500/30' 
+                              : cliente.tipoCliente === 'Novo'
+                                ? 'bg-green-500/10 text-green-600 border-green-500/30'
+                                : 'bg-gray-500/10 text-gray-600 border-gray-500/30'
+                          }>
+                            {cliente.tipoCliente || 'Normal'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={isBloqueado ? 'destructive' : 'outline'} className={
+                            isBloqueado 
+                              ? '' 
+                              : 'bg-green-500/10 text-green-600 border-green-500/30'
+                          }>
+                            {cliente.status === 'Ativo' ? 'Ativo' : 'Bloqueado'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{cliente.telefone}</TableCell>
+                        <TableCell>
+                          {isBloqueado ? (
+                            <span className="text-sm text-destructive font-medium">Bloqueado</span>
+                          ) : (
+                            <Button size="sm" onClick={() => handleSelectCliente(cliente)}>
+                              Selecionar
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                   {clientesFiltrados.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         Nenhum cliente encontrado
                       </TableCell>
                     </TableRow>

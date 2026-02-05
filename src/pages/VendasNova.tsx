@@ -545,6 +545,7 @@ export default function VendasNova() {
       if (p.quantidade <= 0) return false;
       if (p.bloqueadoEmVendaId) return false; // Não mostrar produtos bloqueados
       if (p.statusMovimentacao) return false; // Não mostrar produtos em movimentação
+      if (p.statusEmprestimo) return false; // NOVO: Bloquear produtos emprestados
       
       // Se uma loja foi selecionada para a venda
       if (lojaVenda) {
@@ -569,6 +570,7 @@ export default function VendasNova() {
       if (p.quantidade <= 0) return false;
       if (p.bloqueadoEmVendaId) return false;
       if (p.statusMovimentacao) return false;
+      if (p.statusEmprestimo) return false; // NOVO: Bloquear produtos emprestados
       if (p.loja === lojaEstoqueReal) return false; // Excluir loja de estoque real
       if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
       if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;

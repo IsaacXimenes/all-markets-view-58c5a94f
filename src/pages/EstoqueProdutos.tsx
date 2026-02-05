@@ -356,6 +356,12 @@ export default function EstoqueProdutos() {
                             Em movimentação
                           </Badge>
                         )}
+                        {produto.statusEmprestimo === 'Empréstimo - Assistência' && (
+                          <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500/30">
+                            <ArrowRightLeft className="h-3 w-3 mr-1" />
+                            Empréstimo - Assistência
+                          </Badge>
+                        )}
                         {produto.statusRetiradaPecas && produto.statusRetiradaPecas !== 'Cancelada' && (
                           <Badge 
                             variant="outline" 

@@ -113,6 +113,7 @@ export default function OSAssistenciaNova() {
   // Form state
   const [lojaId, setLojaId] = useState('');
   const [tecnicoId, setTecnicoId] = useState('');
+  const [vendedorId, setVendedorId] = useState(''); // NOVO: campo vendedor
   const [setor, setSetor] = useState<'GARANTIA' | 'ASSISTÊNCIA' | 'TROCA' | ''>('');
   const [clienteId, setClienteId] = useState('');
   const [descricao, setDescricao] = useState('');
@@ -874,6 +875,15 @@ export default function OSAssistenciaNova() {
                   filtrarPorTipo="tecnicos"
                   className={!tecnicoId ? 'border-destructive' : ''}
                   placeholder="Selecione o técnico..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Vendedor</Label>
+                <AutocompleteColaborador
+                  value={vendedorId}
+                  onChange={setVendedorId}
+                  filtrarPorTipo="vendedoresEGestores"
+                  placeholder="Selecione o vendedor..."
                 />
               </div>
               <div className="space-y-2">
