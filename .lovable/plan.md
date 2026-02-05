@@ -1,186 +1,266 @@
 
-# Plano: Implementação de Melhorias nos Módulos de Assistência, Garantia e Estoque
+# Plano: Melhorias no Módulo de Estoque - Movimentações
 
 ## Visão Geral
-Este plano implementa 4 melhorias solicitadas:
-1. Campo "Vendedor" com Autocomplete no módulo de Assistência (Nova OS)
-2. Campo "Loja" sincronizado com Cadastros no módulo de Garantia (Nova Manual)
-3. Modal "Buscar Cliente" padronizado entre Garantia e Vendas
-4. Status "Empréstimo - Assistência" no Estoque com bloqueio de venda
+
+Este plano implementa melhorias significativas nas telas de **Movimentações Matriz**, **Movimentações Aparelhos** e **Movimentações Acessórios**, focando em validação de IMEI, gestão de status dinâmica, logs de auditoria e padronização de campos.
 
 ---
 
-## 1. Campo Vendedor no Módulo de Assistência
+## 1. Movimentações - Matriz
 
-**Arquivo:** `src/pages/OSAssistenciaNova.tsx`
+### 1.1 Leitura de IMEI via Câmera (Registrar Devolução + Nova Movimentação)
 
-### Alterações:
-- Adicionar novo campo "Vendedor" no quadro "Informações da OS"
-- Utilizar o componente `AutocompleteColaborador` já existente
-- Filtrar por vendedores usando `filtrarPorTipo="vendedoresEGestores"`
-- Armazenar o `vendedorId` no state e incluir ao criar a OS
+**Arquivos:** `EstoqueMovimentacaoMatrizDetalhes.tsx`, `EstoqueNovaMovimentacaoMatriz.tsx`
 
-### Estrutura proposta:
+**Alterações:**
+- Adicionar botão de câmera ao lado do campo IMEI no modal de devolução
+- Importar e utilizar o componente `BarcodeScanner` existente
+- Aplicar máscara `formatIMEI` nos itens pendentes listados no modal
+- Limpar campo IMEI ao fechar o modal (cancelar ou confirmar)
+
+**Estrutura do Input com Câmera:**
 ```text
-Quadro "Informações da OS"
-├── Loja (já existe)
-├── Técnico (já existe)  
-├── Vendedor (NOVO) ← AutocompleteColaborador
-├── Setor (já existe)
-└── Status (já existe)
+┌─────────────────────────────────────────────────┐
+│ IMEI do Aparelho *                              │
+│ ┌─────────────────────────────────┐ ┌────────┐  │
+│ │ Informe ou escaneie o IMEI...   │ │ 📷     │  │
+│ └─────────────────────────────────┘ └────────┘  │
+└─────────────────────────────────────────────────┘
 ```
 
----
+### 1.2 Nova Lógica de Status Dinâmico
 
-## 2. Campo Loja Sincronizado no Módulo de Garantia
+**Arquivo:** `estoqueApi.ts`
 
-**Arquivo:** `src/pages/GarantiasNovaManual.tsx`
+Substituir os 3 status atuais por 4 novos status:
 
-### Problema Atual:
-- Usa `getLojas()` de `cadastrosApi` que retorna todas as lojas (incluindo Estoque, Assistência, etc.)
-- Não filtra apenas lojas ativas do tipo "Loja"
+| Status Atual | Novo Status |
+|--------------|-------------|
+| `Aguardando Retorno` | `Pendente` |
+| `Retorno Atrasado` | `Atrasado` |
+| `Concluída` | `Finalizado - Dentro do Prazo` ou `Finalizado - Atrasado` |
 
-### Solução:
-- Substituir `getLojas()` por `useCadastroStore().obterLojasTipoLoja()`
-- Substituir o `<Select>` estático pelo `<AutocompleteLoja>` com `apenasLojasTipoLoja={true}`
+**Lógica de Transição:**
+```text
+1. Movimentação criada → status = 'Pendente'
+2. Se horário atual > 22:00 do dia limite e status = 'Pendente':
+   → status muda automaticamente para 'Atrasado'
+3. Ao finalizar conferência de todos os itens:
+   - Se status era 'Pendente' e horário < 22:00 → 'Finalizado - Dentro do Prazo'
+   - Se status era 'Atrasado' OU horário >= 22:00 → 'Finalizado - Atrasado'
+```
 
----
-
-## 3. Modal Buscar Cliente Padronizado
-
-**Arquivo:** `src/pages/GarantiasNovaManual.tsx`
-
-### Problema Atual:
-O modal de cliente em `GarantiasNovaManual` tem estrutura simplificada diferente do modal de `VendasNova.tsx`.
-
-### Solução - Replicar estrutura do VendasNova:
-
-| Característica | VendasNova (referência) | GarantiasNovaManual (ajustar) |
-|----------------|-------------------------|-------------------------------|
-| Tamanho Modal | `max-w-4xl` | Aplicar `max-w-4xl` |
-| Colunas Tabela | CPF, Nome, Tipo Pessoa, Tipo Cliente, Status, Telefone, Ações | Adicionar mesmas colunas |
-| Busca | Input com placeholder "Buscar por nome ou CPF..." | Manter padrão |
-| Botão Novo Cliente | Presente com ícone `Plus` | Manter padrão |
-| Validação Bloqueio | Verifica `status === 'Inativo'` e bloqueia seleção | Adicionar validação |
-
-### Campos da Tabela (padronizados):
-1. CPF/CNPJ
-2. Nome
-3. Tipo Pessoa (PF/PJ com badge colorido)
-4. Tipo Cliente (VIP/Normal/Novo)
-5. Status (Ativo/Bloqueado)
-6. Telefone
-7. Ações (Selecionar ou texto "Bloqueado")
-
----
-
-## 4. Status "Empréstimo - Assistência" no Estoque
-
-### 4.1 Alterações na Interface de Produto
-
-**Arquivo:** `src/utils/estoqueApi.ts`
-
-Adicionar novo campo na interface `Produto`:
+**Interface Atualizada:**
 ```typescript
-interface Produto {
-  // ... campos existentes ...
-  statusEmprestimo?: 'Empréstimo - Assistência' | null;
-  emprestimoGarantiaId?: string; // ID da garantia vinculada
-  emprestimoClienteId?: string;   // ID do cliente com o aparelho
-  emprestimoClienteNome?: string; // Nome do cliente
-  emprestimoOsId?: string;        // ID da OS vinculada (se houver)
+export interface MovimentacaoMatriz {
+  // ... campos existentes
+  statusMovimentacao: 'Pendente' | 'Atrasado' | 'Finalizado - Dentro do Prazo' | 'Finalizado - Atrasado';
 }
 ```
 
-### 4.2 Alterações na Tratativa de Empréstimo
+### 1.3 Quadro de Logs de Movimentação
 
-**Arquivo:** `src/pages/GarantiasNovaManual.tsx`
+**Arquivo:** `EstoqueMovimentacaoMatrizDetalhes.tsx`
 
-Quando tratativa = "Assistência + Empréstimo":
-- Atualizar produto com `statusEmprestimo: 'Empréstimo - Assistência'`
-- Armazenar `emprestimoGarantiaId`, `emprestimoClienteId`, `emprestimoClienteNome`
-- NÃO alterar `origemEntrada` (manter origem original)
+Adicionar um **4º quadro** abaixo dos 3 existentes (largura total):
 
-### 4.3 Visualização no Estoque
-
-**Arquivo:** `src/pages/Estoque.tsx` (aba Aparelhos)
-
-Adicionar identificação visual:
-- Badge/Tag `Empréstimo - Assistência` na linha do produto (similar a "Em movimentação")
-- Cor de fundo diferenciada (ex: `bg-purple-500/10`)
-- Tooltip com informações: Cliente, Garantia ID, Data
-
-### 4.4 Bloqueio de Venda
-
-**Arquivo:** `src/pages/VendasNova.tsx`
-
-Na filtragem de produtos disponíveis:
-```typescript
-const produtosFiltrados = produtosEstoque.filter(p => {
-  if (p.quantidade <= 0) return false;
-  if (p.bloqueadoEmVendaId) return false;
-  if (p.statusMovimentacao) return false;
-  if (p.statusEmprestimo) return false; // NOVO: Bloquear empréstimos
-  // ...
-});
+```text
+┌──────────────────────────────────────────────────────────────────────────┐
+│ 📜 Histórico de Ações                                          [Badge n] │
+├──────────────────────────────────────────────────────────────────────────┤
+│ 05/02/2025 14:30 - João Silva                                            │
+│   ✓ Item iPhone 14 Pro (IMEI: 35-123456-789012-3) conferido             │
+├──────────────────────────────────────────────────────────────────────────┤
+│ 05/02/2025 10:00 - Sistema                                               │
+│   ⚠️ Status alterado para "Atrasado" (horário limite ultrapassado)       │
+├──────────────────────────────────────────────────────────────────────────┤
+│ 04/02/2025 18:30 - Maria Santos                                          │
+│   📦 Movimentação criada com 5 aparelhos                                 │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Dados exibidos de `movimentacao.timeline`:**
+- Data/Hora da ação
+- Usuário responsável
+- Descrição da ação com ícone contextual
+
+### 1.4 Comportamento de Movimentação Matriz (SEM status "Em movimentação")
+
+**Arquivo:** `estoqueApi.ts` → função `criarMovimentacaoMatriz`
+
+**Mudança Crítica:**
+- **REMOVER** a atribuição de `statusMovimentacao = 'Em movimentação'` nos produtos
+- Apenas atualizar `lojaAtualId` para a loja destino imediatamente
+- Produto continua disponível para venda na loja destino
+- A movimentação é apenas um registro de rastreabilidade
+
+**Antes:**
+```typescript
+produto.statusMovimentacao = 'Em movimentação';
+produto.movimentacaoId = novaMovimentacao.id;
+```
+
+**Depois:**
+```typescript
+// Apenas atualizar localização física (sem bloqueio)
+produto.lojaAtualId = dados.lojaDestinoId;
+// Manter referência para rastreabilidade, mas sem bloquear
+produto.movimentacaoId = novaMovimentacao.id;
+```
+
+### 1.5 Leitura de IMEI via Câmera ao Lançar Novo Registro
+
+**Arquivo:** `EstoqueNovaMovimentacaoMatriz.tsx`
+
+Adicionar opção de scanner no modal de seleção de aparelhos:
+- Botão "Escanear IMEI" que abre `BarcodeScanner`
+- Ao ler, busca o produto na lista e adiciona automaticamente
+
+### 1.6 Limpeza de Modal de Devolução
+
+**Arquivo:** `EstoqueMovimentacaoMatrizDetalhes.tsx`
+
+Garantir que ao fechar o modal (por qualquer meio):
+```typescript
+const handleCloseModal = () => {
+  setImeiDevolucao('');
+  setResponsavelDevolucao('');
+  setShowDevolucaoModal(false);
+};
+```
+
+---
+
+## 2. Movimentações - Aparelhos
+
+### 2.1 Leitura de IMEI via Câmera
+
+**Arquivo:** `EstoqueMovimentacoes.tsx`
+
+- Adicionar botão de câmera no campo de busca de IMEI (filtro da tabela)
+- Adicionar botão de câmera no modal "Buscar Produto no Estoque"
+- Utilizar o componente `BarcodeScanner` existente
+
+### 2.2 Campos Origem e Destino Sincronizados
+
+**Arquivo:** `EstoqueMovimentacoes.tsx`
+
+O código atual já utiliza `AutocompleteLoja` para os campos - verificar se está filtrando apenas lojas ativas.
+
+**Validação:**
+- Filtros Origem/Destino: Já usam `AutocompleteLoja`
+- Modal de Registro: Origem é preenchida automaticamente, Destino usa `AutocompleteLoja`
+
+Nenhuma alteração necessária aqui, apenas validar funcionamento.
+
+---
+
+## 3. Movimentações - Acessórios
+
+### 3.1 Campos Origem e Destino Sincronizados
+
+**Arquivo:** `EstoqueMovimentacoesAcessorios.tsx`
+
+**Problema Atual (linha 282-304):**
+Os filtros e o formulário usam `Select` com `lojas.map(loja => loja.nome)` - isso passa o **nome** em vez do **ID**.
+
+**Solução:**
+Substituir os `<Select>` por `<AutocompleteLoja>` para:
+1. Filtro de Origem (linha 282-292)
+2. Filtro de Destino (linha 294-304)
+3. Campo Origem no modal (linha 359-368)
+4. Campo Destino no modal (linha 371-380)
 
 ---
 
 ## Resumo de Arquivos a Modificar
 
-| Arquivo | Tipo | Alterações |
-|---------|------|------------|
-| `src/utils/estoqueApi.ts` | API | Adicionar campos de empréstimo na interface `Produto` |
-| `src/pages/OSAssistenciaNova.tsx` | UI | Adicionar campo Vendedor com AutocompleteColaborador |
-| `src/pages/GarantiasNovaManual.tsx` | UI | Sincronizar campo Loja + Padronizar modal cliente + Status empréstimo |
-| `src/pages/Estoque.tsx` | UI | Exibir badge e identificação visual de empréstimo |
-| `src/pages/VendasNova.tsx` | Lógica | Bloquear produtos com statusEmprestimo |
-
----
-
-## Fluxo do Empréstimo (Diagrama)
-
-```text
-1. Garantia > Nova Manual
-   └── Tratativa: "Assistência + Empréstimo"
-       └── Selecionar aparelho Seminovo
-
-2. Sistema atualiza Produto:
-   ├── statusEmprestimo = 'Empréstimo - Assistência'
-   ├── emprestimoGarantiaId = GAR-XXXX
-   ├── emprestimoClienteId = CLI-XXX
-   └── emprestimoClienteNome = "Nome Cliente"
-
-3. No Estoque > Aparelhos:
-   └── Linha do produto exibe:
-       ├── Badge roxo "Empréstimo - Assistência"
-       └── Tooltip: "Cliente: Nome | Garantia: GAR-XXXX"
-
-4. Em Vendas > Nova Venda:
-   └── Produto NÃO aparece na lista (bloqueado)
-
-5. Ao registrar devolução:
-   └── Limpar statusEmprestimo e campos relacionados
-```
+| Arquivo | Alterações |
+|---------|-----------|
+| `src/utils/estoqueApi.ts` | Nova lógica de status (4 estados), remover bloqueio "Em movimentação" |
+| `src/pages/EstoqueMovimentacaoMatrizDetalhes.tsx` | Scanner IMEI, máscara IMEI, quadro de logs, limpeza de modal |
+| `src/pages/EstoqueNovaMovimentacaoMatriz.tsx` | Scanner IMEI na seleção de aparelhos |
+| `src/pages/EstoqueMovimentacoesMatriz.tsx` | Atualizar badges para 4 novos status |
+| `src/pages/EstoqueMovimentacoes.tsx` | Scanner IMEI no filtro e modal |
+| `src/pages/EstoqueMovimentacoesAcessorios.tsx` | Substituir Selects por AutocompleteLoja |
 
 ---
 
 ## Detalhes Técnicos
 
-### Campo Vendedor (OSAssistenciaNova)
-- Posição: Logo após o campo "Técnico"
-- Componente: `<AutocompleteColaborador filtrarPorTipo="vendedoresEGestores" />`
-- State: `vendedorId` (string)
-- Persistência: Incluir no objeto `addOrdemServico()`
+### Novos Status e Cores (Badges)
 
-### Modal Cliente (GarantiasNovaManual)
-- Dimensão: `max-w-4xl`
-- Altura máxima tabela: `max-h-[400px] overflow-auto`
-- Validação: Impedir seleção de clientes com `status === 'Inativo'`
-- Formatação CPF/CNPJ: Usar função `formatCpfCnpj` existente
+| Status | Cor | Ícone |
+|--------|-----|-------|
+| `Pendente` | `bg-yellow-500` | `Clock` |
+| `Atrasado` | `bg-destructive animate-pulse` | `AlertTriangle` |
+| `Finalizado - Dentro do Prazo` | `bg-green-600` | `CheckCircle` |
+| `Finalizado - Atrasado` | `bg-orange-500` | `CheckCircle` + `AlertTriangle` |
 
-### Identificação Visual Empréstimo
-- Cor badge: `bg-purple-500/10 text-purple-600 border-purple-500/30`
-- Posição: Na coluna de Status ou como nova coluna "Situação"
-- Ícone sugerido: `ArrowRightLeft` ou `Handshake`
+### Lógica de Verificação Automática de Status
+
+Adicionar função `verificarStatusMovimentacaoMatriz` que:
+1. É chamada ao carregar a página
+2. Verifica todas as movimentações com status `Pendente`
+3. Se `dataHoraLimiteRetorno < agora`, muda para `Atrasado`
+4. Registra a mudança na timeline
+
+### Integração do BarcodeScanner
+
+Padrão de uso:
+```typescript
+const [showScanner, setShowScanner] = useState(false);
+
+<div className="flex gap-2">
+  <Input 
+    placeholder="IMEI..."
+    value={imeiDevolucao}
+    onChange={(e) => setImeiDevolucao(formatIMEI(e.target.value))}
+  />
+  <Button variant="outline" size="icon" onClick={() => setShowScanner(true)}>
+    <Camera className="h-4 w-4" />
+  </Button>
+</div>
+
+<BarcodeScanner
+  open={showScanner}
+  onScan={(code) => {
+    setImeiDevolucao(code);
+    setShowScanner(false);
+  }}
+  onClose={() => setShowScanner(false)}
+/>
+```
+
+### Estrutura do Quadro de Logs
+
+```typescript
+<Card className="col-span-full mt-6">
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2">
+      <History className="h-4 w-4" />
+      Histórico de Ações
+      <Badge variant="secondary">{movimentacao.timeline.length}</Badge>
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    <ScrollArea className="h-[250px]">
+      {movimentacao.timeline.map(entry => (
+        <div key={entry.id} className="flex gap-4 py-3 border-b last:border-0">
+          <div className="text-sm text-muted-foreground whitespace-nowrap">
+            {format(new Date(entry.data), "dd/MM/yyyy HH:mm")}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium">{entry.titulo}</p>
+            <p className="text-xs text-muted-foreground">{entry.descricao}</p>
+            {entry.responsavel && (
+              <p className="text-xs text-primary">Por: {entry.responsavel}</p>
+            )}
+          </div>
+        </div>
+      ))}
+    </ScrollArea>
+  </CardContent>
+</Card>
+```
