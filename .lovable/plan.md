@@ -1,165 +1,96 @@
 
-# Plano: Exibir Anexos do Trade-In na Tela de Nova Venda
+# Plano: Atualizar Quadro de Retirada/Logística em VendasEditar.tsx
 
 ## Objetivo
-Mostrar as imagens e o termo anexados **imediatamente** na tabela de Trade-Ins da tela de Nova Venda, antes de finalizar a venda.
+Igualar as funcionalidades do quadro "Retirada / Logística" na tela de Editar Venda (`VendasEditar.tsx`) às da tela Nova Venda (`VendasNova.tsx`).
 
 ---
 
-## Alterações Propostas
+## Diferenças Identificadas
 
-### Arquivo: `src/pages/VendasNova.tsx`
+| Funcionalidade | VendasNova.tsx | VendasEditar.tsx |
+|----------------|----------------|------------------|
+| Autocomplete de Local de Entrega | Sim | Nao (campo nao existe) |
+| Valor Recomendado (read-only) | Sim | Nao |
+| Indicador de valor abaixo do recomendado | Sim (alerta vermelho) | Nao |
+| Grid dinâmico 5 colunas para Entrega | Sim | 4 colunas |
+| Import de taxasEntregaApi | Sim | Nao |
 
-#### 1. Adicionar Novas Colunas na Tabela de Trade-Ins (linhas 1571-1611)
+---
 
-**Colunas atuais:**
-- Modelo | Condição | IMEI | IMEI Validado | Valor de Compra Usado | (remover)
+## Alterações Necessárias
 
-**Novas colunas a adicionar:**
-- **Status Entrega**: Badge mostrando "Entregue" (verde) ou "Com Cliente" (âmbar)
-- **Anexos**: Ícones clicáveis para visualizar Termo e Fotos em modal
+### 1. Adicionar Imports Faltantes
 
-```text
-<TableHead>Status</TableHead>
-<TableHead>Anexos</TableHead>
+```typescript
+import { getTaxasEntregaAtivas, TaxaEntrega } from '@/utils/taxasEntregaApi';
+import { AlertTriangle } from 'lucide-react'; // Já existe, verificar
 ```
 
-#### 2. Renderização das Novas Células
+### 2. Adicionar Novos Estados (linhas ~90-95)
 
-```text
-{/* Coluna Status Entrega */}
-<TableCell>
-  {trade.tipoEntrega === 'Entregue no Ato' ? (
-    <Badge className="bg-green-500">Entregue</Badge>
-  ) : trade.tipoEntrega === 'Com o Cliente' ? (
-    <Badge className="bg-amber-500">Com Cliente</Badge>
-  ) : (
-    <span className="text-muted-foreground">-</span>
-  )}
-</TableCell>
-
-{/* Coluna Anexos */}
-<TableCell>
-  {trade.tipoEntrega === 'Com o Cliente' && (
-    <div className="flex items-center gap-2">
-      {/* Ícone Termo */}
-      {trade.termoResponsabilidade && (
-        <Tooltip>
-          <TooltipTrigger>
-            <FileText className="h-4 w-4 text-blue-500 cursor-pointer" 
-              onClick={() => abrirPreviewAnexo(trade, 'termo')} />
-          </TooltipTrigger>
-          <TooltipContent>Termo de Responsabilidade</TooltipContent>
-        </Tooltip>
-      )}
-      
-      {/* Ícone Fotos */}
-      {trade.fotosAparelho && trade.fotosAparelho.length > 0 && (
-        <Tooltip>
-          <TooltipTrigger>
-            <div className="relative cursor-pointer" 
-              onClick={() => abrirPreviewAnexo(trade, 'fotos')}>
-              <Camera className="h-4 w-4 text-green-500" />
-              <span className="absolute -top-1 -right-1 text-xs bg-primary text-white rounded-full w-4 h-4 flex items-center justify-center">
-                {trade.fotosAparelho.length}
-              </span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>{trade.fotosAparelho.length} foto(s)</TooltipContent>
-        </Tooltip>
-      )}
-    </div>
-  )}
-</TableCell>
+```typescript
+// Estados para Local de Entrega com autocomplete
+const [valorRecomendadoEntrega, setValorRecomendadoEntrega] = useState(0);
+const [localEntregaId, setLocalEntregaId] = useState('');
+const [localEntregaNome, setLocalEntregaNome] = useState('');
+const [buscaLocalEntrega, setBuscaLocalEntrega] = useState('');
+const [taxasEntrega] = useState<TaxaEntrega[]>(getTaxasEntregaAtivas());
+const [showLocaisEntrega, setShowLocaisEntrega] = useState(false);
 ```
 
-#### 3. Adicionar Estado e Modal de Visualização
+### 3. Atualizar Carregamento da Venda (useEffect ~linha 173)
 
-```text
-// Estado para modal de preview
-const [previewAnexo, setPreviewAnexo] = useState<{
-  aberto: boolean;
-  tipo: 'termo' | 'fotos';
-  trade: ItemTradeIn | null;
-}>({ aberto: false, tipo: 'termo', trade: null });
+Carregar dados do local de entrega se existirem na venda original:
 
-// Função para abrir preview
-const abrirPreviewAnexo = (trade: ItemTradeIn, tipo: 'termo' | 'fotos') => {
-  setPreviewAnexo({ aberto: true, tipo, trade });
-};
+```typescript
+// Carregar dados de entrega se existirem
+if (venda.localEntregaId) {
+  setLocalEntregaId(venda.localEntregaId);
+  const taxa = getTaxasEntregaAtivas().find(t => t.id === venda.localEntregaId);
+  if (taxa) {
+    setLocalEntregaNome(taxa.local);
+    setValorRecomendadoEntrega(taxa.valor);
+  }
+}
 ```
 
-#### 4. Modal de Visualização de Anexos
+### 4. Substituir o Quadro de Retirada/Logística (linhas 1069-1171)
+
+Copiar a estrutura completa de VendasNova.tsx que inclui:
+
+- Grid dinâmico de 5 colunas quando `tipoRetirada === 'Entrega'`
+- Autocomplete de Local de Entrega com dropdown de sugestões
+- Campo "Valor Recom." (read-only)
+- Campo "Valor Entrega" com indicador de diferença
+- Campo Motoboy (já existe)
+
+---
+
+## Estrutura do Novo Quadro
 
 ```text
-{/* Modal Preview Anexos Trade-In */}
-<Dialog open={previewAnexo.aberto} onOpenChange={(open) => 
-  setPreviewAnexo({ ...previewAnexo, aberto: open })}>
-  <DialogContent className="max-w-3xl">
-    <DialogHeader>
-      <DialogTitle>
-        {previewAnexo.tipo === 'termo' 
-          ? 'Termo de Responsabilidade' 
-          : `Fotos do Aparelho (${previewAnexo.trade?.fotosAparelho?.length || 0})`}
-      </DialogTitle>
-    </DialogHeader>
-    
-    {previewAnexo.tipo === 'termo' && previewAnexo.trade?.termoResponsabilidade && (
-      <div className="space-y-4">
-        {/* Preview do documento ou link para download */}
-        {previewAnexo.trade.termoResponsabilidade.tipo.includes('image') ? (
-          <img src={previewAnexo.trade.termoResponsabilidade.dataUrl} 
-            className="max-h-[60vh] object-contain mx-auto rounded" />
-        ) : (
-          <div className="text-center py-8">
-            <FileText className="h-16 w-16 mx-auto text-muted-foreground" />
-            <p>{previewAnexo.trade.termoResponsabilidade.nome}</p>
-            <Button onClick={() => {/* download logic */}}>
-              Baixar Documento
-            </Button>
-          </div>
-        )}
-      </div>
-    )}
-    
-    {previewAnexo.tipo === 'fotos' && previewAnexo.trade?.fotosAparelho && (
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {previewAnexo.trade.fotosAparelho.map((foto) => (
-          <img key={foto.id} src={foto.dataUrl} 
-            className="w-full aspect-square object-cover rounded cursor-pointer hover:opacity-80"
-            onClick={() => window.open(foto.dataUrl, '_blank')} />
-        ))}
-      </div>
-    )}
-  </DialogContent>
-</Dialog>
-```
-
-#### 5. Importar Componentes Necessários
-
-```text
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-// Camera já está importado
+Tipo: Entrega
+├── Tipo de Retirada (Select)
+├── Local de Entrega (Autocomplete com lista de taxas)
+├── Valor Recom. (read-only, mostra valor do cadastro)
+├── Valor Entrega (editável, com alerta se menor que recomendado)
+└── Motoboy (Select obrigatório)
 ```
 
 ---
 
-## Resumo Visual
+## Arquivo a Modificar
 
-**Antes:**
-| Modelo | Condição | IMEI | IMEI Validado | Valor | X |
-
-**Depois:**
-| Modelo | Condição | IMEI | IMEI Validado | Status | Anexos | Valor | X |
-
-Com ícones clicáveis que abrem modal para visualizar:
-- Termo de Responsabilidade (PDF/imagem)
-- Grid de Fotos do Aparelho
+| Arquivo | Alterações |
+|---------|------------|
+| `src/pages/VendasEditar.tsx` | Adicionar imports, estados e substituir seção Retirada/Logística |
 
 ---
 
 ## Benefícios
 
-1. **Feedback imediato** - usuário vê os anexos assim que adiciona
-2. **Verificação visual** - pode conferir se anexou corretamente antes de salvar
-3. **Consistência** - mesmo padrão de ícones usado em Vendas.tsx e VendaDetalhes.tsx
+1. **Consistência** - Mesmo comportamento em Nova Venda e Editar Venda
+2. **Autocomplete** - Facilita seleção do local de entrega
+3. **Controle de valor** - Visualização do valor recomendado e alerta de desconto
+4. **UX melhorada** - Usuário não precisa lembrar valores de entrega
