@@ -23,7 +23,8 @@ import {
   calcularSLA,
   registrarRecebimento,
   getEstatisticasBaseTrocas,
-  SLAInfo
+  SLAInfo,
+  migrarParaProdutosPendentes
 } from '@/utils/baseTrocasPendentesApi';
 import { AnexoTemporario } from '@/components/estoque/BufferAnexos';
 import { formatarMoeda } from '@/utils/formatUtils';
@@ -138,9 +139,18 @@ export default function EstoquePendenciasBaseTrocas() {
       });
 
       if (resultado) {
-        toast.success('Recebimento registrado com sucesso!', {
-          description: 'Aparelho migrado para Produtos Pendentes'
-        });
+        // Migrar para Produtos Pendentes (inicia SLA de Tratativas)
+        const produtoMigrado = migrarParaProdutosPendentes(tradeInSelecionado.id);
+        
+        if (produtoMigrado) {
+          toast.success('Recebimento registrado com sucesso!', {
+            description: `Aparelho migrado para Produtos Pendentes (${produtoMigrado.id}). SLA de Tratativas iniciado.`
+          });
+        } else {
+          toast.success('Recebimento registrado com sucesso!', {
+            description: 'Aparelho aguardando migração para Produtos Pendentes'
+          });
+        }
         
         // Atualizar lista
         setTradeIns(getTradeInsPendentesAguardando());
@@ -269,6 +279,7 @@ export default function EstoquePendenciasBaseTrocas() {
                   <TableHead>Cliente</TableHead>
                   <TableHead>ID Venda</TableHead>
                   <TableHead>Loja</TableHead>
+                  <TableHead>Vendedor</TableHead>
                   <TableHead className="text-right">Valor Trade-In</TableHead>
                   <TableHead>SLA Devolução</TableHead>
                   <TableHead>Ações</TableHead>
@@ -284,6 +295,7 @@ export default function EstoquePendenciasBaseTrocas() {
                       <Badge variant="outline">{tradeIn.vendaId}</Badge>
                     </TableCell>
                     <TableCell>{obterNomeLoja(tradeIn.lojaVenda)}</TableCell>
+                    <TableCell>{tradeIn.vendedorNome || obterNomeColaborador(tradeIn.vendedorId)}</TableCell>
                     <TableCell className="text-right font-medium text-green-600">
                       {formatarMoeda(tradeIn.tradeIn.valorCompraUsado)}
                     </TableCell>
@@ -304,7 +316,7 @@ export default function EstoquePendenciasBaseTrocas() {
                 ))}
                 {tradeInsFiltrados.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                       <Package className="h-12 w-12 mx-auto mb-4 opacity-30" />
                       <p>Nenhum aparelho aguardando devolução</p>
                     </TableCell>
