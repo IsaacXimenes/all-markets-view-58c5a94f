@@ -109,6 +109,8 @@ import GarantiaContatosAtivosEditar from "./pages/GarantiaContatosAtivosEditar";
 import OSAnaliseGarantia from "./pages/OSAnaliseGarantia";
 import CadastrosPlanosGarantia from "./pages/CadastrosPlanosGarantia";
 import VendasEditar from "./pages/VendasEditar";
+import GestaoAdministrativa from "./pages/GestaoAdministrativa";
+import GestaoAdministrativaLogs from "./pages/GestaoAdministrativaLogs";
 
 const queryClient = new QueryClient();
 
@@ -239,6 +241,10 @@ const App = () => (
               <Route path="/garantias/extendida" element={<GarantiasExtendida />} />
               <Route path="/garantias/extendida/:id" element={<GarantiaExtendidaDetalhes />} />
               <Route path="/garantias/:id" element={<GarantiaDetalhes />} />
+              
+              {/* Gestão Administrativa */}
+              <Route path="/gestao-administrativa" element={<GestaoAdministrativa />} />
+              <Route path="/gestao-administrativa/logs" element={<GestaoAdministrativaLogs />} />
             </Route>
             
             {/* Rota 404 */}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  Package, Settings, ChevronRight, ChevronLeft, Home, Banknote, Users, Database, ShoppingCart, Wrench, BarChart3, Shield
+  Package, Settings, ChevronRight, ChevronLeft, Home, Banknote, Users, Database, ShoppingCart, Wrench, BarChart3, Shield, ClipboardCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ const navItems: NavItem[] = [
   { title: 'Painel', icon: Home, href: '/' },
   { title: 'Recursos Humanos', icon: Users, href: '/rh' },
   { title: 'Financeiro', icon: Banknote, href: '/financeiro/conferencia' },
+  { title: 'Gestão Administrativa', icon: ClipboardCheck, href: '/gestao-administrativa' },
   { title: 'Estoque', icon: Package, href: '/estoque' },
   { title: 'Vendas', icon: ShoppingCart, href: '/vendas' },
   { title: 'Garantias', icon: Shield, href: '/garantias/nova' },
@@ -61,6 +62,9 @@ function SidebarContent({
     }
     if (href === '/garantias/nova') {
       return location.pathname.startsWith('/garantias');
+    }
+    if (href === '/gestao-administrativa') {
+      return location.pathname.startsWith('/gestao-administrativa');
     }
     return location.pathname.startsWith(href);
   };

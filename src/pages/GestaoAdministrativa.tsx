@@ -1,0 +1,636 @@
+import { useState, useMemo } from 'react';
+import { GestaoAdministrativaLayout } from '@/components/layout/GestaoAdministrativaLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Eye, Edit3, DollarSign, CheckCircle2, Clock, AlertTriangle, ShieldAlert, TrendingUp, Calendar, Info } from 'lucide-react';
+import { useCadastroStore } from '@/store/cadastroStore';
+import { useAuthStore } from '@/store/authStore';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  consolidarVendasPorDia,
+  getVendasPorDiaMetodo,
+  getVendasDoDia,
+  toggleConferencia,
+  registrarAjuste,
+  calcularResumoConferencia,
+  formatarDataExibicao,
+  getCompetenciasDisponiveis,
+  METODOS_PAGAMENTO,
+  ConferenciaDiaria,
+  VendaDrillDown,
+  AjusteDivergencia
+} from '@/utils/gestaoAdministrativaApi';
+import { Venda } from '@/utils/vendasApi';
+
+export default function GestaoAdministrativa() {
+  const { lojas, colaboradores } = useCadastroStore();
+  const { user } = useAuthStore();
+  
+  // Verificar se é gestor
+  const colaboradorLogado = colaboradores.find(c => c.id === user?.colaborador?.id);
+  const ehGestor = colaboradorLogado?.eh_gestor ?? false;
+  
+  // Estados de filtros
+  const competencias = getCompetenciasDisponiveis();
+  const [competencia, setCompetencia] = useState(competencias[0]?.value || format(new Date(), 'yyyy-MM'));
+  const [lojaId, setLojaId] = useState<string>('todas');
+  const [vendedorId, setVendedorId] = useState<string>('todos');
+  
+  // Estados de modais
+  const [modalDetalhesOpen, setModalDetalhesOpen] = useState(false);
+  const [modalAjusteOpen, setModalAjusteOpen] = useState(false);
+  const [conferenciaSelecionada, setConferenciaSelecionada] = useState<ConferenciaDiaria | null>(null);
+  const [metodoDrillDown, setMetodoDrillDown] = useState<string | null>(null);
+  const [vendasDrillDown, setVendasDrillDown] = useState<VendaDrillDown[]>([]);
+  const [vendasDoDia, setVendasDoDia] = useState<Venda[]>([]);
+  
+  // Estados do modal de ajuste
+  const [ajusteMetodo, setAjusteMetodo] = useState('');
+  const [ajusteValor, setAjusteValor] = useState('');
+  const [ajusteJustificativa, setAjusteJustificativa] = useState('');
+  
+  // Forçar re-render após ações
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  // Consolidar dados
+  const conferencias = useMemo(() => {
+    return consolidarVendasPorDia(competencia, lojaId, vendedorId);
+  }, [competencia, lojaId, vendedorId, refreshKey]);
+  
+  const resumo = useMemo(() => {
+    return calcularResumoConferencia(conferencias);
+  }, [conferencias]);
+  
+  // Handlers
+  const handleToggleConferencia = (conf: ConferenciaDiaria, metodo: string) => {
+    if (!ehGestor) {
+      toast.error('Apenas gestores podem conferir valores');
+      return;
+    }
+    
+    const valorBruto = conf.totaisPorMetodo[metodo]?.bruto || 0;
+    if (valorBruto === 0) return;
+    
+    toggleConferencia(
+      competencia,
+      conf.data,
+      lojaId !== 'todas' ? lojaId : conf.lojaId,
+      metodo,
+      user?.colaborador?.id || '',
+      user?.colaborador?.nome || 'Usuário',
+      valorBruto
+    );
+    
+    setRefreshKey(k => k + 1);
+    toast.success(`${metodo} ${conf.totaisPorMetodo[metodo]?.conferido ? 'desmarcado' : 'conferido'} com sucesso`);
+  };
+  
+  const handleAbrirDrillDown = (conf: ConferenciaDiaria, metodo: string) => {
+    const vendas = getVendasPorDiaMetodo(conf.data, lojaId, metodo);
+    setVendasDrillDown(vendas);
+    setMetodoDrillDown(metodo);
+    setConferenciaSelecionada(conf);
+    setModalDetalhesOpen(true);
+  };
+  
+  const handleAbrirDetalhesDia = (conf: ConferenciaDiaria) => {
+    const vendas = getVendasDoDia(conf.data, lojaId);
+    setVendasDoDia(vendas);
+    setMetodoDrillDown(null);
+    setConferenciaSelecionada(conf);
+    setModalDetalhesOpen(true);
+  };
+  
+  const handleAbrirModalAjuste = (conf: ConferenciaDiaria) => {
+    setConferenciaSelecionada(conf);
+    setAjusteMetodo('');
+    setAjusteValor('');
+    setAjusteJustificativa('');
+    setModalAjusteOpen(true);
+  };
+  
+  const handleSalvarAjuste = () => {
+    if (!ajusteMetodo || !ajusteValor || !ajusteJustificativa.trim()) {
+      toast.error('Preencha todos os campos');
+      return;
+    }
+    
+    const valor = parseFloat(ajusteValor.replace(/[^\d,-]/g, '').replace(',', '.'));
+    if (isNaN(valor)) {
+      toast.error('Valor inválido');
+      return;
+    }
+    
+    registrarAjuste(
+      competencia,
+      conferenciaSelecionada!.data,
+      lojaId !== 'todas' ? lojaId : conferenciaSelecionada!.lojaId,
+      {
+        metodoPagamento: ajusteMetodo,
+        valorDiferenca: valor,
+        justificativa: ajusteJustificativa.trim(),
+        registradoPor: user?.colaborador?.id || '',
+        registradoPorNome: user?.colaborador?.nome || 'Usuário'
+      }
+    );
+    
+    setRefreshKey(k => k + 1);
+    setModalAjusteOpen(false);
+    toast.success('Ajuste registrado com sucesso');
+  };
+  
+  const getStatusBadge = (status: ConferenciaDiaria['statusConferencia']) => {
+    switch (status) {
+      case 'Conferido':
+        return <Badge className="bg-green-500/20 text-green-700 border-green-500/30">🟢 Conferido</Badge>;
+      case 'Parcial':
+        return <Badge className="bg-yellow-500/20 text-yellow-700 border-yellow-500/30">🟡 Parcial</Badge>;
+      default:
+        return <Badge className="bg-red-500/20 text-red-700 border-red-500/30">🔴 Não Conferido</Badge>;
+    }
+  };
+  
+  const getRowClass = (status: ConferenciaDiaria['statusConferencia'], hasValue: boolean) => {
+    if (!hasValue) return '';
+    switch (status) {
+      case 'Conferido':
+        return 'bg-green-500/10';
+      case 'Parcial':
+        return 'bg-yellow-500/10';
+      default:
+        return 'bg-red-500/10';
+    }
+  };
+  
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+  
+  const getVendedorNome = (vendedorId: string) => {
+    const colaborador = colaboradores.find(c => c.id === vendedorId);
+    return colaborador?.nome || vendedorId;
+  };
+  
+  const getLojaNome = (lojaId: string) => {
+    const loja = lojas.find(l => l.id === lojaId);
+    return loja?.nome || lojaId;
+  };
+  
+  // Verificar permissão
+  if (!ehGestor) {
+    return (
+      <GestaoAdministrativaLayout title="Gestão Administrativa">
+        <Alert variant="destructive">
+          <ShieldAlert className="h-4 w-4" />
+          <AlertTitle>Acesso Restrito</AlertTitle>
+          <AlertDescription>
+            Este módulo é restrito a usuários com perfil de gestor. Entre em contato com o administrador do sistema.
+          </AlertDescription>
+        </Alert>
+      </GestaoAdministrativaLayout>
+    );
+  }
+  
+  return (
+    <GestaoAdministrativaLayout title="Conferência de Caixa">
+      {/* Filtros */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="space-y-2">
+          <Label>Competência</Label>
+          <Select value={competencia} onValueChange={setCompetencia}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o mês" />
+            </SelectTrigger>
+            <SelectContent>
+              {competencias.map(comp => (
+                <SelectItem key={comp.value} value={comp.value}>
+                  {comp.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label>Loja</Label>
+          <Select value={lojaId} onValueChange={setLojaId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione a loja" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todas">Todas as Lojas</SelectItem>
+              {lojas.map(loja => (
+                <SelectItem key={loja.id} value={loja.id}>
+                  {loja.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label>Vendedor</Label>
+          <Select value={vendedorId} onValueChange={setVendedorId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione o vendedor" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os Vendedores</SelectItem>
+              {colaboradores.filter(c => c.eh_vendedor).map(col => (
+                <SelectItem key={col.id} value={col.id}>
+                  {col.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      
+      {/* Cards de Resumo */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-primary" />
+              Total Bruto
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{formatCurrency(resumo.totalBruto)}</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              Conferido
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(resumo.totalConferido)}</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Clock className="h-4 w-4 text-yellow-600" />
+              Pendente
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-yellow-600">{formatCurrency(resumo.totalPendente)}</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              Dias Abertos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-red-600">{resumo.diasNaoConferidos}</p>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Tabela de Conferência */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Conferência Diária - {competencias.find(c => c.value === competencia)?.label}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="w-full" type="always">
+            <div className="min-w-[1200px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-20">Data</TableHead>
+                    <TableHead className="w-28">Status</TableHead>
+                    <TableHead className="text-right w-32">Vendas (Bruto)</TableHead>
+                    {METODOS_PAGAMENTO.map(metodo => (
+                      <TableHead key={metodo} className="text-right w-28">{metodo}</TableHead>
+                    ))}
+                    {METODOS_PAGAMENTO.map(metodo => (
+                      <TableHead key={`conf-${metodo}`} className="text-center w-12">✓</TableHead>
+                    ))}
+                    <TableHead className="text-center w-20">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {conferencias.map(conf => {
+                    const hasValue = conf.vendasTotal > 0;
+                    return (
+                      <TableRow key={conf.id} className={getRowClass(conf.statusConferencia, hasValue)}>
+                        <TableCell className="font-medium">
+                          {formatarDataExibicao(conf.data)}
+                        </TableCell>
+                        <TableCell>
+                          {hasValue ? getStatusBadge(conf.statusConferencia) : (
+                            <span className="text-muted-foreground text-xs">Sem vendas</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {hasValue ? formatCurrency(conf.vendasTotal) : '-'}
+                        </TableCell>
+                        
+                        {/* Valores por método */}
+                        {METODOS_PAGAMENTO.map(metodo => {
+                          const valor = conf.totaisPorMetodo[metodo]?.bruto || 0;
+                          return (
+                            <TableCell key={metodo} className="text-right">
+                              {valor > 0 ? (
+                                <Button
+                                  variant="link"
+                                  className="p-0 h-auto font-normal text-foreground hover:text-primary"
+                                  onClick={() => handleAbrirDrillDown(conf, metodo)}
+                                >
+                                  {formatCurrency(valor)}
+                                </Button>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                        
+                        {/* Checkboxes de conferência */}
+                        {METODOS_PAGAMENTO.map(metodo => {
+                          const dados = conf.totaisPorMetodo[metodo];
+                          const temValor = (dados?.bruto || 0) > 0;
+                          return (
+                            <TableCell key={`conf-${metodo}`} className="text-center">
+                              {temValor ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex justify-center">
+                                        <Checkbox
+                                          checked={dados?.conferido || false}
+                                          onCheckedChange={() => handleToggleConferencia(conf, metodo)}
+                                        />
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {dados?.conferido ? (
+                                        <p>Conferido por {dados.conferidoPor} em {dados.dataConferencia ? format(new Date(dados.dataConferencia), 'dd/MM HH:mm') : '-'}</p>
+                                      ) : (
+                                        <p>Clique para marcar como conferido</p>
+                                      )}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                        
+                        {/* Ações */}
+                        <TableCell>
+                          <div className="flex items-center justify-center gap-1">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => handleAbrirDetalhesDia(conf)}
+                                    disabled={!hasValue}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Ver detalhes do dia</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            
+                            {conf.statusConferencia !== 'Conferido' && hasValue && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={() => handleAbrirModalAjuste(conf)}
+                                    >
+                                      <Edit3 className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Registrar ajuste/divergência</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            
+                            {conf.ajustes.length > 0 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center">
+                                      <Info className="h-4 w-4 text-yellow-600" />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <p className="font-semibold mb-1">Ajustes registrados:</p>
+                                    {conf.ajustes.map(aj => (
+                                      <p key={aj.id} className="text-xs">
+                                        {aj.metodoPagamento}: {formatCurrency(aj.valorDiferenca)} - {aj.justificativa}
+                                      </p>
+                                    ))}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+            <ScrollBar orientation="horizontal" className="h-4" />
+          </ScrollArea>
+        </CardContent>
+      </Card>
+      
+      {/* Modal de Detalhes/Drill-Down */}
+      <Dialog open={modalDetalhesOpen} onOpenChange={setModalDetalhesOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              {metodoDrillDown ? (
+                <>Vendas do Dia {conferenciaSelecionada && formatarDataExibicao(conferenciaSelecionada.data)} - {metodoDrillDown}</>
+              ) : (
+                <>Todas as Vendas do Dia {conferenciaSelecionada && formatarDataExibicao(conferenciaSelecionada.data)}</>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {metodoDrillDown ? (
+            // Drill-down por método de pagamento
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID Venda</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Vendedor</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {vendasDrillDown.map(v => (
+                    <TableRow key={`${v.id}-${v.valor}`}>
+                      <TableCell className="font-mono">{v.id}</TableCell>
+                      <TableCell>{v.clienteNome}</TableCell>
+                      <TableCell>{getVendedorNome(v.vendedorId)}</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(v.valor)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="border-t pt-4 mt-4">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Total Bruto:</span>
+                  <span className="text-xl font-bold">
+                    {formatCurrency(vendasDrillDown.reduce((acc, v) => acc + v.valor, 0))}
+                  </span>
+                </div>
+              </div>
+            </>
+          ) : (
+            // Todas as vendas do dia
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Hora</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Vendedor</TableHead>
+                    <TableHead>Pagamentos</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {vendasDoDia.map(v => (
+                    <TableRow key={v.id}>
+                      <TableCell className="font-mono">{v.id}</TableCell>
+                      <TableCell>{format(new Date(v.dataHora), 'HH:mm')}</TableCell>
+                      <TableCell>{v.clienteNome}</TableCell>
+                      <TableCell>{getVendedorNome(v.vendedor)}</TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          {v.pagamentos.map(p => (
+                            <Badge key={p.id} variant="outline" className="text-xs mr-1">
+                              {p.meioPagamento}: {formatCurrency(p.valor)}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(v.total)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <div className="border-t pt-4 mt-4">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Total do Dia:</span>
+                  <span className="text-xl font-bold">
+                    {formatCurrency(vendasDoDia.reduce((acc, v) => acc + v.total, 0))}
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Modal de Ajuste */}
+      <Dialog open={modalAjusteOpen} onOpenChange={setModalAjusteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit3 className="h-5 w-5" />
+              Registrar Divergência - {conferenciaSelecionada && formatarDataExibicao(conferenciaSelecionada.data)}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Método de Pagamento</Label>
+              <Select value={ajusteMetodo} onValueChange={setAjusteMetodo}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o método" />
+                </SelectTrigger>
+                <SelectContent>
+                  {METODOS_PAGAMENTO.map(metodo => (
+                    <SelectItem key={metodo} value={metodo}>
+                      {metodo}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Valor da Diferença (R$)</Label>
+              <Input
+                type="text"
+                placeholder="Ex: 50,00 ou -25,00"
+                value={ajusteValor}
+                onChange={(e) => setAjusteValor(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Use valores positivos para valores a mais no caixa, negativos para valores a menos.
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Justificativa</Label>
+              <Textarea
+                placeholder="Descreva o motivo da divergência..."
+                value={ajusteJustificativa}
+                onChange={(e) => setAjusteJustificativa(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalAjusteOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSalvarAjuste}>
+              Salvar Ajuste
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </GestaoAdministrativaLayout>
+  );
+}
