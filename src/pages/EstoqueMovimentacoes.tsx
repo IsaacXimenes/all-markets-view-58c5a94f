@@ -386,15 +386,26 @@ export default function EstoqueMovimentacoes() {
                         </Button>
                       </div>
                     ) : (
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        className="w-full justify-start"
-                        onClick={() => setShowProdutoModal(true)}
-                      >
-                        <Search className="h-4 w-4 mr-2" />
-                        Buscar Produto no Estoque
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          className="flex-1 justify-start"
+                          onClick={() => setShowProdutoModal(true)}
+                        >
+                          <Search className="h-4 w-4 mr-2" />
+                          Buscar Produto no Estoque
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => setShowScannerModal(true)}
+                          title="Escanear IMEI via câmera"
+                        >
+                          <Camera className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
 
