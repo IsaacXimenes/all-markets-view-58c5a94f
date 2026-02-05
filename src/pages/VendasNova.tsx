@@ -15,8 +15,9 @@ import QRCode from 'qrcode';
 import { 
   ShoppingCart, Search, Plus, X, Eye, Clock, Trash2, 
   User, Package, CreditCard, Truck, FileText, AlertTriangle, Check, Shield, Save,
-  Headphones, ArrowLeftRight, Star, ChevronLeft, Camera
+  Headphones, ArrowLeftRight, Star, ChevronLeft, Camera, Image
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 import { format, addMonths, addDays } from 'date-fns';
 
@@ -125,6 +126,17 @@ export default function VendasNova() {
   const [tipoOperacaoTroca, setTipoOperacaoTroca] = useState<'Upgrade' | 'Downgrade'>('Upgrade');
   const [chavePix, setChavePix] = useState('');
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  
+  // Preview de anexos Trade-In
+  const [previewAnexo, setPreviewAnexo] = useState<{
+    aberto: boolean;
+    tipo: 'termo' | 'fotos';
+    trade: ItemTradeIn | null;
+  }>({ aberto: false, tipo: 'termo', trade: null });
+  
+  const abrirPreviewAnexo = (trade: ItemTradeIn, tipo: 'termo' | 'fotos') => {
+    setPreviewAnexo({ aberto: true, tipo, trade });
+  };
   
   // Pagamentos
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
@@ -1574,6 +1586,8 @@ export default function VendasNova() {
                     <TableHead>Condição</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>IMEI Validado</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Anexos</TableHead>
                     <TableHead className="text-right">Valor de Compra Usado</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
@@ -1591,6 +1605,57 @@ export default function VendasNova() {
                           <Badge variant="default" className="bg-green-500">Sim</Badge>
                         ) : (
                           <Badge variant="destructive">Não</Badge>
+                        )}
+                      </TableCell>
+                      {/* Coluna Status Entrega */}
+                      <TableCell>
+                        {trade.tipoEntrega === 'Entregue no Ato' ? (
+                          <Badge className="bg-green-500 text-white">Entregue</Badge>
+                        ) : trade.tipoEntrega === 'Com o Cliente' ? (
+                          <Badge className="bg-amber-500 text-white">Com Cliente</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      {/* Coluna Anexos */}
+                      <TableCell>
+                        {trade.tipoEntrega === 'Com o Cliente' && (
+                          <div className="flex items-center gap-2">
+                            {/* Ícone Termo */}
+                            {trade.termoResponsabilidade && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button 
+                                    type="button"
+                                    onClick={() => abrirPreviewAnexo(trade, 'termo')}
+                                    className="text-blue-500 hover:text-blue-600 cursor-pointer"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Termo de Responsabilidade</TooltipContent>
+                              </Tooltip>
+                            )}
+                            
+                            {/* Ícone Fotos */}
+                            {trade.fotosAparelho && trade.fotosAparelho.length > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button 
+                                    type="button"
+                                    onClick={() => abrirPreviewAnexo(trade, 'fotos')}
+                                    className="relative text-green-500 hover:text-green-600 cursor-pointer"
+                                  >
+                                    <Image className="h-4 w-4" />
+                                    <span className="absolute -top-1 -right-2 text-[10px] bg-primary text-primary-foreground rounded-full w-4 h-4 flex items-center justify-center">
+                                      {trade.fotosAparelho.length}
+                                    </span>
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>{trade.fotosAparelho.length} foto(s)</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
                         )}
                       </TableCell>
                       <TableCell className="text-right text-green-600">
@@ -3490,6 +3555,68 @@ export default function VendasNova() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowGarantiaExtendidaModal(false)}>Cancelar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Preview Anexos Trade-In */}
+      <Dialog open={previewAnexo.aberto} onOpenChange={(open) => 
+        setPreviewAnexo({ ...previewAnexo, aberto: open })}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {previewAnexo.tipo === 'termo' 
+                ? 'Termo de Responsabilidade' 
+                : `Fotos do Aparelho (${previewAnexo.trade?.fotosAparelho?.length || 0})`}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {previewAnexo.tipo === 'termo' && previewAnexo.trade?.termoResponsabilidade && (
+            <div className="space-y-4">
+              {previewAnexo.trade.termoResponsabilidade.tipo.includes('image') ? (
+                <img 
+                  src={previewAnexo.trade.termoResponsabilidade.dataUrl} 
+                  alt="Termo de Responsabilidade"
+                  className="max-h-[60vh] object-contain mx-auto rounded" 
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="h-16 w-16 mx-auto text-muted-foreground" />
+                  <p className="mt-2 font-medium">{previewAnexo.trade.termoResponsabilidade.nome}</p>
+                  <Button 
+                    className="mt-4"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = previewAnexo.trade?.termoResponsabilidade?.dataUrl || '';
+                      link.download = previewAnexo.trade?.termoResponsabilidade?.nome || 'termo.pdf';
+                      link.click();
+                    }}
+                  >
+                    Baixar Documento
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {previewAnexo.tipo === 'fotos' && previewAnexo.trade?.fotosAparelho && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {previewAnexo.trade.fotosAparelho.map((foto) => (
+                <img 
+                  key={foto.id} 
+                  src={foto.dataUrl} 
+                  alt={foto.nome}
+                  className="w-full aspect-square object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => window.open(foto.dataUrl, '_blank')} 
+                />
+              ))}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewAnexo({ aberto: false, tipo: 'termo', trade: null })}>
+              Fechar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
