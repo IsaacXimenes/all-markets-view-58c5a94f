@@ -1,145 +1,320 @@
 
-# Plano: Correção da Filtragem de Produtos na Nova Venda após Movimentação Matriz
+# Plano: Módulo de Gestão Administrativa - Conferência de Caixa
 
-## Problema Identificado
+## Visão Geral
 
-Ao registrar uma **Movimentação Matriz**, o produto é transferido fisicamente para "Loja - Matriz", mas:
-- Na tela **Nova Venda**, ao selecionar "Loja - Matriz", os produtos não aparecem
-- No modal de seleção, eles ainda mostram "Estoque - SIA"
-
-## Causa Raiz
-
-A filtragem de produtos usa apenas `p.loja` (loja original de cadastro), mas **não considera `p.lojaAtualId`** (localização física atual após Movimentação Matriz).
-
-```typescript
-// Lógica atual (incorreta)
-if (p.loja !== lojaEstoqueReal) return false;
-```
-
-Após Movimentação Matriz:
-- `produto.loja = "ESTOQUE_SIA_ID"` (não muda)
-- `produto.lojaAtualId = "LOJA_MATRIZ_ID"` (localização física real)
-
-A filtragem precisa usar a localização física efetiva: `lojaAtualId || loja`.
+Criar um novo módulo chamado **"Gestão Administrativa"** destinado a gestores para conferência de caixa e conciliação financeira diária. O módulo será 100% sincronizado com as vendas do sistema.
 
 ---
 
-## Alterações Necessárias
+## 1. Estrutura do Módulo
 
-### 1. VendasNova.tsx - Filtro de Produtos Disponíveis (linha 554)
+### Novos Arquivos a Criar
 
-Atualizar a lógica de filtragem para considerar `lojaAtualId`:
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/pages/GestaoAdministrativa.tsx` | Página principal - Conferência Diária |
+| `src/components/layout/GestaoAdministrativaLayout.tsx` | Layout com tabs de navegação |
+| `src/utils/gestaoAdministrativaApi.ts` | API para dados de conferência, ajustes e logs |
 
-```typescript
-// ANTES (linha 551-555)
-if (lojaVenda) {
-  const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
-  if (p.loja !== lojaEstoqueReal) return false;
-}
-
-// DEPOIS
-if (lojaVenda) {
-  const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
-  // Usar localização física efetiva: lojaAtualId (se existir) ou loja original
-  const lojaEfetivaProduto = p.lojaAtualId || p.loja;
-  if (lojaEfetivaProduto !== lojaEstoqueReal) return false;
-}
-```
-
-### 2. VendasNova.tsx - Filtro de Produtos de Outras Lojas (linha 574)
-
-Atualizar também a lógica de exclusão:
-
-```typescript
-// ANTES (linha 574)
-if (p.loja === lojaEstoqueReal) return false;
-
-// DEPOIS
-const lojaEfetivaProduto = p.lojaAtualId || p.loja;
-if (lojaEfetivaProduto === lojaEstoqueReal) return false;
-```
-
-### 3. VendasNova.tsx - Filtro adicional do modal (linha 558)
-
-Atualizar o filtro adicional:
-
-```typescript
-// ANTES (linha 558)
-if (filtroLojaProduto && p.loja !== filtroLojaProduto) return false;
-
-// DEPOIS
-if (filtroLojaProduto) {
-  const lojaEfetivaProduto = p.lojaAtualId || p.loja;
-  if (lojaEfetivaProduto !== filtroLojaProduto) return false;
-}
-```
-
-### 4. estoqueApi.ts - Função getProdutosDisponiveisPorLoja (linha 1176)
-
-Atualizar a função de API para também considerar `lojaAtualId`:
-
-```typescript
-// ANTES (linha 1170-1178)
-export const getProdutosDisponiveisPorLoja = (lojaId: string): Produto[] => {
-  const lojaEstoqueReal = getLojaEstoqueReal(lojaId);
-  return produtos.filter(p => 
-    p.quantidade > 0 && 
-    !p.bloqueadoEmVendaId && 
-    !p.statusMovimentacao && 
-    p.loja === lojaEstoqueReal
-  );
-};
-
-// DEPOIS
-export const getProdutosDisponiveisPorLoja = (lojaId: string): Produto[] => {
-  const lojaEstoqueReal = getLojaEstoqueReal(lojaId);
-  return produtos.filter(p => {
-    if (p.quantidade <= 0) return false;
-    if (p.bloqueadoEmVendaId) return false;
-    if (p.statusMovimentacao) return false;
-    // Usar localização física efetiva
-    const lojaEfetivaProduto = p.lojaAtualId || p.loja;
-    return lojaEfetivaProduto === lojaEstoqueReal;
-  });
-};
-```
-
-### 5. estoqueApi.ts - Função abaterProdutoDoEstoque (linha 1194)
-
-Atualizar também a lógica de abatimento para considerar localização física:
-
-```typescript
-// ANTES (linha 1194)
-if (produto.loja === lojaEstoqueReal && produto.quantidade > 0) {
-
-// DEPOIS
-const lojaEfetivaProduto = produto.lojaAtualId || produto.loja;
-if (lojaEfetivaProduto === lojaEstoqueReal && produto.quantidade > 0) {
-```
-
----
-
-## Resumo de Arquivos a Modificar
+### Modificações em Arquivos Existentes
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/VendasNova.tsx` | Atualizar filtros `produtosFiltrados` e `produtosOutrasLojas` para usar `lojaAtualId \|\| loja` |
-| `src/utils/estoqueApi.ts` | Atualizar `getProdutosDisponiveisPorLoja` e `abaterProdutoDoEstoque` para considerar `lojaAtualId` |
+| `src/App.tsx` | Adicionar rota `/gestao-administrativa` |
+| `src/components/layout/Sidebar.tsx` | Adicionar item "Gestão Administrativa" com ícone `ClipboardCheck` |
 
 ---
 
-## Resultado Esperado
+## 2. Estrutura de Dados
 
-Após as correções:
+### 2.1 Interface de Conferência Diária
 
-1. **Nova Venda com Loja - Matriz selecionada**:
-   - Produtos que vieram do Estoque - SIA via Movimentação Matriz aparecem na lista
-   - Filtro considera a localização física real (`lojaAtualId`)
+```typescript
+interface ConferenciaDiaria {
+  id: string;
+  data: string; // YYYY-MM-DD
+  lojaId: string;
+  
+  // Totais consolidados por método de pagamento
+  totaisPorMetodo: {
+    pix: { bruto: number; conferido: boolean; conferidoPor?: string; dataConferencia?: string };
+    debito: { bruto: number; conferido: boolean; conferidoPor?: string; dataConferencia?: string };
+    credito: { bruto: number; conferido: boolean; conferidoPor?: string; dataConferencia?: string };
+    dinheiro: { bruto: number; conferido: boolean; conferidoPor?: string; dataConferencia?: string };
+    transferencia: { bruto: number; conferido: boolean; conferidoPor?: string; dataConferencia?: string };
+  };
+  
+  vendasTotal: number;
+  statusConferencia: 'Não Conferido' | 'Parcial' | 'Conferido';
+  
+  // Ajustes/Divergências
+  ajustes: AjusteDivergencia[];
+}
 
-2. **Modal de Seleção de Produto**:
-   - Exibe corretamente a loja atual do produto (usando `lojaAtualId`)
-   - Produtos mostram "Loja - Matriz" quando transferidos via Movimentação Matriz
+interface AjusteDivergencia {
+  id: string;
+  metodoPagamento: string;
+  valorDiferenca: number;
+  justificativa: string;
+  registradoPor: string;
+  dataRegistro: string;
+}
 
-3. **Abatimento de Estoque**:
-   - Ao finalizar venda, o sistema reconhece que o produto está fisicamente na Loja - Matriz
-   - Abatimento funciona corretamente mesmo para produtos transferidos
+interface LogAuditoria {
+  id: string;
+  conferenciaId: string;
+  acao: 'conferencia_marcada' | 'conferencia_desmarcada' | 'ajuste_registrado';
+  metodoPagamento?: string;
+  usuarioId: string;
+  usuarioNome: string;
+  dataHora: string;
+  detalhes: string;
+}
+```
+
+---
+
+## 3. Interface do Usuário
+
+### 3.1 Filtros Principais (Topo)
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  [Competência: Fevereiro/2026 ▼]  [Loja: Todas ▼]  [Vendedor: Todos ▼]   │
+│                                                                          │
+│  📊 Cards de Resumo:                                                     │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐            │
+│  │ Total Bruto│ │ Conferido  │ │ Pendente   │ │ Dias Abertos│            │
+│  │R$ 150.000  │ │R$ 120.000  │ │R$ 30.000   │ │    5       │            │
+│  └────────────┘ └────────────┘ └────────────┘ └────────────┘            │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### 3.2 Tabela de Conferência Diária
+
+| Data | Status | Vendas (Bruto) | PIX | ✓ PIX | Débito | ✓ Deb | Crédito | ✓ Cred | Dinheiro | ✓ Din | Ações |
+|------|--------|----------------|-----|-------|--------|-------|---------|--------|----------|-------|-------|
+| 05/02 | 🟡 Parcial | R$ 15.000 | R$ 5.000 | ✅ | R$ 3.000 | ❌ | R$ 7.000 | ✅ | R$ 0 | - | 👁️ ✍️ |
+| 04/02 | 🟢 Conferido | R$ 12.500 | R$ 4.000 | ✅ | R$ 2.500 | ✅ | R$ 6.000 | ✅ | R$ 0 | - | 👁️ |
+
+**Cores das Linhas:**
+- 🔴 `bg-red-500/10` - Não Conferido
+- 🟡 `bg-yellow-500/10` - Parcial
+- 🟢 `bg-green-500/10` - Conferido
+
+### 3.3 Modal de Drill-Down (Detalhes do Dia)
+
+Ao clicar em um valor ou no botão "Visualizar":
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Vendas do Dia 05/02/2026 - Loja Matriz                                 │
+│  Método: PIX (R$ 5.000,00)                                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│  ID Venda    │ Cliente       │ Vendedor        │ Valor                  │
+│  VEN-2025-01 │ João Silva    │ Carlos Vendedor │ R$ 2.500,00            │
+│  VEN-2025-02 │ Maria Santos  │ Ana Vendedora   │ R$ 2.500,00            │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Total Bruto: R$ 5.000,00                                               │
+│  Taxa Estimada (Cartão): -                                              │
+│  Valor Líquido: R$ 5.000,00                                             │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 3.4 Modal de Ajuste/Divergência
+
+Ao clicar no botão ✍️:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Registrar Divergência - 05/02/2026                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Método de Pagamento: [PIX ▼]                                           │
+│  Valor da Diferença:  [R$ __________]                                   │
+│  Justificativa:       [________________________]                        │
+│                       [________________________]                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                          [Cancelar]  [Salvar Ajuste]    │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 4. Implementação Técnica
+
+### 4.1 API de Gestão Administrativa (`gestaoAdministrativaApi.ts`)
+
+```typescript
+// Consolidar vendas por dia, loja e método de pagamento
+export const consolidarVendasPorDia = (
+  competencia: string,   // "2026-02"
+  lojaId?: string,
+  vendedorId?: string
+): ConferenciaDiaria[] => {
+  // 1. Filtrar vendas por competência
+  // 2. Agrupar por data
+  // 3. Para cada dia, somar valores por método de pagamento
+  // 4. Verificar status de conferência salvo no localStorage
+};
+
+// Obter vendas detalhadas de um dia/método
+export const getVendasPorDiaMetodo = (
+  data: string,
+  lojaId: string,
+  metodoPagamento: string
+): VendaDrillDown[] => {
+  // Filtrar vendas e retornar com dados para o modal
+};
+
+// Marcar/Desmarcar conferência
+export const toggleConferencia = (
+  data: string,
+  lojaId: string,
+  metodoPagamento: string,
+  usuarioId: string,
+  usuarioNome: string
+): void => {
+  // Salvar no localStorage e registrar log
+};
+
+// Registrar ajuste/divergência
+export const registrarAjuste = (
+  data: string,
+  lojaId: string,
+  ajuste: Omit<AjusteDivergencia, 'id' | 'dataRegistro'>
+): void => {
+  // Salvar ajuste e registrar log
+};
+
+// Obter logs de auditoria
+export const getLogsAuditoria = (
+  competencia?: string,
+  lojaId?: string
+): LogAuditoria[] => {
+  // Retornar logs filtrados
+};
+```
+
+### 4.2 Layout do Módulo (`GestaoAdministrativaLayout.tsx`)
+
+```typescript
+const tabs = [
+  { name: 'Conferência Diária', href: '/gestao-administrativa', icon: ClipboardCheck },
+  { name: 'Logs de Auditoria', href: '/gestao-administrativa/logs', icon: History },
+];
+```
+
+### 4.3 Controle de Acesso
+
+O módulo deve verificar se o usuário logado é gestor:
+
+```typescript
+// No componente principal
+const { colaboradores } = useCadastroStore();
+const { user } = useAuthStore();
+
+const colaboradorLogado = colaboradores.find(c => c.id === user?.colaborador?.id);
+const ehGestor = colaboradorLogado?.eh_gestor ?? false;
+
+if (!ehGestor) {
+  return <Alert>Acesso restrito a gestores.</Alert>;
+}
+```
+
+---
+
+## 5. Fluxo de Conferência
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      Gestor acessa o módulo                              │
+└───────────────────────────────────┬─────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│            Seleciona Competência (mês/ano) e Loja                        │
+└───────────────────────────────────┬─────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│           Sistema consolida vendas por dia automaticamente               │
+│              (100% sincronizado com base de vendas)                      │
+└───────────────────────────────────┬─────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                Para cada método de pagamento do dia:                     │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                  │
+│  │ Visualizar  │    │   Conferir  │    │  Registrar  │                  │
+│  │  Detalhes   │    │  (Checkbox) │    │   Ajuste    │                  │
+│  └─────────────┘    └─────────────┘    └─────────────┘                  │
+└───────────────────────────────────┬─────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Todas as ações são auditadas                          │
+│         (quem fez, quando fez, qual método, qual valor)                  │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 6. Persistência de Dados
+
+### localStorage Keys
+
+| Key | Descrição |
+|-----|-----------|
+| `gestao_conferencia_{YYYY-MM}_{lojaId}` | Status de conferência por dia |
+| `gestao_ajustes_{YYYY-MM}_{lojaId}` | Ajustes/divergências registrados |
+| `gestao_logs_auditoria` | Logs de todas as ações |
+
+---
+
+## 7. Resumo de Arquivos
+
+### Novos Arquivos (3)
+
+1. **`src/pages/GestaoAdministrativa.tsx`** (~400 linhas)
+   - Página principal com tabela de conferência diária
+   - Filtros de competência, loja e vendedor
+   - Cards de resumo (Total, Conferido, Pendente, Dias)
+   - Modais de drill-down e ajuste
+
+2. **`src/components/layout/GestaoAdministrativaLayout.tsx`** (~35 linhas)
+   - Layout padrão com TabsNavigation
+
+3. **`src/utils/gestaoAdministrativaApi.ts`** (~250 linhas)
+   - Funções de consolidação de vendas
+   - Gerenciamento de conferências
+   - Registro de ajustes e logs
+
+### Arquivos a Modificar (2)
+
+4. **`src/App.tsx`**
+   - Adicionar import e rota
+
+5. **`src/components/layout/Sidebar.tsx`**
+   - Adicionar item de menu
+
+---
+
+## 8. Considerações de Performance
+
+- A consolidação de vendas usa `useMemo` para evitar recálculos desnecessários
+- Filtros aplicados antes da agregação para reduzir volume de dados
+- Índices por data e loja para buscas rápidas
+- Debounce em filtros de texto (se aplicável)
+
+---
+
+## 9. Padrões Seguidos
+
+- Layout consistente com outros módulos (FinanceiroLayout como referência)
+- Tabela com scroll horizontal (TableScrollArea)
+- Cores de status conforme `statusColors.ts`
+- Formatação monetária brasileira (R$ XXX.XXX,XX)
+- Checkboxes para conferência com feedback visual
+- Modais para detalhes e ações
+- Logs de auditoria para rastreabilidade
