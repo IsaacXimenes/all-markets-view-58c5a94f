@@ -23,6 +23,7 @@ import {
   getContasFinanceiras, Cliente, OrigemVenda, ContaFinanceira,
   addCliente
 } from '@/utils/cadastrosApi';
+import { getTaxasEntregaAtivas, TaxaEntrega } from '@/utils/taxasEntregaApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { getProdutos, Produto, bloquearProdutosEmVenda, desbloquearProdutosDeVenda } from '@/utils/estoqueApi';
 import { getVendaById, updateVenda, registrarEdicaoVenda, ItemVenda, ItemTradeIn, Pagamento, Venda } from '@/utils/vendasApi';
@@ -91,6 +92,12 @@ export default function VendasEditar() {
   const [localRetirada, setLocalRetirada] = useState('');
   const [tipoRetirada, setTipoRetirada] = useState<'Retirada Balcão' | 'Entrega' | 'Retirada em Outra Loja'>('Retirada Balcão');
   const [taxaEntrega, setTaxaEntrega] = useState(0);
+  const [valorRecomendadoEntrega, setValorRecomendadoEntrega] = useState(0);
+  const [localEntregaId, setLocalEntregaId] = useState('');
+  const [localEntregaNome, setLocalEntregaNome] = useState('');
+  const [buscaLocalEntrega, setBuscaLocalEntrega] = useState('');
+  const [taxasEntrega] = useState<TaxaEntrega[]>(getTaxasEntregaAtivas());
+  const [showLocaisEntrega, setShowLocaisEntrega] = useState(false);
   const [motoboyId, setMotoboyId] = useState('');
   const [observacoes, setObservacoes] = useState('');
   
@@ -172,6 +179,16 @@ export default function VendasEditar() {
     setTipoRetirada(venda.tipoRetirada || 'Retirada Balcão');
     setTaxaEntrega(venda.taxaEntrega || 0);
     setMotoboyId(venda.motoboyId || '');
+    
+    // Carregar dados de entrega se existirem
+    if ((venda as any).localEntregaId) {
+      setLocalEntregaId((venda as any).localEntregaId);
+      const taxa = getTaxasEntregaAtivas().find(t => t.id === (venda as any).localEntregaId);
+      if (taxa) {
+        setLocalEntregaNome(taxa.local);
+        setValorRecomendadoEntrega(taxa.valor);
+      }
+    }
     setObservacoes(venda.observacoes || '');
     setItens(venda.itens || []);
     setTradeIns(venda.tradeIns || []);
@@ -1075,7 +1092,7 @@ export default function VendasEditar() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`grid gap-4 ${tipoRetirada === 'Entrega' ? 'grid-cols-1 md:grid-cols-4' : 'grid-cols-1 md:grid-cols-2'}`}>
+            <div className={`grid gap-4 ${tipoRetirada === 'Entrega' ? 'grid-cols-1 md:grid-cols-5' : 'grid-cols-1 md:grid-cols-2'}`}>
               <div>
                 <label className="text-sm font-medium">Tipo de Retirada</label>
                 <Select 
@@ -1085,6 +1102,9 @@ export default function VendasEditar() {
                     // Zerar valores de entrega quando não for "Entrega"
                     if (v !== 'Entrega') {
                       setTaxaEntrega(0);
+                      setLocalEntregaId('');
+                      setLocalEntregaNome('');
+                      setValorRecomendadoEntrega(0);
                       setMotoboyId('');
                     }
                   }}
@@ -1102,8 +1122,62 @@ export default function VendasEditar() {
               
               {tipoRetirada === 'Entrega' && (
                 <>
+                  {/* Autocomplete de Local de Entrega */}
+                  <div className="relative">
+                    <label className="text-sm font-medium">Local de Entrega *</label>
+                    <Input
+                      value={localEntregaNome || buscaLocalEntrega}
+                      onChange={(e) => {
+                        setBuscaLocalEntrega(e.target.value);
+                        setLocalEntregaNome('');
+                        setLocalEntregaId('');
+                        setValorRecomendadoEntrega(0);
+                        setShowLocaisEntrega(true);
+                      }}
+                      onFocus={() => setShowLocaisEntrega(true)}
+                      placeholder="Digite para buscar local..."
+                    />
+                    {showLocaisEntrega && (buscaLocalEntrega || !localEntregaNome) && (
+                      <div className="absolute z-50 w-full mt-1 bg-card border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        {taxasEntrega
+                          .filter(t => t.local.toLowerCase().includes((buscaLocalEntrega || '').toLowerCase()))
+                          .map(taxa => (
+                            <div
+                              key={taxa.id}
+                              className="px-3 py-2 hover:bg-muted cursor-pointer flex justify-between items-center"
+                              onClick={() => {
+                                setLocalEntregaId(taxa.id);
+                                setLocalEntregaNome(taxa.local);
+                                setValorRecomendadoEntrega(taxa.valor);
+                                setTaxaEntrega(taxa.valor);
+                                setBuscaLocalEntrega('');
+                                setShowLocaisEntrega(false);
+                              }}
+                            >
+                              <span>{taxa.local}</span>
+                              <span className="text-sm text-muted-foreground">{formatCurrency(taxa.valor)}</span>
+                            </div>
+                          ))}
+                        {taxasEntrega.filter(t => t.local.toLowerCase().includes((buscaLocalEntrega || '').toLowerCase())).length === 0 && (
+                          <div className="px-3 py-2 text-muted-foreground text-sm">
+                            Nenhum local encontrado
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Valor Recomendado (read-only) */}
                   <div>
-                    <label className="text-sm font-medium">Taxa de Entrega</label>
+                    <label className="text-sm font-medium">Valor Recom.</label>
+                    <div className="h-10 flex items-center px-3 bg-muted rounded-md text-sm font-medium text-muted-foreground">
+                      {valorRecomendadoEntrega > 0 ? formatCurrency(valorRecomendadoEntrega) : '-'}
+                    </div>
+                  </div>
+
+                  {/* Valor da Entrega (editável) */}
+                  <div>
+                    <label className="text-sm font-medium">Valor Entrega *</label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
                       <Input 
@@ -1113,11 +1187,19 @@ export default function VendasEditar() {
                           const value = e.target.value.replace(/\D/g, '');
                           setTaxaEntrega(Number(value) / 100);
                         }}
-                        className="pl-10"
+                        className={`pl-10 ${taxaEntrega < valorRecomendadoEntrega && valorRecomendadoEntrega > 0 ? 'border-destructive text-destructive' : ''}`}
                         placeholder="0,00"
                       />
                     </div>
+                    {taxaEntrega < valorRecomendadoEntrega && valorRecomendadoEntrega > 0 && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-destructive">
+                        <AlertTriangle className="h-3 w-3" />
+                        <span>-{formatCurrency(valorRecomendadoEntrega - taxaEntrega)}</span>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Motoboy (obrigatório) */}
                   <div>
                     <label className={`text-sm font-medium ${!motoboyId ? 'text-destructive' : ''}`}>
                       Motoboy *
