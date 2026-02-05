@@ -1,96 +1,79 @@
 
-# Plano: Atualizar Quadro de Retirada/Logística em VendasEditar.tsx
+# Plano: Corrigir Scroll do Modal de Recebimento
 
-## Objetivo
-Igualar as funcionalidades do quadro "Retirada / Logística" na tela de Editar Venda (`VendasEditar.tsx`) às da tela Nova Venda (`VendasNova.tsx`).
+## Problema Identificado
+O modal de "Registrar Recebimento" nao permite scroll porque:
+1. O `DialogContent` usa `display: grid` por padrao (linha 139 do dialog.tsx)
+2. O `flex-col` esta sendo sobrescrito pelo `grid`
+3. O `ScrollArea` precisa de altura definida para funcionar corretamente
 
----
+## Solucao
 
-## Diferenças Identificadas
+### Arquivo: `src/pages/EstoquePendenciasBaseTrocas.tsx`
 
-| Funcionalidade | VendasNova.tsx | VendasEditar.tsx |
-|----------------|----------------|------------------|
-| Autocomplete de Local de Entrega | Sim | Nao (campo nao existe) |
-| Valor Recomendado (read-only) | Sim | Nao |
-| Indicador de valor abaixo do recomendado | Sim (alerta vermelho) | Nao |
-| Grid dinâmico 5 colunas para Entrega | Sim | 4 colunas |
-| Import de taxasEntregaApi | Sim | Nao |
+Substituir a estrutura do modal para:
+1. Adicionar `!flex` com important para sobrescrever o grid
+2. Definir altura explicita no ScrollArea
+3. Usar `overflow-y-auto` nativo ao inves do ScrollArea do Radix (mais confiavel)
 
----
+### Alteracoes (linhas 333-518)
 
-## Alterações Necessárias
+**Antes:**
+```tsx
+<DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] flex flex-col overflow-hidden">
+  <DialogHeader className="flex-shrink-0">
+    ...
+  </DialogHeader>
+  
+  {tradeInSelecionado && (
+    <ScrollArea className="flex-1 min-h-0 pr-4">
+      <div className="space-y-6">
+        ...
+      </div>
+    </ScrollArea>
+  )}
 
-### 1. Adicionar Imports Faltantes
-
-```typescript
-import { getTaxasEntregaAtivas, TaxaEntrega } from '@/utils/taxasEntregaApi';
-import { AlertTriangle } from 'lucide-react'; // Já existe, verificar
+  <DialogFooter className="flex-shrink-0 mt-4 pt-4 border-t">
+    ...
+  </DialogFooter>
+</DialogContent>
 ```
 
-### 2. Adicionar Novos Estados (linhas ~90-95)
+**Depois:**
+```tsx
+<DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] !flex !flex-col overflow-hidden p-0">
+  <DialogHeader className="flex-shrink-0 p-6 pb-4">
+    ...
+  </DialogHeader>
+  
+  {tradeInSelecionado && (
+    <div className="flex-1 overflow-y-auto px-6">
+      <div className="space-y-6 pb-4">
+        ...
+      </div>
+    </div>
+  )}
 
-```typescript
-// Estados para Local de Entrega com autocomplete
-const [valorRecomendadoEntrega, setValorRecomendadoEntrega] = useState(0);
-const [localEntregaId, setLocalEntregaId] = useState('');
-const [localEntregaNome, setLocalEntregaNome] = useState('');
-const [buscaLocalEntrega, setBuscaLocalEntrega] = useState('');
-const [taxasEntrega] = useState<TaxaEntrega[]>(getTaxasEntregaAtivas());
-const [showLocaisEntrega, setShowLocaisEntrega] = useState(false);
+  <DialogFooter className="flex-shrink-0 p-6 pt-4 border-t bg-background">
+    ...
+  </DialogFooter>
+</DialogContent>
 ```
 
-### 3. Atualizar Carregamento da Venda (useEffect ~linha 173)
+### Mudancas Tecnicas
 
-Carregar dados do local de entrega se existirem na venda original:
+| Elemento | Antes | Depois |
+|----------|-------|--------|
+| DialogContent | `flex flex-col` | `!flex !flex-col p-0` (important para sobrescrever grid) |
+| DialogHeader | `flex-shrink-0` | `flex-shrink-0 p-6 pb-4` (padding manual) |
+| ScrollArea | `<ScrollArea className="flex-1 min-h-0 pr-4">` | `<div className="flex-1 overflow-y-auto px-6">` (scroll nativo) |
+| DialogFooter | `flex-shrink-0 mt-4 pt-4 border-t` | `flex-shrink-0 p-6 pt-4 border-t bg-background` |
 
-```typescript
-// Carregar dados de entrega se existirem
-if (venda.localEntregaId) {
-  setLocalEntregaId(venda.localEntregaId);
-  const taxa = getTaxasEntregaAtivas().find(t => t.id === venda.localEntregaId);
-  if (taxa) {
-    setLocalEntregaNome(taxa.local);
-    setValorRecomendadoEntrega(taxa.valor);
-  }
-}
-```
+### Por que usar scroll nativo?
+O `ScrollArea` do Radix depende de altura explicita calculada, o que pode falhar em layouts flex dentro de modais. O `overflow-y-auto` nativo funciona de forma mais confiavel quando combinado com `flex-1`.
 
-### 4. Substituir o Quadro de Retirada/Logística (linhas 1069-1171)
-
-Copiar a estrutura completa de VendasNova.tsx que inclui:
-
-- Grid dinâmico de 5 colunas quando `tipoRetirada === 'Entrega'`
-- Autocomplete de Local de Entrega com dropdown de sugestões
-- Campo "Valor Recom." (read-only)
-- Campo "Valor Entrega" com indicador de diferença
-- Campo Motoboy (já existe)
-
----
-
-## Estrutura do Novo Quadro
-
-```text
-Tipo: Entrega
-├── Tipo de Retirada (Select)
-├── Local de Entrega (Autocomplete com lista de taxas)
-├── Valor Recom. (read-only, mostra valor do cadastro)
-├── Valor Entrega (editável, com alerta se menor que recomendado)
-└── Motoboy (Select obrigatório)
-```
-
----
-
-## Arquivo a Modificar
-
-| Arquivo | Alterações |
-|---------|------------|
-| `src/pages/VendasEditar.tsx` | Adicionar imports, estados e substituir seção Retirada/Logística |
-
----
-
-## Benefícios
-
-1. **Consistência** - Mesmo comportamento em Nova Venda e Editar Venda
-2. **Autocomplete** - Facilita seleção do local de entrega
-3. **Controle de valor** - Visualização do valor recomendado e alerta de desconto
-4. **UX melhorada** - Usuário não precisa lembrar valores de entrega
+## Beneficios
+1. **Scroll funcional** - Conteudo completo acessivel
+2. **Layout estavel** - Header e Footer fixos, area central scrollavel
+3. **Compatibilidade** - Funciona em todos os tamanhos de tela
+4. **UX melhorada** - Usuario consegue anexar fotos e confirmar recebimento
