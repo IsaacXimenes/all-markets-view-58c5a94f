@@ -1,92 +1,120 @@
 
-# Plano: Correção da Exibição de Loja após Movimentação Matriz
+# Plano: Correção da Filtragem de Produtos na Nova Venda após Movimentação Matriz
 
 ## Problema Identificado
 
-Quando o usuário registra uma **Movimentação Matriz** (Estoque - SIA → Loja - Matriz), na aba de Aparelhos:
-1. A coluna **Loja** ainda mostra "Estoque - SIA" em vez de "Loja - Matriz"
-2. Aparece o badge **"Em movimentação"** (que não deveria aparecer para movimentações matriz)
+Ao registrar uma **Movimentação Matriz**, o produto é transferido fisicamente para "Loja - Matriz", mas:
+- Na tela **Nova Venda**, ao selecionar "Loja - Matriz", os produtos não aparecem
+- No modal de seleção, eles ainda mostram "Estoque - SIA"
 
-## Análise Técnica
+## Causa Raiz
 
-### Comportamento Atual
-
-A função `criarMovimentacaoMatriz` já está correta:
-- Define `produto.lojaAtualId = dados.lojaDestinoId` (Loja - Matriz)
-- **NÃO** define `statusMovimentacao = 'Em movimentação'` (linha com comentário "REMOVIDO")
-
-A tela `EstoqueProdutos.tsx` já usa a lógica correta:
-- Linha 66: `const lojaEfetiva = p.lojaAtualId || p.loja;`
-- Linha 385: `getLojaNome(produto.lojaAtualId || produto.loja)`
-
-### Causa Provável
-
-O problema pode estar relacionado a:
-1. **Badge "Em movimentação"** aparecendo porque o produto tinha esse status definido de outra origem (movimentações de aparelhos comuns que usam os mesmos IMEIs)
-2. **Filtro de loja** não considerando corretamente `lojaAtualId` em todos os lugares
-3. **Dados mockados antigos** que podem ter `statusMovimentacao` definido
-
----
-
-## 1. Remover Badge "Em movimentação" para Produtos em Movimentação Matriz
-
-Atualmente, o badge aparece se `statusMovimentacao === 'Em movimentação'`, independente do tipo de movimentação. Para movimentações matriz, o produto **NÃO** deve mostrar esse badge (já que está disponível para venda na loja destino).
-
-### Alteração em EstoqueProdutos.tsx (linha 355-360):
+A filtragem de produtos usa apenas `p.loja` (loja original de cadastro), mas **não considera `p.lojaAtualId`** (localização física atual após Movimentação Matriz).
 
 ```typescript
-// ANTES: Badge aparece para qualquer statusMovimentacao
-{produto.statusMovimentacao === 'Em movimentação' && (
-  <Badge>Em movimentação</Badge>
-)}
-
-// DEPOIS: Badge NÃO aparece se produto tem lojaAtualId (movimentação matriz)
-{produto.statusMovimentacao === 'Em movimentação' && !produto.lojaAtualId && (
-  <Badge>Em movimentação</Badge>
-)}
+// Lógica atual (incorreta)
+if (p.loja !== lojaEstoqueReal) return false;
 ```
 
-**Lógica**: Se o produto tem `lojaAtualId` definido, significa que foi transferido via Movimentação Matriz e está disponível para venda - não deve mostrar "Em movimentação".
+Após Movimentação Matriz:
+- `produto.loja = "ESTOQUE_SIA_ID"` (não muda)
+- `produto.lojaAtualId = "LOJA_MATRIZ_ID"` (localização física real)
+
+A filtragem precisa usar a localização física efetiva: `lojaAtualId || loja`.
 
 ---
 
-## 2. Garantir Limpeza de statusMovimentacao na Movimentação Matriz
+## Alterações Necessárias
 
-Para evitar conflitos, a função `criarMovimentacaoMatriz` deve garantir que `statusMovimentacao` seja limpo:
+### 1. VendasNova.tsx - Filtro de Produtos Disponíveis (linha 554)
 
-### Alteração em estoqueApi.ts (função criarMovimentacaoMatriz):
+Atualizar a lógica de filtragem para considerar `lojaAtualId`:
 
 ```typescript
-dados.itens.forEach(item => {
-  const produto = produtos.find(p => p.id === item.aparelhoId);
-  if (produto) {
-    produto.lojaAtualId = dados.lojaDestinoId; // Loja - Matriz
-    produto.movimentacaoId = novaMovimentacao.id;
-    // Garantir que não tenha status de movimentação comum
-    produto.statusMovimentacao = null; // Limpar qualquer status anterior
-    // ... resto do código
-  }
-});
+// ANTES (linha 551-555)
+if (lojaVenda) {
+  const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
+  if (p.loja !== lojaEstoqueReal) return false;
+}
+
+// DEPOIS
+if (lojaVenda) {
+  const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
+  // Usar localização física efetiva: lojaAtualId (se existir) ou loja original
+  const lojaEfetivaProduto = p.lojaAtualId || p.loja;
+  if (lojaEfetivaProduto !== lojaEstoqueReal) return false;
+}
 ```
 
----
+### 2. VendasNova.tsx - Filtro de Produtos de Outras Lojas (linha 574)
 
-## 3. Verificar Filtro de Loja no getProdutosDisponivelMatriz
-
-A função já está correta, mas vamos garantir que não retorne produtos que já foram transferidos:
-
-### Validação (já existente):
+Atualizar também a lógica de exclusão:
 
 ```typescript
-export const getProdutosDisponivelMatriz = (): Produto[] => {
+// ANTES (linha 574)
+if (p.loja === lojaEstoqueReal) return false;
+
+// DEPOIS
+const lojaEfetivaProduto = p.lojaAtualId || p.loja;
+if (lojaEfetivaProduto === lojaEstoqueReal) return false;
+```
+
+### 3. VendasNova.tsx - Filtro adicional do modal (linha 558)
+
+Atualizar o filtro adicional:
+
+```typescript
+// ANTES (linha 558)
+if (filtroLojaProduto && p.loja !== filtroLojaProduto) return false;
+
+// DEPOIS
+if (filtroLojaProduto) {
+  const lojaEfetivaProduto = p.lojaAtualId || p.loja;
+  if (lojaEfetivaProduto !== filtroLojaProduto) return false;
+}
+```
+
+### 4. estoqueApi.ts - Função getProdutosDisponiveisPorLoja (linha 1176)
+
+Atualizar a função de API para também considerar `lojaAtualId`:
+
+```typescript
+// ANTES (linha 1170-1178)
+export const getProdutosDisponiveisPorLoja = (lojaId: string): Produto[] => {
+  const lojaEstoqueReal = getLojaEstoqueReal(lojaId);
   return produtos.filter(p => 
-    p.loja === ESTOQUE_SIA_ID && 
-    !p.lojaAtualId &&  // ✅ Exclui produtos já transferidos
-    !p.statusMovimentacao &&
-    !p.bloqueadoEmVendaId &&
-    p.statusNota === 'Concluído'
+    p.quantidade > 0 && 
+    !p.bloqueadoEmVendaId && 
+    !p.statusMovimentacao && 
+    p.loja === lojaEstoqueReal
   );
 };
+
+// DEPOIS
+export const getProdutosDisponiveisPorLoja = (lojaId: string): Produto[] => {
+  const lojaEstoqueReal = getLojaEstoqueReal(lojaId);
+  return produtos.filter(p => {
+    if (p.quantidade <= 0) return false;
+    if (p.bloqueadoEmVendaId) return false;
+    if (p.statusMovimentacao) return false;
+    // Usar localização física efetiva
+    const lojaEfetivaProduto = p.lojaAtualId || p.loja;
+    return lojaEfetivaProduto === lojaEstoqueReal;
+  });
+};
+```
+
+### 5. estoqueApi.ts - Função abaterProdutoDoEstoque (linha 1194)
+
+Atualizar também a lógica de abatimento para considerar localização física:
+
+```typescript
+// ANTES (linha 1194)
+if (produto.loja === lojaEstoqueReal && produto.quantidade > 0) {
+
+// DEPOIS
+const lojaEfetivaProduto = produto.lojaAtualId || produto.loja;
+if (lojaEfetivaProduto === lojaEstoqueReal && produto.quantidade > 0) {
 ```
 
 ---
@@ -95,8 +123,8 @@ export const getProdutosDisponivelMatriz = (): Produto[] => {
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/EstoqueProdutos.tsx` | Não mostrar badge "Em movimentação" se produto tem `lojaAtualId` |
-| `src/utils/estoqueApi.ts` | Limpar `statusMovimentacao` na função `criarMovimentacaoMatriz` |
+| `src/pages/VendasNova.tsx` | Atualizar filtros `produtosFiltrados` e `produtosOutrasLojas` para usar `lojaAtualId \|\| loja` |
+| `src/utils/estoqueApi.ts` | Atualizar `getProdutosDisponiveisPorLoja` e `abaterProdutoDoEstoque` para considerar `lojaAtualId` |
 
 ---
 
@@ -104,12 +132,14 @@ export const getProdutosDisponivelMatriz = (): Produto[] => {
 
 Após as correções:
 
-1. **Ao registrar Movimentação Matriz**:
-   - Produto aparece imediatamente como "Loja - Matriz" na aba de Aparelhos
-   - Produto **NÃO** mostra badge "Em movimentação"
-   - Produto fica disponível para venda na Loja - Matriz
+1. **Nova Venda com Loja - Matriz selecionada**:
+   - Produtos que vieram do Estoque - SIA via Movimentação Matriz aparecem na lista
+   - Filtro considera a localização física real (`lojaAtualId`)
 
-2. **Movimentações de Aparelhos Comuns**:
-   - Continuam funcionando normalmente
-   - Badge "Em movimentação" aparece apenas para essas movimentações
-   - Produto bloqueado para venda até receber na loja destino
+2. **Modal de Seleção de Produto**:
+   - Exibe corretamente a loja atual do produto (usando `lojaAtualId`)
+   - Produtos mostram "Loja - Matriz" quando transferidos via Movimentação Matriz
+
+3. **Abatimento de Estoque**:
+   - Ao finalizar venda, o sistema reconhece que o produto está fisicamente na Loja - Matriz
+   - Abatimento funciona corretamente mesmo para produtos transferidos
