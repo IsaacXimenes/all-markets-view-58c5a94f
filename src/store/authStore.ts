@@ -26,11 +26,11 @@ interface AuthState {
 const VALID_USERNAME = '123';
 const VALID_PASSWORD = '123';
 
-// Colaborador padrão para o usuário de teste (financeiro)
+// Colaborador padrão para o usuário de teste (gestor)
 const DEFAULT_COLABORADOR: Colaborador = {
-  id: 'COL-FIN-001',
-  nome: 'João Financeiro',
-  cargo: 'Financeiro'
+  id: 'COL-GES-001',
+  nome: 'João Gestor',
+  cargo: 'Gestor'
 };
 
 export const useAuthStore = create<AuthState>()(
