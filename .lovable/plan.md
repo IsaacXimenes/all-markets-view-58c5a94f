@@ -1,79 +1,56 @@
 
-# Plano: Corrigir Scroll do Modal de Recebimento
+# Plano: Adicionar Redirecionamento para Produtos Pendentes
 
-## Problema Identificado
-O modal de "Registrar Recebimento" nao permite scroll porque:
-1. O `DialogContent` usa `display: grid` por padrao (linha 139 do dialog.tsx)
-2. O `flex-col` esta sendo sobrescrito pelo `grid`
-3. O `ScrollArea` precisa de altura definida para funcionar corretamente
+## Contexto Atual
+Ao confirmar o recebimento de um trade-in na aba "Pendências - Base de Trocas":
+1. O status é atualizado para "Recebido" (mantendo histórico)
+2. O aparelho é migrado para Produtos Pendentes via `migrarParaProdutosPendentes`
+3. A lista é atualizada removendo o item recebido
+4. **Falta**: Redirecionamento automático para a aba de Produtos Pendentes
 
-## Solucao
+## Alteração Necessária
 
 ### Arquivo: `src/pages/EstoquePendenciasBaseTrocas.tsx`
 
-Substituir a estrutura do modal para:
-1. Adicionar `!flex` com important para sobrescrever o grid
-2. Definir altura explicita no ScrollArea
-3. Usar `overflow-y-auto` nativo ao inves do ScrollArea do Radix (mais confiavel)
-
-### Alteracoes (linhas 333-518)
-
-**Antes:**
-```tsx
-<DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] flex flex-col overflow-hidden">
-  <DialogHeader className="flex-shrink-0">
-    ...
-  </DialogHeader>
-  
-  {tradeInSelecionado && (
-    <ScrollArea className="flex-1 min-h-0 pr-4">
-      <div className="space-y-6">
-        ...
-      </div>
-    </ScrollArea>
-  )}
-
-  <DialogFooter className="flex-shrink-0 mt-4 pt-4 border-t">
-    ...
-  </DialogFooter>
-</DialogContent>
+#### 1. Adicionar import do useNavigate
+```typescript
+import { useNavigate } from 'react-router-dom';
 ```
 
-**Depois:**
-```tsx
-<DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] !flex !flex-col overflow-hidden p-0">
-  <DialogHeader className="flex-shrink-0 p-6 pb-4">
-    ...
-  </DialogHeader>
-  
-  {tradeInSelecionado && (
-    <div className="flex-1 overflow-y-auto px-6">
-      <div className="space-y-6 pb-4">
-        ...
-      </div>
-    </div>
-  )}
-
-  <DialogFooter className="flex-shrink-0 p-6 pt-4 border-t bg-background">
-    ...
-  </DialogFooter>
-</DialogContent>
+#### 2. Adicionar hook de navegação
+```typescript
+const navigate = useNavigate();
 ```
 
-### Mudancas Tecnicas
+#### 3. Adicionar redirecionamento após sucesso (linha ~148-158)
+Após a migração bem-sucedida, redirecionar para a página de Produtos Pendentes:
 
-| Elemento | Antes | Depois |
-|----------|-------|--------|
-| DialogContent | `flex flex-col` | `!flex !flex-col p-0` (important para sobrescrever grid) |
-| DialogHeader | `flex-shrink-0` | `flex-shrink-0 p-6 pb-4` (padding manual) |
-| ScrollArea | `<ScrollArea className="flex-1 min-h-0 pr-4">` | `<div className="flex-1 overflow-y-auto px-6">` (scroll nativo) |
-| DialogFooter | `flex-shrink-0 mt-4 pt-4 border-t` | `flex-shrink-0 p-6 pt-4 border-t bg-background` |
+```typescript
+if (produtoMigrado) {
+  toast.success('Recebimento registrado com sucesso!', {
+    description: `Aparelho migrado para Produtos Pendentes (${produtoMigrado.id}). SLA de Tratativas iniciado.`
+  });
+  
+  // Fechar modal e redirecionar
+  setShowRecebimentoModal(false);
+  navigate('/estoque/produtos-pendentes');
+}
+```
 
-### Por que usar scroll nativo?
-O `ScrollArea` do Radix depende de altura explicita calculada, o que pode falhar em layouts flex dentro de modais. O `overflow-y-auto` nativo funciona de forma mais confiavel quando combinado com `flex-1`.
+## Fluxo Atualizado
+
+```text
+1. Usuario clica em "Registrar Recebimento"
+2. Anexa fotos do estado atual do aparelho
+3. Clica em "Confirmar Recebimento"
+4. Sistema:
+   - Atualiza status para "Recebido" (mantem historico)
+   - Migra para Produtos Pendentes (inicia SLA de Tratativas)
+   - Exibe toast de sucesso
+   - Redireciona automaticamente para /estoque/produtos-pendentes
+```
 
 ## Beneficios
-1. **Scroll funcional** - Conteudo completo acessivel
-2. **Layout estavel** - Header e Footer fixos, area central scrollavel
-3. **Compatibilidade** - Funciona em todos os tamanhos de tela
-4. **UX melhorada** - Usuario consegue anexar fotos e confirmar recebimento
+- UX mais fluida - usuario vai direto para a proxima etapa do fluxo
+- Consistencia com outros modulos que redirecionam apos acao (ex: Parecer Encaminhamento)
+- Historico preservado na lista de trade-ins com status "Recebido"
