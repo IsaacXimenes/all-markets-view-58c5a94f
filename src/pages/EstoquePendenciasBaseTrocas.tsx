@@ -20,6 +20,7 @@ import { motion } from 'framer-motion';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
 import { 
+  getTradeInsPendentes,
   getTradeInsPendentesAguardando, 
   TradeInPendente, 
   calcularSLA,
@@ -38,7 +39,7 @@ export default function EstoquePendenciasBaseTrocas() {
   const { obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   const { user } = useAuthStore();
   
-  const [tradeIns, setTradeIns] = useState<TradeInPendente[]>(getTradeInsPendentesAguardando());
+  const [tradeIns, setTradeIns] = useState<TradeInPendente[]>(getTradeInsPendentes());
   const [buscaGeral, setBuscaGeral] = useState('');
   const [filtroLoja, setFiltroLoja] = useState('');
   
@@ -155,8 +156,8 @@ export default function EstoquePendenciasBaseTrocas() {
           });
         }
         
-        // Atualizar lista e fechar modal
-        setTradeIns(getTradeInsPendentesAguardando());
+        // Atualizar lista (mantém todos, incluindo finalizados)
+        setTradeIns(getTradeInsPendentes());
         setShowRecebimentoModal(false);
         
         // Redirecionar para Produtos Pendentes
@@ -288,12 +289,18 @@ export default function EstoquePendenciasBaseTrocas() {
                   <TableHead>Vendedor</TableHead>
                   <TableHead className="text-right">Valor Trade-In</TableHead>
                   <TableHead>SLA Devolução</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {tradeInsFiltrados.map((tradeIn) => (
-                  <TableRow key={tradeIn.id}>
+                  <TableRow 
+                    key={tradeIn.id}
+                    className={cn(
+                      tradeIn.status === 'Recebido' && 'bg-green-500/10'
+                    )}
+                  >
                     <TableCell className="font-medium">{tradeIn.tradeIn.modelo}</TableCell>
                     <TableCell className="font-mono text-sm">{displayIMEI(tradeIn.tradeIn.imei)}</TableCell>
                     <TableCell>{tradeIn.clienteNome}</TableCell>
@@ -306,25 +313,54 @@ export default function EstoquePendenciasBaseTrocas() {
                       {formatarMoeda(tradeIn.tradeIn.valorCompraUsado)}
                     </TableCell>
                     <TableCell>
-                      <SLABadge dataVenda={tradeIn.dataVenda} />
+                      {tradeIn.status === 'Aguardando Devolução' ? (
+                        <SLABadge dataVenda={tradeIn.dataVenda} />
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleAbrirRecebimento(tradeIn)}
-                        className="gap-1.5"
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                        Registrar Recebimento
-                      </Button>
+                      {tradeIn.status === 'Recebido' ? (
+                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Finalizado
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Aguardando
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {tradeIn.status === 'Aguardando Devolução' ? (
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleAbrirRecebimento(tradeIn)}
+                          className="gap-1.5"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Registrar Recebimento
+                        </Button>
+                      ) : (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleAbrirRecebimento(tradeIn)}
+                          className="gap-1.5"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Ver Detalhes
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
                 {tradeInsFiltrados.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-12 text-muted-foreground">
                       <Package className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                      <p>Nenhum aparelho aguardando devolução</p>
+                      <p>Nenhum registro de trade-in encontrado</p>
                     </TableCell>
                   </TableRow>
                 )}

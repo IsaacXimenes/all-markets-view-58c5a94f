@@ -120,6 +120,10 @@ export function getTradeInsPendentesAguardando(): TradeInPendente[] {
   return tradeInsPendentes.filter(t => t.status === 'Aguardando Devolução');
 }
 
+export function getTradeInsPendentesRecebidos(): TradeInPendente[] {
+  return tradeInsPendentes.filter(t => t.status === 'Recebido');
+}
+
 export function getTradeInPendenteById(id: string): TradeInPendente | undefined {
   return tradeInsPendentes.find(t => t.id === id);
 }
