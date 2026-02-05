@@ -71,6 +71,11 @@ export interface MovimentacaoMatrizItem {
   statusItem: 'Enviado' | 'Devolvido' | 'Vendido';
   dataHoraRetorno?: string;
   responsavelRetorno?: string;
+  // Campos para conferência automática via venda
+  vendaId?: string;           // ID da venda quando conferido automaticamente
+  vendedorId?: string;        // ID do vendedor responsável
+  vendedorNome?: string;      // Nome do vendedor
+  conferenciaAutomatica?: boolean; // Flag para indicar conferência automática
 }
 
 // Interface principal da movimentação matriz
@@ -1802,4 +1807,90 @@ export const getProdutosDisponivelMatriz = (): Produto[] => {
     !p.bloqueadoEmVendaId &&
     p.statusNota === 'Concluído'
   );
+};
+
+// ============= CONFERÊNCIA AUTOMÁTICA VIA VENDA =============
+import { buscarVendaPorImei } from './vendasApi';
+
+// Função de conferência automática de itens pendentes via venda
+export const conferirItensAutomaticamentePorVenda = (
+  movimentacaoId: string,
+  obterNomeColaborador: (id: string) => string
+): { 
+  movimentacao: MovimentacaoMatriz | null; 
+  itensConferidos: Array<{ imei: string; vendaId: string; vendedor: string }>; 
+} => {
+  const movimentacao = movimentacoesMatriz.find(m => m.id === movimentacaoId);
+  if (!movimentacao) {
+    return { movimentacao: null, itensConferidos: [] };
+  }
+  
+  // Apenas movimentações não finalizadas
+  if (movimentacao.statusMovimentacao.startsWith('Finalizado')) {
+    return { movimentacao, itensConferidos: [] };
+  }
+  
+  const agora = new Date();
+  const agoraISO = agora.toISOString();
+  const itensConferidos: Array<{ imei: string; vendaId: string; vendedor: string }> = [];
+  
+  // Para cada item pendente (Enviado), verificar se existe venda
+  movimentacao.itens.forEach(item => {
+    if (item.statusItem !== 'Enviado') return;
+    
+    const resultado = buscarVendaPorImei(item.imei);
+    if (resultado) {
+      const { venda } = resultado;
+      const vendedorNome = obterNomeColaborador(venda.vendedor) || 'Vendedor Desconhecido';
+      
+      // Atualizar item
+      item.statusItem = 'Vendido';
+      item.dataHoraRetorno = agoraISO;
+      item.vendaId = venda.id;
+      item.vendedorId = venda.vendedor;
+      item.vendedorNome = vendedorNome;
+      item.conferenciaAutomatica = true;
+      
+      // Adicionar à lista de conferidos
+      itensConferidos.push({
+        imei: item.imei,
+        vendaId: venda.id,
+        vendedor: vendedorNome
+      });
+      
+      // Adicionar entrada na timeline
+      movimentacao.timeline.unshift({
+        id: `TL-${Date.now()}-auto-${item.imei}`,
+        data: agoraISO,
+        tipo: 'venda_matriz',
+        titulo: 'Conferido Automaticamente via Venda',
+        descricao: `${item.modelo} ${item.cor} - Venda ${venda.id} por ${vendedorNome}`,
+        responsavel: 'Sistema',
+        aparelhoId: item.aparelhoId
+      });
+    }
+  });
+  
+  // Verificar se movimentação finalizou
+  const todosFinalizados = movimentacao.itens.every(
+    i => i.statusItem === 'Devolvido' || i.statusItem === 'Vendido'
+  );
+  
+  if (todosFinalizados && itensConferidos.length > 0) {
+    const limite = new Date(movimentacao.dataHoraLimiteRetorno);
+    movimentacao.statusMovimentacao = (movimentacao.statusMovimentacao === 'Atrasado' || agora >= limite)
+      ? 'Finalizado - Atrasado'
+      : 'Finalizado - Dentro do Prazo';
+      
+    movimentacao.timeline.unshift({
+      id: `TL-${Date.now()}-auto-conc`,
+      data: agoraISO,
+      tipo: 'retorno_matriz',
+      titulo: 'Movimentação Finalizada Automaticamente',
+      descricao: `Todos os itens conferidos - ${movimentacao.statusMovimentacao}`,
+      responsavel: 'Sistema'
+    });
+  }
+  
+  return { movimentacao, itensConferidos };
 };

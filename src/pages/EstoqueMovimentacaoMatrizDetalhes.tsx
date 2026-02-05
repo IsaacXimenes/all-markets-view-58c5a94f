@@ -30,6 +30,7 @@ import {
   registrarRetornoItemMatriz,
   desfazerRetornoItemMatriz,
   verificarStatusMovimentacoesMatriz,
+  conferirItensAutomaticamentePorVenda,
   MovimentacaoMatriz,
   MovimentacaoMatrizItem
 } from '@/utils/estoqueApi';
@@ -107,20 +108,38 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
   
   const colaboradores = obterColaboradoresAtivos();
   
-  // Carregar movimentação e verificar status
+  // Carregar movimentação e verificar status + conferência automática
   useEffect(() => {
     if (id) {
       // Verificar status de todas as movimentações primeiro
       verificarStatusMovimentacoesMatriz();
-      const mov = getMovimentacaoMatrizById(id);
-      setMovimentacao(mov);
+      
+      // Tentar conferir itens automaticamente por venda
+      const { movimentacao: movAtualizada, itensConferidos } = 
+        conferirItensAutomaticamentePorVenda(id, obterNomeColaborador);
+      
+      if (movAtualizada) {
+        setMovimentacao(movAtualizada);
+        
+        // Mostrar toast se houver conferências automáticas
+        if (itensConferidos.length > 0) {
+          toast({
+            title: 'Conferência Automática',
+            description: `${itensConferidos.length} item(ns) conferido(s) automaticamente via vendas realizadas`,
+          });
+        }
+      } else {
+        const mov = getMovimentacaoMatrizById(id);
+        setMovimentacao(mov);
+      }
+      
       setIsLoading(false);
     }
   }, [id]);
   
-  // Separar itens por status
+  // Separar itens por status (inclui status 'Vendido' como conferido)
   const itensRelacaoOriginal = movimentacao?.itens ?? [];
-  const itensConferidos = itensRelacaoOriginal.filter(i => i.statusItem === 'Devolvido');
+  const itensConferidos = itensRelacaoOriginal.filter(i => i.statusItem === 'Devolvido' || i.statusItem === 'Vendido');
   const itensPendentes = itensRelacaoOriginal.filter(i => i.statusItem === 'Enviado');
 
   const cloneMovimentacao = (mov: MovimentacaoMatriz): MovimentacaoMatriz => ({
@@ -331,29 +350,52 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
                     {itensConferidos.map(item => (
                       <div 
                         key={item.aparelhoId}
-                        className="p-3 rounded-lg border bg-green-500/10 border-green-500/30"
+                        className={`p-3 rounded-lg border ${
+                          item.conferenciaAutomatica 
+                            ? 'bg-blue-500/10 border-blue-500/30' 
+                            : 'bg-green-500/10 border-green-500/30'
+                        }`}
                       >
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-medium text-sm">{item.modelo}</p>
                             <p className="text-xs text-muted-foreground font-mono">{formatIMEI(item.imei)}</p>
-                            {item.dataHoraRetorno && (
+                            
+                            {item.conferenciaAutomatica && item.vendaId && (
+                              <div className="mt-1 space-y-0.5">
+                                <p className="text-xs text-blue-600">
+                                  <strong>Venda:</strong> {item.vendaId}
+                                </p>
+                                <p className="text-xs text-blue-600">
+                                  <strong>Vendedor:</strong> {item.vendedorNome}
+                                </p>
+                              </div>
+                            )}
+                            
+                            {!item.conferenciaAutomatica && item.dataHoraRetorno && (
                               <p className="text-xs text-green-600 mt-1">
                                 {format(new Date(item.dataHoraRetorno), "dd/MM HH:mm")} - {item.responsavelRetorno}
                               </p>
                             )}
                           </div>
-                          {!isMovimentacaoFinalizada && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDesfazerConferencia(item.aparelhoId)}
-                              className="text-destructive hover:text-destructive"
-                              title="Desfazer Conferência"
-                            >
-                              <Undo2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {item.conferenciaAutomatica ? (
+                              <Badge className="bg-blue-600 text-xs">Venda Automática</Badge>
+                            ) : (
+                              <Badge className="bg-green-600 text-xs">Devolvido</Badge>
+                            )}
+                            {!isMovimentacaoFinalizada && !item.conferenciaAutomatica && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDesfazerConferencia(item.aparelhoId)}
+                                className="text-destructive hover:text-destructive"
+                                title="Desfazer Conferência"
+                              >
+                                <Undo2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}

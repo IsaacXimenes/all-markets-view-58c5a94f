@@ -1049,3 +1049,21 @@ export const exportVendasToCSV = (data: Venda[], filename: string) => {
   link.click();
   document.body.removeChild(link);
 };
+
+// ============= BUSCA DE VENDA POR IMEI =============
+// Buscar venda concluída que contenha um item com o IMEI especificado
+export const buscarVendaPorImei = (imei: string): { venda: Venda; item: ItemVenda; } | null => {
+  const imeiLimpo = imei.replace(/\D/g, '');
+  
+  for (const venda of vendas) {
+    // Apenas vendas concluídas
+    if (venda.status !== 'Concluída') continue;
+    
+    const item = venda.itens.find(i => i.imei === imeiLimpo);
+    if (item) {
+      return { venda, item };
+    }
+  }
+  
+  return null;
+};
