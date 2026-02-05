@@ -1080,7 +1080,14 @@ export default function VendasEditar() {
                 <label className="text-sm font-medium">Tipo de Retirada</label>
                 <Select 
                   value={tipoRetirada} 
-                  onValueChange={(v) => setTipoRetirada(v as any)}
+                  onValueChange={(v) => {
+                    setTipoRetirada(v as any);
+                    // Zerar valores de entrega quando não for "Entrega"
+                    if (v !== 'Entrega') {
+                      setTaxaEntrega(0);
+                      setMotoboyId('');
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
