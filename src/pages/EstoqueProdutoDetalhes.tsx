@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import QRCode from 'qrcode';
 import { formatIMEI } from '@/utils/imeiMask';
 import { ModalRetiradaPecas } from '@/components/estoque/ModalRetiradaPecas';
 import { verificarDisponibilidadeRetirada } from '@/utils/retiradaPecasApi';
+ import { ImagensTemporarias, ImagemTemporaria } from '@/components/estoque/ImagensTemporarias';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -23,6 +24,20 @@ export default function EstoqueProdutoDetalhes() {
   const [produto, setProduto] = useState<Produto | null>(null);
   const [qrCode, setQrCode] = useState('');
   const [showModalRetirada, setShowModalRetirada] = useState(false);
+   const [imagensTemporarias, setImagensTemporarias] = useState<ImagemTemporaria[]>([]);
+   const imagensRef = useRef<ImagemTemporaria[]>([]);
+ 
+   // Keep ref in sync for cleanup
+   useEffect(() => {
+     imagensRef.current = imagensTemporarias;
+   }, [imagensTemporarias]);
+ 
+   // Cleanup blob URLs on unmount
+   useEffect(() => {
+     return () => {
+       imagensRef.current.forEach(img => URL.revokeObjectURL(img.blobUrl));
+     };
+   }, []);
 
   useEffect(() => {
     const produtoEncontrado = getProdutos().find(p => p.id === id);
@@ -424,6 +439,12 @@ export default function EstoqueProdutoDetalhes() {
             </div>
           </CardContent>
         </Card>
+
+         {/* Imagens Temporárias */}
+         <ImagensTemporarias
+           imagens={imagensTemporarias}
+           onImagensChange={setImagensTemporarias}
+         />
       </div>
       
       {/* Modal Retirada de Peças */}
