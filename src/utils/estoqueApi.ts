@@ -1169,12 +1169,14 @@ export const getProdutosDisponiveis = (): Produto[] => {
 // Obter produtos disponíveis para uma loja específica (considerando compartilhamento Online/Matriz)
 export const getProdutosDisponiveisPorLoja = (lojaId: string): Produto[] => {
   const lojaEstoqueReal = getLojaEstoqueReal(lojaId);
-  return produtos.filter(p => 
-    p.quantidade > 0 && 
-    !p.bloqueadoEmVendaId && 
-    !p.statusMovimentacao && 
-    p.loja === lojaEstoqueReal
-  );
+  return produtos.filter(p => {
+    if (p.quantidade <= 0) return false;
+    if (p.bloqueadoEmVendaId) return false;
+    if (p.statusMovimentacao) return false;
+    // Usar localização física efetiva: lojaAtualId (se existir) ou loja original
+    const lojaEfetivaProduto = p.lojaAtualId || p.loja;
+    return lojaEfetivaProduto === lojaEstoqueReal;
+  });
 };
 
 // Verificar se produto está bloqueado
@@ -1191,7 +1193,9 @@ export const abaterProdutoDoEstoque = (produtoId: string, lojaVendaId: string): 
   // Se a venda é na Online, abate do estoque da Matriz
   const lojaEstoqueReal = getLojaEstoqueReal(lojaVendaId);
   
-  if (produto.loja === lojaEstoqueReal && produto.quantidade > 0) {
+  // Usar localização física efetiva: lojaAtualId (se existir) ou loja original
+  const lojaEfetivaProduto = produto.lojaAtualId || produto.loja;
+  if (lojaEfetivaProduto === lojaEstoqueReal && produto.quantidade > 0) {
     produto.quantidade -= 1;
     console.log(`Produto ${produtoId} abatido do estoque da loja ${lojaEstoqueReal}`);
     return true;

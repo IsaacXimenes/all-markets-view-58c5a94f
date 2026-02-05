@@ -551,11 +551,16 @@ export default function VendasNova() {
       if (lojaVenda) {
         // Obter a loja de estoque real (considerando compartilhamento Online/Matriz)
         const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
-        if (p.loja !== lojaEstoqueReal) return false;
+        // Usar localização física efetiva: lojaAtualId (se existir) ou loja original
+        const lojaEfetivaProduto = p.lojaAtualId || p.loja;
+        if (lojaEfetivaProduto !== lojaEstoqueReal) return false;
       }
       
       // Filtros adicionais do modal
-      if (filtroLojaProduto && p.loja !== filtroLojaProduto) return false;
+      if (filtroLojaProduto) {
+        const lojaEfetivaProduto = p.lojaAtualId || p.loja;
+        if (lojaEfetivaProduto !== filtroLojaProduto) return false;
+      }
       if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
       if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
       return true;
@@ -571,7 +576,9 @@ export default function VendasNova() {
       if (p.bloqueadoEmVendaId) return false;
       if (p.statusMovimentacao) return false;
       if (p.statusEmprestimo) return false; // NOVO: Bloquear produtos emprestados
-      if (p.loja === lojaEstoqueReal) return false; // Excluir loja de estoque real
+      // Usar localização física efetiva: lojaAtualId (se existir) ou loja original
+      const lojaEfetivaProduto = p.lojaAtualId || p.loja;
+      if (lojaEfetivaProduto === lojaEstoqueReal) return false; // Excluir loja de estoque real
       if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
       if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
       return true;
