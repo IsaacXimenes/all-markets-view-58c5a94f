@@ -239,28 +239,17 @@ export default function EstoqueNovaMovimentacaoMatriz() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg">Selecionar Aparelhos</CardTitle>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => setShowScanner(true)}
-                  >
-                    <Camera className="h-4 w-4" />
-                    Escanear IMEI
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    className="gap-2"
-                    onClick={() => setIsModalSelecionarOpen(true)}
-                  >
-                    <Search className="h-4 w-4" />
-                    Buscar no Estoque
-                    {produtosDisponiveis.length > 0 && (
-                      <Badge variant="secondary">{produtosDisponiveis.length}</Badge>
-                    )}
-                  </Button>
-                </div>
+                <Button 
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => setIsModalSelecionarOpen(true)}
+                >
+                  <Search className="h-4 w-4" />
+                  Buscar no Estoque
+                  {produtosDisponiveis.length > 0 && (
+                    <Badge variant="secondary">{produtosDisponiveis.length}</Badge>
+                  )}
+                </Button>
               </CardHeader>
               <CardContent>
                 {itensParaEnviar.length === 0 ? (
@@ -379,15 +368,25 @@ export default function EstoqueNovaMovimentacaoMatriz() {
           </DialogHeader>
           
           <div className="space-y-4">
-            {/* Busca */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                className="pl-10"
-                placeholder="Buscar por IMEI ou modelo..."
-                value={buscaProduto}
-                onChange={(e) => setBuscaProduto(e.target.value)}
-              />
+            {/* Busca com Scanner */}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  className="pl-10"
+                  placeholder="Buscar por IMEI ou modelo..."
+                  value={buscaProduto}
+                  onChange={(e) => setBuscaProduto(e.target.value)}
+                />
+              </div>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => setShowScanner(true)}
+                title="Escanear IMEI"
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
             </div>
             
             {/* Lista de produtos */}

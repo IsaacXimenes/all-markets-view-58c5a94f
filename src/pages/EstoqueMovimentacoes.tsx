@@ -642,6 +642,14 @@ export default function EstoqueMovimentacoes() {
                   onChange={(e) => setBuscaProduto(e.target.value)}
                   className="flex-1"
                 />
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => setShowScannerModal(true)}
+                  title="Escanear IMEI"
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
                 <Select value={buscaLojaModal} onValueChange={setBuscaLojaModal}>
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="Filtrar por loja" />

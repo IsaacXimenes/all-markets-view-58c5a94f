@@ -62,7 +62,9 @@ export default function EstoqueProdutos() {
   };
 
   const produtosFiltrados = produtos.filter(p => {
-    if (lojaFilter !== 'todas' && p.loja !== lojaFilter) return false;
+    // Usar lojaAtualId se existir (produto em movimentação matriz), senão usar loja original
+    const lojaEfetiva = p.lojaAtualId || p.loja;
+    if (lojaFilter !== 'todas' && lojaEfetiva !== lojaFilter) return false;
     if (modeloFilter && !p.modelo.toLowerCase().includes(modeloFilter.toLowerCase())) return false;
     if (imeiFilter && !unformatIMEI(p.imei).includes(unformatIMEI(imeiFilter))) return false;
     if (tipoFilter !== 'todos' && p.tipo !== tipoFilter) return false;
@@ -379,8 +381,8 @@ export default function EstoqueProdutos() {
                       <span className="text-xs text-muted-foreground">{produto.cor}</span>
                     </div>
                   </TableCell>
-                  {/* Loja */}
-                  <TableCell className="text-sm">{getLojaNome(produto.loja)}</TableCell>
+                  {/* Loja - Usa lojaAtualId (movimentação matriz) ou loja original */}
+                  <TableCell className="text-sm">{getLojaNome(produto.lojaAtualId || produto.loja)}</TableCell>
                   {/* Venda Recomendada */}
                   <TableCell>
                     {produto.vendaRecomendada ? (

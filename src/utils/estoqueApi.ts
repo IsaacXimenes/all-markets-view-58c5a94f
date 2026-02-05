@@ -826,11 +826,11 @@ let movimentacoes: Movimentacao[] = [
   {
     id: 'MOV-2025-0001',
     data: '2024-11-10',
-    produto: 'iPhone 15 Pro',
+    produto: 'iPhone 14 Pro',
     imei: '352123456789013',
     quantidade: 1,
-    origem: 'Loja Centro',
-    destino: 'Loja Shopping',
+    origem: LOJAS_IDS.MATRIZ,         // ID válido: Loja - Matriz
+    destino: LOJAS_IDS.JK_SHOPPING,   // ID válido: Loja - JK Shopping
     responsavel: 'João Silva',
     motivo: 'Transferência de estoque',
     status: 'Pendente'
@@ -839,10 +839,10 @@ let movimentacoes: Movimentacao[] = [
     id: 'MOV-2025-0002',
     data: '2024-11-15',
     produto: 'iPhone 13',
-    imei: '352123456789015',
+    imei: '352123456789014',
     quantidade: 1,
-    origem: 'Loja Norte',
-    destino: 'Loja Sul',
+    origem: LOJAS_IDS.SHOPPING_SUL,   // ID válido: Loja - Shopping Sul
+    destino: LOJAS_IDS.AGUAS_LINDAS,  // ID válido: Loja - Águas Lindas Shopping
     responsavel: 'Maria Santos',
     motivo: 'Solicitação do gerente',
     status: 'Pendente'
