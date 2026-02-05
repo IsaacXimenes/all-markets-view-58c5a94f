@@ -27,6 +27,7 @@ import {
 } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { getProdutos, Produto, updateProduto, bloquearProdutosEmVenda, getLojaEstoqueReal, LOJA_MATRIZ_ID, LOJA_ONLINE_ID } from '@/utils/estoqueApi';
+import { addTradeInPendente } from '@/utils/baseTrocasPendentesApi';
 import { addVenda, getNextVendaNumber, getHistoricoComprasCliente, ItemVenda, ItemTradeIn, Pagamento } from '@/utils/vendasApi';
 import { inicializarVendaNoFluxo } from '@/utils/fluxoVendasApi';
 import { getAcessorios, Acessorio, subtrairEstoqueAcessorio, VendaAcessorio } from '@/utils/acessoriosApi';
@@ -961,6 +962,26 @@ export default function VendasNova() {
 
     // Inicializar venda no fluxo de conferência (registra no localStorage)
     inicializarVendaNoFluxo(venda.id, confirmVendedor, vendedorNome);
+
+    // INTEGRAÇÃO: Enviar trade-ins "Com o Cliente" para Base de Trocas
+    tradeIns.forEach(tradeIn => {
+      if (tradeIn.tipoEntrega === 'Com o Cliente') {
+        addTradeInPendente({
+          vendaId: venda.id,
+          clienteId,
+          clienteNome,
+          tradeIn,
+          dataVenda: new Date().toISOString(),
+          lojaVenda: confirmLoja,
+          vendedorId: confirmVendedor,
+          vendedorNome,
+          status: 'Aguardando Devolução',
+          termoResponsabilidade: tradeIn.termoResponsabilidade,
+          fotosAparelho: tradeIn.fotosAparelho
+        });
+        console.log(`[VendasNova] Trade-In "${tradeIn.modelo}" enviado para Base de Trocas`);
+      }
+    });
 
     // Limpar rascunho
     clearDraft();

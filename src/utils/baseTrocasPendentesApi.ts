@@ -1,6 +1,7 @@
 // API para gerenciar Trade-Ins pendentes (aparelhos com o cliente)
 import { ItemTradeIn } from './vendasApi';
 import { AnexoTemporario } from '@/components/estoque/BufferAnexos';
+import { addProdutoPendente, ProdutoPendente } from './osApi';
 
 export interface TradeInPendente {
   id: string;
@@ -197,29 +198,46 @@ export function calcularSLA(dataVenda: string): SLAInfo {
  * Função para migrar um trade-in recebido para Produtos Pendentes
  * Esta função deve ser chamada após registrar o recebimento
  */
-export function migrarParaProdutosPendentes(tradeInPendenteId: string): boolean {
+export function migrarParaProdutosPendentes(tradeInPendenteId: string): ProdutoPendente | null {
   const tradeIn = getTradeInPendenteById(tradeInPendenteId);
   if (!tradeIn || tradeIn.status !== 'Recebido') {
-    return false;
+    console.warn('[BaseTrocasAPI] Trade-In não encontrado ou não recebido:', tradeInPendenteId);
+    return null;
   }
 
-  // TODO: Integrar com osApi.addProdutoPendente quando conectar ao backend
-  // Exemplo de estrutura esperada:
-  // addProdutoPendente({
-  //   modelo: tradeIn.tradeIn.modelo,
-  //   imei: tradeIn.tradeIn.imei,
-  //   condicao: tradeIn.tradeIn.condicao,
-  //   valorCusto: tradeIn.tradeIn.valorCompraUsado,
-  //   origem: 'Base de Troca',
-  //   vendaOrigemId: tradeIn.vendaId,
-  //   clienteOrigemId: tradeIn.clienteId,
-  //   dataEntrada: tradeIn.dataRecebimento,
-  //   fotosRecebimento: tradeIn.fotosRecebimento,
-  //   termoResponsabilidade: tradeIn.termoResponsabilidade
-  // });
+  try {
+    // Extrair marca do modelo (assume formato "iPhone X" = "Apple")
+    const marca = tradeIn.tradeIn.modelo.toLowerCase().includes('iphone') ? 'Apple' : 'Outro';
+    
+    // Migrar para Produtos Pendentes via osApi
+    const produtoPendente = addProdutoPendente({
+      imei: tradeIn.tradeIn.imei?.replace(/-/g, '') || '',
+      marca,
+      modelo: tradeIn.tradeIn.modelo,
+      cor: 'N/A', // Não temos cor no trade-in
+      tipo: 'Seminovo',
+      condicao: tradeIn.tradeIn.condicao === 'Novo' ? 'Novo' : 'Semi-novo',
+      origemEntrada: 'Base de Troca',
+      notaOuVendaId: tradeIn.vendaId,
+      valorCusto: tradeIn.tradeIn.valorCompraUsado,
+      valorOrigem: tradeIn.tradeIn.valorCompraUsado,
+      saudeBateria: 85, // Valor padrão
+      loja: tradeIn.lojaVenda,
+      dataEntrada: tradeIn.dataRecebimento || new Date().toISOString().split('T')[0],
+      fornecedor: `Cliente: ${tradeIn.clienteNome}`
+    });
 
-  console.log('[BaseTrocasAPI] Migrando para Produtos Pendentes:', tradeIn.id);
-  return true;
+    console.log(`[BaseTrocasAPI] Trade-In ${tradeInPendenteId} migrado para Produtos Pendentes: ${produtoPendente.id}`);
+    
+    // Remover da lista de pendentes (opcional - manter para histórico)
+    // const index = tradeInsPendentes.findIndex(t => t.id === tradeInPendenteId);
+    // if (index !== -1) tradeInsPendentes.splice(index, 1);
+    
+    return produtoPendente;
+  } catch (error) {
+    console.error('[BaseTrocasAPI] Erro ao migrar para Produtos Pendentes:', error);
+    return null;
+  }
 }
 
 // ============= ESTATÍSTICAS =============
