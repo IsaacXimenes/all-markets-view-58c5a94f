@@ -22,6 +22,7 @@ import {
 import { useCadastroStore } from '@/store/cadastroStore';
 import { 
   getMovimentacoesMatriz,
+  verificarStatusMovimentacoesMatriz,
   MovimentacaoMatriz
 } from '@/utils/estoqueApi';
 
@@ -78,8 +79,10 @@ export default function EstoqueMovimentacoesMatriz() {
   // Refresh
   const [refreshKey, setRefreshKey] = useState(0);
   
-  // Carregar movimentações
+  // Carregar movimentações e verificar status
   useEffect(() => {
+    // Verificar status automaticamente ao carregar
+    verificarStatusMovimentacoesMatriz();
     setMovimentacoes(getMovimentacoesMatriz());
   }, [refreshKey]);
   
@@ -92,7 +95,7 @@ export default function EstoqueMovimentacoesMatriz() {
     return resultado;
   }, [movimentacoes, filtroStatus]);
   
-  // Navegar para detalhes da movimentação (tela full screen com 3 quadros)
+  // Navegar para detalhes da movimentação
   const handleAbrirDetalhes = (movId: string) => {
     navigate(`/estoque/movimentacoes-matriz/${movId}`);
   };
@@ -100,26 +103,32 @@ export default function EstoqueMovimentacoesMatriz() {
   // Badge de status
   const getStatusBadge = (status: MovimentacaoMatriz['statusMovimentacao']) => {
     switch (status) {
-      case 'Aguardando Retorno':
-        return <Badge variant="secondary" className="gap-1"><Clock className="h-3 w-3" /> Aguardando</Badge>;
-      case 'Concluída':
-        return <Badge className="gap-1 bg-green-600 hover:bg-green-600"><CheckCircle className="h-3 w-3" /> Concluída</Badge>;
-      case 'Retorno Atrasado':
+      case 'Pendente':
+        return <Badge className="gap-1 bg-yellow-500"><Clock className="h-3 w-3" /> Pendente</Badge>;
+      case 'Atrasado':
         return <Badge variant="destructive" className="gap-1 animate-pulse"><AlertTriangle className="h-3 w-3" /> Atrasado</Badge>;
+      case 'Finalizado - Dentro do Prazo':
+        return <Badge className="gap-1 bg-green-600 hover:bg-green-600"><CheckCircle className="h-3 w-3" /> Dentro do Prazo</Badge>;
+      case 'Finalizado - Atrasado':
+        return <Badge className="gap-1 bg-orange-500 hover:bg-orange-500"><CheckCircle className="h-3 w-3" /> Finalizado Atrasado</Badge>;
     }
   };
   
-  // Cor da linha baseada no status - vermelho se tem pendência (Aguardando ou Atrasado)
+  // Cor da linha baseada no status
   const getRowStatusClass = (mov: MovimentacaoMatriz) => {
     const temPendencia = mov.itens.some(i => i.statusItem === 'Enviado');
     
-    if (mov.statusMovimentacao === 'Concluída') {
+    if (mov.statusMovimentacao.startsWith('Finalizado')) {
       return 'bg-green-500/10';
     }
     
-    // Se tem pendência (itens não devolvidos), linha vermelha
-    if (temPendencia) {
+    if (mov.statusMovimentacao === 'Atrasado') {
       return 'bg-red-500/10';
+    }
+    
+    // Se tem pendência
+    if (temPendencia) {
+      return 'bg-yellow-500/10';
     }
     
     return '';
@@ -144,9 +153,10 @@ export default function EstoqueMovimentacoesMatriz() {
                     <SelectValue placeholder="Todos os status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Aguardando Retorno">Aguardando Retorno</SelectItem>
-                    <SelectItem value="Concluída">Concluída</SelectItem>
-                    <SelectItem value="Retorno Atrasado">Retorno Atrasado</SelectItem>
+                    <SelectItem value="Pendente">Pendente</SelectItem>
+                    <SelectItem value="Atrasado">Atrasado</SelectItem>
+                    <SelectItem value="Finalizado - Dentro do Prazo">Finalizado - Dentro do Prazo</SelectItem>
+                    <SelectItem value="Finalizado - Atrasado">Finalizado - Atrasado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -220,7 +230,7 @@ export default function EstoqueMovimentacoesMatriz() {
                       </TableCell>
                       <TableCell>{getStatusBadge(mov.statusMovimentacao)}</TableCell>
                       <TableCell>
-                        {mov.statusMovimentacao === 'Concluída' ? (
+                        {mov.statusMovimentacao.startsWith('Finalizado') ? (
                           <span className="text-muted-foreground">--</span>
                         ) : (
                           <TimerRegressivo dataLimite={mov.dataHoraLimiteRetorno} />

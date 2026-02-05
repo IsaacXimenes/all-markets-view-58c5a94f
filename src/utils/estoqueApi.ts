@@ -80,8 +80,8 @@ export interface MovimentacaoMatriz {
   responsavelLancamento: string;
   lojaOrigemId: string; // Sempre Matriz
   lojaDestinoId: string;
-  statusMovimentacao: 'Aguardando Retorno' | 'Concluída' | 'Retorno Atrasado';
-  dataHoraLimiteRetorno: string; // +22 horas
+  statusMovimentacao: 'Pendente' | 'Atrasado' | 'Finalizado - Dentro do Prazo' | 'Finalizado - Atrasado';
+  dataHoraLimiteRetorno: string; // 22:00 do mesmo dia
   itens: MovimentacaoMatrizItem[];
   timeline: TimelineEntry[];
 }
@@ -1505,6 +1505,7 @@ export const getMovimentacaoMatrizById = (id: string): MovimentacaoMatriz | null
 };
 
 // Criar nova movimentação matriz (Estoque SIA → Loja Matriz)
+// IMPORTANTE: Movimentações Matriz NÃO bloqueiam produtos - apenas atualizam lojaAtualId diretamente
 export const criarMovimentacaoMatriz = (dados: {
   lojaDestinoId: string;
   responsavelLancamento: string;
@@ -1528,7 +1529,7 @@ export const criarMovimentacaoMatriz = (dados: {
     responsavelLancamento: dados.responsavelLancamento,
     lojaOrigemId: ESTOQUE_SIA_ID, // Origem fixa: Estoque - SIA
     lojaDestinoId: dados.lojaDestinoId, // Destino fixo: Loja - Matriz
-    statusMovimentacao: 'Aguardando Retorno',
+    statusMovimentacao: 'Pendente', // Novo status inicial
     dataHoraLimiteRetorno,
     itens: dados.itens.map(item => ({
       ...item,
@@ -1538,19 +1539,20 @@ export const criarMovimentacaoMatriz = (dados: {
       id: `TL-${Date.now()}`,
       data: dataHoraLancamento,
       tipo: 'saida_matriz' as const,
-      titulo: 'Saída do Estoque SIA',
+      titulo: 'Movimentação Criada',
       descricao: `${dados.itens.length} aparelho(s) enviado(s) para Loja - Matriz`,
       responsavel: dados.responsavelLancamento
     }]
   };
   
-  // Atualizar lojaAtualId de cada produto (agora está na Matriz)
+  // Atualizar lojaAtualId de cada produto (transferência imediata - SEM bloqueio)
   dados.itens.forEach(item => {
     const produto = produtos.find(p => p.id === item.aparelhoId);
     if (produto) {
+      // Apenas atualizar localização física - NÃO bloquear para venda
       produto.lojaAtualId = dados.lojaDestinoId; // Loja - Matriz
-      produto.statusMovimentacao = 'Em movimentação';
-      produto.movimentacaoId = novaMovimentacao.id;
+      produto.movimentacaoId = novaMovimentacao.id; // Referência para rastreabilidade
+      // REMOVIDO: produto.statusMovimentacao = 'Em movimentação';
       
       // Adicionar entrada na timeline do produto
       if (!produto.timeline) produto.timeline = [];
@@ -1558,8 +1560,8 @@ export const criarMovimentacaoMatriz = (dados: {
         id: `TL-PROD-${Date.now()}-${item.aparelhoId}`,
         data: dataHoraLancamento,
         tipo: 'saida_matriz',
-        titulo: 'Saída para Loja - Matriz',
-        descricao: `Produto enviado do Estoque - SIA para Loja - Matriz`,
+        titulo: 'Transferência para Loja - Matriz',
+        descricao: `Produto transferido do Estoque - SIA para Loja - Matriz (disponível para venda)`,
         responsavel: dados.responsavelLancamento
       });
     }
@@ -1593,25 +1595,25 @@ export const registrarRetornoItemMatriz = (
     return { sucesso: false, mensagem: 'Item foi vendido na loja destino' };
   }
   
-  const agora = new Date().toISOString();
+  const agora = new Date();
+  const agoraISO = agora.toISOString();
   
   // Atualizar item
   item.statusItem = 'Devolvido';
-  item.dataHoraRetorno = agora;
+  item.dataHoraRetorno = agoraISO;
   item.responsavelRetorno = responsavelRetorno;
   
   // Atualizar produto - voltar para Estoque - SIA
   const produto = produtos.find(p => p.id === aparelhoId);
   if (produto) {
     produto.lojaAtualId = undefined; // Volta ao Estoque SIA (loja original)
-    produto.statusMovimentacao = null;
     produto.movimentacaoId = undefined;
     
     // Adicionar entrada na timeline do produto
     if (!produto.timeline) produto.timeline = [];
     produto.timeline.unshift({
       id: `TL-PROD-${Date.now()}-${aparelhoId}-ret`,
-      data: agora,
+      data: agoraISO,
       tipo: 'retorno_matriz',
       titulo: 'Retorno ao Estoque - SIA',
       descricao: `Produto devolvido ao Estoque - SIA`,
@@ -1622,10 +1624,10 @@ export const registrarRetornoItemMatriz = (
   // Adicionar entrada na timeline da movimentação
   movimentacao.timeline.unshift({
     id: `TL-${Date.now()}-ret`,
-    data: agora,
+    data: agoraISO,
     tipo: 'retorno_matriz',
-    titulo: 'Item Devolvido',
-    descricao: `${item.modelo} ${item.cor} (IMEI: ${item.imei}) devolvido`,
+    titulo: 'Item Conferido',
+    descricao: `${item.modelo} ${item.cor} (IMEI: ${item.imei}) conferido e devolvido`,
     responsavel: responsavelRetorno
   });
   
@@ -1635,13 +1637,22 @@ export const registrarRetornoItemMatriz = (
   );
   
   if (todosFinalizados) {
-    movimentacao.statusMovimentacao = 'Concluída';
+    // Determinar se dentro ou fora do prazo
+    const limite = new Date(movimentacao.dataHoraLimiteRetorno);
+    const statusAnterior = movimentacao.statusMovimentacao;
+    
+    if (statusAnterior === 'Atrasado' || agora >= limite) {
+      movimentacao.statusMovimentacao = 'Finalizado - Atrasado';
+    } else {
+      movimentacao.statusMovimentacao = 'Finalizado - Dentro do Prazo';
+    }
+    
     movimentacao.timeline.unshift({
       id: `TL-${Date.now()}-conc`,
-      data: agora,
+      data: agoraISO,
       tipo: 'retorno_matriz',
-      titulo: 'Movimentação Concluída',
-      descricao: 'Todos os itens foram devolvidos ou vendidos',
+      titulo: 'Movimentação Finalizada',
+      descricao: `Todos os itens conferidos - ${movimentacao.statusMovimentacao}`,
       responsavel: responsavelRetorno
     });
   }
@@ -1680,7 +1691,6 @@ export const desfazerRetornoItemMatriz = (
   const produto = produtos.find(p => p.id === aparelhoId);
   if (produto) {
     produto.lojaAtualId = movimentacao.lojaDestinoId;
-    produto.statusMovimentacao = 'Em movimentação';
     produto.movimentacaoId = movimentacaoId;
     
     // Adicionar entrada na timeline do produto
@@ -1690,7 +1700,7 @@ export const desfazerRetornoItemMatriz = (
       data: agora,
       tipo: 'saida_matriz',
       titulo: 'Conferência Desfeita',
-      descricao: `Conferência de retorno desfeita - produto retornou ao status "Em movimentação"`,
+      descricao: `Conferência de retorno desfeita - produto retornou para Loja - Matriz`,
       responsavel
     });
   }
@@ -1705,29 +1715,31 @@ export const desfazerRetornoItemMatriz = (
     responsavel
   });
   
-  // Se a movimentação estava Concluída, voltar para Aguardando Retorno
-  if (movimentacao.statusMovimentacao === 'Concluída') {
-    movimentacao.statusMovimentacao = 'Aguardando Retorno';
+  // Se a movimentação estava Finalizada, voltar para Pendente ou Atrasado
+  if (movimentacao.statusMovimentacao.startsWith('Finalizado')) {
+    const limite = new Date(movimentacao.dataHoraLimiteRetorno);
+    const agoraDate = new Date();
+    movimentacao.statusMovimentacao = agoraDate >= limite ? 'Atrasado' : 'Pendente';
   }
   
   return { sucesso: true, mensagem: 'Conferência desfeita com sucesso', movimentacao };
 };
 
-// Verificar e atualizar retornos atrasados
-export const verificarRetornosAtrasados = (): void => {
+// Verificar e atualizar status para Atrasado quando passa das 22:00
+export const verificarStatusMovimentacoesMatriz = (): void => {
   const agora = new Date();
   
   movimentacoesMatriz.forEach(mov => {
-    if (mov.statusMovimentacao === 'Aguardando Retorno') {
+    if (mov.statusMovimentacao === 'Pendente') {
       const limite = new Date(mov.dataHoraLimiteRetorno);
-      if (agora > limite) {
-        mov.statusMovimentacao = 'Retorno Atrasado';
+      if (agora >= limite) {
+        mov.statusMovimentacao = 'Atrasado';
         mov.timeline.unshift({
           id: `TL-${Date.now()}-atraso`,
           data: agora.toISOString(),
           tipo: 'alerta_sla',
-          titulo: 'Retorno Atrasado',
-          descricao: 'O prazo de 22 horas para retorno expirou',
+          titulo: 'Status: Atrasado',
+          descricao: 'O prazo limite de 22:00 foi ultrapassado',
           responsavel: 'Sistema'
         });
       }
@@ -1735,13 +1747,17 @@ export const verificarRetornosAtrasados = (): void => {
   });
 };
 
+// Alias para compatibilidade
+export const verificarRetornosAtrasados = verificarStatusMovimentacoesMatriz;
+
 // Marcar item como vendido (integração com vendas)
 export const marcarItemVendidoMatriz = (
   imei: string
 ): { sucesso: boolean; movimentacaoId?: string } => {
   // Procurar em movimentações ativas se este IMEI está em alguma
   for (const mov of movimentacoesMatriz) {
-    if (mov.statusMovimentacao !== 'Concluída') {
+    // Apenas movimentações não finalizadas
+    if (!mov.statusMovimentacao.startsWith('Finalizado')) {
       const item = mov.itens.find(i => i.imei === imei && i.statusItem === 'Enviado');
       if (item) {
         item.statusItem = 'Vendido';
@@ -1761,7 +1777,12 @@ export const marcarItemVendidoMatriz = (
         );
         
         if (todosFinalizados) {
-          mov.statusMovimentacao = 'Concluída';
+          // Determinar status de finalização baseado no prazo
+          const agora = new Date();
+          const limite = new Date(mov.dataHoraLimiteRetorno);
+          mov.statusMovimentacao = (mov.statusMovimentacao === 'Atrasado' || agora >= limite)
+            ? 'Finalizado - Atrasado'
+            : 'Finalizado - Dentro do Prazo';
         }
         
         return { sucesso: true, movimentacaoId: mov.id };

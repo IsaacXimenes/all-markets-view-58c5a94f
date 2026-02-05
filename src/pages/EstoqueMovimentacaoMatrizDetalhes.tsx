@@ -20,17 +20,21 @@ import {
   Package, 
   Search,
   Undo2,
-  Timer
+  Timer,
+  Camera,
+  History
 } from 'lucide-react';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { 
   getMovimentacaoMatrizById,
   registrarRetornoItemMatriz,
   desfazerRetornoItemMatriz,
+  verificarStatusMovimentacoesMatriz,
   MovimentacaoMatriz,
   MovimentacaoMatrizItem
 } from '@/utils/estoqueApi';
 import { formatIMEI } from '@/utils/imeiMask';
+import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 
 // Timer Regressivo
 const TimerRegressivo = ({ dataLimite }: { dataLimite: string }) => {
@@ -74,6 +78,20 @@ const TimerRegressivo = ({ dataLimite }: { dataLimite: string }) => {
   );
 };
 
+// Função para obter badge de status
+const getStatusBadge = (status: MovimentacaoMatriz['statusMovimentacao']) => {
+  switch (status) {
+    case 'Pendente':
+      return <Badge className="bg-yellow-500 gap-1"><Clock className="h-3 w-3" /> Pendente</Badge>;
+    case 'Atrasado':
+      return <Badge variant="destructive" className="gap-1 animate-pulse"><AlertTriangle className="h-3 w-3" /> Atrasado</Badge>;
+    case 'Finalizado - Dentro do Prazo':
+      return <Badge className="bg-green-600 gap-1"><CheckCircle className="h-3 w-3" /> Dentro do Prazo</Badge>;
+    case 'Finalizado - Atrasado':
+      return <Badge className="bg-orange-500 gap-1"><CheckCircle className="h-3 w-3" /> Finalizado Atrasado</Badge>;
+  }
+};
+
 export default function EstoqueMovimentacaoMatrizDetalhes() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -85,12 +103,15 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
   const [showDevolucaoModal, setShowDevolucaoModal] = useState(false);
   const [imeiDevolucao, setImeiDevolucao] = useState('');
   const [responsavelDevolucao, setResponsavelDevolucao] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
   
   const colaboradores = obterColaboradoresAtivos();
   
-  // Carregar movimentação
+  // Carregar movimentação e verificar status
   useEffect(() => {
     if (id) {
+      // Verificar status de todas as movimentações primeiro
+      verificarStatusMovimentacoesMatriz();
       const mov = getMovimentacaoMatrizById(id);
       setMovimentacao(mov);
       setIsLoading(false);
@@ -98,8 +119,6 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
   }, [id]);
   
   // Separar itens por status
-  // OBS: não usar useMemo aqui porque a API atual muta o objeto/array internamente;
-  // isso pode manter as listas “congeladas” (pendente não sai / conferido não entra).
   const itensRelacaoOriginal = movimentacao?.itens ?? [];
   const itensConferidos = itensRelacaoOriginal.filter(i => i.statusItem === 'Devolvido');
   const itensPendentes = itensRelacaoOriginal.filter(i => i.statusItem === 'Enviado');
@@ -109,6 +128,13 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
     itens: mov.itens.map(i => ({ ...i })),
     timeline: mov.timeline.map(t => ({ ...t })),
   });
+
+  // Fechar modal e limpar campos
+  const handleCloseModal = () => {
+    setImeiDevolucao('');
+    setResponsavelDevolucao('');
+    setShowDevolucaoModal(false);
+  };
   
   // Registrar devolução
   const handleRegistrarDevolucao = () => {
@@ -133,14 +159,13 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
     if (resultado.sucesso) {
       toast({ title: 'Sucesso', description: 'Devolução registrada com sucesso' });
       setMovimentacao(cloneMovimentacao(resultado.movimentacao!));
-      setImeiDevolucao('');
-      setShowDevolucaoModal(false);
+      handleCloseModal();
     } else {
       toast({ title: 'Erro', description: resultado.mensagem, variant: 'destructive' });
     }
   };
   
-  // Desfazer conferência (marcar como pendente novamente)
+  // Desfazer conferência
   const handleDesfazerConferencia = (aparelhoId: string) => {
     if (!movimentacao) return;
     
@@ -157,6 +182,9 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
       toast({ title: 'Erro', description: resultado.mensagem, variant: 'destructive' });
     }
   };
+
+  // Verificar se movimentação está finalizada
+  const isMovimentacaoFinalizada = movimentacao?.statusMovimentacao.startsWith('Finalizado');
   
   if (isLoading) {
     return (
@@ -200,16 +228,10 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
           </div>
           
           <div className="flex items-center gap-4">
-            {movimentacao.statusMovimentacao !== 'Concluída' && (
+            {!isMovimentacaoFinalizada && (
               <TimerRegressivo dataLimite={movimentacao.dataHoraLimiteRetorno} />
             )}
-            <Badge className={
-              movimentacao.statusMovimentacao === 'Concluída' ? 'bg-green-600' :
-              movimentacao.statusMovimentacao === 'Retorno Atrasado' ? 'bg-destructive' :
-              'bg-yellow-500'
-            }>
-              {movimentacao.statusMovimentacao}
-            </Badge>
+            {getStatusBadge(movimentacao.statusMovimentacao)}
           </div>
         </div>
         
@@ -288,7 +310,7 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {movimentacao.statusMovimentacao !== 'Concluída' && itensPendentes.length > 0 && (
+              {!isMovimentacaoFinalizada && itensPendentes.length > 0 && (
                 <Button 
                   className="w-full mb-4 gap-2"
                   onClick={() => setShowDevolucaoModal(true)}
@@ -321,15 +343,17 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
                               </p>
                             )}
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDesfazerConferencia(item.aparelhoId)}
-                            className="text-destructive hover:text-destructive"
-                            title="Desfazer Conferência"
-                          >
-                            <Undo2 className="h-4 w-4" />
-                          </Button>
+                          {!isMovimentacaoFinalizada && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDesfazerConferencia(item.aparelhoId)}
+                              className="text-destructive hover:text-destructive"
+                              title="Desfazer Conferência"
+                            >
+                              <Undo2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -378,10 +402,51 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Quadro 4: Histórico de Ações */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Histórico de Ações
+              <Badge variant="secondary">{movimentacao.timeline.length}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[250px]">
+              {movimentacao.timeline.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <History className="h-10 w-10 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">Nenhum registro</p>
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {movimentacao.timeline.map(entry => (
+                    <div 
+                      key={entry.id}
+                      className="flex gap-4 py-3 border-b last:border-0"
+                    >
+                      <div className="text-sm text-muted-foreground whitespace-nowrap min-w-[120px]">
+                        {format(new Date(entry.data), "dd/MM/yyyy HH:mm")}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{entry.titulo}</p>
+                        <p className="text-xs text-muted-foreground">{entry.descricao}</p>
+                        {entry.responsavel && (
+                          <p className="text-xs text-primary mt-0.5">Por: {entry.responsavel}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
       </div>
       
       {/* Modal de Devolução */}
-      <Dialog open={showDevolucaoModal} onOpenChange={setShowDevolucaoModal}>
+      <Dialog open={showDevolucaoModal} onOpenChange={(open) => !open && handleCloseModal()}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -393,12 +458,24 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>IMEI do Aparelho *</Label>
-              <Input
-                placeholder="Informe ou escaneie o IMEI..."
-                value={imeiDevolucao}
-                onChange={(e) => setImeiDevolucao(e.target.value)}
-                autoFocus
-              />
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Informe ou escaneie o IMEI..."
+                  value={imeiDevolucao}
+                  onChange={(e) => setImeiDevolucao(formatIMEI(e.target.value))}
+                  autoFocus
+                  maxLength={18}
+                />
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  type="button"
+                  onClick={() => setShowScanner(true)}
+                  title="Escanear IMEI"
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             
             <div className="space-y-2">
@@ -407,7 +484,7 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[100]">
                   {colaboradores.map(col => (
                     <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
                   ))}
@@ -424,10 +501,10 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
                     <div 
                       key={item.aparelhoId}
                       className="p-2 text-sm bg-muted rounded cursor-pointer hover:bg-muted/80"
-                      onClick={() => setImeiDevolucao(item.imei)}
+                      onClick={() => setImeiDevolucao(formatIMEI(item.imei))}
                     >
                       <span className="font-medium">{item.modelo}</span>
-                      <span className="text-muted-foreground ml-2 font-mono text-xs">{item.imei}</span>
+                      <span className="text-muted-foreground ml-2 font-mono text-xs">{formatIMEI(item.imei)}</span>
                     </div>
                   ))}
                 </div>
@@ -436,16 +513,21 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
           </div>
           
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDevolucaoModal(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleRegistrarDevolucao} disabled={!imeiDevolucao}>
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Registrar Devolução
-            </Button>
+            <Button variant="outline" onClick={handleCloseModal}>Cancelar</Button>
+            <Button onClick={handleRegistrarDevolucao}>Confirmar Devolução</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Scanner de Código de Barras */}
+      <BarcodeScanner
+        open={showScanner}
+        onScan={(code) => {
+          setImeiDevolucao(formatIMEI(code));
+          setShowScanner(false);
+        }}
+        onClose={() => setShowScanner(false)}
+      />
     </EstoqueLayout>
   );
 }

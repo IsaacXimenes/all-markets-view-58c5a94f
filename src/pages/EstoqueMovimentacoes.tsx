@@ -10,7 +10,7 @@ import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { exportToCSV } from '@/utils/formatUtils';
 import { formatIMEI } from '@/utils/imeiMask';
-import { Download, Plus, CheckCircle, Clock, Search, Package, Eye, Edit, X } from 'lucide-react';
+import { Download, Plus, CheckCircle, Clock, Search, Package, Eye, Edit, X, Camera } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { ResponsiveTableContainer } from '@/components/ui/ResponsiveContainers';
+import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 
 export default function EstoqueMovimentacoes() {
   const { obterLojasTipoLoja, obterColaboradoresAtivos, obterLojaById, obterNomeLoja } = useCadastroStore();
@@ -71,6 +72,10 @@ export default function EstoqueMovimentacoes() {
     destino: '',
     motivo: '',
   });
+  
+  // Scanner de IMEI
+  const [showScanner, setShowScanner] = useState(false);
+  const [showScannerModal, setShowScannerModal] = useState(false);
 
   // Produtos disponíveis para movimentação (não bloqueados, não em movimentação)
   const produtosDisponiveis = useMemo(() => {
@@ -313,12 +318,22 @@ export default function EstoqueMovimentacoes() {
             </SelectContent>
           </Select>
 
-          <Input
-            placeholder="Filtrar por IMEI..."
-            value={imeiFilter}
-            onChange={(e) => setImeiFilter(e.target.value)}
-            className="w-[180px]"
-          />
+          <div className="flex gap-2 items-center">
+            <Input
+              placeholder="Filtrar por IMEI..."
+              value={imeiFilter}
+              onChange={(e) => setImeiFilter(e.target.value)}
+              className="w-[180px]"
+            />
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => setShowScanner(true)}
+              title="Escanear IMEI"
+            >
+              <Camera className="h-4 w-4" />
+            </Button>
+          </div>
 
           <Button 
             variant="ghost" 
@@ -880,6 +895,31 @@ export default function EstoqueMovimentacoes() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Scanner de IMEI para filtro */}
+        <BarcodeScanner
+          open={showScanner}
+          onScan={(code) => {
+            setImeiFilter(code);
+            setShowScanner(false);
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+
+        {/* Scanner de IMEI para modal de busca */}
+        <BarcodeScanner
+          open={showScannerModal}
+          onScan={(code) => {
+            const cleanCode = code.replace(/\D/g, '');
+            setBuscaProduto(cleanCode);
+            const produto = produtosFiltrados.find(p => p.imei === cleanCode);
+            if (produto) {
+              handleSelecionarProduto(produto);
+            }
+            setShowScannerModal(false);
+          }}
+          onClose={() => setShowScannerModal(false)}
+        />
       </div>
     </EstoqueLayout>
   );

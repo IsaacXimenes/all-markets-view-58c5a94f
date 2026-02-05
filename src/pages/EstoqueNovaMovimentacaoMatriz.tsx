@@ -18,7 +18,8 @@ import {
   Package,
   Search,
   ArrowLeft,
-  Clock
+  Clock,
+  Camera
 } from 'lucide-react';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
@@ -30,6 +31,8 @@ import {
   Produto
 } from '@/utils/estoqueApi';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
+import { formatIMEI } from '@/utils/imeiMask';
+import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 
 export default function EstoqueNovaMovimentacaoMatriz() {
   const navigate = useNavigate();
@@ -46,6 +49,7 @@ export default function EstoqueNovaMovimentacaoMatriz() {
   const [itensParaEnviar, setItensParaEnviar] = useState<Array<{ aparelhoId: string; imei: string; modelo: string; cor: string }>>([]);
   const [responsavelLancamento, setResponsavelLancamento] = useState('');
   const [isModalSelecionarOpen, setIsModalSelecionarOpen] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   
   // Preencher automaticamente o responsável com o usuário logado
   useEffect(() => {
@@ -87,6 +91,22 @@ export default function EstoqueNovaMovimentacaoMatriz() {
       cor: produto.cor
     }]);
     setBuscaProduto('');
+  };
+
+  // Adicionar produto via IMEI escaneado
+  const handleScanIMEI = (imei: string) => {
+    const cleanImei = imei.replace(/\D/g, '');
+    const produto = produtosDisponiveis.find(p => p.imei === cleanImei);
+    if (produto) {
+      if (itensParaEnviar.some(i => i.aparelhoId === produto.id)) {
+        toast({ title: 'Atenção', description: 'Produto já adicionado à lista', variant: 'destructive' });
+        return;
+      }
+      handleAdicionarProduto(produto);
+      toast({ title: 'Sucesso', description: `${produto.modelo} adicionado via scanner` });
+    } else {
+      toast({ title: 'Erro', description: 'IMEI não encontrado no estoque disponível', variant: 'destructive' });
+    }
   };
   
   // Remover produto da lista
@@ -219,17 +239,28 @@ export default function EstoqueNovaMovimentacaoMatriz() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg">Selecionar Aparelhos</CardTitle>
-                <Button 
-                  variant="outline"
-                  className="gap-2"
-                  onClick={() => setIsModalSelecionarOpen(true)}
-                >
-                  <Search className="h-4 w-4" />
-                  Buscar Aparelho no Estoque
-                  {produtosDisponiveis.length > 0 && (
-                    <Badge variant="secondary">{produtosDisponiveis.length}</Badge>
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setShowScanner(true)}
+                  >
+                    <Camera className="h-4 w-4" />
+                    Escanear IMEI
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setIsModalSelecionarOpen(true)}
+                  >
+                    <Search className="h-4 w-4" />
+                    Buscar no Estoque
+                    {produtosDisponiveis.length > 0 && (
+                      <Badge variant="secondary">{produtosDisponiveis.length}</Badge>
+                    )}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {itensParaEnviar.length === 0 ? (
@@ -250,7 +281,7 @@ export default function EstoqueNovaMovimentacaoMatriz() {
                             <p className="font-medium">{item.modelo}</p>
                             <Badge variant="outline">{item.cor}</Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground font-mono mt-1">IMEI: {item.imei}</p>
+                          <p className="text-sm text-muted-foreground font-mono mt-1">IMEI: {formatIMEI(item.imei)}</p>
                         </div>
                         <Button 
                           size="sm" 
@@ -389,7 +420,7 @@ export default function EstoqueNovaMovimentacaoMatriz() {
                             </Badge>
                           </div>
                           <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                            <span className="font-mono">IMEI: {produto.imei}</span>
+                            <span className="font-mono">IMEI: {formatIMEI(produto.imei)}</span>
                             <span>Custo: R$ {produto.valorCusto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                             <span>Bateria: {produto.saudeBateria}%</span>
                           </div>
@@ -436,6 +467,16 @@ export default function EstoqueNovaMovimentacaoMatriz() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Scanner de Código de Barras */}
+      <BarcodeScanner
+        open={showScanner}
+        onScan={(code) => {
+          handleScanIMEI(code);
+          setShowScanner(false);
+        }}
+        onClose={() => setShowScanner(false)}
+      />
     </EstoqueLayout>
   );
 }
