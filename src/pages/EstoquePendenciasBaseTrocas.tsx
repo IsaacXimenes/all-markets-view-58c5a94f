@@ -331,8 +331,8 @@ export default function EstoquePendenciasBaseTrocas() {
 
       {/* Modal de Recebimento */}
       <Dialog open={showRecebimentoModal} onOpenChange={setShowRecebimentoModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-green-500" />
               Registrar Recebimento
@@ -340,7 +340,7 @@ export default function EstoquePendenciasBaseTrocas() {
           </DialogHeader>
           
           {tradeInSelecionado && (
-            <ScrollArea className="flex-1 pr-4">
+            <ScrollArea className="flex-1 min-h-0 pr-4">
               <div className="space-y-6">
                 {/* Info do Trade-In */}
                 <Card>
@@ -502,7 +502,7 @@ export default function EstoquePendenciasBaseTrocas() {
             </ScrollArea>
           )}
 
-          <DialogFooter className="mt-4">
+          <DialogFooter className="flex-shrink-0 mt-4 pt-4 border-t">
             <Button variant="outline" onClick={() => setShowRecebimentoModal(false)}>
               Cancelar
             </Button>
