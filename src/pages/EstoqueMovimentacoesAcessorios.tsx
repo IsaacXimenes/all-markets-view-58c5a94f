@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { getAcessorios, Acessorio } from '@/utils/acessoriosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { Download, Plus, CheckCircle, Clock, Eye, Edit, Package, X } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -109,6 +110,10 @@ export default function EstoqueMovimentacoesAcessorios() {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [movimentacaoParaConfirmar, setMovimentacaoParaConfirmar] = useState<string | null>(null);
   const [responsavelConfirmacao, setResponsavelConfirmacao] = useState<string>('');
+
+  // Estado do formulário de nova movimentação
+  const [formOrigem, setFormOrigem] = useState<string>('');
+  const [formDestino, setFormDestino] = useState<string>('');
 
   const getLojaNome = (lojaIdOuNome: string) => {
     const loja = obterLojaById(lojaIdOuNome);
@@ -252,6 +257,19 @@ export default function EstoqueMovimentacoesAcessorios() {
       });
       return;
     }
+
+    if (!formOrigem || !formDestino) {
+      toast({
+        title: 'Campo obrigatório',
+        description: 'Selecione origem e destino',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Obter nome da loja pelo ID
+    const origemNome = obterNomeLoja(formOrigem);
+    const destinoNome = obterNomeLoja(formDestino);
     
     const novaMovimentacao: MovimentacaoAcessorio = {
       id: `MOV-ACESS-${Date.now()}`,
@@ -259,8 +277,8 @@ export default function EstoqueMovimentacoesAcessorios() {
       acessorio: acessorio?.descricao || '',
       acessorioId,
       quantidade: parseInt(formData.get('quantidade') as string),
-      origem: formData.get('origem') as string,
-      destino: formData.get('destino') as string,
+      origem: origemNome,
+      destino: destinoNome,
       responsavel: responsavelNome,
       motivo: motivo,
       status: 'Pendente'
@@ -269,6 +287,8 @@ export default function EstoqueMovimentacoesAcessorios() {
     movimentacoesData = [...movimentacoesData, novaMovimentacao];
     setMovimentacoes(movimentacoesData);
     setDialogOpen(false);
+    setFormOrigem('');
+    setFormDestino('');
     toast({
       title: 'Movimentação registrada',
       description: `Movimentação ${novaMovimentacao.id} registrada com sucesso`,
@@ -279,29 +299,19 @@ export default function EstoqueMovimentacoesAcessorios() {
     <EstoqueLayout title="Movimentações - Acessórios">
       <div className="space-y-4">
         <div className="flex flex-wrap gap-4">
-          <Select value={origemFilter} onValueChange={setOrigemFilter}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Origem" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as origens</SelectItem>
-              {lojas.map(loja => (
-                <SelectItem key={loja.id} value={loja.nome}>{loja.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <AutocompleteLoja
+            value={origemFilter === 'todas' ? '' : origemFilter}
+            onChange={(v) => setOrigemFilter(v || 'todas')}
+            placeholder="Todas as origens"
+            apenasLojasTipoLoja
+          />
 
-          <Select value={destinoFilter} onValueChange={setDestinoFilter}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Destino" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todos os destinos</SelectItem>
-              {lojas.map(loja => (
-                <SelectItem key={loja.id} value={loja.nome}>{loja.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <AutocompleteLoja
+            value={destinoFilter === 'todas' ? '' : destinoFilter}
+            onChange={(v) => setDestinoFilter(v || 'todas')}
+            placeholder="Todos os destinos"
+            apenasLojasTipoLoja
+          />
 
           <Button 
             variant="ghost" 
@@ -355,31 +365,23 @@ export default function EstoqueMovimentacoesAcessorios() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="origem">Origem</Label>
-                      <Select name="origem" required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {lojas.map(loja => (
-                            <SelectItem key={loja.id} value={loja.nome}>{loja.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="origem">Origem *</Label>
+                      <AutocompleteLoja
+                        value={formOrigem}
+                        onChange={(v) => setFormOrigem(v)}
+                        placeholder="Selecione a origem"
+                        apenasLojasTipoLoja
+                      />
                     </div>
 
                     <div>
-                      <Label htmlFor="destino">Destino</Label>
-                      <Select name="destino" required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {lojas.map(loja => (
-                            <SelectItem key={loja.id} value={loja.nome}>{loja.nome}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="destino">Destino *</Label>
+                      <AutocompleteLoja
+                        value={formDestino}
+                        onChange={(v) => setFormDestino(v)}
+                        placeholder="Selecione o destino"
+                        apenasLojasTipoLoja
+                      />
                     </div>
                   </div>
 
@@ -389,7 +391,7 @@ export default function EstoqueMovimentacoesAcessorios() {
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o colaborador" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="z-[100]">
                         {colaboradoresComPermissao.map(col => (
                           <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
                         ))}
