@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ import { displayIMEI } from '@/utils/imeiMask';
 import { cn } from '@/lib/utils';
 
 export default function EstoquePendenciasBaseTrocas() {
+  const navigate = useNavigate();
   const { obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   const { user } = useAuthStore();
   
@@ -153,9 +155,12 @@ export default function EstoquePendenciasBaseTrocas() {
           });
         }
         
-        // Atualizar lista
+        // Atualizar lista e fechar modal
         setTradeIns(getTradeInsPendentesAguardando());
         setShowRecebimentoModal(false);
+        
+        // Redirecionar para Produtos Pendentes
+        navigate('/estoque/produtos-pendentes');
       } else {
         toast.error('Erro ao registrar recebimento');
       }
