@@ -7,8 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Download, Eye, TrendingUp, DollarSign, Percent, ShoppingCart, CreditCard } from 'lucide-react';
-import { getVendas, exportVendasToCSV, formatCurrency, Venda } from '@/utils/vendasApi';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Plus, Download, Eye, TrendingUp, DollarSign, Percent, ShoppingCart, CreditCard, FileText, Image, Package, Check, AlertTriangle, X } from 'lucide-react';
+import { getVendas, exportVendasToCSV, formatCurrency, Venda, ItemTradeIn, AnexoTradeIn } from '@/utils/vendasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { getStatusConferenciaByVendaId, StatusConferencia } from '@/utils/conferenciaGestorApi';
 import { getGarantiasByVendaId, calcularStatusExpiracao } from '@/utils/garantiasApi';
@@ -32,6 +34,15 @@ export default function Vendas() {
   const [vendedorFiltro, setVendedorFiltro] = useState('');
   const [filtroGarantia, setFiltroGarantia] = useState('');
   const [tipoPagamentoFiltro, setTipoPagamentoFiltro] = useState('');
+  
+  // Estado para modal de anexos do Trade-In
+  const [tradeInAnexosModal, setTradeInAnexosModal] = useState<{
+    open: boolean;
+    tipo: 'termo' | 'fotos';
+    tradeIn: ItemTradeIn | null;
+    vendaId: string;
+  }>({ open: false, tipo: 'fotos', tradeIn: null, vendaId: '' });
+  const [fotoSelecionadaIndex, setFotoSelecionadaIndex] = useState(0);
   
   // Identificar permissões do usuário logado
   const colaboradorLogado = useMemo(() => {
@@ -386,6 +397,7 @@ export default function Vendas() {
                   <TableHead>Data/Hora</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Resp. Venda</TableHead>
+                  <TableHead>Trade-In</TableHead>
                   <TableHead className="text-right">V. Custo</TableHead>
                   <TableHead className="text-right">V. Venda</TableHead>
                   <TableHead className="text-right">Lucro</TableHead>
@@ -439,6 +451,69 @@ export default function Vendas() {
                       </TableCell>
                       <TableCell className="font-medium">{venda.clienteNome}</TableCell>
                       <TableCell>{getColaboradorNome(venda.vendedor)}</TableCell>
+                      <TableCell>
+                        {venda.tradeIns.length > 0 ? (
+                          <TooltipProvider>
+                            <div className="flex items-center gap-1.5">
+                              {venda.tradeIns.some(t => t.tipoEntrega === 'Com o Cliente') ? (
+                                <>
+                                  <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 whitespace-nowrap text-xs">
+                                    <AlertTriangle className="h-3 w-3 mr-1" />
+                                    Com Cliente
+                                  </Badge>
+                                  {venda.tradeIns.filter(t => t.tipoEntrega === 'Com o Cliente').map(t => (
+                                    <div key={t.id} className="flex items-center gap-1">
+                                      {t.termoResponsabilidade && (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="icon" 
+                                              className="h-6 w-6"
+                                              onClick={() => setTradeInAnexosModal({ open: true, tipo: 'termo', tradeIn: t, vendaId: venda.id })}
+                                            >
+                                              <FileText className="h-4 w-4 text-primary" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>Termo de Responsabilidade</TooltipContent>
+                                        </Tooltip>
+                                      )}
+                                      {t.fotosAparelho && t.fotosAparelho.length > 0 && (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button 
+                                              variant="ghost" 
+                                              size="icon" 
+                                              className="h-6 w-6 relative"
+                                              onClick={() => {
+                                                setFotoSelecionadaIndex(0);
+                                                setTradeInAnexosModal({ open: true, tipo: 'fotos', tradeIn: t, vendaId: venda.id });
+                                              }}
+                                            >
+                                              <Image className="h-4 w-4 text-primary" />
+                                              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] rounded-full h-4 w-4 flex items-center justify-center">
+                                                {t.fotosAparelho.length}
+                                              </span>
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>{t.fotosAparelho.length} foto(s) anexada(s)</TooltipContent>
+                                        </Tooltip>
+                                      )}
+                                    </div>
+                                  ))}
+                                </>
+                              ) : (
+                                <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 whitespace-nowrap text-xs">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  Entregue
+                                </Badge>
+                              )}
+                            </div>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {formatCurrency(calc.valorCusto)}
                       </TableCell>
@@ -516,6 +591,152 @@ export default function Vendas() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Modal de Visualização de Anexos do Trade-In */}
+      <Dialog 
+        open={tradeInAnexosModal.open} 
+        onOpenChange={(open) => setTradeInAnexosModal(prev => ({ ...prev, open }))}
+      >
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {tradeInAnexosModal.tipo === 'termo' ? (
+                <>
+                  <FileText className="h-5 w-5" />
+                  Termo de Responsabilidade
+                </>
+              ) : (
+                <>
+                  <Image className="h-5 w-5" />
+                  Fotos do Aparelho ({tradeInAnexosModal.tradeIn?.fotosAparelho?.length || 0})
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-auto">
+            {tradeInAnexosModal.tipo === 'termo' && tradeInAnexosModal.tradeIn?.termoResponsabilidade && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-8 w-8 text-primary" />
+                    <div>
+                      <p className="font-medium">{tradeInAnexosModal.tradeIn.termoResponsabilidade.nome}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {(tradeInAnexosModal.tradeIn.termoResponsabilidade.tamanho / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = tradeInAnexosModal.tradeIn!.termoResponsabilidade!.dataUrl;
+                      link.download = tradeInAnexosModal.tradeIn!.termoResponsabilidade!.nome;
+                      link.click();
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar
+                  </Button>
+                </div>
+                
+                {tradeInAnexosModal.tradeIn.termoResponsabilidade.tipo.startsWith('image/') && (
+                  <div className="flex justify-center">
+                    <img 
+                      src={tradeInAnexosModal.tradeIn.termoResponsabilidade.dataUrl} 
+                      alt="Termo de Responsabilidade"
+                      className="max-w-full max-h-[400px] object-contain rounded-lg border"
+                    />
+                  </div>
+                )}
+                
+                {tradeInAnexosModal.tradeIn.termoResponsabilidade.tipo === 'application/pdf' && (
+                  <div className="flex flex-col items-center gap-4 p-8 bg-muted/30 rounded-lg">
+                    <FileText className="h-16 w-16 text-muted-foreground" />
+                    <p className="text-muted-foreground">Documento PDF - clique em Baixar para visualizar</p>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {tradeInAnexosModal.tipo === 'fotos' && tradeInAnexosModal.tradeIn?.fotosAparelho && (
+              <div className="space-y-4">
+                {/* Imagem principal */}
+                <div className="flex justify-center bg-muted/30 rounded-lg p-4">
+                  <img 
+                    src={tradeInAnexosModal.tradeIn.fotosAparelho[fotoSelecionadaIndex]?.dataUrl} 
+                    alt={`Foto ${fotoSelecionadaIndex + 1}`}
+                    className="max-w-full max-h-[350px] object-contain rounded-lg"
+                  />
+                </div>
+                
+                {/* Miniaturas */}
+                {tradeInAnexosModal.tradeIn.fotosAparelho.length > 1 && (
+                  <div className="flex gap-2 justify-center overflow-x-auto pb-2">
+                    {tradeInAnexosModal.tradeIn.fotosAparelho.map((foto, index) => (
+                      <button
+                        key={foto.id}
+                        className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                          index === fotoSelecionadaIndex 
+                            ? 'border-primary ring-2 ring-primary/30' 
+                            : 'border-transparent hover:border-muted-foreground/30'
+                        }`}
+                        onClick={() => setFotoSelecionadaIndex(index)}
+                      >
+                        <img 
+                          src={foto.dataUrl} 
+                          alt={`Miniatura ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Info da foto selecionada */}
+                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <div>
+                    <p className="font-medium text-sm">
+                      {tradeInAnexosModal.tradeIn.fotosAparelho[fotoSelecionadaIndex]?.nome}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Foto {fotoSelecionadaIndex + 1} de {tradeInAnexosModal.tradeIn.fotosAparelho.length}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const foto = tradeInAnexosModal.tradeIn!.fotosAparelho![fotoSelecionadaIndex];
+                      const link = document.createElement('a');
+                      link.href = foto.dataUrl;
+                      link.download = foto.nome;
+                      link.click();
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div className="text-sm text-muted-foreground">
+              <span className="font-medium">Trade-In:</span> {tradeInAnexosModal.tradeIn?.modelo}
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => setTradeInAnexosModal(prev => ({ ...prev, open: false }))}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </VendasLayout>
   );
 }
