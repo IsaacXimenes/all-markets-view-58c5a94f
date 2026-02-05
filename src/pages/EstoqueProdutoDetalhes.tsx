@@ -1,4 +1,4 @@
- import { useState, useEffect, useRef } from 'react';
+ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,9 @@ import QRCode from 'qrcode';
 import { formatIMEI } from '@/utils/imeiMask';
 import { ModalRetiradaPecas } from '@/components/estoque/ModalRetiradaPecas';
 import { verificarDisponibilidadeRetirada } from '@/utils/retiradaPecasApi';
- import { ImagensTemporarias, ImagemTemporaria } from '@/components/estoque/ImagensTemporarias';
+  import { ImagemTemporaria } from '@/components/estoque/ImagensTemporarias';
+  import { CarrosselImagensProduto } from '@/components/estoque/CarrosselImagensProduto';
+  import { ListaImagensAnexadas } from '@/components/estoque/ListaImagensAnexadas';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -37,6 +39,10 @@ export default function EstoqueProdutoDetalhes() {
      return () => {
        imagensRef.current.forEach(img => URL.revokeObjectURL(img.blobUrl));
      };
+   }, []);
+ 
+   const handleRemoveImagem = useCallback((id: string) => {
+     setImagensTemporarias(prev => prev.filter(img => img.id !== id));
    }, []);
 
   useEffect(() => {
@@ -180,16 +186,20 @@ export default function EstoqueProdutoDetalhes() {
           {/* Imagem e QR Code */}
           <Card>
             <CardHeader>
-              <CardTitle>Imagem do Produto</CardTitle>
+             <CardTitle className="flex items-center justify-between">
+               Imagem do Produto
+               {imagensTemporarias.length > 0 && (
+                 <span className="text-sm font-normal text-muted-foreground">
+                   ({imagensTemporarias.length})
+                 </span>
+               )}
+             </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="aspect-square bg-muted rounded-lg flex items-center justify-center">
-                <span className="text-muted-foreground">Imagem do produto</span>
-              </div>
-              <Button variant="outline" className="w-full">
-                <Upload className="mr-2 h-4 w-4" />
-                Upload Imagem
-              </Button>
+             <CarrosselImagensProduto
+               imagens={imagensTemporarias}
+               onImagensChange={setImagensTemporarias}
+             />
 
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-2">QR Code</h3>
@@ -440,10 +450,10 @@ export default function EstoqueProdutoDetalhes() {
           </CardContent>
         </Card>
 
-         {/* Imagens Temporárias */}
-         <ImagensTemporarias
+         {/* Lista de Imagens Anexadas */}
+         <ListaImagensAnexadas
            imagens={imagensTemporarias}
-           onImagensChange={setImagensTemporarias}
+           onRemove={handleRemoveImagem}
          />
       </div>
       
