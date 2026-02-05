@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { ResponsiveCardGrid, ResponsiveFilterGrid, ResponsiveTableContainer } from '@/components/ui/ResponsiveContainers';
 import { toast } from 'sonner';
 import { 
   Package, Search, Clock, AlertTriangle, CheckCircle2, 
@@ -195,7 +196,7 @@ export default function EstoquePendenciasBaseTrocas() {
   return (
     <EstoqueLayout title="Pendências - Base de Trocas">
       {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <ResponsiveCardGrid cols={4} className="mb-6">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -248,13 +249,13 @@ export default function EstoquePendenciasBaseTrocas() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </ResponsiveCardGrid>
 
       {/* Filtros */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
+          <ResponsiveFilterGrid cols={4}>
+            <div className="flex-1 relative col-span-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por modelo, cliente, IMEI ou ID da venda..."
@@ -263,14 +264,14 @@ export default function EstoquePendenciasBaseTrocas() {
                 className="pl-10"
               />
             </div>
-          </div>
+          </ResponsiveFilterGrid>
         </CardContent>
       </Card>
 
       {/* Tabela */}
       <Card>
         <CardContent className="p-0">
-          <ScrollArea className="h-[600px]">
+          <ResponsiveTableContainer>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -324,7 +325,7 @@ export default function EstoquePendenciasBaseTrocas() {
                 )}
               </TableBody>
             </Table>
-          </ScrollArea>
+          </ResponsiveTableContainer>
         </CardContent>
       </Card>
 
