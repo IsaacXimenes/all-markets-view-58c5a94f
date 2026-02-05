@@ -1,73 +1,98 @@
 
-# Plano: Corrigir Fluxo de Recebimento da Base de Trocas
+# Plano: Corrigir Migração e Adicionar Coluna Data/Hora
 
-## Problemas Identificados
+## Problema Identificado
 
-### 1. Item sumindo da aba "Pendências - Base de Trocas"
-- A lista atual usa `getTradeInsPendentesAguardando()` que filtra apenas status `'Aguardando Devolução'`
-- Quando o recebimento é confirmado, o status muda para `'Recebido'` e o item some da lista
-- **Solução**: Exibir todos os trade-ins (pendentes e finalizados) na mesma aba, com distinção visual por status
+Após análise do código, identifiquei que:
 
-### 2. Produto não aparece em "Aparelhos Pendentes"
-- A função `addProdutoPendente` na `osApi.ts` verifica duplicatas por IMEI
-- Se o IMEI já existe nos dados mockados, retorna o existente sem adicionar novo
-- O console loga "já existe nos pendentes, retornando existente" mas a UI não reflete
-- **Solução**: Verificar se a migração está criando novo ou retornando existente e notificar adequadamente
+1. **A migração está funcionando parcialmente** - A função `migrarParaProdutosPendentes` chama `addProdutoPendente` corretamente
+2. **O IMEI está sendo passado com hífens removidos** mas o formato original do mock (`99-888777-666555-4`) pode causar problemas na remoção
+3. **Falta coluna de Data/Hora** na tabela de Base de Trocas
+
+### Causa Raiz da Não-Migração
+
+Na linha 218 de `baseTrocasPendentesApi.ts`:
+```typescript
+imei: tradeIn.tradeIn.imei?.replace(/-/g, '') || ''
+```
+
+O IMEI no mock é `99-888777-666555-4` (17 caracteres com hífens). Após `replace(/-/g, '')` fica `998887776665554` (15 dígitos) - correto!
+
+O problema real é que os dados mockados da osApi já podem conter IMEIs que estão conflitando, OU a verificação de IMEI na `addProdutoPendente` está encontrando duplicata e retornando o existente sem adicionar.
 
 ## Alterações Necessárias
 
-### Arquivo 1: `src/utils/baseTrocasPendentesApi.ts`
+### Arquivo 1: `src/pages/EstoquePendenciasBaseTrocas.tsx`
+
+#### 1.1 Adicionar coluna "Data/Hora" na tabela
 
 | Linha | Alteração |
 |-------|-----------|
-| 119-121 | Criar nova função `getTradeInsPendentesRecebidos()` para filtrar status 'Recebido' |
-| 115-117 | Renomear uso da função `getTradeInsPendentes()` para retornar todos (já existe) |
+| 283-294 | Adicionar `<TableHead>Data/Hora</TableHead>` após "Loja" |
+| 310-320 | Adicionar célula com data formatada |
 
-Adicionar função:
+**Estrutura atualizada da tabela:**
+```text
+| Modelo | IMEI | Cliente | ID Venda | Loja | Data/Hora | Vendedor | Valor | SLA | Status | Ações |
+```
+
+#### 1.2 Formatar data/hora
+Usar `formatDateTime` de `formatUtils.ts` para exibir `dataVenda` como "05/02/2025 10:30"
+
+### Arquivo 2: `src/utils/baseTrocasPendentesApi.ts`
+
+#### 2.1 Melhorar log de debug na migração
+
+Adicionar console.log para debug do IMEI sendo passado:
 ```typescript
-export function getTradeInsPendentesRecebidos(): TradeInPendente[] {
-  return tradeInsPendentes.filter(t => t.status === 'Recebido');
+const imeiLimpo = tradeIn.tradeIn.imei?.replace(/-/g, '') || '';
+console.log(`[BaseTrocasAPI] Migrando IMEI: ${imeiLimpo} (original: ${tradeIn.tradeIn.imei})`);
+```
+
+### Arquivo 3: `src/utils/osApi.ts`
+
+#### 3.1 Forçar criação mesmo com IMEI existente (flag opcional)
+
+Modificar `addProdutoPendente` para aceitar um parâmetro `forcarCriacao` que ignora a verificação de duplicata quando vindo de Base de Troca:
+
+```typescript
+export const addProdutoPendente = (
+  produto: Omit<ProdutoPendente, 'id' | 'timeline' | ...>,
+  forcarCriacao: boolean = false
+): ProdutoPendente => {
+  // Verificar duplicatas APENAS se não for forçado
+  if (!forcarCriacao && produto.imei) {
+    const jaExiste = produtosPendentes.find(p => p.imei === produto.imei);
+    if (jaExiste) {
+      console.log(`[OS API] IMEI ${produto.imei} já existe, retornando existente.`);
+      return jaExiste;
+    }
+  }
+  // ... resto do código de criação
 }
 ```
 
-### Arquivo 2: `src/pages/EstoquePendenciasBaseTrocas.tsx`
-
-| Linha | Alteração |
-|-------|-----------|
-| 41 | Mudar de `getTradeInsPendentesAguardando()` para `getTradeInsPendentes()` |
-| 159 | Mudar de `getTradeInsPendentesAguardando()` para `getTradeInsPendentes()` |
-| Tabela | Adicionar coluna "Status" com badge visual (Aguardando/Finalizado) |
-| Ação | Desabilitar botão "Registrar Recebimento" para itens com status 'Recebido' |
-| Imports | Adicionar import de `getTradeInsPendentes` |
-
-Estrutura visual da tabela atualizada:
-```text
-| Modelo | Cliente | IMEI | Loja | SLA Devolução | Status | Ações |
-|--------|---------|------|------|---------------|--------|-------|
-| iPhone 12 | João | ... | Matriz | 3 dias | ⏳ Aguardando | [Receber] |
-| iPhone 11 | Maria | ... | JK | - | ✅ Finalizado | [Ver] |
-```
-
-### Cards de Estatísticas
-Manter os 4 cards existentes mas incluir:
-- Total de aparelhos aguardando devolução
-- Total de aparelhos recebidos (finalizados)
-
-## Fluxo Corrigido
-
-```text
-1. Trade-In registrado na venda → Status: "Aguardando Devolução"
-2. Usuário clica "Registrar Recebimento" → Modal com fotos
-3. Confirma recebimento:
-   a. Status atualizado para "Recebido" (mantém na lista com badge verde)
-   b. Produto migrado para Aparelhos Pendentes (osApi)
-   c. Redireciona para /estoque/produtos-pendentes
-4. Item permanece visível na aba Base de Trocas como "Finalizado"
+E na chamada em `migrarParaProdutosPendentes`:
+```typescript
+const produtoPendente = addProdutoPendente({...}, true); // força criação
 ```
 
 ## Resumo das Mudanças
 
 | Arquivo | Tipo | Descrição |
 |---------|------|-----------|
-| baseTrocasPendentesApi.ts | API | Adicionar função para buscar recebidos |
-| EstoquePendenciasBaseTrocas.tsx | UI | Exibir todos os itens, adicionar coluna Status, desabilitar ações para finalizados |
+| EstoquePendenciasBaseTrocas.tsx | UI | Adicionar coluna Data/Hora formatada |
+| baseTrocasPendentesApi.ts | Debug | Melhorar logs de debug na migração |
+| osApi.ts | Lógica | Adicionar flag `forcarCriacao` em `addProdutoPendente` |
+
+## Fluxo Corrigido
+
+```text
+1. Usuário clica "Registrar Recebimento"
+2. Anexa fotos e confirma
+3. Sistema:
+   a. Atualiza status para "Recebido" (mantém histórico com Data/Hora visível)
+   b. Chama migrarParaProdutosPendentes com forcarCriacao=true
+   c. Produto é SEMPRE criado em Produtos Pendentes
+   d. Redireciona para /estoque/produtos-pendentes
+```
