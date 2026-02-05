@@ -675,6 +675,24 @@ export default function VendasNova() {
       return;
     }
     
+    // Validar tipo de entrega
+    if (!novoTradeIn.tipoEntrega) {
+      toast({ title: "Erro", description: "Selecione o tipo de entrega do aparelho", variant: "destructive" });
+      return;
+    }
+    
+    // Validar anexos obrigatórios para "Com o Cliente"
+    if (novoTradeIn.tipoEntrega === 'Com o Cliente') {
+      if (!novoTradeIn.termoResponsabilidade) {
+        toast({ title: "Erro", description: "Termo de Responsabilidade é obrigatório para aparelho com o cliente", variant: "destructive" });
+        return;
+      }
+      if (!novoTradeIn.fotosAparelho || novoTradeIn.fotosAparelho.length === 0) {
+        toast({ title: "Erro", description: "Adicione pelo menos uma foto do aparelho", variant: "destructive" });
+        return;
+      }
+    }
+    
     const tradeIn: ItemTradeIn = {
       id: `TRADE-${Date.now()}`,
       modelo: novoTradeIn.modelo!,
@@ -682,7 +700,11 @@ export default function VendasNova() {
       imei: novoTradeIn.imei || '',
       valorCompraUsado: novoTradeIn.valorCompraUsado!,
       imeiValidado: novoTradeIn.imeiValidado || false,
-      condicao: novoTradeIn.condicao as 'Novo' | 'Semi-novo'
+      condicao: novoTradeIn.condicao as 'Novo' | 'Semi-novo',
+      tipoEntrega: novoTradeIn.tipoEntrega,
+      termoResponsabilidade: novoTradeIn.termoResponsabilidade,
+      fotosAparelho: novoTradeIn.fotosAparelho,
+      dataRegistro: new Date().toISOString()
     };
     
     setTradeIns([...tradeIns, tradeIn]);
@@ -2826,7 +2848,7 @@ export default function VendasNova() {
 
       {/* Modal Base de Troca */}
       <Dialog open={showTradeInModal} onOpenChange={setShowTradeInModal}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Adicionar Item de Troca</DialogTitle>
           </DialogHeader>
@@ -2914,6 +2936,177 @@ export default function VendasNova() {
                 />
               </div>
             </div>
+            
+            {/* NOVO: Tipo de Entrega */}
+            <div>
+              <label className="text-sm font-medium">Entrega do Aparelho *</label>
+              <Select 
+                value={novoTradeIn.tipoEntrega || ''} 
+                onValueChange={(v) => setNovoTradeIn({ 
+                  ...novoTradeIn, 
+                  tipoEntrega: v as 'Entregue no Ato' | 'Com o Cliente',
+                  // Limpar anexos se mudar para "Entregue no Ato"
+                  termoResponsabilidade: v === 'Entregue no Ato' ? undefined : novoTradeIn.termoResponsabilidade,
+                  fotosAparelho: v === 'Entregue no Ato' ? undefined : novoTradeIn.fotosAparelho
+                })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo de entrega" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Entregue no Ato">Aparelho entregue no ato da Venda</SelectItem>
+                  <SelectItem value="Com o Cliente">Aparelho com o Cliente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* NOVO: Campos obrigatórios para "Com o Cliente" */}
+            {novoTradeIn.tipoEntrega === 'Com o Cliente' && (
+              <>
+                <Separator />
+                <div className="bg-amber-50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200 dark:border-amber-900">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      Quando o aparelho fica com o cliente, é obrigatório anexar o Termo de Responsabilidade e fotos do estado atual. O registro será enviado para "Pendências - Base de Trocas" no Estoque.
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Termo de Responsabilidade */}
+                <div>
+                  <label className="text-sm font-medium">Termo de Responsabilidade *</label>
+                  <div className="mt-2">
+                    {novoTradeIn.termoResponsabilidade ? (
+                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{novoTradeIn.termoResponsabilidade.nome}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(novoTradeIn.termoResponsabilidade.tamanho / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
+                        <Button 
+                          type="button"
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setNovoTradeIn({ ...novoTradeIn, termoResponsabilidade: undefined })}
+                        >
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast({ title: "Arquivo muito grande", description: "Máximo de 5MB", variant: "destructive" });
+                              return;
+                            }
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              setNovoTradeIn({
+                                ...novoTradeIn,
+                                termoResponsabilidade: {
+                                  id: `termo-${Date.now()}`,
+                                  nome: file.name,
+                                  tipo: file.type,
+                                  tamanho: file.size,
+                                  dataUrl: reader.result as string
+                                }
+                              });
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                        <div className="flex items-center gap-2 p-3 border-2 border-dashed rounded-lg hover:border-primary transition-colors">
+                          <FileText className="h-5 w-5 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Clique para anexar o termo assinado</span>
+                        </div>
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {/* Fotos do Aparelho */}
+                <div>
+                  <label className="text-sm font-medium">Fotos do Aparelho *</label>
+                  <div className="mt-2 space-y-3">
+                    {novoTradeIn.fotosAparelho && novoTradeIn.fotosAparelho.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2">
+                        {novoTradeIn.fotosAparelho.map((foto) => (
+                          <div key={foto.id} className="relative group aspect-square">
+                            <img
+                              src={foto.dataUrl}
+                              alt={foto.nome}
+                              className="w-full h-full object-cover rounded-lg border"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => setNovoTradeIn({
+                                ...novoTradeIn,
+                                fotosAparelho: novoTradeIn.fotosAparelho?.filter(f => f.id !== foto.id)
+                              })}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={async (e) => {
+                          const files = e.target.files;
+                          if (!files) return;
+                          
+                          const novasFotos: typeof novoTradeIn.fotosAparelho = [...(novoTradeIn.fotosAparelho || [])];
+                          
+                          for (let i = 0; i < files.length; i++) {
+                            const file = files[i];
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast({ title: "Arquivo muito grande", description: `${file.name} excede 5MB`, variant: "destructive" });
+                              continue;
+                            }
+                            const dataUrl = await new Promise<string>((resolve) => {
+                              const reader = new FileReader();
+                              reader.onload = () => resolve(reader.result as string);
+                              reader.readAsDataURL(file);
+                            });
+                            novasFotos.push({
+                              id: `foto-${Date.now()}-${i}`,
+                              nome: file.name,
+                              tipo: file.type,
+                              tamanho: file.size,
+                              dataUrl
+                            });
+                          }
+                          
+                          setNovoTradeIn({ ...novoTradeIn, fotosAparelho: novasFotos });
+                        }}
+                      />
+                      <div className="flex items-center gap-2 p-3 border-2 border-dashed rounded-lg hover:border-primary transition-colors">
+                        <Camera className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Clique para adicionar fotos do aparelho</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </>
+            )}
+
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"

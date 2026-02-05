@@ -17,6 +17,15 @@ export interface ItemVenda {
   loja: string;
 }
 
+// Tipo para anexos temporários no trade-in
+export interface AnexoTradeIn {
+  id: string;
+  nome: string;
+  tipo: string;
+  tamanho: number;
+  dataUrl: string;
+}
+
 export interface ItemTradeIn {
   id: string;
   produtoId?: string; // PROD-XXXX - ID único gerado para o produto de trade-in
@@ -26,6 +35,11 @@ export interface ItemTradeIn {
   valorCompraUsado: number; // Renomeado de valorAbatimento para clareza
   imeiValidado: boolean;
   condicao: 'Novo' | 'Semi-novo';
+  // Novos campos para Trade-In Inteligente
+  tipoEntrega?: 'Entregue no Ato' | 'Com o Cliente';
+  termoResponsabilidade?: AnexoTradeIn;
+  fotosAparelho?: AnexoTradeIn[];
+  dataRegistro?: string;
 }
 
 export interface Pagamento {
