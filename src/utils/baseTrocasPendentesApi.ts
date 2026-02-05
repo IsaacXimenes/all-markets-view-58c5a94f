@@ -213,9 +213,14 @@ export function migrarParaProdutosPendentes(tradeInPendenteId: string): ProdutoP
     // Extrair marca do modelo (assume formato "iPhone X" = "Apple")
     const marca = tradeIn.tradeIn.modelo.toLowerCase().includes('iphone') ? 'Apple' : 'Outro';
     
-    // Migrar para Produtos Pendentes via osApi
+    // Limpar IMEI removendo hífens
+    const imeiLimpo = tradeIn.tradeIn.imei?.replace(/-/g, '') || '';
+    console.log(`[BaseTrocasAPI] Migrando Trade-In ${tradeInPendenteId} - IMEI: ${imeiLimpo} (original: ${tradeIn.tradeIn.imei})`);
+    
+    // Migrar para Produtos Pendentes via osApi COM forcarCriacao=true
+    // Isso ignora a verificação de duplicatas para Trade-Ins
     const produtoPendente = addProdutoPendente({
-      imei: tradeIn.tradeIn.imei?.replace(/-/g, '') || '',
+      imei: imeiLimpo,
       marca,
       modelo: tradeIn.tradeIn.modelo,
       cor: 'N/A', // Não temos cor no trade-in
@@ -229,17 +234,13 @@ export function migrarParaProdutosPendentes(tradeInPendenteId: string): ProdutoP
       loja: tradeIn.lojaVenda,
       dataEntrada: tradeIn.dataRecebimento || new Date().toISOString().split('T')[0],
       fornecedor: `Cliente: ${tradeIn.clienteNome}`
-    });
+    }, true); // forcarCriacao=true para garantir migração
 
-    console.log(`[BaseTrocasAPI] Trade-In ${tradeInPendenteId} migrado para Produtos Pendentes: ${produtoPendente.id}`);
-    
-    // Remover da lista de pendentes (opcional - manter para histórico)
-    // const index = tradeInsPendentes.findIndex(t => t.id === tradeInPendenteId);
-    // if (index !== -1) tradeInsPendentes.splice(index, 1);
+    console.log(`[BaseTrocasAPI] ✅ Trade-In ${tradeInPendenteId} migrado para Produtos Pendentes: ${produtoPendente.id}`);
     
     return produtoPendente;
   } catch (error) {
-    console.error('[BaseTrocasAPI] Erro ao migrar para Produtos Pendentes:', error);
+    console.error('[BaseTrocasAPI] ❌ Erro ao migrar para Produtos Pendentes:', error);
     return null;
   }
 }

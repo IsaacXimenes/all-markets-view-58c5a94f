@@ -600,9 +600,13 @@ export const updateProdutoPendente = (id: string, dados: Partial<ProdutoPendente
   return produtosPendentes[index];
 };
 
-export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeline' | 'custoAssistencia' | 'statusGeral' | 'valorCustoOriginal' | 'contadorEncaminhamentos'>): ProdutoPendente => {
+export const addProdutoPendente = (
+  produto: Omit<ProdutoPendente, 'id' | 'timeline' | 'custoAssistencia' | 'statusGeral' | 'valorCustoOriginal' | 'contadorEncaminhamentos'>,
+  forcarCriacao: boolean = false
+): ProdutoPendente => {
   // VALIDAÇÃO: Verificar se já existe produto com mesmo IMEI (evitar duplicatas)
-  if (produto.imei) {
+  // EXCEÇÃO: Se forcarCriacao=true (ex: Base de Trocas), ignora verificação
+  if (!forcarCriacao && produto.imei) {
     const jaExiste = produtosPendentes.find(p => p.imei === produto.imei);
     if (jaExiste) {
       console.log(`[OS API] Produto com IMEI ${produto.imei} já existe nos pendentes (ID: ${jaExiste.id}), retornando existente.`);
@@ -639,6 +643,7 @@ export const addProdutoPendente = (produto: Omit<ProdutoPendente, 'id' | 'timeli
   };
 
   produtosPendentes.push(newProduto);
+  console.log(`[OS API] Novo produto pendente criado: ${newId} (IMEI: ${produto.imei || 'N/A'}, forcarCriacao: ${forcarCriacao})`);
   return newProduto;
 };
 
