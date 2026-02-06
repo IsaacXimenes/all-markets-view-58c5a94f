@@ -22,9 +22,9 @@ export default function GestaoAdministrativaLogs() {
   const { lojas, colaboradores } = useCadastroStore();
   const { user } = useAuthStore();
   
-  // Verificar se é gestor
+  // Verificar se é gestor - busca no cadastro ou fallback pelo cargo do authStore
   const colaboradorLogado = colaboradores.find(c => c.id === user?.colaborador?.id);
-  const ehGestor = colaboradorLogado?.eh_gestor ?? false;
+  const ehGestor = colaboradorLogado?.eh_gestor ?? user?.colaborador?.cargo?.toLowerCase().includes('gestor') ?? false;
   
   // Estados de filtros
   const competencias = getCompetenciasDisponiveis();
