@@ -10,22 +10,30 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { InputComMascara } from '@/components/ui/InputComMascara';
-import { Download, Filter, X, Eye, DollarSign, CheckCircle2, Clock, FileText } from 'lucide-react';
+import {
+  Download, Filter, X, Eye, DollarSign, CheckCircle2, Clock,
+  FileText, CalendarDays, AlertTriangle, Plus, MessageSquare
+} from 'lucide-react';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
 import {
   getDividasFiado,
   getPagamentosDivida,
+  getAnotacoesDivida,
   getValorPagoDivida,
   getSaldoDevedor,
   getProgressoDivida,
   registrarPagamentoFiado,
+  registrarAnotacaoFiado,
   getEstatisticasFiado,
   formatCurrency,
   DividaFiado,
-  PagamentoFiado
+  PagamentoFiado,
+  AnotacaoFiado
 } from '@/utils/fiadoApi';
 import { toast } from 'sonner';
 
@@ -36,6 +44,7 @@ export default function FinanceiroFiado() {
 
   const [dividas, setDividas] = useState<DividaFiado[]>(getDividasFiado());
   const [filters, setFilters] = useState({ cliente: '', loja: 'todas', situacao: 'todos' });
+  const [filtroRapido, setFiltroRapido] = useState<string | null>(null);
 
   // Modal de pagamento
   const [pagamentoModalOpen, setPagamentoModalOpen] = useState(false);
@@ -44,20 +53,40 @@ export default function FinanceiroFiado() {
   const [comprovante, setComprovante] = useState('');
   const [comprovanteNome, setComprovanteNome] = useState('');
 
-  // Histórico
-  const [historicoModalOpen, setHistoricoModalOpen] = useState(false);
-  const [dividaHistorico, setDividaHistorico] = useState<DividaFiado | null>(null);
+  // Modal detalhes (histórico + agenda)
+  const [detalhesModalOpen, setDetalhesModalOpen] = useState(false);
+  const [dividaDetalhes, setDividaDetalhes] = useState<DividaFiado | null>(null);
+
+  // Modal agenda standalone
+  const [agendaModalOpen, setAgendaModalOpen] = useState(false);
+  const [dividaAgenda, setDividaAgenda] = useState<DividaFiado | null>(null);
+
+  // Nova anotação
+  const [novaAnotacaoModalOpen, setNovaAnotacaoModalOpen] = useState(false);
+  const [novaAnotacaoTexto, setNovaAnotacaoTexto] = useState('');
+  const [novaAnotacaoImportante, setNovaAnotacaoImportante] = useState(false);
+  const [anotacaoDividaId, setAnotacaoDividaId] = useState('');
 
   const recarregar = () => setDividas(getDividasFiado());
 
   const filteredDividas = useMemo(() => {
-    return dividas.filter(d => {
+    let resultado = dividas.filter(d => {
       if (filters.cliente && !d.clienteNome.toLowerCase().includes(filters.cliente.toLowerCase())) return false;
       if (filters.loja !== 'todas' && d.lojaId !== filters.loja) return false;
       if (filters.situacao !== 'todos' && d.situacao !== filters.situacao) return false;
       return true;
     });
-  }, [dividas, filters]);
+
+    if (filtroRapido === 'em_aberto') {
+      resultado = resultado.filter(d => d.situacao === 'Em Aberto');
+    } else if (filtroRapido === 'quitados') {
+      resultado = resultado.filter(d => d.situacao === 'Quitado');
+    } else if (filtroRapido === 'com_alerta') {
+      resultado = resultado.filter(d => d.temAnotacaoImportante);
+    }
+
+    return resultado;
+  }, [dividas, filters, filtroRapido]);
 
   const stats = useMemo(() => getEstatisticasFiado(), [dividas]);
 
@@ -100,28 +129,57 @@ export default function FinanceiroFiado() {
     }
   };
 
-  const handleAbrirHistorico = (divida: DividaFiado) => {
-    setDividaHistorico(divida);
-    setHistoricoModalOpen(true);
+  const handleAbrirDetalhes = (divida: DividaFiado) => {
+    setDividaDetalhes(divida);
+    setDetalhesModalOpen(true);
   };
 
-  const handleLimpar = () => setFilters({ cliente: '', loja: 'todas', situacao: 'todos' });
+  const handleAbrirAgenda = (divida: DividaFiado) => {
+    setDividaAgenda(divida);
+    setAgendaModalOpen(true);
+  };
+
+  const handleAbrirNovaAnotacao = (dividaId: string) => {
+    setAnotacaoDividaId(dividaId);
+    setNovaAnotacaoTexto('');
+    setNovaAnotacaoImportante(false);
+    setNovaAnotacaoModalOpen(true);
+  };
+
+  const handleSalvarAnotacao = () => {
+    if (!novaAnotacaoTexto.trim()) {
+      toast.error('Informe a observação');
+      return;
+    }
+    const usuario = user?.colaborador?.nome || 'Usuário';
+    registrarAnotacaoFiado(anotacaoDividaId, usuario, novaAnotacaoTexto.trim(), novaAnotacaoImportante);
+    recarregar();
+    setNovaAnotacaoModalOpen(false);
+    toast.success('Anotação registrada!');
+  };
+
+  const handleLimpar = () => {
+    setFilters({ cliente: '', loja: 'todas', situacao: 'todos' });
+    setFiltroRapido(null);
+  };
 
   const handleExport = () => {
     const dataToExport = filteredDividas.map(d => ({
-      'Venda': d.vendaId,
+      'ID Venda': d.vendaId,
+      'Data Lançamento': new Date(d.dataCriacao).toLocaleDateString('pt-BR'),
       'Cliente': d.clienteNome,
-      'Loja': d.lojaNome,
       'Valor Final': formatCurrency(d.valorFinal),
       'Valor Pago': formatCurrency(getValorPagoDivida(d.id)),
       'Saldo Devedor': formatCurrency(getSaldoDevedor(d)),
       'Progresso': `${Math.round(getProgressoDivida(d))}%`,
+      'Recorrência': d.tipoRecorrencia,
       'Qtd. Vezes': `${d.qtdVezes}x`,
       'Início Competência': d.inicioCompetencia,
       'Situação': d.situacao
     }));
 
-    const headers = Object.keys(dataToExport[0] || {}).join(',');
+    if (dataToExport.length === 0) { toast.error('Nenhum dado para exportar'); return; }
+    const headers = Object.keys(dataToExport[0]).join(',');
     const rows = dataToExport.map(item =>
       Object.values(item).map(v => typeof v === 'string' && v.includes(',') ? `"${v}"` : v).join(',')
     );
@@ -137,14 +195,24 @@ export default function FinanceiroFiado() {
   };
 
   const historicoPagamentos = useMemo(() => {
-    if (!dividaHistorico) return [];
-    return getPagamentosDivida(dividaHistorico.id);
-  }, [dividaHistorico, dividas]);
+    if (!dividaDetalhes) return [];
+    return getPagamentosDivida(dividaDetalhes.id);
+  }, [dividaDetalhes, dividas]);
+
+  const anotacoesDetalhes = useMemo(() => {
+    if (!dividaDetalhes) return [];
+    return getAnotacoesDivida(dividaDetalhes.id);
+  }, [dividaDetalhes, dividas]);
+
+  const anotacoesAgenda = useMemo(() => {
+    if (!dividaAgenda) return [];
+    return getAnotacoesDivida(dividaAgenda.id);
+  }, [dividaAgenda, dividas]);
 
   return (
     <FinanceiroLayout title="Conferências - Fiado">
       {/* Cards de resumo */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -182,6 +250,44 @@ export default function FinanceiroFiado() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="border-red-200 dark:border-red-800">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Inadimplência</p>
+                <p className="text-2xl font-bold text-red-600">{formatCurrency(stats.saldoDevedor)}</p>
+                <p className="text-xs text-muted-foreground">vs Total: {formatCurrency(stats.valorTotalEmAberto)}</p>
+              </div>
+              <AlertTriangle className="h-10 w-10 text-red-500 opacity-50" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filtros rápidos */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Button
+          variant={filtroRapido === 'em_aberto' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFiltroRapido(filtroRapido === 'em_aberto' ? null : 'em_aberto')}
+        >
+          <Clock className="h-4 w-4 mr-1" /> Em Aberto
+        </Button>
+        <Button
+          variant={filtroRapido === 'quitados' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFiltroRapido(filtroRapido === 'quitados' ? null : 'quitados')}
+        >
+          <CheckCircle2 className="h-4 w-4 mr-1" /> Quitados
+        </Button>
+        <Button
+          variant={filtroRapido === 'com_alerta' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFiltroRapido(filtroRapido === 'com_alerta' ? null : 'com_alerta')}
+        >
+          <AlertTriangle className="h-4 w-4 mr-1" /> Com Alerta
+        </Button>
       </div>
 
       <div className="space-y-6">
@@ -251,11 +357,14 @@ export default function FinanceiroFiado() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>ID Venda</TableHead>
+                    <TableHead>Data Lançamento</TableHead>
                     <TableHead>Cliente</TableHead>
                     <TableHead className="text-right">Valor Final</TableHead>
                     <TableHead className="text-right">Valor Pago</TableHead>
                     <TableHead className="text-right">Saldo Devedor</TableHead>
                     <TableHead className="w-[160px]">Progresso</TableHead>
+                    <TableHead>Recorrência</TableHead>
                     <TableHead className="text-center">Qtd. Vezes</TableHead>
                     <TableHead>Início Competência</TableHead>
                     <TableHead>Situação</TableHead>
@@ -265,7 +374,7 @@ export default function FinanceiroFiado() {
                 <TableBody>
                   {filteredDividas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                         Nenhuma dívida de fiado encontrada
                       </TableCell>
                     </TableRow>
@@ -283,7 +392,16 @@ export default function FinanceiroFiado() {
                             ? 'bg-green-500/10 hover:bg-green-500/20'
                             : 'bg-yellow-500/10 hover:bg-yellow-500/20'}
                         >
-                          <TableCell className="font-medium">{divida.clienteNome}</TableCell>
+                          <TableCell className="font-mono text-xs">{divida.vendaId}</TableCell>
+                          <TableCell>{new Date(divida.dataCriacao).toLocaleDateString('pt-BR')}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-1">
+                              {divida.temAnotacaoImportante && (
+                                <AlertTriangle className="h-4 w-4 text-red-500" />
+                              )}
+                              {divida.clienteNome}
+                            </div>
+                          </TableCell>
                           <TableCell className="text-right font-semibold">{formatCurrency(divida.valorFinal)}</TableCell>
                           <TableCell className="text-right">{formatCurrency(valorPago)}</TableCell>
                           <TableCell className="text-right font-semibold">
@@ -297,6 +415,7 @@ export default function FinanceiroFiado() {
                               <span className="text-xs text-muted-foreground w-10 text-right">{Math.round(progresso)}%</span>
                             </div>
                           </TableCell>
+                          <TableCell>{divida.tipoRecorrencia}</TableCell>
                           <TableCell className="text-center">{divida.qtdVezes}x</TableCell>
                           <TableCell>{divida.inicioCompetencia}</TableCell>
                           <TableCell>
@@ -306,7 +425,7 @@ export default function FinanceiroFiado() {
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => handleAbrirHistorico(divida)} title="Ver histórico">
+                              <Button variant="ghost" size="icon" onClick={() => handleAbrirDetalhes(divida)} title="Ver detalhes">
                                 <Eye className="h-4 w-4" />
                               </Button>
                               {!isQuitado && (
@@ -314,6 +433,9 @@ export default function FinanceiroFiado() {
                                   <DollarSign className="h-4 w-4" />
                                 </Button>
                               )}
+                              <Button variant="ghost" size="icon" onClick={() => handleAbrirAgenda(divida)} title="Agenda eletrônica">
+                                <CalendarDays className="h-4 w-4" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -376,71 +498,203 @@ export default function FinanceiroFiado() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Histórico de Pagamentos */}
-      <Dialog open={historicoModalOpen} onOpenChange={setHistoricoModalOpen}>
-        <DialogContent className="max-w-3xl !flex !flex-col max-h-[80vh]">
+      {/* Modal Detalhes (Histórico + Agenda) */}
+      <Dialog open={detalhesModalOpen} onOpenChange={setDetalhesModalOpen}>
+        <DialogContent className="max-w-4xl !flex !flex-col max-h-[85vh]">
           <DialogHeader>
-            <DialogTitle>Histórico de Pagamentos</DialogTitle>
-            {dividaHistorico && (
+            <DialogTitle>Detalhes da Dívida</DialogTitle>
+            {dividaDetalhes && (
               <div className="text-sm text-muted-foreground space-y-1">
-                <p><strong>Cliente:</strong> {dividaHistorico.clienteNome} | <strong>Venda:</strong> {dividaHistorico.vendaId}</p>
-                <p><strong>Valor Final:</strong> {formatCurrency(dividaHistorico.valorFinal)} | <strong>Saldo Devedor:</strong> {formatCurrency(getSaldoDevedor(dividaHistorico))}</p>
+                <p><strong>ID Venda:</strong> {dividaDetalhes.vendaId} | <strong>Cliente:</strong> {dividaDetalhes.clienteNome} | <strong>Loja:</strong> {dividaDetalhes.lojaNome}</p>
+                <p><strong>Valor Final:</strong> {formatCurrency(dividaDetalhes.valorFinal)} | <strong>Saldo Devedor:</strong> {formatCurrency(getSaldoDevedor(dividaDetalhes))} | <strong>Situação:</strong> {dividaDetalhes.situacao}</p>
                 <div className="flex items-center gap-2 mt-2">
-                  <Progress value={getProgressoDivida(dividaHistorico)} className="h-3 flex-1" />
-                  <span className="text-xs font-medium">{Math.round(getProgressoDivida(dividaHistorico))}%</span>
+                  <Progress value={getProgressoDivida(dividaDetalhes)} className="h-3 flex-1" />
+                  <span className="text-xs font-medium">{Math.round(getProgressoDivida(dividaDetalhes))}%</span>
                 </div>
               </div>
             )}
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data do Pagamento</TableHead>
-                  <TableHead className="text-right">Valor Pago</TableHead>
-                  <TableHead>Responsável</TableHead>
-                  <TableHead>Anexo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {historicoPagamentos.length === 0 ? (
+          <div className="flex-1 overflow-y-auto space-y-6">
+            {/* Histórico de Pagamentos */}
+            <div>
+              <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <DollarSign className="h-4 w-4" /> Histórico de Pagamentos
+              </h3>
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
-                      Nenhum pagamento registrado
-                    </TableCell>
+                    <TableHead>Data do Pagamento</TableHead>
+                    <TableHead className="text-right">Valor Pago</TableHead>
+                    <TableHead>Responsável</TableHead>
+                    <TableHead>Anexo</TableHead>
                   </TableRow>
-                ) : (
-                  historicoPagamentos.map(pgt => (
-                    <TableRow key={pgt.id}>
-                      <TableCell>{new Date(pgt.dataPagamento).toLocaleString('pt-BR')}</TableCell>
-                      <TableCell className="text-right font-semibold">{formatCurrency(pgt.valor)}</TableCell>
-                      <TableCell>{pgt.responsavel}</TableCell>
-                      <TableCell>
-                        {pgt.comprovanteNome ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              if (pgt.comprovanteBase64) {
-                                window.open(pgt.comprovanteBase64, '_blank');
-                              }
-                            }}
-                          >
-                            <FileText className="h-4 w-4 mr-1" />
-                            {pgt.comprovanteNome}
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">—</span>
-                        )}
+                </TableHeader>
+                <TableBody>
+                  {historicoPagamentos.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                        Nenhum pagamento registrado
                       </TableCell>
                     </TableRow>
-                  ))
+                  ) : (
+                    historicoPagamentos.map(pgt => (
+                      <TableRow key={pgt.id}>
+                        <TableCell>{new Date(pgt.dataPagamento).toLocaleString('pt-BR')}</TableCell>
+                        <TableCell className="text-right font-semibold">{formatCurrency(pgt.valor)}</TableCell>
+                        <TableCell>{pgt.responsavel}</TableCell>
+                        <TableCell>
+                          {pgt.comprovanteNome ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => { if (pgt.comprovanteBase64) window.open(pgt.comprovanteBase64, '_blank'); }}
+                            >
+                              <FileText className="h-4 w-4 mr-1" />
+                              {pgt.comprovanteNome}
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Agenda Eletrônica */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4" /> Agenda Eletrônica
+                </h3>
+                {dividaDetalhes && (
+                  <Button size="sm" variant="outline" onClick={() => handleAbrirNovaAnotacao(dividaDetalhes.id)}>
+                    <Plus className="h-4 w-4 mr-1" /> Nova Anotação
+                  </Button>
                 )}
-              </TableBody>
-            </Table>
+              </div>
+              {anotacoesDetalhes.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma anotação registrada</p>
+              ) : (
+                <div className="space-y-3">
+                  {anotacoesDetalhes.map(ano => (
+                    <div key={ano.id} className={`p-3 rounded-lg border ${ano.importante ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/20' : 'bg-muted/50'}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{new Date(ano.dataHora).toLocaleString('pt-BR')}</span>
+                          <span>•</span>
+                          <span>{ano.usuario}</span>
+                        </div>
+                        {ano.importante && (
+                          <Badge variant="destructive" className="text-xs">
+                            <AlertTriangle className="h-3 w-3 mr-1" /> Importante
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm">{ano.observacao}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setHistoricoModalOpen(false)}>Fechar</Button>
+            <Button variant="outline" onClick={() => setDetalhesModalOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Agenda Eletrônica Standalone */}
+      <Dialog open={agendaModalOpen} onOpenChange={setAgendaModalOpen}>
+        <DialogContent className="max-w-3xl !flex !flex-col max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5" /> Agenda Eletrônica
+            </DialogTitle>
+            {dividaAgenda && (
+              <p className="text-sm text-muted-foreground">
+                {dividaAgenda.clienteNome} — {dividaAgenda.vendaId}
+              </p>
+            )}
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-4">
+            {dividaAgenda && (
+              <Button size="sm" onClick={() => handleAbrirNovaAnotacao(dividaAgenda.id)}>
+                <Plus className="h-4 w-4 mr-1" /> Registrar Nova Anotação
+              </Button>
+            )}
+            {anotacoesAgenda.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">Nenhuma anotação registrada</p>
+            ) : (
+              <div className="space-y-3">
+                {anotacoesAgenda.map(ano => (
+                  <div key={ano.id} className={`p-3 rounded-lg border ${ano.importante ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-900/20' : 'bg-muted/50'}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{new Date(ano.dataHora).toLocaleString('pt-BR')}</span>
+                        <span>•</span>
+                        <span>{ano.usuario}</span>
+                      </div>
+                      {ano.importante && (
+                        <Badge variant="destructive" className="text-xs">
+                          <AlertTriangle className="h-3 w-3 mr-1" /> Importante
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm">{ano.observacao}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAgendaModalOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Nova Anotação */}
+      <Dialog open={novaAnotacaoModalOpen} onOpenChange={setNovaAnotacaoModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nova Anotação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Data/Hora</Label>
+                <Input value={new Date().toLocaleString('pt-BR')} readOnly className="bg-muted cursor-not-allowed" />
+              </div>
+              <div>
+                <Label>Usuário</Label>
+                <Input value={user?.colaborador?.nome || 'Não identificado'} readOnly className="bg-muted cursor-not-allowed" />
+              </div>
+            </div>
+            <div>
+              <Label>Observação *</Label>
+              <Textarea
+                value={novaAnotacaoTexto}
+                onChange={(e) => setNovaAnotacaoTexto(e.target.value)}
+                placeholder="Digite a anotação..."
+                rows={4}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={novaAnotacaoImportante}
+                onCheckedChange={(v) => setNovaAnotacaoImportante(!!v)}
+              />
+              <Label className="cursor-pointer flex items-center gap-1">
+                <AlertTriangle className="h-4 w-4 text-red-500" />
+                Marcar como Importante
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNovaAnotacaoModalOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSalvarAnotacao}>Salvar Anotação</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -10,9 +10,10 @@ export interface DividaFiado {
   valorFinal: number;
   qtdVezes: number;
   tipoRecorrencia: 'Mensal' | 'Semanal';
-  inicioCompetencia: string; // formato "MMM-YYYY"
+  inicioCompetencia: string;
   situacao: 'Em Aberto' | 'Quitado';
   dataCriacao: string;
+  temAnotacaoImportante?: boolean;
 }
 
 export interface PagamentoFiado {
@@ -25,7 +26,16 @@ export interface PagamentoFiado {
   comprovanteNome?: string;
 }
 
-// Mock data convertido do modelo anterior
+export interface AnotacaoFiado {
+  id: string;
+  dividaId: string;
+  dataHora: string;
+  usuario: string;
+  observacao: string;
+  importante: boolean;
+}
+
+// Mock data
 let dividasFiado: DividaFiado[] = [
   {
     id: 'DIV-001',
@@ -39,7 +49,8 @@ let dividasFiado: DividaFiado[] = [
     tipoRecorrencia: 'Mensal',
     inicioCompetencia: 'Dez-2024',
     situacao: 'Em Aberto',
-    dataCriacao: '2024-12-01T10:00:00'
+    dataCriacao: '2024-12-01T10:00:00',
+    temAnotacaoImportante: true
   },
   {
     id: 'DIV-002',
@@ -86,57 +97,38 @@ let dividasFiado: DividaFiado[] = [
 ];
 
 let pagamentosFiado: PagamentoFiado[] = [
-  // Pagamentos da dívida 1 (João Silva - R$ 1.500)
+  { id: 'PGT-001', dividaId: 'DIV-001', valor: 500, dataPagamento: '2024-12-04T14:30:00', responsavel: 'Maria Santos' },
+  { id: 'PGT-002', dividaId: 'DIV-001', valor: 500, dataPagamento: '2025-01-05T10:15:00', responsavel: 'Maria Santos' },
+  { id: 'PGT-003', dividaId: 'DIV-002', valor: 400, dataPagamento: '2024-12-10T16:45:00', responsavel: 'Pedro Costa' },
+  { id: 'PGT-004', dividaId: 'DIV-004', valor: 500, dataPagamento: '2025-01-15T09:00:00', responsavel: 'João Gestor' },
+  { id: 'PGT-005', dividaId: 'DIV-004', valor: 500, dataPagamento: '2025-02-10T14:20:00', responsavel: 'João Gestor' },
+  { id: 'PGT-006', dividaId: 'DIV-004', valor: 300, dataPagamento: '2025-03-05T11:30:00', responsavel: 'João Gestor' }
+];
+
+let anotacoesFiado: AnotacaoFiado[] = [
   {
-    id: 'PGT-001',
+    id: 'ANO-001',
     dividaId: 'DIV-001',
-    valor: 500,
-    dataPagamento: '2024-12-04T14:30:00',
-    responsavel: 'Maria Santos'
+    dataHora: '2024-12-10T09:00:00',
+    usuario: 'Maria Santos',
+    observacao: 'Cliente solicitou prazo extra para o próximo pagamento. Combinado para dia 15/01.',
+    importante: true
   },
   {
-    id: 'PGT-002',
+    id: 'ANO-002',
     dividaId: 'DIV-001',
-    valor: 500,
-    dataPagamento: '2025-01-05T10:15:00',
-    responsavel: 'Maria Santos'
-  },
-  // Pagamentos da dívida 2 (Carlos Oliveira - R$ 2.000)
-  {
-    id: 'PGT-003',
-    dividaId: 'DIV-002',
-    valor: 400,
-    dataPagamento: '2024-12-10T16:45:00',
-    responsavel: 'Pedro Costa'
-  },
-  // Pagamentos da dívida 4 (Roberto Mendes - R$ 1.300, quitado)
-  {
-    id: 'PGT-004',
-    dividaId: 'DIV-004',
-    valor: 500,
-    dataPagamento: '2025-01-15T09:00:00',
-    responsavel: 'João Gestor'
-  },
-  {
-    id: 'PGT-005',
-    dividaId: 'DIV-004',
-    valor: 500,
-    dataPagamento: '2025-02-10T14:20:00',
-    responsavel: 'João Gestor'
-  },
-  {
-    id: 'PGT-006',
-    dividaId: 'DIV-004',
-    valor: 300,
-    dataPagamento: '2025-03-05T11:30:00',
-    responsavel: 'João Gestor'
+    dataHora: '2025-01-06T11:30:00',
+    usuario: 'Maria Santos',
+    observacao: 'Pagamento de janeiro realizado normalmente.',
+    importante: false
   }
 ];
 
 let nextDividaId = 5;
 let nextPagamentoId = 7;
+let nextAnotacaoId = 3;
 
-// --- Funções de consulta ---
+// --- Consultas ---
 
 export function getDividasFiado(): DividaFiado[] {
   return [...dividasFiado];
@@ -144,6 +136,12 @@ export function getDividasFiado(): DividaFiado[] {
 
 export function getPagamentosDivida(dividaId: string): PagamentoFiado[] {
   return pagamentosFiado.filter(p => p.dividaId === dividaId);
+}
+
+export function getAnotacoesDivida(dividaId: string): AnotacaoFiado[] {
+  return anotacoesFiado.filter(a => a.dividaId === dividaId).sort((a, b) =>
+    new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime()
+  );
 }
 
 export function getValorPagoDivida(dividaId: string): number {
@@ -162,7 +160,7 @@ export function getProgressoDivida(divida: DividaFiado): number {
   return Math.min(100, (valorPago / divida.valorFinal) * 100);
 }
 
-// --- Funções de mutação ---
+// --- Mutações ---
 
 export function criarDividaFiado(
   vendaId: string,
@@ -176,7 +174,7 @@ export function criarDividaFiado(
 ): DividaFiado {
   const agora = new Date();
   const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-  
+
   const divida: DividaFiado = {
     id: `DIV-${String(nextDividaId++).padStart(3, '0')}`,
     vendaId,
@@ -218,13 +216,37 @@ export function registrarPagamentoFiado(
 
   pagamentosFiado.push(pagamento);
 
-  // Verificar quitação automática (tolerância de 0.01)
   const totalPago = getValorPagoDivida(dividaId);
   if (totalPago >= divida.valorFinal - 0.01) {
     divida.situacao = 'Quitado';
   }
 
   return pagamento;
+}
+
+export function registrarAnotacaoFiado(
+  dividaId: string,
+  usuario: string,
+  observacao: string,
+  importante: boolean
+): AnotacaoFiado {
+  const anotacao: AnotacaoFiado = {
+    id: `ANO-${String(nextAnotacaoId++).padStart(3, '0')}`,
+    dividaId,
+    dataHora: new Date().toISOString(),
+    usuario,
+    observacao,
+    importante
+  };
+
+  anotacoesFiado.push(anotacao);
+
+  if (importante) {
+    const divida = dividasFiado.find(d => d.id === dividaId);
+    if (divida) divida.temAnotacaoImportante = true;
+  }
+
+  return anotacao;
 }
 
 // --- Estatísticas ---
