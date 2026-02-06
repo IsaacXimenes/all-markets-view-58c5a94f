@@ -28,12 +28,12 @@ export default function GestaoAdministrativaLogs() {
   
   // Estados de filtros
   const competencias = getCompetenciasDisponiveis();
-  const [competencia, setCompetencia] = useState<string>('');
+  const [competencia, setCompetencia] = useState<string>('todas');
   const [lojaId, setLojaId] = useState<string>('todas');
   
   // Buscar logs
   const logs = useMemo(() => {
-    return getLogsAuditoria(competencia || undefined, lojaId);
+    return getLogsAuditoria(competencia === 'todas' ? undefined : competencia, lojaId);
   }, [competencia, lojaId]);
   
   const getLojaNome = (lojaId: string) => {
@@ -96,7 +96,7 @@ export default function GestaoAdministrativaLogs() {
               <SelectValue placeholder="Todas as competências" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas as competências</SelectItem>
+              <SelectItem value="todas">Todas as competências</SelectItem>
               {competencias.map(comp => (
                 <SelectItem key={comp.value} value={comp.value}>
                   {comp.label}
