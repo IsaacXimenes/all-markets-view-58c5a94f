@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Lock, AlertCircle, Info, FileText, Zap, Plus, Trash2, Layers } from 'lucide-react';
+import { ArrowLeft, Lock, AlertCircle, Info, FileText, Zap, Plus, Trash2 } from 'lucide-react';
 import { getNotasCompra } from '@/utils/estoqueApi';
 import { 
   criarNotaEntrada, 
@@ -145,29 +145,6 @@ export default function EstoqueNotaCadastrar() {
   const handleCustoChange = (index: number, formatted: string, raw: string | number) => {
     const valor = typeof raw === 'number' ? raw : parseFloat(String(raw)) || 0;
     atualizarProduto(index, 'custoUnitario', valor);
-  };
-
-  const explodirItem = (index: number) => {
-    const item = produtos[index];
-    if (item.quantidade <= 1) return;
-
-    const novasLinhas: ProdutoLinha[] = Array.from({ length: item.quantidade }, () => ({
-      ...item,
-      quantidade: 1,
-      custoTotal: item.custoUnitario,
-      imei: '',
-      cor: '',
-      categoria: '',
-      explodido: true
-    }));
-
-    const novosProdutos = [
-      ...produtos.slice(0, index),
-      ...novasLinhas,
-      ...produtos.slice(index + 1)
-    ];
-    setProdutos(novosProdutos);
-    toast.success(`Item explodido em ${item.quantidade} unidades individuais`);
   };
 
   const validarCampos = (): string[] => {
@@ -531,16 +508,6 @@ export default function EstoqueNotaCadastrar() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {produto.quantidade > 1 && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => explodirItem(index)}
-                              title="Gerar unidades individuais"
-                            >
-                              <Layers className="h-4 w-4 text-primary" />
-                            </Button>
-                          )}
                           <Button
                             variant="ghost"
                             size="sm"

@@ -3,24 +3,26 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Separator } from '@/components/ui/separator';
 import { 
   ArrowLeft, 
   Check, 
   Clock, 
   ChevronDown, 
   ChevronUp,
-  AlertTriangle,
-  CheckCircle
+  CheckCircle,
+  Save,
+  Layers
 } from 'lucide-react';
 import { 
   getNotaEntradaById, 
   finalizarConferencia, 
+  explodirProdutoNota,
   NotaEntrada,
   ProdutoNotaEntrada,
   podeRealizarAcao,
@@ -30,7 +32,7 @@ import { getCores } from '@/utils/coresApi';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/utils/formatUtils';
 import { formatIMEI } from '@/utils/imeiMask';
-import { Save } from 'lucide-react';
+import { InputComMascara } from '@/components/ui/InputComMascara';
 
 export default function EstoqueNotaConferencia() {
   const { id } = useParams();
@@ -43,7 +45,11 @@ export default function EstoqueNotaConferencia() {
   // Estado local para rastrear produtos marcados como conferidos (antes de salvar)
   const [produtosConferidos, setProdutosConferidos] = useState<Set<string>>(new Set());
   
+  // Estado para campos editáveis inline (IMEI, Cor, Categoria) dos itens explodidos
+  const [camposEditaveis, setCamposEditaveis] = useState<Record<string, { imei: string; cor: string; categoria: string }>>({});
+  
   const coresCadastradas = useMemo(() => getCores(), []);
+  const coresAtivas = useMemo(() => coresCadastradas.filter(c => c.status === 'Ativo'), [coresCadastradas]);
 
   useEffect(() => {
     if (id) {
@@ -58,6 +64,19 @@ export default function EstoqueNotaConferencia() {
             .map(p => p.id)
         );
         setProdutosConferidos(jaConferidos);
+        
+        // Inicializar campos editáveis para itens que precisam preenchimento
+        const campos: Record<string, { imei: string; cor: string; categoria: string }> = {};
+        notaData.produtos.forEach(p => {
+          if (p.statusConferencia !== 'Conferido') {
+            campos[p.id] = {
+              imei: p.imei || '',
+              cor: p.cor || '',
+              categoria: p.categoria || ''
+            };
+          }
+        });
+        setCamposEditaveis(campos);
       }
       
       setIsLoading(false);
@@ -66,8 +85,11 @@ export default function EstoqueNotaConferencia() {
 
   const progressoConferencia = useMemo(() => {
     if (!nota) return { conferidos: 0, total: 0, percentual: 0 };
-    const total = nota.produtos.length;
-    const conferidos = produtosConferidos.size;
+    const total = nota.produtos.reduce((acc, p) => acc + p.quantidade, 0);
+    const conferidos = Array.from(produtosConferidos).reduce((acc, pid) => {
+      const p = nota.produtos.find(pr => pr.id === pid);
+      return acc + (p?.quantidade || 0);
+    }, 0);
     const percentual = total > 0 ? Math.round((conferidos / total) * 100) : 0;
     return { conferidos, total, percentual };
   }, [nota, produtosConferidos]);
@@ -75,6 +97,29 @@ export default function EstoqueNotaConferencia() {
   const getCorHex = (corNome: string) => {
     const cor = coresCadastradas.find(c => c.nome === corNome);
     return cor?.hexadecimal || '#888888';
+  };
+
+  // Verificar se um item precisa de campos preenchidos antes de poder ser conferido
+  const itemPrecisaCampos = (produto: ProdutoNotaEntrada): boolean => {
+    return produto.quantidade === 1 && produto.tipoProduto === 'Aparelho' && (!produto.imei || !produto.cor || !produto.categoria);
+  };
+
+  // Verificar se os campos editáveis do item estão preenchidos
+  const camposPreenchidos = (produtoId: string, produto: ProdutoNotaEntrada): boolean => {
+    if (!itemPrecisaCampos(produto)) return true;
+    const campos = camposEditaveis[produtoId];
+    if (!campos) return false;
+    return !!(campos.imei && campos.cor && campos.categoria);
+  };
+
+  const atualizarCampoEditavel = (produtoId: string, campo: 'imei' | 'cor' | 'categoria', valor: string) => {
+    setCamposEditaveis(prev => ({
+      ...prev,
+      [produtoId]: {
+        ...prev[produtoId],
+        [campo]: valor
+      }
+    }));
   };
 
   // Toggle local de conferência (não salva ainda)
@@ -90,6 +135,38 @@ export default function EstoqueNotaConferencia() {
     });
   };
 
+  // Explodir item agrupado em unidades individuais
+  const handleExplodirItem = (produtoId: string) => {
+    if (!nota) return;
+    
+    const resultado = explodirProdutoNota(nota.id, produtoId, 'Carlos Estoque');
+    if (resultado) {
+      setNota(resultado);
+      // Reinicializar campos editáveis para novos itens
+      const campos: Record<string, { imei: string; cor: string; categoria: string }> = {};
+      resultado.produtos.forEach(p => {
+        if (p.statusConferencia !== 'Conferido') {
+          campos[p.id] = {
+            imei: p.imei || '',
+            cor: p.cor || '',
+            categoria: p.categoria || ''
+          };
+        }
+      });
+      setCamposEditaveis(campos);
+      // Reset conferidos set since products changed
+      const jaConferidos = new Set(
+        resultado.produtos
+          .filter(p => p.statusConferencia === 'Conferido')
+          .map(p => p.id)
+      );
+      setProdutosConferidos(jaConferidos);
+      toast.success('Item explodido em unidades individuais para conferência');
+    } else {
+      toast.error('Erro ao explodir item');
+    }
+  };
+
   // Salvar conferência - só aqui que confirma tudo
   const handleSalvarConferencia = () => {
     if (!nota) return;
@@ -97,6 +174,20 @@ export default function EstoqueNotaConferencia() {
     if (produtosConferidos.size === 0) {
       toast.error('Marque pelo menos um produto como conferido');
       return;
+    }
+
+    // Antes de salvar, atualizar os campos editáveis nos produtos da nota
+    // (isso é feito in-memory antes de chamar finalizarConferencia)
+    const notaAtual = getNotaEntradaById(nota.id);
+    if (notaAtual) {
+      for (const [produtoId, campos] of Object.entries(camposEditaveis)) {
+        const produto = notaAtual.produtos.find(p => p.id === produtoId);
+        if (produto && produtosConferidos.has(produtoId)) {
+          if (campos.imei) produto.imei = campos.imei;
+          if (campos.cor) produto.cor = campos.cor;
+          if (campos.categoria) produto.categoria = campos.categoria as 'Novo' | 'Seminovo';
+        }
+      }
     }
     
     const produtosIds = Array.from(produtosConferidos);
@@ -226,7 +317,7 @@ export default function EstoqueNotaConferencia() {
           </CardContent>
         </Card>
 
-        {/* Tabela de Produtos - Layout igual ao cadastro */}
+        {/* Tabela de Produtos */}
         <Card>
           <CardHeader>
             <CardTitle>Produtos para Conferir</CardTitle>
@@ -245,69 +336,159 @@ export default function EstoqueNotaConferencia() {
                     <TableHead>Qtd</TableHead>
                     <TableHead>Custo Unit.</TableHead>
                     <TableHead>Custo Total</TableHead>
-                    <TableHead className="text-center">Conferir</TableHead>
+                    <TableHead className="text-center">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {nota.produtos.map(produto => (
-                    <TableRow 
-                      key={produto.id}
-                      className={produto.statusConferencia === 'Conferido' ? 'bg-primary/10' : ''}
-                    >
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {produto.tipoProduto}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium">{produto.marca}</TableCell>
-                      <TableCell className="font-medium">{produto.modelo}</TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {produto.imei ? formatIMEI(produto.imei) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        {produto.cor ? (
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full border border-border" 
-                              style={{ backgroundColor: getCorHex(produto.cor) }}
+                  {nota.produtos.map(produto => {
+                    const precisaCampos = itemPrecisaCampos(produto);
+                    const camposOk = camposPreenchidos(produto.id, produto);
+                    const campos = camposEditaveis[produto.id];
+                    
+                    return (
+                      <TableRow 
+                        key={produto.id}
+                        className={produto.statusConferencia === 'Conferido' ? 'bg-primary/10' : ''}
+                      >
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {produto.tipoProduto}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-medium">{produto.marca}</TableCell>
+                        <TableCell className="font-medium">{produto.modelo}</TableCell>
+                        {/* IMEI - editável se precisa preenchimento */}
+                        <TableCell className="font-mono text-xs">
+                          {produto.statusConferencia === 'Conferido' ? (
+                            produto.imei ? formatIMEI(produto.imei) : '-'
+                          ) : precisaCampos && campos ? (
+                            <InputComMascara
+                              mascara="imei"
+                              value={campos.imei}
+                              onChange={(formatted, raw) => atualizarCampoEditavel(produto.id, 'imei', String(raw))}
+                              className="w-40"
+                              placeholder="00-000000-000000-0"
                             />
-                            <span className="text-sm">{produto.cor}</span>
+                          ) : (
+                            produto.imei ? formatIMEI(produto.imei) : '-'
+                          )}
+                        </TableCell>
+                        {/* Cor - editável se precisa preenchimento */}
+                        <TableCell>
+                          {produto.statusConferencia === 'Conferido' ? (
+                            produto.cor ? (
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full border border-border" 
+                                  style={{ backgroundColor: getCorHex(produto.cor) }}
+                                />
+                                <span className="text-sm">{produto.cor}</span>
+                              </div>
+                            ) : '-'
+                          ) : precisaCampos && campos ? (
+                            <Select
+                              value={campos.cor || 'selecione_cor'}
+                              onValueChange={(v) => atualizarCampoEditavel(produto.id, 'cor', v === 'selecione_cor' ? '' : v)}
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue placeholder="Cor" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="selecione_cor">Selecione</SelectItem>
+                                {coresAtivas.map(cor => (
+                                  <SelectItem key={cor.id} value={cor.nome}>
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-3 h-3 rounded-full border border-border" style={{ backgroundColor: cor.hexadecimal }} />
+                                      {cor.nome}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            produto.cor ? (
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full border border-border" 
+                                  style={{ backgroundColor: getCorHex(produto.cor) }}
+                                />
+                                <span className="text-sm">{produto.cor}</span>
+                              </div>
+                            ) : '-'
+                          )}
+                        </TableCell>
+                        {/* Categoria - editável se precisa preenchimento */}
+                        <TableCell>
+                          {produto.statusConferencia === 'Conferido' ? (
+                            <Badge variant={produto.categoria === 'Novo' ? 'default' : 'secondary'} className="text-xs">
+                              {produto.categoria || '-'}
+                            </Badge>
+                          ) : precisaCampos && campos ? (
+                            <Select
+                              value={campos.categoria || 'selecione_cat'}
+                              onValueChange={(v) => atualizarCampoEditavel(produto.id, 'categoria', v === 'selecione_cat' ? '' : v)}
+                            >
+                              <SelectTrigger className="w-24">
+                                <SelectValue placeholder="Cat" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="selecione_cat">Selecione</SelectItem>
+                                <SelectItem value="Novo">Novo</SelectItem>
+                                <SelectItem value="Seminovo">Seminovo</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <Badge variant={produto.categoria === 'Novo' ? 'default' : 'secondary'} className="text-xs">
+                              {produto.categoria || '-'}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">{produto.quantidade}</TableCell>
+                        <TableCell>{formatCurrency(produto.custoUnitario)}</TableCell>
+                        <TableCell className="font-medium">{formatCurrency(produto.custoTotal)}</TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            {/* Botão Explodir para itens agrupados */}
+                            {produto.quantidade > 1 && produto.statusConferencia !== 'Conferido' && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                onClick={() => handleExplodirItem(produto.id)}
+                                title="Gerar unidades individuais"
+                              >
+                                <Layers className="h-4 w-4 text-primary" />
+                              </Button>
+                            )}
+                            {/* Botão Conferir */}
+                            {produto.statusConferencia === 'Conferido' ? (
+                              <CheckCircle className="h-6 w-6 text-primary mx-auto" />
+                            ) : produtosConferidos.has(produto.id) ? (
+                              <Button
+                                size="icon"
+                                variant="default"
+                                className="h-8 w-8"
+                                onClick={() => handleToggleConferido(produto.id)}
+                              >
+                                <Check className="h-5 w-5" />
+                              </Button>
+                            ) : (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 hover:bg-primary/20"
+                                onClick={() => handleToggleConferido(produto.id)}
+                                disabled={precisaCampos && !camposOk}
+                                title={precisaCampos && !camposOk ? 'Preencha IMEI, Cor e Categoria primeiro' : 'Marcar como conferido'}
+                              >
+                                <Check className="h-5 w-5 text-primary" />
+                              </Button>
+                            )}
                           </div>
-                        ) : '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={produto.categoria === 'Novo' ? 'default' : 'secondary'} className="text-xs">
-                          {produto.categoria || '-'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">{produto.quantidade}</TableCell>
-                      <TableCell>{formatCurrency(produto.custoUnitario)}</TableCell>
-                      <TableCell className="font-medium">{formatCurrency(produto.custoTotal)}</TableCell>
-                      <TableCell className="text-center">
-                        {produto.statusConferencia === 'Conferido' ? (
-                          <CheckCircle className="h-6 w-6 text-primary mx-auto" />
-                        ) : produtosConferidos.has(produto.id) ? (
-                          <Button
-                            size="icon"
-                            variant="default"
-                            className="h-8 w-8"
-                            onClick={() => handleToggleConferido(produto.id)}
-                          >
-                            <Check className="h-5 w-5" />
-                          </Button>
-                        ) : (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 hover:bg-primary/20"
-                            onClick={() => handleToggleConferido(produto.id)}
-                          >
-                            <Check className="h-5 w-5 text-primary" />
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

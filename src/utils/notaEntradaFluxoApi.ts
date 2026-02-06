@@ -357,7 +357,7 @@ export const criarNotaEntrada = (dados: {
         statusConferencia: 'Pendente' as const
       });
     });
-    qtdCadastrada = produtosProcessados.length;
+    qtdCadastrada = produtosProcessados.reduce((acc, p) => acc + p.quantidade, 0);
   }
   
   const valorTotal = (dados.produtos && dados.produtos.length > 0)
@@ -679,7 +679,8 @@ export const cadastrarProdutosNota = (
   }
   
   // Verificar se quantidade não excede o informado
-  const qtdNova = nota.qtdCadastrada + produtos.length;
+  const qtdNovaUnidades = produtos.reduce((acc, p) => acc + p.quantidade, 0);
+  const qtdNova = nota.qtdCadastrada + qtdNovaUnidades;
   if (nota.qtdInformada > 0 && qtdNova > nota.qtdInformada) {
     // Gerar alerta mas permitir cadastro
     const alerta: AlertaNota = {
@@ -712,7 +713,7 @@ export const cadastrarProdutosNota = (
   }));
   
   nota.produtos.push(...produtosProcessados);
-  nota.qtdCadastrada = nota.produtos.length;
+  nota.qtdCadastrada = nota.produtos.reduce((acc, p) => acc + p.quantidade, 0);
   
   // Recalcular valor total
   nota.valorTotal = nota.produtos.reduce((acc, p) => acc + p.custoTotal, 0);
@@ -883,7 +884,7 @@ export const conferirProdutoSimples = (
   produto.responsavelConferencia = responsavel;
   
   // Atualizar contadores
-  notaOriginal.qtdConferida = notaOriginal.produtos.filter(p => p.statusConferencia === 'Conferido').length;
+  notaOriginal.qtdConferida = notaOriginal.produtos.filter(p => p.statusConferencia === 'Conferido').reduce((acc, p) => acc + p.quantidade, 0);
   notaOriginal.valorConferido = notaOriginal.produtos
     .filter(p => p.statusConferencia === 'Conferido')
     .reduce((acc, p) => acc + p.custoTotal, 0);
@@ -979,7 +980,7 @@ export const finalizarConferencia = (
   }
   
   // Atualizar contadores
-  notaOriginal.qtdConferida = notaOriginal.produtos.filter(p => p.statusConferencia === 'Conferido').length;
+  notaOriginal.qtdConferida = notaOriginal.produtos.filter(p => p.statusConferencia === 'Conferido').reduce((acc, p) => acc + p.quantidade, 0);
   notaOriginal.valorConferido = notaOriginal.produtos
     .filter(p => p.statusConferencia === 'Conferido')
     .reduce((acc, p) => acc + p.custoTotal, 0);
@@ -1039,6 +1040,47 @@ export const finalizarConferencia = (
   
   // Retornar cópia profunda para forçar re-render do React
   return JSON.parse(JSON.stringify(notaOriginal));
+};
+
+// ============= FUNÇÃO DE EXPLOSÃO DE ITENS =============
+
+export const explodirProdutoNota = (
+  notaId: string,
+  produtoId: string,
+  usuario: string
+): NotaEntrada | null => {
+  const nota = notasEntrada.find(n => n.id === notaId);
+  if (!nota) return null;
+
+  const produtoIndex = nota.produtos.findIndex(p => p.id === produtoId);
+  if (produtoIndex === -1) return null;
+
+  const produto = nota.produtos[produtoIndex];
+  if (produto.quantidade <= 1) return null;
+
+  const novasLinhas: ProdutoNotaEntrada[] = Array.from(
+    { length: produto.quantidade },
+    (_, i) => ({
+      id: `${produto.id}-U${String(i + 1).padStart(3, '0')}`,
+      tipoProduto: produto.tipoProduto,
+      marca: produto.marca,
+      modelo: produto.modelo,
+      quantidade: 1,
+      custoUnitario: produto.custoUnitario,
+      custoTotal: produto.custoUnitario,
+      statusRecebimento: 'Pendente' as const,
+      statusConferencia: 'Pendente' as const
+    })
+  );
+
+  nota.produtos.splice(produtoIndex, 1, ...novasLinhas);
+  // qtdCadastrada não muda (soma de quantidades permanece igual)
+
+  registrarTimeline(nota, usuario, 'Estoque',
+    `Item "${produto.modelo}" explodido em ${produto.quantidade} unidades`,
+    nota.status);
+
+  return JSON.parse(JSON.stringify(nota));
 };
 
 // ============= MIGRAÇÃO DE PRODUTOS POR CATEGORIA (NOVO VS SEMI-NOVO) =============

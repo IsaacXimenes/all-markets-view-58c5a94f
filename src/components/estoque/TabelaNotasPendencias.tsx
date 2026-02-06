@@ -220,6 +220,7 @@ export function TabelaNotasPendencias({
             <TableHead>% Conf.</TableHead>
             <TableHead>Valor Total</TableHead>
             <TableHead>Valor Pago</TableHead>
+            <TableHead>Saldo Devedor</TableHead>
             <TableHead>Dias</TableHead>
             <TableHead>Ações</TableHead>
           </TableRow>
@@ -227,7 +228,7 @@ export function TabelaNotasPendencias({
         <TableBody>
           {notas.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                 Nenhuma nota pendente encontrada
               </TableCell>
             </TableRow>
@@ -281,6 +282,13 @@ export function TabelaNotasPendencias({
                   </TableCell>
                   <TableCell>{formatCurrency(nota.valorTotal)}</TableCell>
                   <TableCell>{formatCurrency(nota.valorPago)}</TableCell>
+                  <TableCell>
+                    {nota.status === 'Finalizada' || Math.abs(nota.valorPendente) <= 0.01 ? (
+                      <Badge variant="outline" className="bg-primary/10 text-primary">Quitado</Badge>
+                    ) : (
+                      <span className="text-destructive font-medium">{formatCurrency(nota.valorPendente)}</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={
                       dias >= 7 ? 'bg-destructive/10 text-destructive' :
