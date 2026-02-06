@@ -664,72 +664,18 @@ export function PagamentoQuadro({
                     value={novoPagamento.fiadoTipoRecorrencia || 'Mensal'} 
                     onValueChange={(v) => setNovoPagamento({ 
                       ...novoPagamento, 
-                      fiadoTipoRecorrencia: v as 'Mensal' | 'Semanal',
-                      fiadoDataBase: v === 'Semanal' ? undefined : novoPagamento.fiadoDataBase,
-                      fiadoIntervaloDias: v === 'Semanal' ? 7 : undefined
+                      fiadoTipoRecorrencia: v as 'Mensal' | 'Semanal'
                     })}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Mensal">Mensal (dia fixo do mês)</SelectItem>
-                      <SelectItem value="Semanal">Semanal (intervalo em dias)</SelectItem>
+                      <SelectItem value="Mensal">Mensal</SelectItem>
+                      <SelectItem value="Semanal">Semanal</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                
-                {/* Campos para Mensal */}
-                {(novoPagamento.fiadoTipoRecorrencia || 'Mensal') === 'Mensal' && (
-                  <div>
-                    <label className="text-sm font-medium">Dia do Mês *</label>
-                    <Select 
-                      value={String(novoPagamento.fiadoDataBase || 5)} 
-                      onValueChange={(v) => setNovoPagamento({ ...novoPagamento, fiadoDataBase: Number(v) })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o dia" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[1, 5, 10, 15, 20, 25, 28].map(dia => (
-                          <SelectItem key={dia} value={String(dia)}>Dia {dia}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Dia do mês em que as parcelas vencerão
-                    </p>
-                  </div>
-                )}
-                
-                {/* Campos para Semanal */}
-                {novoPagamento.fiadoTipoRecorrencia === 'Semanal' && (
-                  <div>
-                    <label className="text-sm font-medium">Intervalo de Dias *</label>
-                    <Select 
-                      value={String(novoPagamento.fiadoIntervaloDias || 7)} 
-                      onValueChange={(v) => setNovoPagamento({ ...novoPagamento, fiadoIntervaloDias: Number(v) })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="7">A cada 7 dias</SelectItem>
-                        <SelectItem value="14">A cada 14 dias</SelectItem>
-                        <SelectItem value="15">A cada 15 dias</SelectItem>
-                        <SelectItem value="21">A cada 21 dias</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Primeira parcela em {(() => {
-                        const dias = novoPagamento.fiadoIntervaloDias || 7;
-                        const data = new Date();
-                        data.setDate(data.getDate() + dias);
-                        return data.toLocaleDateString('pt-BR');
-                      })()}
-                    </p>
-                  </div>
-                )}
                 
                 <div>
                   <label className="text-sm font-medium">Número de Parcelas *</label>
@@ -746,15 +692,10 @@ export function PagamentoQuadro({
                       ))}
                     </SelectContent>
                   </Select>
-                  {novoPagamento.valor && novoPagamento.fiadoNumeroParcelas && novoPagamento.fiadoNumeroParcelas > 1 && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {novoPagamento.fiadoNumeroParcelas}x de {formatarMoeda(novoPagamento.valor / novoPagamento.fiadoNumeroParcelas)}
-                    </p>
-                  )}
                 </div>
                 <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg text-sm text-yellow-700 dark:text-yellow-300 flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4" />
-                  As parcelas serão geradas automaticamente na tela "Conferências - Fiado" no módulo Financeiro.
+                  A dívida será enviada para Conferência - Fiado no Financeiro.
                 </div>
               </>
             )}

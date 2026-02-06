@@ -1,354 +1,260 @@
-// Fiado API - Gerenciamento de parcelas de vendas no fiado
-import { addMonths, differenceInDays, format, setDate, addWeeks, nextDay } from 'date-fns';
+// Fiado API - Modelo de Crédito Flexível com Amortizações Variáveis
 
-export interface ParcelaFiado {
+export interface DividaFiado {
   id: string;
   vendaId: string;
   clienteId: string;
   clienteNome: string;
   lojaId: string;
   lojaNome: string;
-  numeroParcela: number;
-  totalParcelas: number;
-  valorParcela: number;
-  dataVencimento: string;
-  dataPagamento?: string;
-  status: 'Pendente' | 'Pago' | 'Vencido';
-  contaDestino?: string;
-  responsavelPagamento?: string;
-  observacao?: string;
-  tipoRecorrencia?: 'Mensal' | 'Semanal'; // Novo campo
-  diaSemana?: number; // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab
+  valorFinal: number;
+  qtdVezes: number;
+  tipoRecorrencia: 'Mensal' | 'Semanal';
+  inicioCompetencia: string; // formato "MMM-YYYY"
+  situacao: 'Em Aberto' | 'Quitado';
+  dataCriacao: string;
 }
 
-// Mock data com exemplos - UUIDs reais do useCadastroStore
-// Lojas: db894e7d (JK Shopping), 3ac7e00c (Matriz), 5b9446d5 (Shopping Sul)
-let parcelasFiado: ParcelaFiado[] = [
-  // Venda 1 - Cliente com parcelas em dia
+export interface PagamentoFiado {
+  id: string;
+  dividaId: string;
+  valor: number;
+  dataPagamento: string;
+  responsavel: string;
+  comprovanteBase64?: string;
+  comprovanteNome?: string;
+}
+
+// Mock data convertido do modelo anterior
+let dividasFiado: DividaFiado[] = [
   {
-    id: 'FIADO-VEN-2025-0050-1',
+    id: 'DIV-001',
     vendaId: 'VEN-2025-0050',
     clienteId: 'CLI-001',
     clienteNome: 'João Silva',
-    lojaId: 'db894e7d', // Loja - JK Shopping
+    lojaId: 'db894e7d',
     lojaNome: 'Loja - JK Shopping',
-    numeroParcela: 1,
-    totalParcelas: 3,
-    valorParcela: 500,
-    dataVencimento: '2024-12-05T00:00:00',
-    dataPagamento: '2024-12-04T14:30:00',
-    status: 'Pago',
-    contaDestino: 'Caixa Principal',
-    responsavelPagamento: 'Maria Santos'
+    valorFinal: 1500,
+    qtdVezes: 3,
+    tipoRecorrencia: 'Mensal',
+    inicioCompetencia: 'Dez-2024',
+    situacao: 'Em Aberto',
+    dataCriacao: '2024-12-01T10:00:00'
   },
   {
-    id: 'FIADO-VEN-2025-0050-2',
-    vendaId: 'VEN-2025-0050',
-    clienteId: 'CLI-001',
-    clienteNome: 'João Silva',
-    lojaId: 'db894e7d', // Loja - JK Shopping
-    lojaNome: 'Loja - JK Shopping',
-    numeroParcela: 2,
-    totalParcelas: 3,
-    valorParcela: 500,
-    dataVencimento: '2025-01-05T00:00:00',
-    dataPagamento: '2025-01-05T10:15:00',
-    status: 'Pago',
-    contaDestino: 'Caixa Principal',
-    responsavelPagamento: 'Maria Santos'
-  },
-  {
-    id: 'FIADO-VEN-2025-0050-3',
-    vendaId: 'VEN-2025-0050',
-    clienteId: 'CLI-001',
-    clienteNome: 'João Silva',
-    lojaId: 'db894e7d', // Loja - JK Shopping
-    lojaNome: 'Loja - JK Shopping',
-    numeroParcela: 3,
-    totalParcelas: 3,
-    valorParcela: 500,
-    dataVencimento: '2025-02-05T00:00:00',
-    status: 'Pendente'
-  },
-  // Venda 2 - Cliente com parcela vencida
-  {
-    id: 'FIADO-VEN-2025-0055-1',
+    id: 'DIV-002',
     vendaId: 'VEN-2025-0055',
     clienteId: 'CLI-003',
     clienteNome: 'Carlos Oliveira',
-    lojaId: '3ac7e00c', // Loja - Matriz
+    lojaId: '3ac7e00c',
     lojaNome: 'Loja - Matriz',
-    numeroParcela: 1,
-    totalParcelas: 5,
-    valorParcela: 400,
-    dataVencimento: '2024-12-10T00:00:00',
-    dataPagamento: '2024-12-10T16:45:00',
-    status: 'Pago',
-    contaDestino: 'Banco Itaú',
-    responsavelPagamento: 'Pedro Costa'
+    valorFinal: 2000,
+    qtdVezes: 5,
+    tipoRecorrencia: 'Mensal',
+    inicioCompetencia: 'Dez-2024',
+    situacao: 'Em Aberto',
+    dataCriacao: '2024-12-05T14:00:00'
   },
   {
-    id: 'FIADO-VEN-2025-0055-2',
-    vendaId: 'VEN-2025-0055',
-    clienteId: 'CLI-003',
-    clienteNome: 'Carlos Oliveira',
-    lojaId: '3ac7e00c', // Loja - Matriz
-    lojaNome: 'Loja - Matriz',
-    numeroParcela: 2,
-    totalParcelas: 5,
-    valorParcela: 400,
-    dataVencimento: '2025-01-02T00:00:00',
-    status: 'Vencido'
-  },
-  {
-    id: 'FIADO-VEN-2025-0055-3',
-    vendaId: 'VEN-2025-0055',
-    clienteId: 'CLI-003',
-    clienteNome: 'Carlos Oliveira',
-    lojaId: '3ac7e00c', // Loja - Matriz
-    lojaNome: 'Loja - Matriz',
-    numeroParcela: 3,
-    totalParcelas: 5,
-    valorParcela: 400,
-    dataVencimento: '2025-02-10T00:00:00',
-    status: 'Pendente'
-  },
-  {
-    id: 'FIADO-VEN-2025-0055-4',
-    vendaId: 'VEN-2025-0055',
-    clienteId: 'CLI-003',
-    clienteNome: 'Carlos Oliveira',
-    lojaId: '3ac7e00c', // Loja - Matriz
-    lojaNome: 'Loja - Matriz',
-    numeroParcela: 4,
-    totalParcelas: 5,
-    valorParcela: 400,
-    dataVencimento: '2025-03-10T00:00:00',
-    status: 'Pendente'
-  },
-  {
-    id: 'FIADO-VEN-2025-0055-5',
-    vendaId: 'VEN-2025-0055',
-    clienteId: 'CLI-003',
-    clienteNome: 'Carlos Oliveira',
-    lojaId: '3ac7e00c', // Loja - Matriz
-    lojaNome: 'Loja - Matriz',
-    numeroParcela: 5,
-    totalParcelas: 5,
-    valorParcela: 400,
-    dataVencimento: '2025-04-10T00:00:00',
-    status: 'Pendente'
-  },
-  // Venda 3 - Vence hoje
-  {
-    id: 'FIADO-VEN-2025-0060-1',
+    id: 'DIV-003',
     vendaId: 'VEN-2025-0060',
     clienteId: 'CLI-005',
     clienteNome: 'Ana Paula Ferreira',
-    lojaId: 'db894e7d', // Loja - JK Shopping
+    lojaId: 'db894e7d',
     lojaNome: 'Loja - JK Shopping',
-    numeroParcela: 1,
-    totalParcelas: 2,
-    valorParcela: 750,
-    dataVencimento: new Date().toISOString().split('T')[0] + 'T00:00:00',
-    status: 'Pendente'
+    valorFinal: 1500,
+    qtdVezes: 2,
+    tipoRecorrencia: 'Semanal',
+    inicioCompetencia: 'Jan-2025',
+    situacao: 'Em Aberto',
+    dataCriacao: '2025-01-03T09:30:00'
   },
   {
-    id: 'FIADO-VEN-2025-0060-2',
-    vendaId: 'VEN-2025-0060',
-    clienteId: 'CLI-005',
-    clienteNome: 'Ana Paula Ferreira',
-    lojaId: 'db894e7d', // Loja - JK Shopping
-    lojaNome: 'Loja - JK Shopping',
-    numeroParcela: 2,
-    totalParcelas: 2,
-    valorParcela: 750,
-    dataVencimento: '2025-02-08T00:00:00',
-    status: 'Pendente'
-  },
-  // Venda 4 - Vence em 3 dias
-  {
-    id: 'FIADO-VEN-2025-0062-1',
+    id: 'DIV-004',
     vendaId: 'VEN-2025-0062',
     clienteId: 'CLI-007',
     clienteNome: 'Roberto Mendes',
-    lojaId: '5b9446d5', // Loja - Shopping Sul
+    lojaId: '5b9446d5',
     lojaNome: 'Loja - Shopping Sul',
-    numeroParcela: 1,
-    totalParcelas: 4,
-    valorParcela: 325,
-    dataVencimento: '2025-01-11T00:00:00',
-    status: 'Pendente'
-  },
-  {
-    id: 'FIADO-VEN-2025-0062-2',
-    vendaId: 'VEN-2025-0062',
-    clienteId: 'CLI-007',
-    clienteNome: 'Roberto Mendes',
-    lojaId: '5b9446d5', // Loja - Shopping Sul
-    lojaNome: 'Loja - Shopping Sul',
-    numeroParcela: 2,
-    totalParcelas: 4,
-    valorParcela: 325,
-    dataVencimento: '2025-02-11T00:00:00',
-    status: 'Pendente'
-  },
-  {
-    id: 'FIADO-VEN-2025-0062-3',
-    vendaId: 'VEN-2025-0062',
-    clienteId: 'CLI-007',
-    clienteNome: 'Roberto Mendes',
-    lojaId: '5b9446d5', // Loja - Shopping Sul
-    lojaNome: 'Loja - Shopping Sul',
-    numeroParcela: 3,
-    totalParcelas: 4,
-    valorParcela: 325,
-    dataVencimento: '2025-03-11T00:00:00',
-    status: 'Pendente'
-  },
-  {
-    id: 'FIADO-VEN-2025-0062-4',
-    vendaId: 'VEN-2025-0062',
-    clienteId: 'CLI-007',
-    clienteNome: 'Roberto Mendes',
-    lojaId: '5b9446d5', // Loja - Shopping Sul
-    lojaNome: 'Loja - Shopping Sul',
-    numeroParcela: 4,
-    totalParcelas: 4,
-    valorParcela: 325,
-    dataVencimento: '2025-04-11T00:00:00',
-    status: 'Pendente'
+    valorFinal: 1300,
+    qtdVezes: 4,
+    tipoRecorrencia: 'Mensal',
+    inicioCompetencia: 'Jan-2025',
+    situacao: 'Quitado',
+    dataCriacao: '2025-01-08T11:00:00'
   }
 ];
 
-export function getParcelasFiado(): ParcelaFiado[] {
-  // Atualizar status de parcelas vencidas
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  
-  parcelasFiado = parcelasFiado.map(p => {
-    if (p.status === 'Pendente' && new Date(p.dataVencimento) < hoje) {
-      return { ...p, status: 'Vencido' };
-    }
-    return p;
-  });
-  
-  return [...parcelasFiado];
+let pagamentosFiado: PagamentoFiado[] = [
+  // Pagamentos da dívida 1 (João Silva - R$ 1.500)
+  {
+    id: 'PGT-001',
+    dividaId: 'DIV-001',
+    valor: 500,
+    dataPagamento: '2024-12-04T14:30:00',
+    responsavel: 'Maria Santos'
+  },
+  {
+    id: 'PGT-002',
+    dividaId: 'DIV-001',
+    valor: 500,
+    dataPagamento: '2025-01-05T10:15:00',
+    responsavel: 'Maria Santos'
+  },
+  // Pagamentos da dívida 2 (Carlos Oliveira - R$ 2.000)
+  {
+    id: 'PGT-003',
+    dividaId: 'DIV-002',
+    valor: 400,
+    dataPagamento: '2024-12-10T16:45:00',
+    responsavel: 'Pedro Costa'
+  },
+  // Pagamentos da dívida 4 (Roberto Mendes - R$ 1.300, quitado)
+  {
+    id: 'PGT-004',
+    dividaId: 'DIV-004',
+    valor: 500,
+    dataPagamento: '2025-01-15T09:00:00',
+    responsavel: 'João Gestor'
+  },
+  {
+    id: 'PGT-005',
+    dividaId: 'DIV-004',
+    valor: 500,
+    dataPagamento: '2025-02-10T14:20:00',
+    responsavel: 'João Gestor'
+  },
+  {
+    id: 'PGT-006',
+    dividaId: 'DIV-004',
+    valor: 300,
+    dataPagamento: '2025-03-05T11:30:00',
+    responsavel: 'João Gestor'
+  }
+];
+
+let nextDividaId = 5;
+let nextPagamentoId = 7;
+
+// --- Funções de consulta ---
+
+export function getDividasFiado(): DividaFiado[] {
+  return [...dividasFiado];
 }
 
-export function criarParcelasFiado(
+export function getPagamentosDivida(dividaId: string): PagamentoFiado[] {
+  return pagamentosFiado.filter(p => p.dividaId === dividaId);
+}
+
+export function getValorPagoDivida(dividaId: string): number {
+  return pagamentosFiado
+    .filter(p => p.dividaId === dividaId)
+    .reduce((acc, p) => acc + p.valor, 0);
+}
+
+export function getSaldoDevedor(divida: DividaFiado): number {
+  const valorPago = getValorPagoDivida(divida.id);
+  return Math.max(0, divida.valorFinal - valorPago);
+}
+
+export function getProgressoDivida(divida: DividaFiado): number {
+  const valorPago = getValorPagoDivida(divida.id);
+  return Math.min(100, (valorPago / divida.valorFinal) * 100);
+}
+
+// --- Funções de mutação ---
+
+export function criarDividaFiado(
   vendaId: string,
   clienteId: string,
   clienteNome: string,
   lojaId: string,
   lojaNome: string,
-  valorTotal: number,
-  numeroParcelas: number,
-  diaVencimento: number,
-  tipoRecorrencia: 'Mensal' | 'Semanal' = 'Mensal',
-  diaSemana?: number, // 0-6 (Dom-Sab) para recorrência semanal
-  dataInicial?: Date // Data de início das parcelas
-): ParcelaFiado[] {
-  const valorParcela = valorTotal / numeroParcelas;
-  const hoje = dataInicial || new Date();
-  const novasParcelas: ParcelaFiado[] = [];
+  valorFinal: number,
+  qtdVezes: number,
+  tipoRecorrencia: 'Mensal' | 'Semanal'
+): DividaFiado {
+  const agora = new Date();
+  const meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
   
-  for (let i = 0; i < numeroParcelas; i++) {
-    let dataVencimento: Date;
-    
-    if (tipoRecorrencia === 'Semanal' && diaSemana !== undefined) {
-      // Cálculo para parcelas semanais
-      if (i === 0) {
-        // Primeira parcela: próximo dia da semana a partir da data inicial
-        const diasSemana = [0, 1, 2, 3, 4, 5, 6] as const;
-        dataVencimento = nextDay(hoje, diasSemana[diaSemana]);
-      } else {
-        // Parcelas subsequentes: adiciona semanas a partir da primeira
-        const primeiraParcela = novasParcelas[0].dataVencimento;
-        dataVencimento = addWeeks(new Date(primeiraParcela), i);
-      }
-    } else {
-      // Cálculo mensal (comportamento atual)
-      dataVencimento = addMonths(hoje, i + 1);
-      
-      // Ajustar para o dia do vencimento escolhido
-      const ultimoDiaMes = new Date(dataVencimento.getFullYear(), dataVencimento.getMonth() + 1, 0).getDate();
-      const diaAjustado = Math.min(diaVencimento, ultimoDiaMes);
-      dataVencimento = setDate(dataVencimento, diaAjustado);
-    }
-    
-    const parcela: ParcelaFiado = {
-      id: `FIADO-${vendaId}-${i + 1}`,
-      vendaId,
-      clienteId,
-      clienteNome,
-      lojaId,
-      lojaNome,
-      numeroParcela: i + 1,
-      totalParcelas: numeroParcelas,
-      valorParcela,
-      dataVencimento: dataVencimento.toISOString(),
-      status: 'Pendente',
-      tipoRecorrencia,
-      diaSemana: tipoRecorrencia === 'Semanal' ? diaSemana : undefined
-    };
-    
-    novasParcelas.push(parcela);
-  }
-  
-  parcelasFiado.push(...novasParcelas);
-  return novasParcelas;
-}
-
-export function pagarParcelaFiado(
-  parcelaId: string,
-  contaDestino: string,
-  responsavel: string,
-  observacao?: string
-): ParcelaFiado | null {
-  const index = parcelasFiado.findIndex(p => p.id === parcelaId);
-  if (index === -1) return null;
-  
-  parcelasFiado[index] = {
-    ...parcelasFiado[index],
-    status: 'Pago',
-    dataPagamento: new Date().toISOString(),
-    contaDestino,
-    responsavelPagamento: responsavel,
-    observacao
+  const divida: DividaFiado = {
+    id: `DIV-${String(nextDividaId++).padStart(3, '0')}`,
+    vendaId,
+    clienteId,
+    clienteNome,
+    lojaId,
+    lojaNome,
+    valorFinal,
+    qtdVezes,
+    tipoRecorrencia,
+    inicioCompetencia: `${meses[agora.getMonth()]}-${agora.getFullYear()}`,
+    situacao: 'Em Aberto',
+    dataCriacao: agora.toISOString()
   };
-  
-  return parcelasFiado[index];
+
+  dividasFiado.push(divida);
+  return divida;
 }
 
-export function getDiasParaVencimento(dataVencimento: string): number {
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  const vencimento = new Date(dataVencimento);
-  vencimento.setHours(0, 0, 0, 0);
-  return differenceInDays(vencimento, hoje);
+export function registrarPagamentoFiado(
+  dividaId: string,
+  valor: number,
+  responsavel: string,
+  comprovanteBase64?: string,
+  comprovanteNome?: string
+): PagamentoFiado | null {
+  const divida = dividasFiado.find(d => d.id === dividaId);
+  if (!divida || divida.situacao === 'Quitado') return null;
+
+  const pagamento: PagamentoFiado = {
+    id: `PGT-${String(nextPagamentoId++).padStart(3, '0')}`,
+    dividaId,
+    valor,
+    dataPagamento: new Date().toISOString(),
+    responsavel,
+    comprovanteBase64,
+    comprovanteNome
+  };
+
+  pagamentosFiado.push(pagamento);
+
+  // Verificar quitação automática (tolerância de 0.01)
+  const totalPago = getValorPagoDivida(dividaId);
+  if (totalPago >= divida.valorFinal - 0.01) {
+    divida.situacao = 'Quitado';
+  }
+
+  return pagamento;
 }
+
+// --- Estatísticas ---
+
+export function getEstatisticasFiado() {
+  const dividas = getDividasFiado();
+  const emAberto = dividas.filter(d => d.situacao === 'Em Aberto');
+  const quitadas = dividas.filter(d => d.situacao === 'Quitado');
+
+  const valorTotalEmAberto = emAberto.reduce((acc, d) => acc + d.valorFinal, 0);
+  const valorPagoEmAberto = emAberto.reduce((acc, d) => acc + getValorPagoDivida(d.id), 0);
+  const saldoDevedor = valorTotalEmAberto - valorPagoEmAberto;
+
+  const valorTotalQuitado = quitadas.reduce((acc, d) => acc + d.valorFinal, 0);
+
+  return {
+    totalEmAberto: emAberto.length,
+    totalQuitadas: quitadas.length,
+    valorTotalEmAberto,
+    valorTotalQuitado,
+    saldoDevedor,
+    valorRecebido: valorPagoEmAberto + valorTotalQuitado
+  };
+}
+
+// --- Formatação ---
 
 export function formatCurrency(value: number): string {
   return value.toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL'
   });
-}
-
-// Estatísticas
-export function getEstatisticasFiado() {
-  const parcelas = getParcelasFiado();
-  const pendentes = parcelas.filter(p => p.status === 'Pendente');
-  const vencidas = parcelas.filter(p => p.status === 'Vencido');
-  const pagas = parcelas.filter(p => p.status === 'Pago');
-  
-  return {
-    totalPendentes: pendentes.length,
-    totalVencidas: vencidas.length,
-    totalPagas: pagas.length,
-    valorPendente: pendentes.reduce((acc, p) => acc + p.valorParcela, 0),
-    valorVencido: vencidas.reduce((acc, p) => acc + p.valorParcela, 0),
-    valorRecebido: pagas.reduce((acc, p) => acc + p.valorParcela, 0)
-  };
 }
