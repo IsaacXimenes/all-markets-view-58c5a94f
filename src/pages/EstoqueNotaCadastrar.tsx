@@ -22,7 +22,9 @@ import {
 import { toast } from 'sonner';
 import { InputComMascara } from '@/components/ui/InputComMascara';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
+import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { formatCurrency } from '@/utils/formatUtils';
+import { useAuthStore } from '@/store/authStore';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { BufferAnexos, AnexoTemporario } from '@/components/estoque/BufferAnexos';
 import { getProdutosCadastro } from '@/utils/cadastrosApi';
@@ -58,10 +60,12 @@ const produtoLinhaVazia = (): ProdutoLinha => ({
 export default function EstoqueNotaCadastrar() {
   const navigate = useNavigate();
   const produtosCadastro = getProdutosCadastro();
+  const { user } = useAuthStore();
   
   // Informações da Nota
   const [fornecedor, setFornecedor] = useState('');
-  const [dataEntrada, setDataEntrada] = useState(new Date().toISOString().split('T')[0]);
+  const [dataEntrada] = useState(new Date().toISOString().split('T')[0]);
+  const [responsavelLancamento, setResponsavelLancamento] = useState(user?.colaborador?.id || '');
   
   // Flag de Urgência
   const [urgente, setUrgente] = useState(false);
@@ -147,6 +151,7 @@ export default function EstoqueNotaCadastrar() {
     
     if (!fornecedor) camposFaltando.push('Fornecedor');
     if (!dataEntrada) camposFaltando.push('Data de Entrada');
+    if (!responsavelLancamento) camposFaltando.push('Responsável pelo Lançamento');
     if (!tipoPagamento) camposFaltando.push('Tipo de Pagamento');
     
     return camposFaltando;
@@ -209,7 +214,7 @@ export default function EstoqueNotaCadastrar() {
       tipoPagamento: tipoPagamento as TipoPagamentoNota,
       valorTotal: valorFinal || undefined,
       formaPagamento: formaPagamento || undefined,
-      responsavel: 'Usuário Estoque',
+      responsavel: responsavelLancamento,
       observacoes: observacaoPagamento || undefined,
       urgente: urgente,
       produtos: temProdutosPreenchidos ? produtos.filter(p => p.modelo && p.custoUnitario > 0).map(p => ({
@@ -285,7 +290,8 @@ export default function EstoqueNotaCadastrar() {
                   id="dataEntrada" 
                   type="date"
                   value={dataEntrada}
-                  onChange={(e) => setDataEntrada(e.target.value)}
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
                 />
               </div>
               <div>
@@ -296,6 +302,14 @@ export default function EstoqueNotaCadastrar() {
                   placeholder="Selecione um fornecedor"
                 />
               </div>
+              <div>
+                <Label>Responsável pelo Lançamento *</Label>
+                <AutocompleteColaborador
+                  value={responsavelLancamento}
+                  onChange={setResponsavelLancamento}
+                  placeholder="Selecione o responsável"
+                />
+              </div>
             </div>
             
             <div className="p-3 rounded-lg bg-muted/50 border">
@@ -304,32 +318,17 @@ export default function EstoqueNotaCadastrar() {
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center gap-3 mt-2">
-                <Checkbox
-                  id="urgente"
-                  checked={urgente}
-                  onCheckedChange={(checked) => setUrgente(checked as boolean)}
-                />
-                <div className="flex items-center gap-2">
-                  <Zap className={`h-4 w-4 ${urgente ? 'text-destructive' : 'text-muted-foreground'}`} />
-                  <Label htmlFor="urgente" className={`cursor-pointer ${urgente ? 'text-destructive font-medium' : ''}`}>
-                    Solicitação de Urgência
-                  </Label>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 mt-6">
-                <Checkbox
-                  id="urgente"
-                  checked={urgente}
-                  onCheckedChange={(checked) => setUrgente(checked as boolean)}
-                />
-                <div className="flex items-center gap-2">
-                  <Zap className={`h-4 w-4 ${urgente ? 'text-destructive' : 'text-muted-foreground'}`} />
-                  <Label htmlFor="urgente" className={`cursor-pointer ${urgente ? 'text-destructive font-medium' : ''}`}>
-                    Solicitação de Urgência
-                  </Label>
-                </div>
+            <div className="flex items-center gap-3 mt-2">
+              <Checkbox
+                id="urgente"
+                checked={urgente}
+                onCheckedChange={(checked) => setUrgente(checked as boolean)}
+              />
+              <div className="flex items-center gap-2">
+                <Zap className={`h-4 w-4 ${urgente ? 'text-destructive' : 'text-muted-foreground'}`} />
+                <Label htmlFor="urgente" className={`cursor-pointer ${urgente ? 'text-destructive font-medium' : ''}`}>
+                  Solicitação de Urgência
+                </Label>
               </div>
             </div>
           </CardContent>
