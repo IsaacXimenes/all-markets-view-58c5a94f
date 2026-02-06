@@ -43,7 +43,7 @@ export default function FinanceiroFiado() {
   const lojas = obterLojasAtivas();
 
   const [dividas, setDividas] = useState<DividaFiado[]>(getDividasFiado());
-  const [filters, setFilters] = useState({ cliente: '', loja: 'todas', situacao: 'todos' });
+  const [filters, setFilters] = useState({ cliente: '', loja: 'todas', situacao: 'todos', recorrencia: 'todas', competencia: 'todas', dataInicio: '', dataFim: '' });
   const [filtroRapido, setFiltroRapido] = useState<string | null>(null);
 
   // Modal de pagamento
@@ -74,6 +74,16 @@ export default function FinanceiroFiado() {
       if (filters.cliente && !d.clienteNome.toLowerCase().includes(filters.cliente.toLowerCase())) return false;
       if (filters.loja !== 'todas' && d.lojaId !== filters.loja) return false;
       if (filters.situacao !== 'todos' && d.situacao !== filters.situacao) return false;
+      if (filters.recorrencia !== 'todas' && d.tipoRecorrencia !== filters.recorrencia) return false;
+      if (filters.competencia !== 'todas' && d.inicioCompetencia !== filters.competencia) return false;
+      if (filters.dataInicio) {
+        const dataLanc = new Date(d.dataCriacao).toISOString().split('T')[0];
+        if (dataLanc < filters.dataInicio) return false;
+      }
+      if (filters.dataFim) {
+        const dataLanc = new Date(d.dataCriacao).toISOString().split('T')[0];
+        if (dataLanc > filters.dataFim) return false;
+      }
       return true;
     });
 
@@ -159,7 +169,7 @@ export default function FinanceiroFiado() {
   };
 
   const handleLimpar = () => {
-    setFilters({ cliente: '', loja: 'todas', situacao: 'todos' });
+    setFilters({ cliente: '', loja: 'todas', situacao: 'todos', recorrencia: 'todas', competencia: 'todas', dataInicio: '', dataFim: '' });
     setFiltroRapido(null);
   };
 
@@ -330,6 +340,47 @@ export default function FinanceiroFiado() {
                     <SelectItem value="Quitado">Quitado</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label htmlFor="recorrencia">Recorrência</Label>
+                <Select value={filters.recorrencia} onValueChange={(v) => setFilters({ ...filters, recorrencia: v })}>
+                  <SelectTrigger id="recorrencia"><SelectValue placeholder="Todas" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas</SelectItem>
+                    <SelectItem value="Mensal">Mensal</SelectItem>
+                    <SelectItem value="Semanal">Semanal</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="competencia">Competência</Label>
+                <Select value={filters.competencia} onValueChange={(v) => setFilters({ ...filters, competencia: v })}>
+                  <SelectTrigger id="competencia"><SelectValue placeholder="Todas" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas</SelectItem>
+                    {[...new Set(dividas.map(d => d.inicioCompetencia))].sort().map(c => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="dataInicio">Data Início</Label>
+                <Input
+                  id="dataInicio"
+                  type="date"
+                  value={filters.dataInicio}
+                  onChange={(e) => setFilters({ ...filters, dataInicio: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label htmlFor="dataFim">Data Fim</Label>
+                <Input
+                  id="dataFim"
+                  type="date"
+                  value={filters.dataFim}
+                  onChange={(e) => setFilters({ ...filters, dataFim: e.target.value })}
+                />
               </div>
               <div className="flex items-end">
                 <Button variant="outline" onClick={handleLimpar} className="w-full">
