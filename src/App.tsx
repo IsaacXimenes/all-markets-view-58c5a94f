@@ -111,6 +111,10 @@ import CadastrosPlanosGarantia from "./pages/CadastrosPlanosGarantia";
 import VendasEditar from "./pages/VendasEditar";
 import GestaoAdministrativa from "./pages/GestaoAdministrativa";
 import GestaoAdministrativaLogs from "./pages/GestaoAdministrativaLogs";
+import GestaoAdmStoriesLotes from "./pages/GestaoAdmStoriesLotes";
+import GestaoAdmStoriesConferencia from "./pages/GestaoAdmStoriesConferencia";
+import GestaoAdmStoriesValidacao from "./pages/GestaoAdmStoriesValidacao";
+import GestaoAdmStoriesIndicadores from "./pages/GestaoAdmStoriesIndicadores";
 
 const queryClient = new QueryClient();
 
@@ -245,6 +249,10 @@ const App = () => (
               {/* Gestão Administrativa */}
               <Route path="/gestao-administrativa" element={<GestaoAdministrativa />} />
               <Route path="/gestao-administrativa/logs" element={<GestaoAdministrativaLogs />} />
+              <Route path="/gestao-administrativa/stories" element={<GestaoAdmStoriesLotes />} />
+              <Route path="/gestao-administrativa/stories/indicadores" element={<GestaoAdmStoriesIndicadores />} />
+              <Route path="/gestao-administrativa/stories/lote/:id/conferencia" element={<GestaoAdmStoriesConferencia />} />
+              <Route path="/gestao-administrativa/stories/lote/:id/validacao" element={<GestaoAdmStoriesValidacao />} />
             </Route>
             
             {/* Rota 404 */}
