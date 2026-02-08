@@ -27,7 +27,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { getNotasCompra, NotaCompra } from '@/utils/estoqueApi';
+import { getNotasCompra, NotaCompra, ESTOQUE_SIA_LOJA_ID } from '@/utils/estoqueApi';
 import { migrarProdutosNotaParaPendentes } from '@/utils/osApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
@@ -239,7 +239,7 @@ export default function EstoqueNotasUrgenciaPendentes() {
     }));
 
     // Migrar produtos para Aparelhos Pendentes com origem NEGOCIADO
-    const lojaDestino = notaSelecionada.lojaDestino || lojas[0]?.id || 'Loja Centro';
+    const lojaDestino = ESTOQUE_SIA_LOJA_ID;
     const produtosMigrados = migrarProdutosNotaParaPendentes(
       produtosParaMigrar,
       notaSelecionada.id,

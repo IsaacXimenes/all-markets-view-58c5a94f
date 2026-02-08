@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { getNotasCompra, finalizarNota, NotaCompra, migrarAparelhoNovoParaEstoque } from '@/utils/estoqueApi';
+import { getNotasCompra, finalizarNota, NotaCompra, migrarAparelhoNovoParaEstoque, ESTOQUE_SIA_LOJA_ID } from '@/utils/estoqueApi';
 import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
 import { Eye, CheckCircle, Download, Filter, X, Check, FileText, Clock, CheckCircle2, FileSearch } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -52,7 +52,7 @@ export default function FinanceiroConferenciaNotas() {
   const [formaPagamento, setFormaPagamento] = useState('');
   const [parcelas, setParcelas] = useState('1');
   const [responsavelFinanceiro, setResponsavelFinanceiro] = useState('');
-  const [lojaDestino, setLojaDestino] = useState('');
+  const lojaDestino = ESTOQUE_SIA_LOJA_ID;
   
   // Estado para modal de pendência
   const [pendenciaSelecionada, setPendenciaSelecionada] = useState<any>(null);
@@ -114,7 +114,6 @@ export default function FinanceiroConferenciaNotas() {
     setFormaPagamento('');
     setParcelas('1');
     setResponsavelFinanceiro('');
-    setLojaDestino('');
     setDialogOpen(true);
   };
   
@@ -131,7 +130,7 @@ export default function FinanceiroConferenciaNotas() {
 
   const mostrarCampoParcelas = formaPagamento === 'Cartão de Crédito' || formaPagamento === 'Boleto';
   
-  const botaoDesabilitado = !contaPagamento || !formaPagamento || !responsavelFinanceiro || !lojaDestino || (mostrarCampoParcelas && !parcelas);
+  const botaoDesabilitado = !contaPagamento || !formaPagamento || !responsavelFinanceiro || (mostrarCampoParcelas && !parcelas);
 
   const handleFinalizarNota = () => {
     if (!notaSelecionada || botaoDesabilitado) return;
@@ -572,20 +571,9 @@ export default function FinanceiroConferenciaNotas() {
                       <h3 className="font-semibold mb-3 text-primary">Seção "Pagamento" (Habilitada)</h3>
                       <div className="grid gap-4">
                         <div>
-                          <Label htmlFor="lojaDestino">Loja de Destino dos Produtos *</Label>
-                          <Select value={lojaDestino} onValueChange={setLojaDestino}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione a loja" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {lojas.map(l => (
-                                <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {!lojaDestino && (
-                            <p className="text-sm text-muted-foreground mt-1">Selecione a loja de destino dos aparelhos</p>
-                          )}
+                          <Label>Loja de Destino dos Produtos</Label>
+                          <Input value="Estoque - SIA" disabled className="font-medium" />
+                          <p className="text-xs text-muted-foreground mt-1">Destino fixo conforme regra de origem</p>
                         </div>
                         
                         <div>
