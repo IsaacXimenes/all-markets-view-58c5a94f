@@ -1,86 +1,201 @@
 
 
-# Plano: Correcao da Migracao de Produtos no Fluxo de Notas de Entrada
+# Plano: Modulo Marketing - Monitoramento de Stories
 
-## Problema Identificado
+## Resumo
 
-A funcao `migrarProdutosConferidosPorCategoria` existe em `notaEntradaFluxoApi.ts` mas **nunca e chamada** por nenhuma pagina do sistema. Isso causa uma falha critica:
+Criar um novo modulo dentro da "Gestao Administrativa" com 3 abas adicionais para monitorar a prova social (stories de Instagram) gerada por vendas. O sistema agrupa vendas em lotes diarios, permite conferencia operacional (anexar prints), validacao administrativa (supervisor) e exibe indicadores de performance.
 
-- **100% Antecipado**: Apos a conferencia no Estoque, a nota e auto-finalizada mas os produtos **nunca sao migrados** para Estoque > Produtos (novos) ou Aparelhos Pendentes (seminovos). Os produtos ficam "perdidos".
-- **Pagamento Pos e Parcial**: Funcionam parcialmente porque a migracao acontece via `FinanceiroConferenciaNotas.tsx` usando o sistema legado (`estoqueApi.ts`). Porem, esse fluxo so cobre notas do sistema antigo (`NotaCompra`), nao as notas criadas pelo novo fluxo (`NotaEntrada`).
+## Arquitetura
 
-## Causa Raiz
+O modulo sera integrado como novas abas no layout existente de Gestao Administrativa (`GestaoAdministrativaLayout`), seguindo o mesmo padrao de persistencia em localStorage usado pelo modulo de conferencia de caixa.
 
-Existem dois sistemas rodando em paralelo:
+### Novas Abas no Layout
 
-| Sistema | API | Tela | Migracao de Produtos |
-|---------|-----|------|---------------------|
-| Legado | `estoqueApi.ts` (`NotaCompra`) | `FinanceiroConferenciaNotas.tsx` | Sim - no momento do pagamento |
-| Novo | `notaEntradaFluxoApi.ts` (`NotaEntrada`) | `EstoqueNotaConferencia.tsx` | NAO - funcao existe mas nunca e chamada |
+| Aba | Rota | Descricao |
+|-----|------|-----------|
+| Conferencia Diaria | `/gestao-administrativa` | Existente (conferencia de caixa) |
+| Logs de Auditoria | `/gestao-administrativa/logs` | Existente |
+| **Lotes de Stories** | `/gestao-administrativa/stories` | **Nova** - Listagem de lotes diarios |
+| **Indicadores Stories** | `/gestao-administrativa/stories/indicadores` | **Nova** - Dashboard de performance |
 
-## Solucao
+A conferencia operacional e a validacao administrativa serao acessadas via rotas dedicadas (nao abas), pois sao telas de detalhe de um lote especifico:
+- `/gestao-administrativa/stories/lote/:id/conferencia` - Conferencia operacional
+- `/gestao-administrativa/stories/lote/:id/validacao` - Validacao administrativa
 
-Integrar a chamada de `migrarProdutosConferidosPorCategoria` no fluxo de conferencia do Estoque, garantindo que os produtos sejam migrados automaticamente ao concluir a conferencia.
+## Estrutura de Dados
 
-### Arquivo: `src/pages/EstoqueNotaConferencia.tsx`
-
-**Alteracao na funcao `handleSalvarConferencia`:**
-
-Apos chamar `finalizarConferencia()` com sucesso, verificar se a nota atingiu 100% de conferencia. Se sim:
-
-1. Chamar `migrarProdutosConferidosPorCategoria(resultado, responsavel)` para migrar os produtos conferidos
-2. A funcao ja usa `ESTOQUE_SIA_LOJA_ID` como default (loja destino fixa)
-3. Exibir toast detalhado com quantidades de novos e seminovos migrados
-
-Logica:
+### Interfaces principais (em `src/utils/storiesMonitoramentoApi.ts`)
 
 ```text
-handleSalvarConferencia()
-  |
-  v
-finalizarConferencia(nota.id, produtosIds, responsavel)
-  |
-  v  (se resultado.qtdConferida === resultado.qtdCadastrada)
-  |
-  migrarProdutosConferidosPorCategoria(notaOriginal, responsavel)
-  |
-  +--> Novos: migrarAparelhoNovoParaEstoque (loja SIA)
-  +--> Seminovos: migrarProdutosNotaParaPendentes (loja SIA)
-  |
-  v
-  Toast com resumo + navegar para /estoque/notas-pendencias
+LoteMonitoramento
+  - id: string
+  - data: string (YYYY-MM-DD)
+  - lojaId: string
+  - totalVendas: number
+  - vendasComStory: number
+  - percentualStories: number
+  - status: 'Pendente Conf. Operacional' | 'Aguardando Validacao' | 'Validado' | 'Rejeitado Parcial'
+  - conferidoPor?: string (ID colaborador)
+  - dataConferencia?: string
+  - validadoPor?: string (ID colaborador)
+  - dataValidacao?: string
+
+VendaMonitoramento
+  - id: string
+  - loteId: string
+  - vendaId: string (ref para Venda)
+  - vendaNumero: number
+  - clienteNome: string
+  - vendedorId: string
+  - vendedorNome: string
+  - valorVenda: number
+  - statusAnexo: 'Sem Anexo' | 'Anexo Pendente' | 'Anexado' | 'Validado' | 'Rejeitado'
+  - motivoNaoPostagem?: string
+  - seloQualidade?: 'Story Exemplo' | 'Excelente Engajamento' | null
+  - observacaoConferencia?: string
+  - observacaoValidacao?: string
+
+AnexoStory
+  - id: string
+  - vendaMonitoramentoId: string
+  - nome: string
+  - tipo: string (image/png, image/jpeg)
+  - tamanho: number
+  - dataUrl: string (Base64 - temporario ate salvar)
+  - dataUpload: string
 ```
 
-**Imports adicionais:**
+### Persistencia
 
-- `migrarProdutosConferidosPorCategoria` de `notaEntradaFluxoApi`
+- localStorage com chaves por competencia/loja (mesmo padrao do modulo de caixa)
+- Lotes gerados automaticamente ao acessar a tela (simulando rotina diaria)
+- Anexos armazenados em Base64 no localStorage ao salvar a conferencia (volateis antes do save)
 
-### Fluxo Corrigido por Tipo de Pagamento
+## Arquivos a Criar
 
-**Pagamento Pos:**
-1. Estoque cadastra e confere produtos
-2. Ao salvar conferencia 100%: `migrarProdutosConferidosPorCategoria` e chamada (produtos migram)
-3. Status muda para "Aguardando Pagamento Final", atuacao vai para Financeiro
-4. Financeiro paga e finaliza a nota
+### 1. `src/utils/storiesMonitoramentoApi.ts`
+API principal com:
+- Interfaces de dados
+- `gerarLotesDiarios(competencia, lojaId)` - consolida vendas em lotes
+- `getLoteById(loteId)` - buscar lote especifico
+- `getVendasDoLote(loteId)` - listar vendas de um lote
+- `salvarConferenciaOperacional(loteId, vendas, anexos, responsavel)` - persiste conferencia
+- `salvarValidacao(loteId, validacoes, responsavel)` - persiste validacao
+- `calcularIndicadores(competencia, lojaId)` - retorna metricas para dashboard
+- Constantes: `META_STORIES_PERCENTUAL = 70`, motivos de nao-postagem
 
-**Pagamento Parcial:**
-1. Financeiro faz primeiro pagamento
-2. Estoque cadastra e confere
-3. Ao salvar conferencia 100%: `migrarProdutosConferidosPorCategoria` e chamada (produtos migram)
-4. Se saldo pendente: vai para Financeiro para pagamento final
-5. Financeiro paga e finaliza
+### 2. `src/pages/GestaoAdmStoriesLotes.tsx`
+Tela de listagem de lotes com:
+- Filtros: periodo (competencia), loja, status
+- Tabela com colunas: Data, Loja, Total Vendas, Vendas com Story, % Stories, Status, Acoes
+- Acoes: Ver Detalhes, Conferir (1a etapa), Validar (2a etapa)
+- Cores de linha por status (padrao semaforo existente)
 
-**Pagamento 100% Antecipado:**
-1. Financeiro paga 100%
-2. Estoque cadastra e confere
-3. Ao salvar conferencia 100%: `migrarProdutosConferidosPorCategoria` e chamada (produtos migram)
-4. Nota e auto-finalizada (ja estava paga)
+### 3. `src/pages/GestaoAdmStoriesConferencia.tsx`
+Interface de conferencia operacional (1a etapa) com:
+- Layout dividido: lista de vendas (esquerda) + area de upload (direita)
+- Upload multiplo de imagens (prints de stories)
+- Indicadores de status por venda (sem anexo / pendente / anexado)
+- Dropdown de motivo de nao-postagem para vendas sem anexo
+- Anexos temporarios em memoria (Blob URLs) ate salvar
+- Botao "Salvar Conferencia Operacional" que muda status do lote
 
-### Resumo
+### 4. `src/pages/GestaoAdmStoriesValidacao.tsx`
+Interface de validacao administrativa (2a etapa) com:
+- Lista de vendas com anexos e motivos
+- Visualizador de imagens dos prints
+- Botoes de Confirmar/Rejeitar por venda
+- Checkbox de selo de qualidade
+- Botao "Validar Lote" que finaliza o processo
 
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/pages/EstoqueNotaConferencia.tsx` | Adicionar chamada a `migrarProdutosConferidosPorCategoria` apos conferencia 100%, com import e toast detalhado |
+### 5. `src/pages/GestaoAdmStoriesIndicadores.tsx`
+Dashboard de indicadores com:
+- Termometro de engajamento (barra de progresso vs meta 70%)
+- Cards: total vendas, total stories, percentual
+- Ranking de lojas (tabela comparativa)
+- Ranking de vendedores (tabela com % sucesso)
+- Grafico de motivos de nao-postagem (pizza via Recharts)
 
-Esta e uma correcao pontual de 1 arquivo que resolve a falha critica de produtos nao serem migrados no fluxo de notas de entrada do novo sistema.
+## Arquivos a Modificar
+
+### 1. `src/components/layout/GestaoAdministrativaLayout.tsx`
+- Adicionar 2 novas abas: "Lotes de Stories" e "Indicadores Stories"
+- Novos icones: `Camera` e `BarChart3` do lucide-react
+
+### 2. `src/App.tsx`
+- Adicionar 4 novas rotas:
+  - `/gestao-administrativa/stories` -> GestaoAdmStoriesLotes
+  - `/gestao-administrativa/stories/indicadores` -> GestaoAdmStoriesIndicadores
+  - `/gestao-administrativa/stories/lote/:id/conferencia` -> GestaoAdmStoriesConferencia
+  - `/gestao-administrativa/stories/lote/:id/validacao` -> GestaoAdmStoriesValidacao
+- Importar os 4 novos componentes de pagina
+
+### 3. `src/components/layout/Sidebar.tsx`
+- Nenhuma alteracao necessaria (o modulo ja esta no sidebar como "Gestao Administrativa")
+
+## Fluxo do Usuario
+
+```text
+1. Gestor acessa Gestao Administrativa > aba "Lotes de Stories"
+   |
+   v
+2. Sistema gera lotes automaticamente (1 por dia/loja com vendas)
+   |
+   v
+3. Gestor da loja clica em "Conferir" (icone upload) no lote pendente
+   |
+   v
+4. Tela de Conferencia Operacional:
+   - Seleciona venda na lista esquerda
+   - Faz upload dos prints do story na area direita
+   - Para vendas sem story: seleciona motivo
+   - Clica "Salvar Conferencia Operacional"
+   - Status do lote muda para "Aguardando Validacao"
+   |
+   v
+5. Supervisor clica em "Validar" (icone check) no lote
+   |
+   v
+6. Tela de Validacao Administrativa:
+   - Revisa anexos de cada venda
+   - Confirma ou rejeita cada anexo
+   - Opcionalmente marca selo de qualidade
+   - Clica "Validar Lote"
+   - Status do lote muda para "Validado"
+   |
+   v
+7. Indicadores atualizados automaticamente na aba "Indicadores Stories"
+```
+
+## Detalhes Tecnicos
+
+### Upload de Imagens
+- Aceitar apenas imagens (image/jpeg, image/png, image/webp)
+- Limite: 5MB por arquivo, ate 5 arquivos por venda
+- Armazenamento temporario via `FileReader.readAsDataURL()` (Base64)
+- Persistido no localStorage ao salvar conferencia
+- Volatil antes do save (descartado no F5)
+
+### Geracao de Lotes
+- Ao acessar a tela, o sistema verifica se ja existem lotes no localStorage para a competencia/loja selecionada
+- Se nao existirem, gera automaticamente a partir das vendas finalizadas do periodo
+- Cada combinacao data + loja gera 1 lote
+
+### Controle de Acesso
+- Conferencia operacional: perfil `eh_gestor`
+- Validacao administrativa: perfil `eh_gestor` (mesmo perfil, mas o validador nao pode ser o mesmo que conferiu)
+- Indicadores: perfil `eh_gestor` (somente leitura)
+
+### Componentes Reutilizados
+- `GestaoAdministrativaLayout` (com tabs atualizadas)
+- `Table`, `Card`, `Badge`, `Dialog` do shadcn/ui
+- `Recharts` para grafico de pizza
+- `ResponsiveCardGrid`, `ResponsiveFilterGrid` para responsividade
+- Padrao de cores semaforo via `statusColors.ts`
+
+### Meta de 70%
+- Constante configuravel na API (`META_STORIES_PERCENTUAL = 70`)
+- Usada no termometro e nos indicadores
+- Cores: verde (>= 70%), amarelo (50-69%), vermelho (< 50%)
 
