@@ -1,201 +1,118 @@
 
 
-# Plano: Modulo Marketing - Monitoramento de Stories
+# Plano: Anexo de Comprovante por Metodo de Pagamento
 
 ## Resumo
 
-Criar um novo modulo dentro da "Gestao Administrativa" com 3 abas adicionais para monitorar a prova social (stories de Instagram) gerada por vendas. O sistema agrupa vendas em lotes diarios, permite conferencia operacional (anexar prints), validacao administrativa (supervisor) e exibe indicadores de performance.
+Adicionar um campo de anexo (comprovante) em cada registro de pagamento na tela de Nova Venda / Editar Venda, armazenando temporariamente em memoria (Base64). Esses anexos serao visiveis nas telas de Conferencia Lancamento, Conferencia Gestor e Conferencia Financeiro.
 
-## Arquitetura
+## Alteracoes
 
-O modulo sera integrado como novas abas no layout existente de Gestao Administrativa (`GestaoAdministrativaLayout`), seguindo o mesmo padrao de persistencia em localStorage usado pelo modulo de conferencia de caixa.
+### 1. Interface `Pagamento` (`src/utils/vendasApi.ts`)
 
-### Novas Abas no Layout
-
-| Aba | Rota | Descricao |
-|-----|------|-----------|
-| Conferencia Diaria | `/gestao-administrativa` | Existente (conferencia de caixa) |
-| Logs de Auditoria | `/gestao-administrativa/logs` | Existente |
-| **Lotes de Stories** | `/gestao-administrativa/stories` | **Nova** - Listagem de lotes diarios |
-| **Indicadores Stories** | `/gestao-administrativa/stories/indicadores` | **Nova** - Dashboard de performance |
-
-A conferencia operacional e a validacao administrativa serao acessadas via rotas dedicadas (nao abas), pois sao telas de detalhe de um lote especifico:
-- `/gestao-administrativa/stories/lote/:id/conferencia` - Conferencia operacional
-- `/gestao-administrativa/stories/lote/:id/validacao` - Validacao administrativa
-
-## Estrutura de Dados
-
-### Interfaces principais (em `src/utils/storiesMonitoramentoApi.ts`)
+Adicionar 2 campos opcionais na interface `Pagamento`:
 
 ```text
-LoteMonitoramento
-  - id: string
-  - data: string (YYYY-MM-DD)
-  - lojaId: string
-  - totalVendas: number
-  - vendasComStory: number
-  - percentualStories: number
-  - status: 'Pendente Conf. Operacional' | 'Aguardando Validacao' | 'Validado' | 'Rejeitado Parcial'
-  - conferidoPor?: string (ID colaborador)
-  - dataConferencia?: string
-  - validadoPor?: string (ID colaborador)
-  - dataValidacao?: string
-
-VendaMonitoramento
-  - id: string
-  - loteId: string
-  - vendaId: string (ref para Venda)
-  - vendaNumero: number
-  - clienteNome: string
-  - vendedorId: string
-  - vendedorNome: string
-  - valorVenda: number
-  - statusAnexo: 'Sem Anexo' | 'Anexo Pendente' | 'Anexado' | 'Validado' | 'Rejeitado'
-  - motivoNaoPostagem?: string
-  - seloQualidade?: 'Story Exemplo' | 'Excelente Engajamento' | null
-  - observacaoConferencia?: string
-  - observacaoValidacao?: string
-
-AnexoStory
-  - id: string
-  - vendaMonitoramentoId: string
-  - nome: string
-  - tipo: string (image/png, image/jpeg)
-  - tamanho: number
-  - dataUrl: string (Base64 - temporario ate salvar)
-  - dataUpload: string
+comprovante?: string;       // Base64 ou URL do comprovante
+comprovanteNome?: string;   // Nome do arquivo anexado
 ```
 
-### Persistencia
+### 2. Modal de Pagamento (`src/components/vendas/PagamentoQuadro.tsx`)
 
-- localStorage com chaves por competencia/loja (mesmo padrao do modulo de caixa)
-- Lotes gerados automaticamente ao acessar a tela (simulando rotina diaria)
-- Anexos armazenados em Base64 no localStorage ao salvar a conferencia (volateis antes do save)
+**No modal "Adicionar Pagamento":**
+- Adicionar area de upload de comprovante antes do botao "Adicionar", usando o componente `FileUploadComprovante` ja existente no projeto
+- O comprovante fica armazenado no estado `novoPagamento` como Base64 (temporario)
+- Ao clicar "Adicionar", o comprovante e persistido no objeto `Pagamento`
 
-## Arquivos a Criar
+**Na tabela de pagamentos:**
+- Adicionar coluna "Comprovante" entre "Descricao" e o botao de remover
+- Exibir icone clicavel (miniatura para imagens, icone de arquivo para PDFs) que abre um modal/dialog de visualizacao
+- Se nao houver comprovante, exibir "-"
 
-### 1. `src/utils/storiesMonitoramentoApi.ts`
-API principal com:
-- Interfaces de dados
-- `gerarLotesDiarios(competencia, lojaId)` - consolida vendas em lotes
-- `getLoteById(loteId)` - buscar lote especifico
-- `getVendasDoLote(loteId)` - listar vendas de um lote
-- `salvarConferenciaOperacional(loteId, vendas, anexos, responsavel)` - persiste conferencia
-- `salvarValidacao(loteId, validacoes, responsavel)` - persiste validacao
-- `calcularIndicadores(competencia, lojaId)` - retorna metricas para dashboard
-- Constantes: `META_STORIES_PERCENTUAL = 70`, motivos de nao-postagem
+**Alteracoes especificas:**
+- Import de `FileUploadComprovante` e icones `Paperclip`, `Image`
+- Novos campos em `NovoPagamentoState`: `comprovante`, `comprovanteNome`
+- Na funcao `handleAddPagamento`: copiar `comprovante` e `comprovanteNome` para o objeto `Pagamento`
+- Novo estado para modal de visualizacao do comprovante
+- Nova coluna na tabela com preview clicavel
 
-### 2. `src/pages/GestaoAdmStoriesLotes.tsx`
-Tela de listagem de lotes com:
-- Filtros: periodo (competencia), loja, status
-- Tabela com colunas: Data, Loja, Total Vendas, Vendas com Story, % Stories, Status, Acoes
-- Acoes: Ver Detalhes, Conferir (1a etapa), Validar (2a etapa)
-- Cores de linha por status (padrao semaforo existente)
+### 3. Conferencia Lancamento (`src/pages/VendasConferenciaLancamento.tsx`)
 
-### 3. `src/pages/GestaoAdmStoriesConferencia.tsx`
-Interface de conferencia operacional (1a etapa) com:
-- Layout dividido: lista de vendas (esquerda) + area de upload (direita)
-- Upload multiplo de imagens (prints de stories)
-- Indicadores de status por venda (sem anexo / pendente / anexado)
-- Dropdown de motivo de nao-postagem para vendas sem anexo
-- Anexos temporarios em memoria (Blob URLs) ate salvar
-- Botao "Salvar Conferencia Operacional" que muda status do lote
+**No modal de aprovacao** (quando o usuario clica "Conferir"):
+- Exibir secao "Comprovantes de Pagamento" listando cada pagamento com seu comprovante
+- Para cada pagamento: meio, valor, e miniatura/link do comprovante
+- Se o pagamento nao tiver comprovante, exibir alerta amarelo "Sem comprovante"
 
-### 4. `src/pages/GestaoAdmStoriesValidacao.tsx`
-Interface de validacao administrativa (2a etapa) com:
-- Lista de vendas com anexos e motivos
-- Visualizador de imagens dos prints
-- Botoes de Confirmar/Rejeitar por venda
-- Checkbox de selo de qualidade
-- Botao "Validar Lote" que finaliza o processo
+### 4. Conferencia Gestor (`src/pages/VendasConferenciaGestorDetalhes.tsx`)
 
-### 5. `src/pages/GestaoAdmStoriesIndicadores.tsx`
-Dashboard de indicadores com:
-- Termometro de engajamento (barra de progresso vs meta 70%)
-- Cards: total vendas, total stories, percentual
-- Ranking de lojas (tabela comparativa)
-- Ranking de vendedores (tabela com % sucesso)
-- Grafico de motivos de nao-postagem (pizza via Recharts)
+**No card de Pagamentos** (linhas 154-169):
+- Adicionar coluna "Comprovante" na tabela de pagamentos
+- Exibir miniatura clicavel ou icone de arquivo
+- Ao clicar, abrir dialog com imagem em tamanho maior ou link para PDF
+
+### 5. Conferencia Financeiro (`src/pages/FinanceiroConferencia.tsx`)
+
+**Na interface `LinhaConferencia`:**
+- Adicionar campos `comprovante?` e `comprovanteNome?`
+
+**Na tabela de conferencia:**
+- Adicionar coluna "Comprovante" com icone clicavel
+- Ao clicar, abrir dialog de visualizacao
+
+**Na montagem das linhas:**
+- Propagar `comprovante` e `comprovanteNome` do pagamento original da venda para a `LinhaConferencia`
+
+## Detalhes Tecnicos
+
+### Armazenamento
+- Base64 em memoria, mesmo padrao usado pelo `AnexoTradeIn` e pelo Buffer de Anexos do Estoque
+- Volatil: perdido ao recarregar a pagina (F5)
+- Tipos aceitos: image/jpeg, image/png, image/webp, application/pdf
+- Limite: 5MB por arquivo
+
+### Componente Reutilizado
+- `FileUploadComprovante` de `src/components/estoque/FileUploadComprovante.tsx` - ja suporta drag-and-drop, URL externa, preview de imagem e PDF
+
+### Visualizacao nas Conferencias
+- Imagens: exibidas em `<img>` dentro de um Dialog com zoom
+- PDFs: exibidos como link "Abrir PDF" que abre em nova aba via `window.open(dataUrl)`
+- Sem comprovante: badge amarelo "Sem anexo"
 
 ## Arquivos a Modificar
 
-### 1. `src/components/layout/GestaoAdministrativaLayout.tsx`
-- Adicionar 2 novas abas: "Lotes de Stories" e "Indicadores Stories"
-- Novos icones: `Camera` e `BarChart3` do lucide-react
-
-### 2. `src/App.tsx`
-- Adicionar 4 novas rotas:
-  - `/gestao-administrativa/stories` -> GestaoAdmStoriesLotes
-  - `/gestao-administrativa/stories/indicadores` -> GestaoAdmStoriesIndicadores
-  - `/gestao-administrativa/stories/lote/:id/conferencia` -> GestaoAdmStoriesConferencia
-  - `/gestao-administrativa/stories/lote/:id/validacao` -> GestaoAdmStoriesValidacao
-- Importar os 4 novos componentes de pagina
-
-### 3. `src/components/layout/Sidebar.tsx`
-- Nenhuma alteracao necessaria (o modulo ja esta no sidebar como "Gestao Administrativa")
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/utils/vendasApi.ts` | Adicionar `comprovante?` e `comprovanteNome?` na interface `Pagamento` |
+| `src/components/vendas/PagamentoQuadro.tsx` | Upload no modal + coluna na tabela + dialog de preview |
+| `src/pages/VendasConferenciaLancamento.tsx` | Exibir comprovantes no modal de aprovacao |
+| `src/pages/VendasConferenciaGestorDetalhes.tsx` | Coluna de comprovante na tabela de pagamentos |
+| `src/pages/FinanceiroConferencia.tsx` | Coluna de comprovante na tabela + propagacao dos dados |
 
 ## Fluxo do Usuario
 
 ```text
-1. Gestor acessa Gestao Administrativa > aba "Lotes de Stories"
+1. Vendedor abre "Nova Venda" > Quadro de Pagamentos
    |
    v
-2. Sistema gera lotes automaticamente (1 por dia/loja com vendas)
+2. Clica "Adicionar Pagamento" > Preenche meio, valor, conta
    |
    v
-3. Gestor da loja clica em "Conferir" (icone upload) no lote pendente
+3. Faz upload do comprovante (drag-and-drop ou clique)
+   |  - Aceita JPG, PNG, WebP, PDF (max 5MB)
+   |  - Preview exibido no modal antes de confirmar
    |
    v
-4. Tela de Conferencia Operacional:
-   - Seleciona venda na lista esquerda
-   - Faz upload dos prints do story na area direita
-   - Para vendas sem story: seleciona motivo
-   - Clica "Salvar Conferencia Operacional"
-   - Status do lote muda para "Aguardando Validacao"
+4. Clica "Adicionar" > Pagamento salvo com comprovante em Base64
    |
    v
-5. Supervisor clica em "Validar" (icone check) no lote
+5. Na tabela de pagamentos, coluna "Comprovante" mostra miniatura
    |
    v
-6. Tela de Validacao Administrativa:
-   - Revisa anexos de cada venda
-   - Confirma ou rejeita cada anexo
-   - Opcionalmente marca selo de qualidade
-   - Clica "Validar Lote"
-   - Status do lote muda para "Validado"
+6. Conferencia Lancamento: modal exibe comprovantes de cada pagamento
    |
    v
-7. Indicadores atualizados automaticamente na aba "Indicadores Stories"
+7. Conferencia Gestor: tabela de pagamentos com coluna comprovante
+   |
+   v
+8. Conferencia Financeiro: tabela com coluna comprovante por linha
 ```
-
-## Detalhes Tecnicos
-
-### Upload de Imagens
-- Aceitar apenas imagens (image/jpeg, image/png, image/webp)
-- Limite: 5MB por arquivo, ate 5 arquivos por venda
-- Armazenamento temporario via `FileReader.readAsDataURL()` (Base64)
-- Persistido no localStorage ao salvar conferencia
-- Volatil antes do save (descartado no F5)
-
-### Geracao de Lotes
-- Ao acessar a tela, o sistema verifica se ja existem lotes no localStorage para a competencia/loja selecionada
-- Se nao existirem, gera automaticamente a partir das vendas finalizadas do periodo
-- Cada combinacao data + loja gera 1 lote
-
-### Controle de Acesso
-- Conferencia operacional: perfil `eh_gestor`
-- Validacao administrativa: perfil `eh_gestor` (mesmo perfil, mas o validador nao pode ser o mesmo que conferiu)
-- Indicadores: perfil `eh_gestor` (somente leitura)
-
-### Componentes Reutilizados
-- `GestaoAdministrativaLayout` (com tabs atualizadas)
-- `Table`, `Card`, `Badge`, `Dialog` do shadcn/ui
-- `Recharts` para grafico de pizza
-- `ResponsiveCardGrid`, `ResponsiveFilterGrid` para responsividade
-- Padrao de cores semaforo via `statusColors.ts`
-
-### Meta de 70%
-- Constante configuravel na API (`META_STORIES_PERCENTUAL = 70`)
-- Usada no termometro e nos indicadores
-- Cores: verde (>= 70%), amarelo (50-69%), vermelho (< 50%)
-
