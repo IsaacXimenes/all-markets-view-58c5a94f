@@ -15,6 +15,8 @@ import { Pagamento } from '@/utils/vendasApi';
 import { formatarMoeda, moedaMask, parseMoeda } from '@/utils/formatUtils';
 import { calcularValoresVenda, getTaxaCredito, TAXA_DEBITO, MAX_PARCELAS } from '@/config/taxasCartao';
 import { calcularComissaoVenda, ResultadoComissaoVenda, LOJA_ONLINE_ID } from '@/utils/calculoComissaoVenda';
+import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
+import { ComprovantePreview } from '@/components/vendas/ComprovantePreview';
 
 export interface PagamentoQuadroProps {
   valorTotalProdutos: number;
@@ -42,6 +44,9 @@ interface NovoPagamentoState extends Partial<Pagamento> {
   // Campos específicos para Fiado
   fiadoTipoRecorrencia?: 'Mensal' | 'Semanal';
   fiadoIntervaloDias?: number;
+  // Comprovante
+  comprovante?: string;
+  comprovanteNome?: string;
 }
 
 // Função para obter parcelamentos da máquina ou usar valores padrão
@@ -343,7 +348,9 @@ export function PagamentoQuadro({
       fiadoNumeroParcelas: novoPagamento.fiadoNumeroParcelas,
       taxaCartao: novoPagamento.taxaCartao || 0,
       valorComTaxa: novoPagamento.valor, // Valor bruto é o que foi pago
-      maquinaId: novoPagamento.maquinaId
+      maquinaId: novoPagamento.maquinaId,
+      comprovante: novoPagamento.comprovante,
+      comprovanteNome: novoPagamento.comprovanteNome
     };
     
     setPagamentos([...pagamentos, pagamento]);
@@ -389,8 +396,9 @@ export function PagamentoQuadro({
                   <TableHead className="text-right">Valor Final</TableHead>
                   <TableHead className="text-right">Taxa</TableHead>
                   <TableHead className="text-right">Valor Líquido</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead></TableHead>
+                   <TableHead>Descrição</TableHead>
+                   <TableHead>Comprovante</TableHead>
+                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -418,8 +426,11 @@ export function PagamentoQuadro({
                       <TableCell className="text-right text-green-600 font-medium">
                         {formatarMoeda(valorLiquidoPag)}
                       </TableCell>
-                      <TableCell className="max-w-[150px] truncate text-sm text-muted-foreground">
+                     <TableCell className="max-w-[150px] truncate text-sm text-muted-foreground">
                         {pag.descricao || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <ComprovantePreview comprovante={pag.comprovante} comprovanteNome={pag.comprovanteNome} />
                       </TableCell>
                       <TableCell>
                         <Button 
@@ -844,6 +855,20 @@ export function PagamentoQuadro({
                 rows={2}
               />
             </div>
+
+            {/* Upload de Comprovante */}
+            <FileUploadComprovante
+              label="Comprovante de Pagamento"
+              value={novoPagamento.comprovante || ''}
+              fileName={novoPagamento.comprovanteNome}
+              onFileChange={(data) => {
+                setNovoPagamento({
+                  ...novoPagamento,
+                  comprovante: data.comprovante,
+                  comprovanteNome: data.comprovanteNome
+                });
+              }}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowPagamentoModal(false)}>Cancelar</Button>

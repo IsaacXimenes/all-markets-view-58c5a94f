@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, CheckCircle2, Clock, Send, User, Package, CreditCard, TrendingUp, FileText, DollarSign } from 'lucide-react';
+import { ComprovantePreview, ComprovanteBadgeSemAnexo } from '@/components/vendas/ComprovantePreview';
 import { toast } from '@/hooks/use-toast';
 import { getVendaConferenciaById, validarVendaGestor, getGestores, formatCurrency, VendaConferencia, StatusConferencia } from '@/utils/conferenciaGestorApi';
 
@@ -157,10 +158,20 @@ export default function VendasConferenciaGestorDetalhes() {
               <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><CreditCard className="h-4 w-4" /> Pagamentos</CardTitle></CardHeader>
               <CardContent>
                 <Table>
-                  <TableHeader><TableRow><TableHead>Meio</TableHead><TableHead className="text-right">Valor</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead>Meio</TableHead><TableHead className="text-right">Valor</TableHead><TableHead>Comprovante</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {venda.dadosVenda.pagamentos.map((pag: any, i: number) => (
-                      <TableRow key={i}><TableCell>{pag.meioPagamento}</TableCell><TableCell className="text-right">{formatCurrency(pag.valor)}</TableCell></TableRow>
+                      <TableRow key={i}>
+                        <TableCell>{pag.meioPagamento}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(pag.valor)}</TableCell>
+                        <TableCell>
+                          {pag.comprovante ? (
+                            <ComprovantePreview comprovante={pag.comprovante} comprovanteNome={pag.comprovanteNome} />
+                          ) : (
+                            <ComprovanteBadgeSemAnexo />
+                          )}
+                        </TableCell>
+                      </TableRow>
                     ))}
                   </TableBody>
                 </Table>

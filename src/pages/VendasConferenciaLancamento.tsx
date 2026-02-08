@@ -29,6 +29,7 @@ import {
   DialogDescription
 } from '@/components/ui/dialog';
 import { Eye, Download, Filter, X, Pencil, Check, Clock, AlertTriangle, CreditCard, Wallet, Smartphone, Banknote, AlertCircle, ArrowLeftRight } from 'lucide-react';
+import { ComprovantePreview, ComprovanteBadgeSemAnexo } from '@/components/vendas/ComprovantePreview';
 import { useFluxoVendas } from '@/hooks/useFluxoVendas';
 import { 
   aprovarLancamento, 
@@ -722,6 +723,30 @@ export default function VendasConferenciaLancamento() {
                   </p>
                 </div>
               </div>
+
+              {/* Comprovantes de Pagamento */}
+              {vendaSelecionada.pagamentos && vendaSelecionada.pagamentos.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Comprovantes de Pagamento:</p>
+                  <div className="space-y-2">
+                    {vendaSelecionada.pagamentos.map((pag, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{pag.meioPagamento}</span>
+                          <span className="text-muted-foreground">{formatCurrency(pag.valor)}</span>
+                        </div>
+                        <div>
+                          {pag.comprovante ? (
+                            <ComprovantePreview comprovante={pag.comprovante} comprovanteNome={pag.comprovanteNome} />
+                          ) : (
+                            <ComprovanteBadgeSemAnexo />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Exibir chave PIX para Downgrade */}
               {(vendaSelecionada as any).tipoOperacao === 'Downgrade' && (vendaSelecionada as any).chavePix && (

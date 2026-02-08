@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Check, Download, Filter, X, Clock, CheckCircle2, Undo2, AlertCircle, CreditCard, Banknote, Smartphone, Wallet, ChevronRight, Lock, MessageSquare, XCircle, Save, Building2, History, UserCheck, Calendar, User, CheckCircle, FileText, Timer } from 'lucide-react';
+import { ComprovantePreview, ComprovanteBadgeSemAnexo } from '@/components/vendas/ComprovantePreview';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useFluxoVendas } from '@/hooks/useFluxoVendas';
@@ -42,6 +43,8 @@ interface LinhaConferencia {
   dataConferencia?: string;
   tempoSLA?: string;
   slaHoras?: number;
+  comprovante?: string;
+  comprovanteNome?: string;
 }
 
 // Função para calcular SLA em formato legível
@@ -214,7 +217,9 @@ export default function FinanceiroConferencia() {
           conferidoPor: validacao?.conferidoPor,
           dataConferencia: validacao?.dataValidacaoFinanceiro,
           tempoSLA: slaResult.texto,
-          slaHoras: slaResult.horas
+          slaHoras: slaResult.horas,
+          comprovante: pag.comprovante,
+          comprovanteNome: pag.comprovanteNome
         });
       });
     });
@@ -1015,13 +1020,14 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
                     <TableHead className="min-w-[220px]">Conta Destino</TableHead>
                     <TableHead className="min-w-[110px]">Situação</TableHead>
                     <TableHead className="min-w-[140px]">Status</TableHead>
+                    <TableHead className="min-w-[100px]">Comprovante</TableHead>
                     <TableHead className="min-w-[70px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredLinhas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         Nenhum lançamento encontrado
                       </TableCell>
                     </TableRow>
@@ -1059,6 +1065,13 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
                       </TableCell>
                       <TableCell>{getSituacaoBadge(linha.conferido)}</TableCell>
                       <TableCell>{getStatusBadge(linha.venda.statusFluxo as StatusVenda)}</TableCell>
+                      <TableCell>
+                        {linha.comprovante ? (
+                          <ComprovantePreview comprovante={linha.comprovante} comprovanteNome={linha.comprovanteNome} />
+                        ) : (
+                          <ComprovanteBadgeSemAnexo />
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleSelecionarVenda(linha.venda); }}>
                           <ChevronRight className="h-4 w-4" />

@@ -60,6 +60,9 @@ export interface Pagamento {
   taxaCartao?: number;      // Valor da taxa calculada
   valorComTaxa?: number;    // Valor total com taxa incluída
   maquinaId?: string;       // ID da máquina de cartão utilizada
+  // Comprovante de pagamento (Base64 temporário)
+  comprovante?: string;       // Base64 ou URL do comprovante
+  comprovanteNome?: string;   // Nome do arquivo anexado
 }
 
 export interface TimelineEdicaoVenda {
