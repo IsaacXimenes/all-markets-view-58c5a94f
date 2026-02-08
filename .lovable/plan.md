@@ -1,74 +1,86 @@
 
 
-# Plano: Animacao de Login Simples + Regra de Origem Estoque SIA
+# Plano: Correcao da Migracao de Produtos no Fluxo de Notas de Entrada
 
-## Parte 1: Animacao de Login - Fade Simples
+## Problema Identificado
 
-Substituir toda a animacao biometrica (celular 3D, Face ID scan, expansao) por um fade out suave do card de login seguido de redirecionamento direto ao dashboard. Duracao total: ~0.8s.
+A funcao `migrarProdutosConferidosPorCategoria` existe em `notaEntradaFluxoApi.ts` mas **nunca e chamada** por nenhuma pagina do sistema. Isso causa uma falha critica:
 
-### Arquivos alterados
+- **100% Antecipado**: Apos a conferencia no Estoque, a nota e auto-finalizada mas os produtos **nunca sao migrados** para Estoque > Produtos (novos) ou Aparelhos Pendentes (seminovos). Os produtos ficam "perdidos".
+- **Pagamento Pos e Parcial**: Funcionam parcialmente porque a migracao acontece via `FinanceiroConferenciaNotas.tsx` usando o sistema legado (`estoqueApi.ts`). Porem, esse fluxo so cobre notas do sistema antigo (`NotaCompra`), nao as notas criadas pelo novo fluxo (`NotaEntrada`).
 
-**`src/components/login/BiometricTransition.tsx`**
-- Remover toda a logica de fases (centering, scanning, expanding) e o componente Phone3D
-- Substituir por um overlay branco simples que faz fade in e depois redireciona
-- Timeline simplificada: fadeOut (300ms) -> complete (500ms) -> navigate
+## Causa Raiz
 
-**`src/components/login/LoginCard.tsx`**
-- Manter o fade out do card (`!showContent && 'opacity-0 scale-75'`)
-- Continuar acionando `BiometricTransition` mas agora ele sera apenas um overlay de fade rapido
+Existem dois sistemas rodando em paralelo:
 
-### Resultado
-- O card de login faz fade out suave
-- Um overlay branco aparece brevemente (~0.5s)
-- O usuario e redirecionado ao dashboard
-- Sem celular, sem Face ID, sem animacao complexa
+| Sistema | API | Tela | Migracao de Produtos |
+|---------|-----|------|---------------------|
+| Legado | `estoqueApi.ts` (`NotaCompra`) | `FinanceiroConferenciaNotas.tsx` | Sim - no momento do pagamento |
+| Novo | `notaEntradaFluxoApi.ts` (`NotaEntrada`) | `EstoqueNotaConferencia.tsx` | NAO - funcao existe mas nunca e chamada |
 
----
+## Solucao
 
-## Parte 2: Regra de Origem Fixa - Estoque SIA
+Integrar a chamada de `migrarProdutosConferidosPorCategoria` no fluxo de conferencia do Estoque, garantindo que os produtos sejam migrados automaticamente ao concluir a conferencia.
 
-Todos os aparelhos cadastrados via Nota de Entrada devem ter como loja de origem fixa o "Estoque - SIA" (ID: `dcc6547f`), independente do tipo de pagamento (Pos, Parcial ou Antecipado).
+### Arquivo: `src/pages/EstoqueNotaConferencia.tsx`
 
-### Pontos de intervencao
+**Alteracao na funcao `handleSalvarConferencia`:**
 
-**1. `src/pages/FinanceiroConferenciaNotas.tsx`**
-- Remover o campo `Select` de "Loja de Destino dos Produtos" do modal de pagamento
-- Substituir por um campo read-only exibindo "Estoque - SIA" fixo
-- Forcar `lojaDestino = ESTOQUE_SIA_LOJA_ID` automaticamente ao abrir o modal (importar a constante de `estoqueApi`)
-- Remover a validacao `!lojaDestino` do botao (ja que sera automatico)
-- Manter o localStorage salvando o valor para rastreabilidade
+Apos chamar `finalizarConferencia()` com sucesso, verificar se a nota atingiu 100% de conferencia. Se sim:
 
-**2. `src/utils/notaEntradaFluxoApi.ts`**
-- A funcao `migrarProdutosConferidosPorCategoria` ja usa `ESTOQUE_SIA_LOJA_ID` como default -- nenhuma alteracao necessaria aqui
-- Garantir que quando chamada do fluxo "100% Antecipado" (conferencia no Estoque que finaliza direto), tambem use SIA
+1. Chamar `migrarProdutosConferidosPorCategoria(resultado, responsavel)` para migrar os produtos conferidos
+2. A funcao ja usa `ESTOQUE_SIA_LOJA_ID` como default (loja destino fixa)
+3. Exibir toast detalhado com quantidades de novos e seminovos migrados
 
-**3. `src/pages/EstoqueNotasUrgenciaPendentes.tsx`**
-- Verificar e forcar `lojaDestino` para `ESTOQUE_SIA_LOJA_ID` na migracao de produtos de notas de urgencia
-
-**4. `src/utils/osApi.ts` (deferimento de semi-novos)**
-- A funcao `migrarProdutoPendente` usa `produto.loja` para definir a loja do produto no estoque final
-- Como os produtos pendentes ja terao `loja = ESTOQUE_SIA_LOJA_ID` desde a entrada, o deferimento preservara automaticamente a loja SIA
-- Nenhuma alteracao necessaria aqui
-
-### Fluxo revisado
+Logica:
 
 ```text
-Nota de Entrada (qualquer tipo de pagamento)
-    |
-    v
-Aparelhos NOVOS --> migrarAparelhoNovoParaEstoque(loja: SIA) --> Estoque > Produtos (loja SIA)
-    |
-Aparelhos SEMI-NOVOS --> migrarProdutosNotaParaPendentes(loja: SIA) --> Estoque > Aparelhos Pendentes (loja SIA)
-    |
-    v  (apos deferimento)
-    addProdutoMigrado(loja: SIA preservada) --> Estoque > Produtos (loja SIA)
+handleSalvarConferencia()
+  |
+  v
+finalizarConferencia(nota.id, produtosIds, responsavel)
+  |
+  v  (se resultado.qtdConferida === resultado.qtdCadastrada)
+  |
+  migrarProdutosConferidosPorCategoria(notaOriginal, responsavel)
+  |
+  +--> Novos: migrarAparelhoNovoParaEstoque (loja SIA)
+  +--> Seminovos: migrarProdutosNotaParaPendentes (loja SIA)
+  |
+  v
+  Toast com resumo + navegar para /estoque/notas-pendencias
 ```
 
-### Resumo de arquivos
+**Imports adicionais:**
+
+- `migrarProdutosConferidosPorCategoria` de `notaEntradaFluxoApi`
+
+### Fluxo Corrigido por Tipo de Pagamento
+
+**Pagamento Pos:**
+1. Estoque cadastra e confere produtos
+2. Ao salvar conferencia 100%: `migrarProdutosConferidosPorCategoria` e chamada (produtos migram)
+3. Status muda para "Aguardando Pagamento Final", atuacao vai para Financeiro
+4. Financeiro paga e finaliza a nota
+
+**Pagamento Parcial:**
+1. Financeiro faz primeiro pagamento
+2. Estoque cadastra e confere
+3. Ao salvar conferencia 100%: `migrarProdutosConferidosPorCategoria` e chamada (produtos migram)
+4. Se saldo pendente: vai para Financeiro para pagamento final
+5. Financeiro paga e finaliza
+
+**Pagamento 100% Antecipado:**
+1. Financeiro paga 100%
+2. Estoque cadastra e confere
+3. Ao salvar conferencia 100%: `migrarProdutosConferidosPorCategoria` e chamada (produtos migram)
+4. Nota e auto-finalizada (ja estava paga)
+
+### Resumo
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/components/login/BiometricTransition.tsx` | Simplificar para fade simples (~0.8s), remover Phone3D e fases complexas |
-| `src/components/login/LoginCard.tsx` | Ajustes menores de timing (se necessario) |
-| `src/pages/FinanceiroConferenciaNotas.tsx` | Remover Select de loja destino, fixar ESTOQUE_SIA_LOJA_ID automaticamente |
-| `src/pages/EstoqueNotasUrgenciaPendentes.tsx` | Forcar loja destino para SIA nas migracoes de urgencia |
+| `src/pages/EstoqueNotaConferencia.tsx` | Adicionar chamada a `migrarProdutosConferidosPorCategoria` apos conferencia 100%, com import e toast detalhado |
+
+Esta e uma correcao pontual de 1 arquivo que resolve a falha critica de produtos nao serem migrados no fluxo de notas de entrada do novo sistema.
+
