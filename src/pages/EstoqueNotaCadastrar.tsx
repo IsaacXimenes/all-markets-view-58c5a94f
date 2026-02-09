@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Lock, AlertCircle, Info, FileText, Zap, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Lock, AlertCircle, Info, FileText, Zap, Plus, Trash2, Save, RotateCcw } from 'lucide-react';
 import { getNotasCompra } from '@/utils/estoqueApi';
 import { 
   criarNotaEntrada, 
@@ -62,18 +62,31 @@ export default function EstoqueNotaCadastrar() {
   const produtosCadastro = getProdutosCadastro();
   const { user } = useAuthStore();
   
+  const DRAFT_KEY = 'draft_nota_entrada';
+
+  // Carregar draft do localStorage
+  const loadDraft = useCallback(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  }, []);
+
+  const draft = loadDraft();
+
   // Informações da Nota
-  const [fornecedor, setFornecedor] = useState('');
+  const [fornecedor, setFornecedor] = useState(draft?.fornecedor || '');
   const [dataEntrada] = useState(new Date().toISOString().split('T')[0]);
-  const [responsavelLancamento, setResponsavelLancamento] = useState(user?.colaborador?.id || '');
+  const [responsavelLancamento, setResponsavelLancamento] = useState(draft?.responsavelLancamento || user?.colaborador?.id || '');
   
   // Flag de Urgência
-  const [urgente, setUrgente] = useState(false);
+  const [urgente, setUrgente] = useState(draft?.urgente || false);
   
   // Pagamento
-  const [formaPagamento, setFormaPagamento] = useState<'Dinheiro' | 'Pix' | ''>('');
-  const [tipoPagamento, setTipoPagamento] = useState<TipoPagamentoNota | ''>('');
-  const [observacaoPagamento, setObservacaoPagamento] = useState('');
+  const [formaPagamento, setFormaPagamento] = useState<'Dinheiro' | 'Pix' | ''>(draft?.formaPagamento || '');
+  const [tipoPagamento, setTipoPagamento] = useState<TipoPagamentoNota | ''>(draft?.tipoPagamento || '');
+  const [observacaoPagamento, setObservacaoPagamento] = useState(draft?.observacaoPagamento || '');
   
   // Atuação Atual (somente leitura, calculado automaticamente)
   const [atuacaoAtual, setAtuacaoAtual] = useState<AtuacaoAtual | ''>('');
@@ -82,7 +95,41 @@ export default function EstoqueNotaCadastrar() {
   const [anexos, setAnexos] = useState<AnexoTemporario[]>([]);
 
   // Produtos
-  const [produtos, setProdutos] = useState<ProdutoLinha[]>([produtoLinhaVazia()]);
+  const [produtos, setProdutos] = useState<ProdutoLinha[]>(draft?.produtos?.length ? draft.produtos : [produtoLinhaVazia()]);
+
+  // Indicador de draft carregado
+  const [hasDraft, setHasDraft] = useState(!!draft);
+
+  // Salvar draft
+  const handleSalvarDraft = useCallback(() => {
+    const draftData = {
+      fornecedor,
+      responsavelLancamento,
+      urgente,
+      formaPagamento,
+      tipoPagamento,
+      observacaoPagamento,
+      produtos,
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
+    setHasDraft(true);
+    toast.success('Rascunho salvo com sucesso!');
+  }, [fornecedor, responsavelLancamento, urgente, formaPagamento, tipoPagamento, observacaoPagamento, produtos]);
+
+  // Descartar draft
+  const handleDescartarDraft = useCallback(() => {
+    localStorage.removeItem(DRAFT_KEY);
+    setFornecedor('');
+    setResponsavelLancamento(user?.colaborador?.id || '');
+    setUrgente(false);
+    setFormaPagamento('');
+    setTipoPagamento('');
+    setObservacaoPagamento('');
+    setProdutos([produtoLinhaVazia()]);
+    setHasDraft(false);
+    toast.info('Rascunho descartado.');
+  }, [user]);
 
   // Campos simplificados (oculta IMEI, Cor, Categoria)
   const camposSimplificados = useMemo(() => {
@@ -236,7 +283,8 @@ export default function EstoqueNotaCadastrar() {
     toast.success(`Nota ${novaNota.id} lançada com sucesso${prodMsg}!`, {
       description: `Atuação inicial: ${atuacao}. ${atuacao === 'Estoque' ? 'Acesse Notas Pendências para cadastrar/conferir produtos.' : 'Aguardando ação do Financeiro.'}`
     });
-    
+    // Limpar draft ao salvar com sucesso
+    localStorage.removeItem(DRAFT_KEY);
     navigate('/estoque/notas-pendencias');
   };
 
@@ -262,6 +310,22 @@ export default function EstoqueNotaCadastrar() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Voltar para Notas de Compra
         </Button>
+
+        {/* Banner de Rascunho */}
+        {hasDraft && (
+          <Alert className="border-yellow-500/30 bg-yellow-500/5">
+            <Save className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="text-sm flex items-center justify-between">
+              <span>
+                <strong>Rascunho restaurado.</strong> Os dados do último rascunho foram carregados automaticamente.
+              </span>
+              <Button variant="ghost" size="sm" onClick={handleDescartarDraft} className="text-destructive ml-2">
+                <RotateCcw className="h-3 w-3 mr-1" />
+                Descartar
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Alerta informativo */}
         <Alert className="border-primary/30 bg-primary/5">
@@ -308,6 +372,7 @@ export default function EstoqueNotaCadastrar() {
                   value={responsavelLancamento}
                   onChange={setResponsavelLancamento}
                   placeholder="Selecione o responsável"
+                  filtrarPorTipo="estoquistas"
                 />
               </div>
             </div>
@@ -653,13 +718,27 @@ export default function EstoqueNotaCadastrar() {
           maxSizeMB={5}
         />
 
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => navigate('/estoque/notas-compra')}>
-            Cancelar
-          </Button>
-          <Button onClick={handleSalvar}>
-            Salvar Lançamento Inicial
-          </Button>
+        <div className="flex justify-between gap-2">
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleSalvarDraft}>
+              <Save className="h-4 w-4 mr-2" />
+              Salvar Rascunho
+            </Button>
+            {hasDraft && (
+              <Button variant="ghost" onClick={handleDescartarDraft} className="text-destructive">
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Descartar Rascunho
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/estoque/notas-compra')}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSalvar}>
+              Salvar Lançamento Inicial
+            </Button>
+          </div>
         </div>
       </div>
     </EstoqueLayout>
