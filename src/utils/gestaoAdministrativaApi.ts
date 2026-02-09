@@ -166,11 +166,14 @@ export const consolidarVendasPorDia = (
       // Verificar se há conferência salva
       const conferenciaSalva = storedConferencias[dataStr]?.[metodo];
       
+      // Se o valor bruto mudou (nova venda adicionada/removida), invalidar conferência
+      const valorMudou = conferenciaSalva && conferenciaSalva.bruto !== total;
+      
       totaisPorMetodo[metodo] = {
         bruto: total,
-        conferido: conferenciaSalva?.conferido ?? false,
-        conferidoPor: conferenciaSalva?.conferidoPor,
-        dataConferencia: conferenciaSalva?.dataConferencia
+        conferido: valorMudou ? false : (conferenciaSalva?.conferido ?? false),
+        conferidoPor: valorMudou ? undefined : conferenciaSalva?.conferidoPor,
+        dataConferencia: valorMudou ? undefined : conferenciaSalva?.dataConferencia
       };
     });
     
