@@ -1,68 +1,69 @@
 
 
-# Plano: Melhorias nos Modulos Gestao Administrativa e Financeiro
+# Plano: Correcao do Checkbox e Remocao do Filtro de Competencia
 
-## 1. Filtro de Periodo na Conferencia Diaria (`GestaoAdministrativa.tsx`)
+## 1. Bug do Checkbox nao ficando marcado (`gestaoAdministrativaApi.ts`)
 
-Adicionar campos "Data Inicio" e "Data Fim" como filtro primario, mantendo o filtro de competencia como secundario. A competencia pre-carrega o mes, mas o periodo permite refinar por intervalo de datas.
+**Causa raiz:** Quando nenhuma loja e selecionada, o `lojaId` passado para `toggleConferencia` e `'todas'`. O dado e salvo no localStorage com a chave `gestao_conferencia_2026-02_todas`. Porem, na funcao `consolidarVendasPorDia` (linha 143), ha uma condicao que **ignora** conferencias salvas quando `lojaId === 'todas'`:
 
-**Alteracoes:**
-- Adicionar estados `dataInicio` e `dataFim` (tipo `Date | undefined`)
-- Adicionar dois DatePickers (Popover + Calendar) na area de filtros, antes do filtro de competencia
-- Quando o usuario seleciona uma competencia, pre-preencher `dataInicio` e `dataFim` com o primeiro e ultimo dia do mes
-- Filtrar o array `conferencias` pelo intervalo de datas selecionado
+```
+const storedConferencias = lojaId && lojaId !== 'todas' 
+  ? getStoredConferencias(competencia, lojaId)
+  : {};  // <-- nunca le os dados salvos com 'todas'
+```
 
-## 2. Checkbox com Confirmacao em Duas Etapas (`GestaoAdministrativa.tsx`)
+**Correcao:** Remover a condicao que impede a leitura quando `lojaId === 'todas'`. Sempre ler as conferencias e ajustes salvos, independente do filtro de loja. Mesma correcao para `storedAjustes`.
 
-Ao clicar no checkbox de conferencia, em vez de marcar/desmarcar diretamente, abrir um modal de confirmacao.
+## 2. Validacao: Produto retirado do estoque ao cadastrar venda
 
-**Alteracoes:**
-- Criar estado para o modal de confirmacao (`modalConfirmacaoCheck`) com dados do metodo/dia sendo alterado
-- Ao clicar no checkbox, abrir o modal mostrando: Data, Metodo, Valor e a acao (Marcar/Desmarcar)
-- Somente ao confirmar no modal, executar o `toggleConferencia` (que ja gera log tanto para marcar quanto desmarcar)
-- O log ja esta implementado na API para ambos os cenarios (linhas 293-307 do `gestaoAdministrativaApi.ts`)
+A baixa de estoque JA esta implementada corretamente em `vendasApi.ts` (linhas 853-876). Ao chamar `addVenda`, o sistema:
+- Marca o produto com `quantidade: 0` e `statusNota: 'Concluido'`
+- Registra uma movimentacao de saida com destino `'Vendido'`
+- Para acessorios, chama `subtrairEstoqueAcessorio`
 
-## 3. Filtro de Periodo nos Lotes de Stories (`GestaoAdmStoriesLotes.tsx`)
+Nenhuma alteracao necessaria. O estoque ja e abatido automaticamente.
 
-Mesma logica do item 1: adicionar DatePickers de "Data Inicio" e "Data Fim" junto ao filtro de competencia.
+## 3. Remover filtro de Competencia de todas as abas de Gestao Administrativa
 
-**Alteracoes:**
-- Adicionar estados `dataInicio` e `dataFim`
-- Adicionar DatePickers na area de filtros
-- Filtrar `lotesFiltrados` pelo intervalo de datas (campo `lote.data`)
+Remover o `<Select>` de competencia e a logica associada dos seguintes arquivos:
 
-## 4. Autocomplete para Selects de Loja/Vendedor nas abas de Gestao Administrativa
+### `GestaoAdministrativa.tsx` (Conferencia Diaria)
+- Remover o Select de competencia (linhas 290-304)
+- Manter os DatePickers de periodo como filtro primario
+- A competencia passa a ser derivada automaticamente das datas selecionadas (ex: se Data Inicio = 01/02/2026, competencia = '2026-02')
+- Se nenhuma data for selecionada, usar o mes atual como padrao
 
-Substituir os `<Select>` estaticos por componentes `AutocompleteLoja` e `AutocompleteColaborador` em:
-- `GestaoAdministrativa.tsx`: filtros de Loja e Vendedor
-- `GestaoAdmStoriesLotes.tsx`: filtro de Loja
+### `GestaoAdministrativaLogs.tsx` (Logs de Auditoria)
+- Remover o Select de competencia (linhas 93-107)
+- Substituir o Select de Loja por `AutocompleteLoja`
+- Adicionar DatePickers de periodo (Data Inicio / Data Fim) para filtrar logs por `log.dataHora`
+- Filtrar localmente pelo intervalo de datas
 
-**Alteracoes:**
-- Importar `AutocompleteLoja` e `AutocompleteColaborador`
-- Substituir os `<Select>` correspondentes
-- Ajustar os valores "todas"/"todos" para string vazia (padrao dos Autocompletes) e tratar na logica de filtragem
+### `GestaoAdmStoriesLotes.tsx` (Lotes de Stories)
+- Remover o Select de competencia (linhas 137-147)
+- A competencia sera derivada das datas selecionadas
+- Manter os DatePickers ja existentes como filtro principal
 
-## 5. Coluna Comprovante no Financeiro Conferencia (`FinanceiroConferencia.tsx`)
-
-Substituir a miniatura/preview por texto simples.
-
-**Alteracoes:**
-- Na linha 1068-1073, trocar `<ComprovantePreview>` por um `<Badge>` com texto "Contem Anexo"
-- Manter `<ComprovanteBadgeSemAnexo>` para quando nao ha anexo
-- O comprovante completo continua visivel ao abrir o detalhamento lateral
+### `GestaoAdmStoriesIndicadores.tsx` (Indicadores Stories)
+- Remover o Select de competencia (linhas 64-74)
+- Adicionar DatePickers de periodo (Data Inicio / Data Fim)
+- Substituir Select de Loja por `AutocompleteLoja`
+- Derivar competencia das datas selecionadas para a API de indicadores
 
 ## Resumo dos Arquivos Modificados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/pages/GestaoAdministrativa.tsx` | Filtro periodo, checkbox 2 etapas, autocomplete loja/vendedor |
-| `src/pages/GestaoAdmStoriesLotes.tsx` | Filtro periodo, autocomplete loja |
-| `src/pages/FinanceiroConferencia.tsx` | Coluna comprovante: texto "Contem Anexo" |
+| `src/utils/gestaoAdministrativaApi.ts` | Corrigir leitura de conferencias quando lojaId='todas' |
+| `src/pages/GestaoAdministrativa.tsx` | Remover Select competencia, derivar de datas |
+| `src/pages/GestaoAdministrativaLogs.tsx` | Remover Select competencia, adicionar DatePickers e AutocompleteLoja |
+| `src/pages/GestaoAdmStoriesLotes.tsx` | Remover Select competencia, derivar de datas |
+| `src/pages/GestaoAdmStoriesIndicadores.tsx` | Remover Select competencia, adicionar DatePickers, AutocompleteLoja |
 
 ## Detalhes Tecnicos
 
-- DatePickers usam `Popover` + `Calendar` do Shadcn com `pointer-events-auto`
-- Autocomplete reutiliza `AutocompleteLoja` (prop `apenasLojasTipoLoja`) e `AutocompleteColaborador`
-- O modal de confirmacao do checkbox usa `Dialog` existente com botoes "Confirmar" e "Cancelar"
-- Nenhuma alteracao na API `gestaoAdministrativaApi.ts` (logs de marcar/desmarcar ja funcionam)
+- A competencia sera derivada com `format(dataInicio, 'yyyy-MM')` usando a data inicio selecionada
+- Valor padrao: mes atual (`new Date()`) com `startOfMonth` e `endOfMonth`
+- A API `consolidarVendasPorDia` continua recebendo competencia como parametro (derivada), sem alteracoes na assinatura
+- Para Logs, o filtro por datas usa `isWithinInterval` no campo `log.dataHora`
 
