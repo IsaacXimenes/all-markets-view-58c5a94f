@@ -1,52 +1,32 @@
 
-# Plano: Corrigir botao Salvar desabilitado na Conferencia de Lancamento (Editar Venda)
+# Plano: Persistir acessorios na venda e exibi-los na Conferencia de Lancamento
 
-## Problema Identificado
+## Problema
 
-O botao "Salvar" na tela de Editar Venda esta desabilitado mesmo quando nao ha pendencia financeira. A causa raiz e uma inconsistencia entre as validacoes de `VendasNova.tsx` e `VendasEditar.tsx`:
+Ao criar uma Nova Venda com acessorios, eles nao sao enviados para a API porque o campo `acessorios` nao e incluido no objeto `vendaData`. A interface `Venda` em `vendasApi.ts` ja suporta o campo `acessorios?: VendaAcessorio[]`, mas ele nunca e preenchido. Alem disso, o modal de conferencia nao exibe acessorios.
 
-- **Nova Venda**: O campo `localRetirada` NAO e obrigatorio no `canSubmit` (linha 789)
-- **Editar Venda**: O campo `localRetirada` E obrigatorio no `canSubmit` (linha 556)
+## Alteracoes
 
-Quando o usuario cria uma venda sem preencher o "Local de Retirada", a venda e registrada normalmente. Porem, ao tentar editar essa venda (ex: alterar o meio de pagamento), o botao Salvar fica permanentemente desabilitado porque `localRetirada` esta vazio.
+### 1. Salvar acessorios ao registrar venda (`src/pages/VendasNova.tsx`)
 
-## Solucao
+Adicionar `acessorios: acessoriosVenda` ao objeto `vendaData` em dois locais:
 
-Alinhar a validacao de `VendasEditar.tsx` com `VendasNova.tsx`, removendo `localRetirada` como campo obrigatorio no `canSubmit`. O campo continuara disponivel para preenchimento, mas nao bloqueara o salvamento.
+- **Venda normal** (linha ~963, dentro de `handleConfirmarVenda`): adicionar `acessorios: acessoriosVenda,` apos a linha `itens,`
+- **Venda com sinal** (linha ~881, dentro de `handleSalvarComSinal`): adicionar `acessorios: acessoriosVenda,` apos a linha `itens,`
 
-## Arquivo Modificado
+### 2. Exibir acessorios no modal de conferencia (`src/pages/VendasConferenciaLancamento.tsx`)
+
+Adicionar uma secao no modal de aprovacao (apos os dados basicos e antes dos comprovantes) que lista os itens (produtos) e acessorios da venda:
+
+- **Secao "Produtos"**: listar `vendaSelecionada.itens` com modelo, IMEI e valor
+- **Secao "Acessorios"**: listar `vendaSelecionada.acessorios` com descricao, quantidade, valor unitario e valor total
+- Ambas as secoes so aparecem se houver dados
+
+Sera necessario importar `VendaAcessorio` ou acessar os campos diretamente do objeto venda.
+
+## Arquivos Modificados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/pages/VendasEditar.tsx` | Remover `localRetirada` da condicao `canSubmit` |
-
-## Detalhe Tecnico
-
-```text
-// Antes (linha 556-566):
-return (
-  lojaVenda &&
-  vendedor &&
-  clienteId &&
-  origemVenda &&
-  localRetirada &&    // <-- REMOVER esta linha
-  (itens.length > 0 || acessoriosVenda.length > 0) &&
-  pagamentoCompleto &&
-  !tradeInNaoValidado &&
-  motoboyValido
-);
-
-// Depois:
-return (
-  lojaVenda &&
-  vendedor &&
-  clienteId &&
-  origemVenda &&
-  (itens.length > 0 || acessoriosVenda.length > 0) &&
-  pagamentoCompleto &&
-  !tradeInNaoValidado &&
-  motoboyValido
-);
-```
-
-Tambem sera necessario remover `localRetirada` do array de dependencias do `useMemo` na mesma linha 567.
+| `src/pages/VendasNova.tsx` | Adicionar `acessorios: acessoriosVenda` no vendaData (2 locais) |
+| `src/pages/VendasConferenciaLancamento.tsx` | Exibir secoes de Produtos e Acessorios no modal de conferencia |
