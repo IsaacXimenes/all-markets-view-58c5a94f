@@ -61,6 +61,7 @@ import CadastrosContasFinanceiras from "./pages/CadastrosContasFinanceiras";
 import CadastrosMaquinas from "./pages/CadastrosMaquinas";
 import CadastrosCores from "./pages/CadastrosCores";
 import CadastrosTaxasEntrega from "./pages/CadastrosTaxasEntrega";
+import CadastrosConfigWhatsApp from "./pages/CadastrosConfigWhatsApp";
 import Vendas from "./pages/Vendas";
 import VendasNova from "./pages/VendasNova";
 import VendaDetalhes from "./pages/VendaDetalhes";
@@ -221,6 +222,7 @@ const App = () => (
               <Route path="/cadastros/maquinas" element={<CadastrosMaquinas />} />
               <Route path="/cadastros/cores" element={<CadastrosCores />} />
               <Route path="/cadastros/taxas-entrega" element={<CadastrosTaxasEntrega />} />
+              <Route path="/cadastros/config-whatsapp" element={<CadastrosConfigWhatsApp />} />
               <Route path="/vendas" element={<Vendas />} />
               <Route path="/vendas/nova" element={<VendasNova />} />
               <Route path="/vendas/nova-digital" element={<VendasNovaDigital />} />
