@@ -38,20 +38,17 @@ export default function GestaoAdmStoriesLotes() {
   const colaboradorLogado = colaboradores.find(c => c.id === user?.colaborador?.id);
   const ehGestor = colaboradorLogado?.eh_gestor ?? user?.colaborador?.cargo?.toLowerCase().includes('gestor') ?? false;
 
-  const competencias = getCompetenciasDisponiveisStories();
-  const [competencia, setCompetencia] = useState(competencias[0]?.value || format(new Date(), 'yyyy-MM'));
+  const [competencia, setCompetencia] = useState(format(new Date(), 'yyyy-MM'));
   const [lojaFiltro, setLojaFiltro] = useState<string>('');
   const [statusFiltro, setStatusFiltro] = useState<string>('todos');
   const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
   const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
 
-  const handleCompetenciaChange = (comp: string) => {
-    setCompetencia(comp);
-    const [year, month] = comp.split('-').map(Number);
-    const inicio = new Date(year, month - 1, 1);
-    const fim = endOfMonth(inicio);
-    setDataInicio(inicio);
-    setDataFim(fim);
+  const handleDataInicioChange = (date: Date | undefined) => {
+    setDataInicio(date);
+    if (date) {
+      setCompetencia(format(date, 'yyyy-MM'));
+    }
   };
 
   // Generate batches on load
@@ -116,7 +113,7 @@ export default function GestaoAdmStoriesLotes() {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <CalendarComponent mode="single" selected={dataInicio} onSelect={setDataInicio} initialFocus className="p-3 pointer-events-auto" />
+              <CalendarComponent mode="single" selected={dataInicio} onSelect={handleDataInicioChange} initialFocus className="p-3 pointer-events-auto" />
             </PopoverContent>
           </Popover>
         </div>
@@ -133,17 +130,6 @@ export default function GestaoAdmStoriesLotes() {
               <CalendarComponent mode="single" selected={dataFim} onSelect={setDataFim} initialFocus className="p-3 pointer-events-auto" />
             </PopoverContent>
           </Popover>
-        </div>
-        <div className="space-y-2">
-          <Label>Competência</Label>
-          <Select value={competencia} onValueChange={handleCompetenciaChange}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {competencias.map(c => (
-                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
         <div className="space-y-2">
           <Label>Loja</Label>

@@ -48,9 +48,8 @@ export default function GestaoAdministrativa() {
   const colaboradorLogado = colaboradores.find(c => c.id === user?.colaborador?.id);
   const ehGestor = colaboradorLogado?.eh_gestor ?? user?.colaborador?.cargo?.toLowerCase().includes('gestor') ?? false;
   
-  // Estados de filtros
-  const competencias = getCompetenciasDisponiveis();
-  const [competencia, setCompetencia] = useState(competencias[0]?.value || format(new Date(), 'yyyy-MM'));
+  // Estados de filtros - competência derivada das datas
+  const [competencia, setCompetencia] = useState(format(new Date(), 'yyyy-MM'));
   const [lojaId, setLojaId] = useState<string>('');
   const [vendedorId, setVendedorId] = useState<string>('');
   const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
@@ -101,14 +100,12 @@ export default function GestaoAdministrativa() {
     return calcularResumoConferencia(conferenciasFiltradas);
   }, [conferenciasFiltradas]);
   
-  // Ao mudar competência, pre-preencher período
-  const handleCompetenciaChange = (comp: string) => {
-    setCompetencia(comp);
-    const [year, month] = comp.split('-').map(Number);
-    const inicio = new Date(year, month - 1, 1);
-    const fim = endOfMonth(inicio);
-    setDataInicio(inicio);
-    setDataFim(fim);
+  // Derivar competência automaticamente da data início
+  const handleDataInicioChange = (date: Date | undefined) => {
+    setDataInicio(date);
+    if (date) {
+      setCompetencia(format(date, 'yyyy-MM'));
+    }
   };
   // Handlers
   const handleToggleConferencia = (conf: ConferenciaDiaria, metodo: string) => {
@@ -269,7 +266,7 @@ export default function GestaoAdministrativa() {
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <CalendarComponent mode="single" selected={dataInicio} onSelect={setDataInicio} initialFocus className="p-3 pointer-events-auto" />
+              <CalendarComponent mode="single" selected={dataInicio} onSelect={handleDataInicioChange} initialFocus className="p-3 pointer-events-auto" />
             </PopoverContent>
           </Popover>
         </div>
@@ -286,21 +283,6 @@ export default function GestaoAdministrativa() {
               <CalendarComponent mode="single" selected={dataFim} onSelect={setDataFim} initialFocus className="p-3 pointer-events-auto" />
             </PopoverContent>
           </Popover>
-        </div>
-        <div className="space-y-2">
-          <Label>Competência</Label>
-          <Select value={competencia} onValueChange={handleCompetenciaChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o mês" />
-            </SelectTrigger>
-            <SelectContent>
-              {competencias.map(comp => (
-                <SelectItem key={comp.value} value={comp.value}>
-                  {comp.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
         
         <div className="space-y-2">
@@ -380,7 +362,7 @@ export default function GestaoAdministrativa() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Conferência Diária - {competencias.find(c => c.value === competencia)?.label}
+            Conferência Diária - {competencia}
           </CardTitle>
         </CardHeader>
         <CardContent>

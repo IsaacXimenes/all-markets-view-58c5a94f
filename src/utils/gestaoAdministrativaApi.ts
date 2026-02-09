@@ -140,12 +140,8 @@ export const consolidarVendasPorDia = (
   });
   
   // Buscar conferências e ajustes salvos
-  const storedConferencias = lojaId && lojaId !== 'todas' 
-    ? getStoredConferencias(competencia, lojaId)
-    : {};
-  const storedAjustes = lojaId && lojaId !== 'todas'
-    ? getStoredAjustes(competencia, lojaId)
-    : {};
+  const storedConferencias = getStoredConferencias(competencia, lojaId || 'todas');
+  const storedAjustes = getStoredAjustes(competencia, lojaId || 'todas');
   
   // Gerar array de dias do mês
   const diasDoMes = eachDayOfInterval({ start: inicioMes, end: fimMes });
