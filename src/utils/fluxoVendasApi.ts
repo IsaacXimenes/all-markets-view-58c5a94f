@@ -2,6 +2,7 @@
 // Fluxo: Lançamento Aprovada -> Conferência Gestor -> Conferência Financeiro -> Finalizado
 import { Venda, getVendas, getVendaById, updateVenda as updateVendaBase } from './vendasApi';
 import { migrarTradeInsParaPendentes } from './osApi';
+import { enviarNotificacaoVenda, DadosVendaNotificacao } from './whatsappNotificacaoApi';
 
 // Novo tipo para status de venda no fluxo de conferência
 export type StatusVenda = 
@@ -438,6 +439,26 @@ export const finalizarVenda = (
   if (venda && venda.tradeIns && venda.tradeIns.length > 0) {
     migrarTradeInsParaPendentes(venda.tradeIns, vendaId, venda.lojaVenda, usuarioNome);
     console.log(`[Fluxo Vendas] ${venda.tradeIns.length} trade-in(s) migrado(s) para Aparelhos Pendentes - Estoque`);
+  }
+
+  // NOTIFICAÇÃO WHATSAPP: Disparar após finalização bem-sucedida
+  try {
+    if (venda) {
+      const formaPrincipal = venda.pagamentos && venda.pagamentos.length > 0
+        ? venda.pagamentos[0].meioPagamento || 'Não informado'
+        : 'Não informado';
+      const dadosNotif: DadosVendaNotificacao = {
+        id_venda: vendaId,
+        loja: venda.lojaVenda || '',
+        vendedor: venda.vendedor || '',
+        cliente: venda.clienteNome || '',
+        valor: (venda.total ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }),
+        forma_pagamento: formaPrincipal,
+      };
+      enviarNotificacaoVenda(dadosNotif);
+    }
+  } catch (err) {
+    console.error('[WhatsApp] Falha ao disparar notificação (não bloqueante):', err);
   }
   
   return getVendaComFluxo(vendaId);
