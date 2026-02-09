@@ -56,6 +56,21 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        // Limpar dados de sessão do localStorage
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (
+            key.startsWith('gestao_conferencia_') ||
+            key.startsWith('gestao_ajustes_') ||
+            key === 'gestao_logs_auditoria' ||
+            key.startsWith('stories_lotes_')
+          )) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+
         set({ 
           isAuthenticated: false, 
           user: null,

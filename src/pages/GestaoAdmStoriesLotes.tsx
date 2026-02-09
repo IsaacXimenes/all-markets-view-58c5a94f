@@ -18,7 +18,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ShieldAlert } from 'lucide-react';
 import {
   gerarLotesDiarios,
-  getLotes,
   getCompetenciasDisponiveisStories,
   getStatusLoteColor,
   getStatusLoteRowClass,
@@ -43,6 +42,7 @@ export default function GestaoAdmStoriesLotes() {
   const [statusFiltro, setStatusFiltro] = useState<string>('todos');
   const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
   const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
+  const [lotesGerados, setLotesGerados] = useState<LoteMonitoramento[]>([]);
 
   const handleDataInicioChange = (date: Date | undefined) => {
     setDataInicio(date);
@@ -51,14 +51,16 @@ export default function GestaoAdmStoriesLotes() {
     }
   };
 
-  // Generate batches on load
+  // Generate batches on load - store result in state to trigger re-render
   useEffect(() => {
-    const lojasAtivas = lojas.filter(l => l.ativa && l.tipo === 'Loja');
-    gerarLotesDiarios(competencia, lojasAtivas.map(l => ({ id: l.id, nome: l.nome })));
+    const lojasAtivas = lojas.filter(l => l.ativa);
+    const resultado = gerarLotesDiarios(competencia, lojasAtivas.map(l => ({ id: l.id, nome: l.nome })));
+    setLotesGerados(resultado);
   }, [competencia, lojas]);
 
   const lotesFiltrados = useMemo(() => {
-    let result = getLotes(competencia, lojaFiltro || undefined);
+    let result = [...lotesGerados];
+    if (lojaFiltro) result = result.filter(l => l.lojaId === lojaFiltro);
     if (statusFiltro !== 'todos') result = result.filter(l => l.status === statusFiltro);
     // Filtro por período
     if (dataInicio || dataFim) {
@@ -70,17 +72,17 @@ export default function GestaoAdmStoriesLotes() {
       });
     }
     return result;
-  }, [competencia, lojaFiltro, statusFiltro, dataInicio, dataFim]);
+  }, [lotesGerados, lojaFiltro, statusFiltro, dataInicio, dataFim]);
 
   // Resumo
   const resumo = useMemo(() => {
-    const all = getLotes(competencia, lojaFiltro || undefined);
+    const all = lojaFiltro ? lotesGerados.filter(l => l.lojaId === lojaFiltro) : lotesGerados;
     const totalVendas = all.reduce((s, l) => s + l.totalVendas, 0);
     const comStory = all.reduce((s, l) => s + l.vendasComStory, 0);
     const pendentes = all.filter(l => l.status === 'Pendente Conf. Operacional').length;
     const perc = totalVendas > 0 ? Math.round((comStory / totalVendas) * 100) : 0;
     return { totalVendas, comStory, perc, pendentes, totalLotes: all.length };
-  }, [competencia, lojaFiltro, lotesFiltrados]);
+  }, [lotesGerados, lojaFiltro]);
 
   const formatDate = (d: string) => {
     const [y, m, day] = d.split('-');
