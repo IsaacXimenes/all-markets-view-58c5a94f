@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,12 +13,17 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Eye, Edit3, DollarSign, CheckCircle2, Clock, AlertTriangle, ShieldAlert, TrendingUp, Calendar, Info } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Eye, Edit3, DollarSign, CheckCircle2, Clock, AlertTriangle, ShieldAlert, TrendingUp, Calendar, Info, CalendarIcon } from 'lucide-react';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parseISO, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import {
   consolidarVendasPorDia,
   getVendasPorDiaMetodo,
@@ -46,8 +51,19 @@ export default function GestaoAdministrativa() {
   // Estados de filtros
   const competencias = getCompetenciasDisponiveis();
   const [competencia, setCompetencia] = useState(competencias[0]?.value || format(new Date(), 'yyyy-MM'));
-  const [lojaId, setLojaId] = useState<string>('todas');
-  const [vendedorId, setVendedorId] = useState<string>('todos');
+  const [lojaId, setLojaId] = useState<string>('');
+  const [vendedorId, setVendedorId] = useState<string>('');
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
+  const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
+  
+  // Modal de confirmação do checkbox
+  const [modalConfirmacaoCheck, setModalConfirmacaoCheck] = useState<{
+    open: boolean;
+    conf: ConferenciaDiaria | null;
+    metodo: string;
+    valor: number;
+    acao: 'Marcar' | 'Desmarcar';
+  }>({ open: false, conf: null, metodo: '', valor: 0, acao: 'Marcar' });
   
   // Estados de modais
   const [modalDetalhesOpen, setModalDetalhesOpen] = useState(false);
@@ -67,13 +83,33 @@ export default function GestaoAdministrativa() {
   
   // Consolidar dados
   const conferencias = useMemo(() => {
-    return consolidarVendasPorDia(competencia, lojaId, vendedorId);
+    return consolidarVendasPorDia(competencia, lojaId || 'todas', vendedorId || 'todos');
   }, [competencia, lojaId, vendedorId, refreshKey]);
   
-  const resumo = useMemo(() => {
-    return calcularResumoConferencia(conferencias);
-  }, [conferencias]);
+  // Filtrar por período
+  const conferenciasFiltradas = useMemo(() => {
+    if (!dataInicio && !dataFim) return conferencias;
+    return conferencias.filter(conf => {
+      const dataConf = parseISO(conf.data);
+      if (dataInicio && dataConf < dataInicio) return false;
+      if (dataFim && dataConf > dataFim) return false;
+      return true;
+    });
+  }, [conferencias, dataInicio, dataFim]);
   
+  const resumo = useMemo(() => {
+    return calcularResumoConferencia(conferenciasFiltradas);
+  }, [conferenciasFiltradas]);
+  
+  // Ao mudar competência, pre-preencher período
+  const handleCompetenciaChange = (comp: string) => {
+    setCompetencia(comp);
+    const [year, month] = comp.split('-').map(Number);
+    const inicio = new Date(year, month - 1, 1);
+    const fim = endOfMonth(inicio);
+    setDataInicio(inicio);
+    setDataFim(fim);
+  };
   // Handlers
   const handleToggleConferencia = (conf: ConferenciaDiaria, metodo: string) => {
     if (!ehGestor) {
@@ -84,22 +120,37 @@ export default function GestaoAdministrativa() {
     const valorBruto = conf.totaisPorMetodo[metodo]?.bruto || 0;
     if (valorBruto === 0) return;
     
+    const estaConferido = conf.totaisPorMetodo[metodo]?.conferido || false;
+    setModalConfirmacaoCheck({
+      open: true,
+      conf,
+      metodo,
+      valor: valorBruto,
+      acao: estaConferido ? 'Desmarcar' : 'Marcar'
+    });
+  };
+  
+  const handleConfirmarCheck = () => {
+    const { conf, metodo, acao } = modalConfirmacaoCheck;
+    if (!conf) return;
+    
     toggleConferencia(
       competencia,
       conf.data,
-      lojaId !== 'todas' ? lojaId : conf.lojaId,
+      lojaId ? lojaId : conf.lojaId,
       metodo,
       user?.colaborador?.id || '',
       user?.colaborador?.nome || 'Usuário',
-      valorBruto
+      modalConfirmacaoCheck.valor
     );
     
     setRefreshKey(k => k + 1);
-    toast.success(`${metodo} ${conf.totaisPorMetodo[metodo]?.conferido ? 'desmarcado' : 'conferido'} com sucesso`);
+    setModalConfirmacaoCheck({ open: false, conf: null, metodo: '', valor: 0, acao: 'Marcar' });
+    toast.success(`${metodo} ${acao === 'Desmarcar' ? 'desmarcado' : 'conferido'} com sucesso`);
   };
   
   const handleAbrirDrillDown = (conf: ConferenciaDiaria, metodo: string) => {
-    const vendas = getVendasPorDiaMetodo(conf.data, lojaId, metodo);
+    const vendas = getVendasPorDiaMetodo(conf.data, lojaId || 'todas', metodo);
     setVendasDrillDown(vendas);
     setMetodoDrillDown(metodo);
     setConferenciaSelecionada(conf);
@@ -107,7 +158,7 @@ export default function GestaoAdministrativa() {
   };
   
   const handleAbrirDetalhesDia = (conf: ConferenciaDiaria) => {
-    const vendas = getVendasDoDia(conf.data, lojaId);
+    const vendas = getVendasDoDia(conf.data, lojaId || 'todas');
     setVendasDoDia(vendas);
     setMetodoDrillDown(null);
     setConferenciaSelecionada(conf);
@@ -137,7 +188,7 @@ export default function GestaoAdministrativa() {
     registrarAjuste(
       competencia,
       conferenciaSelecionada!.data,
-      lojaId !== 'todas' ? lojaId : conferenciaSelecionada!.lojaId,
+      lojaId ? lojaId : conferenciaSelecionada!.lojaId,
       {
         metodoPagamento: ajusteMetodo,
         valorDiferenca: valor,
@@ -207,10 +258,38 @@ export default function GestaoAdministrativa() {
   return (
     <GestaoAdministrativaLayout title="Conferência de Caixa">
       {/* Filtros */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div className="space-y-2">
+          <Label>Data Início</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dataInicio && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dataInicio ? format(dataInicio, 'dd/MM/yyyy') : 'Selecione'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent mode="single" selected={dataInicio} onSelect={setDataInicio} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+        </div>
+        <div className="space-y-2">
+          <Label>Data Fim</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dataFim && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dataFim ? format(dataFim, 'dd/MM/yyyy') : 'Selecione'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent mode="single" selected={dataFim} onSelect={setDataFim} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+        </div>
         <div className="space-y-2">
           <Label>Competência</Label>
-          <Select value={competencia} onValueChange={setCompetencia}>
+          <Select value={competencia} onValueChange={handleCompetenciaChange}>
             <SelectTrigger>
               <SelectValue placeholder="Selecione o mês" />
             </SelectTrigger>
@@ -226,36 +305,22 @@ export default function GestaoAdministrativa() {
         
         <div className="space-y-2">
           <Label>Loja</Label>
-          <Select value={lojaId} onValueChange={setLojaId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione a loja" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as Lojas</SelectItem>
-              {lojas.map(loja => (
-                <SelectItem key={loja.id} value={loja.id}>
-                  {loja.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <AutocompleteLoja
+            value={lojaId}
+            onChange={setLojaId}
+            placeholder="Todas as Lojas"
+            apenasLojasTipoLoja
+          />
         </div>
         
         <div className="space-y-2">
           <Label>Vendedor</Label>
-          <Select value={vendedorId} onValueChange={setVendedorId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione o vendedor" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os Vendedores</SelectItem>
-              {colaboradores.filter(c => c.eh_vendedor).map(col => (
-                <SelectItem key={col.id} value={col.id}>
-                  {col.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <AutocompleteColaborador
+            value={vendedorId}
+            onChange={setVendedorId}
+            placeholder="Todos os Vendedores"
+            filtrarPorTipo="vendedoresEGestores"
+          />
         </div>
       </div>
       
@@ -337,7 +402,7 @@ export default function GestaoAdministrativa() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {conferencias.map(conf => {
+                  {conferenciasFiltradas.map(conf => {
                     const hasValue = conf.vendasTotal > 0;
                     return (
                       <TableRow key={conf.id} className={getRowClass(conf.statusConferencia, hasValue)}>
@@ -627,6 +692,48 @@ export default function GestaoAdministrativa() {
             </Button>
             <Button onClick={handleSalvarAjuste}>
               Salvar Ajuste
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Modal de Confirmação do Checkbox */}
+      <Dialog open={modalConfirmacaoCheck.open} onOpenChange={(open) => !open && setModalConfirmacaoCheck({ open: false, conf: null, metodo: '', valor: 0, acao: 'Marcar' })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{modalConfirmacaoCheck.acao === 'Marcar' ? 'Confirmar Conferência' : 'Desmarcar Conferência'}</DialogTitle>
+            <DialogDescription>
+              {modalConfirmacaoCheck.acao === 'Marcar' 
+                ? 'Tem certeza que deseja marcar este método como conferido?' 
+                : 'Tem certeza que deseja desmarcar este método? A ação será registrada no log.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Data:</span>
+              <span className="font-medium">{modalConfirmacaoCheck.conf ? formatarDataExibicao(modalConfirmacaoCheck.conf.data) : '-'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Método:</span>
+              <span className="font-medium">{modalConfirmacaoCheck.metodo}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Valor:</span>
+              <span className="font-medium">{formatCurrency(modalConfirmacaoCheck.valor)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Ação:</span>
+              <Badge variant={modalConfirmacaoCheck.acao === 'Marcar' ? 'default' : 'destructive'}>
+                {modalConfirmacaoCheck.acao}
+              </Badge>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalConfirmacaoCheck({ open: false, conf: null, metodo: '', valor: 0, acao: 'Marcar' })}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmarCheck} variant={modalConfirmacaoCheck.acao === 'Desmarcar' ? 'destructive' : 'default'}>
+              Confirmar
             </Button>
           </DialogFooter>
         </DialogContent>

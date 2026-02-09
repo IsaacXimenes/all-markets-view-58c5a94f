@@ -1067,7 +1067,7 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
                       <TableCell>{getStatusBadge(linha.venda.statusFluxo as StatusVenda)}</TableCell>
                       <TableCell>
                         {linha.comprovante ? (
-                          <ComprovantePreview comprovante={linha.comprovante} comprovanteNome={linha.comprovanteNome} />
+                          <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/30 text-xs">Contém Anexo</Badge>
                         ) : (
                           <ComprovanteBadgeSemAnexo />
                         )}

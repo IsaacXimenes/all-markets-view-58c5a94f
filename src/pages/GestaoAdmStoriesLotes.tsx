@@ -8,9 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Eye, Upload, CheckCircle, Camera, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Eye, Upload, CheckCircle, Camera, TrendingUp, AlertTriangle, CalendarIcon } from 'lucide-react';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ShieldAlert } from 'lucide-react';
 import {
@@ -24,7 +27,8 @@ import {
   StatusLote,
   LoteMonitoramento
 } from '@/utils/storiesMonitoramentoApi';
-import { format } from 'date-fns';
+import { format, endOfMonth, parseISO } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export default function GestaoAdmStoriesLotes() {
   const navigate = useNavigate();
@@ -36,8 +40,19 @@ export default function GestaoAdmStoriesLotes() {
 
   const competencias = getCompetenciasDisponiveisStories();
   const [competencia, setCompetencia] = useState(competencias[0]?.value || format(new Date(), 'yyyy-MM'));
-  const [lojaFiltro, setLojaFiltro] = useState<string>('todas');
+  const [lojaFiltro, setLojaFiltro] = useState<string>('');
   const [statusFiltro, setStatusFiltro] = useState<string>('todos');
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
+  const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
+
+  const handleCompetenciaChange = (comp: string) => {
+    setCompetencia(comp);
+    const [year, month] = comp.split('-').map(Number);
+    const inicio = new Date(year, month - 1, 1);
+    const fim = endOfMonth(inicio);
+    setDataInicio(inicio);
+    setDataFim(fim);
+  };
 
   // Generate batches on load
   useEffect(() => {
@@ -46,14 +61,23 @@ export default function GestaoAdmStoriesLotes() {
   }, [competencia, lojas]);
 
   const lotesFiltrados = useMemo(() => {
-    let result = getLotes(competencia, lojaFiltro !== 'todas' ? lojaFiltro : undefined);
+    let result = getLotes(competencia, lojaFiltro || undefined);
     if (statusFiltro !== 'todos') result = result.filter(l => l.status === statusFiltro);
+    // Filtro por período
+    if (dataInicio || dataFim) {
+      result = result.filter(l => {
+        const dataLote = parseISO(l.data);
+        if (dataInicio && dataLote < dataInicio) return false;
+        if (dataFim && dataLote > dataFim) return false;
+        return true;
+      });
+    }
     return result;
-  }, [competencia, lojaFiltro, statusFiltro]);
+  }, [competencia, lojaFiltro, statusFiltro, dataInicio, dataFim]);
 
   // Resumo
   const resumo = useMemo(() => {
-    const all = getLotes(competencia, lojaFiltro !== 'todas' ? lojaFiltro : undefined);
+    const all = getLotes(competencia, lojaFiltro || undefined);
     const totalVendas = all.reduce((s, l) => s + l.totalVendas, 0);
     const comStory = all.reduce((s, l) => s + l.vendasComStory, 0);
     const pendentes = all.filter(l => l.status === 'Pendente Conf. Operacional').length;
@@ -81,10 +105,38 @@ export default function GestaoAdmStoriesLotes() {
   return (
     <GestaoAdministrativaLayout title="Lotes de Stories">
       {/* Filtros */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div className="space-y-2">
+          <Label>Data Início</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dataInicio && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dataInicio ? format(dataInicio, 'dd/MM/yyyy') : 'Selecione'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent mode="single" selected={dataInicio} onSelect={setDataInicio} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+        </div>
+        <div className="space-y-2">
+          <Label>Data Fim</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dataFim && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dataFim ? format(dataFim, 'dd/MM/yyyy') : 'Selecione'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent mode="single" selected={dataFim} onSelect={setDataFim} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+        </div>
         <div className="space-y-2">
           <Label>Competência</Label>
-          <Select value={competencia} onValueChange={setCompetencia}>
+          <Select value={competencia} onValueChange={handleCompetenciaChange}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               {competencias.map(c => (
@@ -95,15 +147,12 @@ export default function GestaoAdmStoriesLotes() {
         </div>
         <div className="space-y-2">
           <Label>Loja</Label>
-          <Select value={lojaFiltro} onValueChange={setLojaFiltro}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as Lojas</SelectItem>
-              {lojas.filter(l => l.ativa && l.tipo === 'Loja').map(l => (
-                <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <AutocompleteLoja
+            value={lojaFiltro}
+            onChange={setLojaFiltro}
+            placeholder="Todas as Lojas"
+            apenasLojasTipoLoja
+          />
         </div>
         <div className="space-y-2">
           <Label>Status</Label>
