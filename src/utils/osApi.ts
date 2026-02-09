@@ -617,12 +617,6 @@ export const addProdutoPendente = (
   // Gerar ID único usando o sistema centralizado
   const newId = generateProductId();
   
-  // Validar que o ID não está duplicado
-  if (isProductIdRegistered(newId)) {
-    console.error(`Erro de rastreabilidade – ID duplicado detectado: ${newId}`);
-    throw new Error(`Erro de rastreabilidade – ID duplicado detectado: ${newId}`);
-  }
-  
   const newProduto: ProdutoPendente = {
     ...produto,
     id: newId,
