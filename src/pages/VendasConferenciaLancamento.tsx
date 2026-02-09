@@ -724,6 +724,43 @@ export default function VendasConferenciaLancamento() {
                 </div>
               </div>
 
+              {/* Produtos */}
+              {vendaSelecionada.itens && vendaSelecionada.itens.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Produtos:</p>
+                  <div className="space-y-1">
+                    {vendaSelecionada.itens.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm">
+                        <div>
+                          <span className="font-medium">{item.produto}</span>
+                          {item.imei && <span className="text-muted-foreground ml-2">IMEI: {item.imei}</span>}
+                        </div>
+                        <span className="font-medium">{formatCurrency(item.valorVenda)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Acessórios */}
+              {vendaSelecionada.acessorios && vendaSelecionada.acessorios.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Acessórios:</p>
+                  <div className="space-y-1">
+                    {vendaSelecionada.acessorios.map((acess, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm">
+                        <div>
+                          <span className="font-medium">{acess.descricao}</span>
+                          <span className="text-muted-foreground ml-2">Qtd: {acess.quantidade}</span>
+                          <span className="text-muted-foreground ml-2">Unit: {formatCurrency(acess.valorUnitario)}</span>
+                        </div>
+                        <span className="font-medium">{formatCurrency(acess.valorTotal)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Comprovantes de Pagamento */}
               {vendaSelecionada.pagamentos && vendaSelecionada.pagamentos.length > 0 && (
                 <div className="space-y-2">

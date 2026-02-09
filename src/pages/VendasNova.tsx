@@ -879,6 +879,7 @@ export default function VendasNova() {
       taxaEntrega,
       motoboyId: tipoRetirada === 'Entrega' ? motoboyId : undefined,
       itens,
+      acessorios: acessoriosVenda,
       tradeIns,
       pagamentos,
       subtotal,
@@ -961,6 +962,7 @@ export default function VendasNova() {
       taxaEntrega,
       motoboyId: tipoRetirada === 'Entrega' ? motoboyId : undefined,
       itens,
+      acessorios: acessoriosVenda,
       tradeIns,
       pagamentos: hasValidDowngrade ? [] : pagamentos, // Sem pagamentos em Downgrade
       subtotal,
