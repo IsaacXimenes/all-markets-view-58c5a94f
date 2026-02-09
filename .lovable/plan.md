@@ -1,96 +1,70 @@
 
 
-# Plano: Comprovantes nas Conferencias, Coluna Loja e Stories
+# Plano: Coluna "Status do Aparelho" no Estoque
 
-## 1. Comprovante visivel nas telas de Conferencia e Detalhes da Venda
+## Objetivo
 
-Os comprovantes ja sao salvos corretamente no objeto `Pagamento` (campos `comprovante` e `comprovanteNome`). O problema e que algumas telas nao exibem essa informacao.
+Adicionar uma nova coluna "Status" na tabela de Aparelhos do Estoque que exibe o estado atual do dispositivo: Disponivel, Vendido, Em Movimentacao, Emprestado, Retirada de Pecas. Atualmente, quando um aparelho e vendido, a coluna "Loja" esta sendo sobrescrita para "Vendido", o que e incorreto -- a loja original deve ser preservada.
 
-### Conferencia - Lancamento (`VendasConferenciaLancamento.tsx`)
-- A tabela principal nao tem coluna de comprovante (o modal de aprovacao ja exibe)
-- A conferencia de lancamento e uma listagem de vendas, nao de pagamentos individuais - portanto o comprovante ja esta visivel ao clicar em "Conferir" (modal de aprovacao, linhas 728-749)
-- **Nenhuma alteracao necessaria** nesta tela, pois o fluxo correto e: clicar em Conferir > ver comprovantes no modal
+## Como funciona hoje (problema)
 
-### Conferencia - Gestor (`VendasConferenciaGestorDetalhes.tsx`)
-- Ja exibe comprovantes na tabela de pagamentos (linhas 159-173)
-- **Nenhuma alteracao necessaria**
+- Ao vender, `quantidade` vai para 0 e `statusNota` muda para "Concluido", mas nao ha campo dedicado para o status do aparelho
+- Badges individuais de "Em movimentacao", "Emprestimo", "Retirada de Pecas" ja existem no campo Produto, mas ficam misturados com o nome do modelo
+- Nao ha indicacao visual clara de "Vendido" ou "Disponivel"
 
-### Conferencia - Financeiro (`FinanceiroConferencia.tsx`)
-- Ja exibe badge "Contem Anexo" na tabela e comprovante no detalhamento lateral
-- **Nenhuma alteracao necessaria**
+## Alteracoes
 
-### Detalhes da Venda (`VendaDetalhes.tsx`)
-- **NAO exibe comprovantes** na tabela de pagamentos (linhas 360-378)
-- Adicionar coluna "Comprovante" na tabela de pagamentos usando o componente `ComprovantePreview`
-- Importar `ComprovantePreview` e `ComprovanteBadgeSemAnexo`
+### 1. Novo campo `statusAparelho` na interface Produto (`src/utils/estoqueApi.ts`)
 
-## 2. Coluna de Loja na Conferencia Diaria (`GestaoAdministrativa.tsx`)
+Adicionar campo opcional na interface:
 
-A tabela de Conferencia Diaria atualmente nao exibe a loja, pois os dados sao consolidados por dia sem informacao de loja individual.
+```text
+statusAparelho?: 'Disponível' | 'Vendido' | 'Em movimentação' | 'Empréstimo - Assistência' | 'Retirada de Peças' | 'Bloqueado';
+```
 
-**Problema na API**: A funcao `consolidarVendasPorDia` agrupa vendas por data, mas nao por loja. Quando o filtro e "todas", todas as lojas sao misturadas em um unico registro por dia.
+Este campo sera derivado/calculado, nao armazenado diretamente. Uma funcao helper determinara o status baseado nos campos existentes:
 
-**Solucao**: Alterar a consolidacao para agrupar por **dia + loja**, gerando linhas separadas para cada loja em cada dia. Adicionar coluna "Loja" na tabela.
+- `quantidade === 0` e `statusNota === 'Concluído'` -> "Vendido"
+- `statusMovimentacao === 'Em movimentação'` -> "Em movimentacao"
+- `statusEmprestimo === 'Empréstimo - Assistência'` -> "Emprestimo - Assistencia"
+- `statusRetiradaPecas` presente e diferente de null/Cancelada -> "Retirada de Pecas"
+- `bloqueadoEmVendaId` presente -> "Bloqueado"
+- Caso contrario -> "Disponivel"
 
-### Alteracoes em `gestaoAdministrativaApi.ts`:
-- Modificar `consolidarVendasPorDia` para agrupar por `data + lojaId` quando `lojaId === 'todas'`
-- Adicionar campo `lojaNome` na interface `ConferenciaDiaria`
-- Cada linha da tabela representara um dia de uma loja especifica
+### 2. Funcao helper `getStatusAparelho` (`src/utils/estoqueApi.ts`)
 
-### Alteracoes em `GestaoAdministrativa.tsx`:
-- Adicionar coluna "Loja" na tabela entre "Data" e "Status"
-- Exibir o nome da loja em cada linha
+```text
+export const getStatusAparelho = (produto: Produto): string => {
+  if (produto.quantidade === 0 && produto.statusNota === 'Concluído') return 'Vendido';
+  if (produto.statusMovimentacao === 'Em movimentação') return 'Em movimentação';
+  if (produto.statusEmprestimo === 'Empréstimo - Assistência') return 'Empréstimo';
+  if (produto.statusRetiradaPecas && produto.statusRetiradaPecas !== 'Cancelada') return 'Retirada de Peças';
+  if (produto.bloqueadoEmVendaId) return 'Bloqueado';
+  return 'Disponível';
+};
+```
 
-## 3. Vendas novas nao aparecem nos Lotes de Stories
+### 3. Coluna "Status" na tabela (`src/pages/EstoqueProdutos.tsx`)
 
-**Causa raiz**: A funcao `gerarLotesDiarios` (linha 110 de `storiesMonitoramentoApi.ts`) faz `if (existentes.length > 0) return existentes` - uma vez gerados os lotes para uma competencia, **nunca mais sao atualizados** com novas vendas.
+- Adicionar coluna "Status" apos "Produto" e antes de "Loja"
+- Exibir badge colorido conforme o status:
+  - Verde: Disponivel
+  - Vermelho: Vendido
+  - Amarelo: Em movimentacao
+  - Roxo: Emprestimo
+  - Laranja: Retirada de Pecas
+  - Cinza: Bloqueado
+- Remover os badges de status que atualmente ficam dentro da celula "Produto" (Em movimentacao, Emprestimo, Retirada de Pecas) pois agora terao coluna propria
+- A coluna "Loja" continua exibindo o nome real da loja (nunca "Vendido")
 
-**Solucao**: Ao inves de retornar cedo, comparar as vendas atuais com as existentes e adicionar novas vendas aos lotes ja existentes.
+### 4. Filtro por Status (`src/pages/EstoqueProdutos.tsx`)
 
-### Alteracoes em `storiesMonitoramentoApi.ts`:
-- Modificar `gerarLotesDiarios` para:
-  1. Carregar lotes existentes do localStorage
-  2. Para cada dia/loja, verificar se ha vendas novas (comparando IDs de vendas)
-  3. Adicionar vendas novas aos lotes existentes
-  4. Criar novos lotes para combinacoes dia/loja que ainda nao existem
-  5. Atualizar contadores (totalVendas, percentualStories)
-  6. Salvar lotes atualizados
+- Adicionar filtro Select de "Status" nos filtros existentes com opcoes: Todos, Disponivel, Vendido, Em movimentacao, Emprestimo, Retirada de Pecas, Bloqueado
 
-## Resumo dos Arquivos Modificados
+## Resumo dos Arquivos
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/pages/VendaDetalhes.tsx` | Adicionar coluna Comprovante na tabela de pagamentos |
-| `src/utils/gestaoAdministrativaApi.ts` | Agrupar consolidacao por dia+loja, adicionar lojaNome |
-| `src/pages/GestaoAdministrativa.tsx` | Adicionar coluna Loja na tabela de conferencia |
-| `src/utils/storiesMonitoramentoApi.ts` | Atualizar lotes existentes com novas vendas |
-
-## Detalhes Tecnicos
-
-### VendaDetalhes - Comprovante
-```text
-// Adicionar na tabela de pagamentos:
-<TableHead>Comprovante</TableHead>
-// E na celula:
-<TableCell>
-  {pag.comprovante 
-    ? <ComprovantePreview comprovante={pag.comprovante} comprovanteNome={pag.comprovanteNome} />
-    : <ComprovanteBadgeSemAnexo />
-  }
-</TableCell>
-```
-
-### Conferencia Diaria - Agrupamento por Loja
-A chave de persistencia do localStorage passara a incluir o lojaId real de cada linha (nao mais 'todas'), garantindo que checkboxes funcionem corretamente por loja.
-
-### Stories - Sincronizacao de Vendas
-```text
-// Logica atualizada:
-1. Carregar lotes existentes
-2. Para cada dia/loja com vendas atuais:
-   - Se lote existe: comparar vendaIds, adicionar novos
-   - Se lote nao existe: criar novo lote
-3. Atualizar totalVendas de cada lote
-4. Salvar no localStorage
-```
-
+| `src/utils/estoqueApi.ts` | Funcao `getStatusAparelho` |
+| `src/pages/EstoqueProdutos.tsx` | Nova coluna Status, filtro, remover badges duplicados do campo Produto |
+| `src/utils/statusColors.ts` | Adicionar mapeamentos para os novos status (Emprestimo, Bloqueado) se necessario |
