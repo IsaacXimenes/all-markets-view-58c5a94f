@@ -558,13 +558,12 @@ export default function VendasEditar() {
       vendedor &&
       clienteId &&
       origemVenda &&
-      localRetirada &&
       (itens.length > 0 || acessoriosVenda.length > 0) &&
       pagamentoCompleto &&
       !tradeInNaoValidado &&
       motoboyValido
     );
-  }, [lojaVenda, vendedor, clienteId, origemVenda, localRetirada, itens.length, acessoriosVenda.length, valorPendente, tradeInNaoValidado, tipoRetirada, motoboyId]);
+  }, [lojaVenda, vendedor, clienteId, origemVenda, itens.length, acessoriosVenda.length, valorPendente, tradeInNaoValidado, tipoRetirada, motoboyId]);
 
   // Preparar salvamento
   const handlePrepararSalvar = () => {
