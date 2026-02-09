@@ -1,24 +1,27 @@
 import { useState, useMemo, useEffect } from 'react';
 import { GestaoAdministrativaLayout } from '@/components/layout/GestaoAdministrativaLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Camera, TrendingUp, Target, Users, ShieldAlert, Award } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Camera, TrendingUp, Target, Users, ShieldAlert, Award, CalendarIcon } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { cn } from '@/lib/utils';
 import {
   gerarLotesDiarios,
   calcularIndicadores,
-  getCompetenciasDisponiveisStories,
   getPercentualColor,
   META_STORIES_PERCENTUAL
 } from '@/utils/storiesMonitoramentoApi';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 const PIE_COLORS = ['hsl(var(--primary))', 'hsl(0 84% 60%)', 'hsl(38 92% 50%)', 'hsl(142 72% 52%)', 'hsl(280 60% 60%)', 'hsl(200 70% 50%)'];
 
@@ -29,9 +32,10 @@ export default function GestaoAdmStoriesIndicadores() {
   const colaboradorLogado = colaboradores.find(c => c.id === user?.colaborador?.id);
   const ehGestor = colaboradorLogado?.eh_gestor ?? user?.colaborador?.cargo?.toLowerCase().includes('gestor') ?? false;
 
-  const competencias = getCompetenciasDisponiveisStories();
-  const [competencia, setCompetencia] = useState(competencias[0]?.value || format(new Date(), 'yyyy-MM'));
-  const [lojaFiltro, setLojaFiltro] = useState<string>('todas');
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(startOfMonth(new Date()));
+  const [dataFim, setDataFim] = useState<Date | undefined>(endOfMonth(new Date()));
+  const competencia = dataInicio ? format(dataInicio, 'yyyy-MM') : format(new Date(), 'yyyy-MM');
+  const [lojaFiltro, setLojaFiltro] = useState<string>('');
 
   useEffect(() => {
     const lojasAtivas = lojas.filter(l => l.ativa && l.tipo === 'Loja');
@@ -39,7 +43,7 @@ export default function GestaoAdmStoriesIndicadores() {
   }, [competencia, lojas]);
 
   const indicadores = useMemo(() => {
-    return calcularIndicadores(competencia, lojaFiltro !== 'todas' ? lojaFiltro : undefined);
+    return calcularIndicadores(competencia, lojaFiltro || undefined);
   }, [competencia, lojaFiltro]);
 
   if (!ehGestor) {
@@ -60,29 +64,43 @@ export default function GestaoAdmStoriesIndicadores() {
   return (
     <GestaoAdministrativaLayout title="Indicadores de Stories">
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="space-y-2">
-          <Label>Competência</Label>
-          <Select value={competencia} onValueChange={setCompetencia}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {competencias.map(c => (
-                <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>Data Início</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dataInicio && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dataInicio ? format(dataInicio, 'dd/MM/yyyy') : 'Selecione'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent mode="single" selected={dataInicio} onSelect={setDataInicio} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+        </div>
+        <div className="space-y-2">
+          <Label>Data Fim</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dataFim && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dataFim ? format(dataFim, 'dd/MM/yyyy') : 'Selecione'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent mode="single" selected={dataFim} onSelect={setDataFim} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="space-y-2">
           <Label>Loja</Label>
-          <Select value={lojaFiltro} onValueChange={setLojaFiltro}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as Lojas</SelectItem>
-              {lojas.filter(l => l.ativa && l.tipo === 'Loja').map(l => (
-                <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <AutocompleteLoja
+            value={lojaFiltro}
+            onChange={setLojaFiltro}
+            placeholder="Todas as Lojas"
+            apenasLojasTipoLoja
+          />
         </div>
       </div>
 

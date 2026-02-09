@@ -1,20 +1,23 @@
 import { useState, useMemo } from 'react';
 import { GestaoAdministrativaLayout } from '@/components/layout/GestaoAdministrativaLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { History, CheckCircle, XCircle, FileEdit, ShieldAlert } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { History, CheckCircle, XCircle, FileEdit, ShieldAlert, CalendarIcon } from 'lucide-react';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
-import { format } from 'date-fns';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import {
   getLogsAuditoria,
-  getCompetenciasDisponiveis,
   LogAuditoria
 } from '@/utils/gestaoAdministrativaApi';
 
@@ -27,14 +30,26 @@ export default function GestaoAdministrativaLogs() {
   const ehGestor = colaboradorLogado?.eh_gestor ?? user?.colaborador?.cargo?.toLowerCase().includes('gestor') ?? false;
   
   // Estados de filtros
-  const competencias = getCompetenciasDisponiveis();
-  const [competencia, setCompetencia] = useState<string>('todas');
-  const [lojaId, setLojaId] = useState<string>('todas');
+  const [lojaId, setLojaId] = useState<string>('');
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(startOfMonth(new Date()));
+  const [dataFim, setDataFim] = useState<Date | undefined>(endOfMonth(new Date()));
   
-  // Buscar logs
+  // Buscar logs e filtrar por período
   const logs = useMemo(() => {
-    return getLogsAuditoria(competencia === 'todas' ? undefined : competencia, lojaId);
-  }, [competencia, lojaId]);
+    const competencia = dataInicio ? format(dataInicio, 'yyyy-MM') : undefined;
+    const allLogs = getLogsAuditoria(competencia, lojaId || 'todas');
+    if (!dataInicio && !dataFim) return allLogs;
+    return allLogs.filter(log => {
+      const logDate = new Date(log.dataHora);
+      if (dataInicio && logDate < dataInicio) return false;
+      if (dataFim) {
+        const fimDia = new Date(dataFim);
+        fimDia.setHours(23, 59, 59, 999);
+        if (logDate > fimDia) return false;
+      }
+      return true;
+    });
+  }, [lojaId, dataInicio, dataFim]);
   
   const getLojaNome = (lojaId: string) => {
     if (lojaId === 'todas') return 'Todas as Lojas';
@@ -88,39 +103,43 @@ export default function GestaoAdministrativaLogs() {
   return (
     <GestaoAdministrativaLayout title="Logs de Auditoria">
       {/* Filtros */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="space-y-2">
-          <Label>Competência</Label>
-          <Select value={competencia} onValueChange={setCompetencia}>
-            <SelectTrigger>
-              <SelectValue placeholder="Todas as competências" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as competências</SelectItem>
-              {competencias.map(comp => (
-                <SelectItem key={comp.value} value={comp.value}>
-                  {comp.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>Data Início</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dataInicio && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dataInicio ? format(dataInicio, 'dd/MM/yyyy') : 'Selecione'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent mode="single" selected={dataInicio} onSelect={setDataInicio} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
         </div>
-        
+        <div className="space-y-2">
+          <Label>Data Fim</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dataFim && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dataFim ? format(dataFim, 'dd/MM/yyyy') : 'Selecione'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarComponent mode="single" selected={dataFim} onSelect={setDataFim} initialFocus className="p-3 pointer-events-auto" />
+            </PopoverContent>
+          </Popover>
+        </div>
         <div className="space-y-2">
           <Label>Loja</Label>
-          <Select value={lojaId} onValueChange={setLojaId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione a loja" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todas">Todas as Lojas</SelectItem>
-              {lojas.map(loja => (
-                <SelectItem key={loja.id} value={loja.id}>
-                  {loja.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <AutocompleteLoja
+            value={lojaId}
+            onChange={setLojaId}
+            placeholder="Todas as Lojas"
+            apenasLojasTipoLoja
+          />
         </div>
       </div>
       
