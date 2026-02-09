@@ -23,6 +23,9 @@ export interface TradeInPendente {
   responsavelRecebimentoId?: string;
   responsavelRecebimentoNome?: string;
   observacoesRecebimento?: string;
+  // SLA congelado (preenchido ao finalizar recebimento)
+  slaCongelado?: string;
+  slaFaixaCongelada?: SLAFaixa;
 }
 
 // Mock de dados para desenvolvimento
@@ -157,10 +160,15 @@ export function registrarRecebimento(
   const index = tradeInsPendentes.findIndex(t => t.id === id);
   if (index === -1) return null;
 
+  // Congelar SLA antes de mudar status
+  const sla = calcularSLA(tradeInsPendentes[index].dataVenda);
+
   tradeInsPendentes[index] = {
     ...tradeInsPendentes[index],
     status: 'Recebido',
     dataRecebimento: new Date().toISOString(),
+    slaCongelado: sla.texto,
+    slaFaixaCongelada: sla.faixa,
     ...dados
   };
 
@@ -169,30 +177,42 @@ export function registrarRecebimento(
 
 // ============= FUNÇÕES DE SLA =============
 
+export type SLAFaixa = '0-24 horas' | '24-48 horas' | '48-72 horas' | '72+ horas';
+
 export interface SLAInfo {
   dias: number;
   horas: number;
   texto: string;
   nivel: 'normal' | 'atencao' | 'critico';
+  faixa: SLAFaixa;
 }
 
 export function calcularSLA(dataVenda: string): SLAInfo {
   const diff = Date.now() - new Date(dataVenda).getTime();
+  const horasTotal = diff / (1000 * 60 * 60);
   const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
   const horas = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   
   let nivel: 'normal' | 'atencao' | 'critico' = 'normal';
-  if (dias >= 5) {
+  let faixa: SLAFaixa = '0-24 horas';
+
+  if (horasTotal >= 72) {
     nivel = 'critico';
-  } else if (dias >= 3) {
+    faixa = '72+ horas';
+  } else if (horasTotal >= 48) {
     nivel = 'atencao';
+    faixa = '48-72 horas';
+  } else if (horasTotal >= 24) {
+    nivel = 'normal';
+    faixa = '24-48 horas';
   }
 
   return {
     dias,
     horas,
     texto: `${dias} dias e ${horas} horas`,
-    nivel
+    nivel,
+    faixa
   };
 }
 

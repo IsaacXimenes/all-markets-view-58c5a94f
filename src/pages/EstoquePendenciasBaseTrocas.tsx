@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
@@ -14,7 +15,7 @@ import { ResponsiveCardGrid, ResponsiveFilterGrid, ResponsiveTableContainer } fr
 import { toast } from 'sonner';
 import { 
   Package, Search, Clock, AlertTriangle, CheckCircle2, 
-  Camera, FileText, Eye, ArrowRight, Upload, X, Image
+  Camera, FileText, Eye, ArrowRight, Upload, X, Image, Lock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -27,6 +28,7 @@ import {
   registrarRecebimento,
   getEstatisticasBaseTrocas,
   SLAInfo,
+  SLAFaixa,
   migrarParaProdutosPendentes
 } from '@/utils/baseTrocasPendentesApi';
 import { AnexoTemporario } from '@/components/estoque/BufferAnexos';
@@ -42,6 +44,7 @@ export default function EstoquePendenciasBaseTrocas() {
   const [tradeIns, setTradeIns] = useState<TradeInPendente[]>(getTradeInsPendentes());
   const [buscaGeral, setBuscaGeral] = useState('');
   const [filtroLoja, setFiltroLoja] = useState('');
+  const [filtroSLA, setFiltroSLA] = useState('');
   
   // Modal de recebimento
   const [showRecebimentoModal, setShowRecebimentoModal] = useState(false);
@@ -72,9 +75,13 @@ export default function EstoquePendenciasBaseTrocas() {
         if (!matchModelo && !matchCliente && !matchIMEI && !matchVenda) return false;
       }
       if (filtroLoja && t.lojaVenda !== filtroLoja) return false;
+      if (filtroSLA && filtroSLA !== 'all') {
+        const faixa = t.status === 'Recebido' ? t.slaFaixaCongelada : calcularSLA(t.dataVenda).faixa;
+        if (faixa !== filtroSLA) return false;
+      }
       return true;
     });
-  }, [tradeIns, buscaGeral, filtroLoja]);
+  }, [tradeIns, buscaGeral, filtroLoja, filtroSLA]);
 
   // Abrir modal de recebimento
   const handleAbrirRecebimento = (tradeIn: TradeInPendente) => {
@@ -151,9 +158,7 @@ export default function EstoquePendenciasBaseTrocas() {
             description: `Aparelho migrado para Produtos Pendentes (${produtoMigrado.id}). SLA de Tratativas iniciado.`
           });
         } else {
-          toast.success('Recebimento registrado com sucesso!', {
-            description: 'Aparelho aguardando migração para Produtos Pendentes'
-          });
+          toast.error('Erro ao migrar aparelho para Produtos Pendentes');
         }
         
         // Atualizar lista (mantém todos, incluindo finalizados)
@@ -170,9 +175,19 @@ export default function EstoquePendenciasBaseTrocas() {
     }
   };
 
-  // Componente de SLA com animação
-  const SLABadge = ({ dataVenda }: { dataVenda: string }) => {
-    const sla = calcularSLA(dataVenda);
+  // Componente de SLA com animação (para itens aguardando)
+  const SLABadge = ({ tradeIn }: { tradeIn: TradeInPendente }) => {
+    if (tradeIn.status === 'Recebido') {
+      // SLA congelado
+      return (
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+          <Lock className="h-3.5 w-3.5" />
+          <span>{tradeIn.slaCongelado || '-'}</span>
+        </div>
+      );
+    }
+
+    const sla = calcularSLA(tradeIn.dataVenda);
     
     return (
       <motion.div
@@ -186,7 +201,7 @@ export default function EstoquePendenciasBaseTrocas() {
         )}
       >
         <Clock className="h-3.5 w-3.5" />
-        <span>{sla.texto}</span>
+        <span>{sla.faixa}</span>
         {sla.nivel === 'critico' && (
           <motion.div
             animate={{ scale: [1, 1.2, 1] }}
@@ -261,7 +276,7 @@ export default function EstoquePendenciasBaseTrocas() {
       <Card className="mb-6">
         <CardContent className="p-4">
           <ResponsiveFilterGrid cols={4}>
-            <div className="flex-1 relative col-span-full">
+            <div className="flex-1 relative col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por modelo, cliente, IMEI ou ID da venda..."
@@ -270,6 +285,21 @@ export default function EstoquePendenciasBaseTrocas() {
                 className="pl-10"
               />
             </div>
+            <Select value={filtroSLA} onValueChange={setFiltroSLA}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar SLA" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="0-24 horas">0-24 horas</SelectItem>
+                <SelectItem value="24-48 horas">24-48 horas</SelectItem>
+                <SelectItem value="48-72 horas">48-72 horas</SelectItem>
+                <SelectItem value="72+ horas">72+ horas</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" onClick={() => { setBuscaGeral(''); setFiltroLoja(''); setFiltroSLA(''); }}>
+              Limpar
+            </Button>
           </ResponsiveFilterGrid>
         </CardContent>
       </Card>
@@ -317,11 +347,7 @@ export default function EstoquePendenciasBaseTrocas() {
                       {formatarMoeda(tradeIn.tradeIn.valorCompraUsado)}
                     </TableCell>
                     <TableCell>
-                      {tradeIn.status === 'Aguardando Devolução' ? (
-                        <SLABadge dataVenda={tradeIn.dataVenda} />
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
+                      <SLABadge tradeIn={tradeIn} />
                     </TableCell>
                     <TableCell>
                       {tradeIn.status === 'Recebido' ? (
