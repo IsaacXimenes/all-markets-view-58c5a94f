@@ -1,118 +1,167 @@
 
 
-# Plano: Anexo de Comprovante por Metodo de Pagamento
+# Plano: Notificacao Automatica via WhatsApp para Novas Vendas
 
 ## Resumo
 
-Adicionar um campo de anexo (comprovante) em cada registro de pagamento na tela de Nova Venda / Editar Venda, armazenando temporariamente em memoria (Base64). Esses anexos serao visiveis nas telas de Conferencia Lancamento, Conferencia Gestor e Conferencia Financeiro.
+Implementar um sistema de notificacao via WhatsApp que dispara automaticamente ao finalizar uma venda no Financeiro. Inclui uma tela de configuracao no modulo de Cadastros para o gestor definir URL da API, token, destinatario e modelo de mensagem.
 
-## Alteracoes
+## Arquitetura
 
-### 1. Interface `Pagamento` (`src/utils/vendasApi.ts`)
+Como o sistema e 100% frontend (sem backend/Supabase), a chamada HTTP para a API de WhatsApp sera feita diretamente do navegador usando `fetch` com `mode: "no-cors"` (mesmo padrao usado em webhooks Zapier). As configuracoes serao persistidas em localStorage.
 
-Adicionar 2 campos opcionais na interface `Pagamento`:
+**Importante**: Como nao ha backend, o token da API ficara armazenado no localStorage do navegador. Isso e aceitavel para o contexto atual (sistema interno), mas nao seria recomendado para producao publica.
+
+## Estrutura de Dados
+
+### Configuracao WhatsApp (em `src/utils/whatsappNotificacaoApi.ts`)
 
 ```text
-comprovante?: string;       // Base64 ou URL do comprovante
-comprovanteNome?: string;   // Nome do arquivo anexado
+ConfigWhatsApp
+  - habilitado: boolean
+  - apiUrl: string (URL do endpoint da API WhatsApp)
+  - token: string (Token de autenticacao)
+  - destinatario: string (Numero ou ID do grupo)
+  - modeloMensagem: string (Texto com placeholders)
 ```
 
-### 2. Modal de Pagamento (`src/components/vendas/PagamentoQuadro.tsx`)
+### Placeholders disponiveis no modelo de mensagem
 
-**No modal "Adicionar Pagamento":**
-- Adicionar area de upload de comprovante antes do botao "Adicionar", usando o componente `FileUploadComprovante` ja existente no projeto
-- O comprovante fica armazenado no estado `novoPagamento` como Base64 (temporario)
-- Ao clicar "Adicionar", o comprovante e persistido no objeto `Pagamento`
+```text
+{{id_venda}}
+{{loja}}
+{{vendedor}}
+{{cliente}}
+{{valor}}
+{{forma_pagamento}}
+```
 
-**Na tabela de pagamentos:**
-- Adicionar coluna "Comprovante" entre "Descricao" e o botao de remover
-- Exibir icone clicavel (miniatura para imagens, icone de arquivo para PDFs) que abre um modal/dialog de visualizacao
-- Se nao houver comprovante, exibir "-"
+### Mensagem padrao (quando modelo nao configurado)
 
-**Alteracoes especificas:**
-- Import de `FileUploadComprovante` e icones `Paperclip`, `Image`
-- Novos campos em `NovoPagamentoState`: `comprovante`, `comprovanteNome`
-- Na funcao `handleAddPagamento`: copiar `comprovante` e `comprovanteNome` para o objeto `Pagamento`
-- Novo estado para modal de visualizacao do comprovante
-- Nova coluna na tabela com preview clicavel
+```text
+Nova Venda Registrada!
+Valor: R$ {{valor}}
+Loja: {{loja}}
+Vendedor: {{vendedor}}
+Cliente: {{cliente}}
+Pagamento: {{forma_pagamento}}
+ID da Venda: #{{id_venda}}
+```
 
-### 3. Conferencia Lancamento (`src/pages/VendasConferenciaLancamento.tsx`)
+## Arquivos a Criar
 
-**No modal de aprovacao** (quando o usuario clica "Conferir"):
-- Exibir secao "Comprovantes de Pagamento" listando cada pagamento com seu comprovante
-- Para cada pagamento: meio, valor, e miniatura/link do comprovante
-- Se o pagamento nao tiver comprovante, exibir alerta amarelo "Sem comprovante"
+### 1. `src/utils/whatsappNotificacaoApi.ts`
 
-### 4. Conferencia Gestor (`src/pages/VendasConferenciaGestorDetalhes.tsx`)
+API de configuracao e disparo com:
+- Interface `ConfigWhatsApp`
+- `getConfigWhatsApp()` - buscar config do localStorage
+- `salvarConfigWhatsApp(config)` - salvar config no localStorage
+- `enviarNotificacaoVenda(venda)` - montar payload e disparar fetch POST
+- `formatarMensagemVenda(modelo, dadosVenda)` - substituir placeholders
+- `MENSAGEM_PADRAO` - template default com emojis
+- Log de erros no console para monitoramento
 
-**No card de Pagamentos** (linhas 154-169):
-- Adicionar coluna "Comprovante" na tabela de pagamentos
-- Exibir miniatura clicavel ou icone de arquivo
-- Ao clicar, abrir dialog com imagem em tamanho maior ou link para PDF
+### 2. `src/pages/CadastrosConfigWhatsApp.tsx`
 
-### 5. Conferencia Financeiro (`src/pages/FinanceiroConferencia.tsx`)
-
-**Na interface `LinhaConferencia`:**
-- Adicionar campos `comprovante?` e `comprovanteNome?`
-
-**Na tabela de conferencia:**
-- Adicionar coluna "Comprovante" com icone clicavel
-- Ao clicar, abrir dialog de visualizacao
-
-**Na montagem das linhas:**
-- Propagar `comprovante` e `comprovanteNome` do pagamento original da venda para a `LinhaConferencia`
-
-## Detalhes Tecnicos
-
-### Armazenamento
-- Base64 em memoria, mesmo padrao usado pelo `AnexoTradeIn` e pelo Buffer de Anexos do Estoque
-- Volatil: perdido ao recarregar a pagina (F5)
-- Tipos aceitos: image/jpeg, image/png, image/webp, application/pdf
-- Limite: 5MB por arquivo
-
-### Componente Reutilizado
-- `FileUploadComprovante` de `src/components/estoque/FileUploadComprovante.tsx` - ja suporta drag-and-drop, URL externa, preview de imagem e PDF
-
-### Visualizacao nas Conferencias
-- Imagens: exibidas em `<img>` dentro de um Dialog com zoom
-- PDFs: exibidos como link "Abrir PDF" que abre em nova aba via `window.open(dataUrl)`
-- Sem comprovante: badge amarelo "Sem anexo"
+Tela de configuracao com:
+- Switch "Habilitar Notificacoes de Vendas"
+- Campo URL da API WhatsApp (com validacao de URL)
+- Campo Token de Autenticacao (tipo password, com toggle de visibilidade)
+- Campo Numero/ID do Destinatario
+- Campo Modelo da Mensagem (textarea multilinha com instrucoes dos placeholders)
+- Botao "Testar Envio" para validar a integracao
+- Botao "Salvar Configuracoes"
+- Preview da mensagem formatada em tempo real
 
 ## Arquivos a Modificar
 
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/utils/vendasApi.ts` | Adicionar `comprovante?` e `comprovanteNome?` na interface `Pagamento` |
-| `src/components/vendas/PagamentoQuadro.tsx` | Upload no modal + coluna na tabela + dialog de preview |
-| `src/pages/VendasConferenciaLancamento.tsx` | Exibir comprovantes no modal de aprovacao |
-| `src/pages/VendasConferenciaGestorDetalhes.tsx` | Coluna de comprovante na tabela de pagamentos |
-| `src/pages/FinanceiroConferencia.tsx` | Coluna de comprovante na tabela + propagacao dos dados |
+### 1. `src/utils/fluxoVendasApi.ts`
 
-## Fluxo do Usuario
+Na funcao `finalizarVenda` (linha ~435, apos salvar e migrar trade-ins):
+- Importar `enviarNotificacaoVenda` de `whatsappNotificacaoApi`
+- Chamar `enviarNotificacaoVenda(venda)` apos a finalizacao bem-sucedida
+- Envolver em try/catch para nao impactar o fluxo principal em caso de erro
+
+Tambem na funcao `finalizarVendaDowngrade` (se existir logica similar):
+- Adicionar o mesmo disparo de notificacao
+
+### 2. `src/components/layout/CadastrosLayout.tsx`
+
+- Adicionar nova aba "Config. WhatsApp" no array de tabs
+- Rota: `/cadastros/config-whatsapp`
+- Icone: `MessageSquare` do lucide-react
+
+### 3. `src/App.tsx`
+
+- Importar `CadastrosConfigWhatsApp`
+- Adicionar rota `/cadastros/config-whatsapp`
+
+## Fluxo Tecnico
 
 ```text
-1. Vendedor abre "Nova Venda" > Quadro de Pagamentos
+1. Financeiro finaliza venda (finalizarVenda ou finalizarVendaFinanceiro)
    |
    v
-2. Clica "Adicionar Pagamento" > Preenche meio, valor, conta
+2. Sistema verifica se notificacao WhatsApp esta habilitada (localStorage)
+   |-- Nao habilitada -> encerra silenciosamente
    |
    v
-3. Faz upload do comprovante (drag-and-drop ou clique)
-   |  - Aceita JPG, PNG, WebP, PDF (max 5MB)
-   |  - Preview exibido no modal antes de confirmar
+3. Monta payload com dados da venda:
+   - ID, loja, vendedor, cliente, valor, forma de pagamento principal
    |
    v
-4. Clica "Adicionar" > Pagamento salvo com comprovante em Base64
+4. Formata mensagem usando modelo configurado (ou padrao)
    |
    v
-5. Na tabela de pagamentos, coluna "Comprovante" mostra miniatura
+5. Envia POST para a URL da API configurada:
+   - Headers: Authorization: Bearer {token}, Content-Type: application/json
+   - Body: { number: destinatario, text: mensagemFormatada }
+   - mode: "no-cors" (para evitar bloqueio CORS no navegador)
    |
    v
-6. Conferencia Lancamento: modal exibe comprovantes de cada pagamento
-   |
-   v
-7. Conferencia Gestor: tabela de pagamentos com coluna comprovante
-   |
-   v
-8. Conferencia Financeiro: tabela com coluna comprovante por linha
+6. Resultado logado no console (sucesso ou erro)
+   - Falhas NAO bloqueiam a finalizacao da venda
 ```
+
+## Detalhes de Implementacao
+
+### Chamada HTTP
+
+```text
+fetch(apiUrl, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + token  (se token configurado)
+  },
+  mode: 'no-cors',
+  body: JSON.stringify({
+    number: destinatario,
+    text: mensagemFormatada
+  })
+})
+```
+
+Nota: Com `mode: "no-cors"`, a resposta nao sera legivel (opaque response). O sistema exibira mensagem informativa de que a requisicao foi enviada e o usuario deve verificar no painel da API WhatsApp.
+
+### Validacao de Campos
+
+- URL: verificar se comeca com `https://`
+- Destinatario: aceitar formato `5511999999999` (apenas numeros, com DDD)
+- Token: campo obrigatorio se a API exigir
+- Modelo: opcional (usa padrao se vazio)
+
+### Botao "Testar Envio"
+
+Envia uma mensagem de teste com dados ficticios para validar que a integracao esta funcionando antes de ativar em producao.
+
+## Pontos de Atencao
+
+1. **Sem backend**: A chamada e feita direto do navegador. Algumas APIs de WhatsApp podem bloquear requisicoes de origens desconhecidas (CORS). O `no-cors` mitiga isso mas impede leitura da resposta.
+
+2. **Seguranca**: O token fica no localStorage. Aceitavel para sistema interno, mas deve ser documentado.
+
+3. **Formato do payload**: O corpo da requisicao segue um formato generico (`number` + `text`). O usuario pode precisar ajustar conforme a API especifica (Evolution API, Z-API, Twilio, etc.).
+
+4. **Nao bloqueante**: Erros no envio da notificacao nunca impedem a finalizacao da venda.
+
