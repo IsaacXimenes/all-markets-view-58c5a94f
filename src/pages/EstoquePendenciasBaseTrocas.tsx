@@ -15,7 +15,7 @@ import { ResponsiveCardGrid, ResponsiveFilterGrid, ResponsiveTableContainer } fr
 import { toast } from 'sonner';
 import { 
   Package, Search, Clock, AlertTriangle, CheckCircle2, 
-  Camera, FileText, Eye, ArrowRight, Upload, X, Image, Lock
+  Camera, FileText, Eye, ArrowRight, Upload, X, Image, Lock, Download
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -38,13 +38,17 @@ import { cn } from '@/lib/utils';
 
 export default function EstoquePendenciasBaseTrocas() {
   const navigate = useNavigate();
-  const { obterNomeLoja, obterNomeColaborador } = useCadastroStore();
+  const { obterNomeLoja, obterNomeColaborador, obterLojasAtivas, obterColaboradoresAtivos } = useCadastroStore();
   const { user } = useAuthStore();
   
   const [tradeIns, setTradeIns] = useState<TradeInPendente[]>(getTradeInsPendentes());
-  const [buscaGeral, setBuscaGeral] = useState('');
+  const [buscaIMEI, setBuscaIMEI] = useState('');
   const [filtroLoja, setFiltroLoja] = useState('');
+  const [filtroVendedor, setFiltroVendedor] = useState('');
   const [filtroSLA, setFiltroSLA] = useState('');
+  
+  const lojas = useMemo(() => obterLojasAtivas(), []);
+  const colaboradores = useMemo(() => obterColaboradoresAtivos(), []);
   
   // Modal de recebimento
   const [showRecebimentoModal, setShowRecebimentoModal] = useState(false);
@@ -66,22 +70,48 @@ export default function EstoquePendenciasBaseTrocas() {
   // Filtrar trade-ins
   const tradeInsFiltrados = useMemo(() => {
     return tradeIns.filter(t => {
-      if (buscaGeral) {
-        const termo = buscaGeral.toLowerCase();
-        const matchModelo = t.tradeIn.modelo.toLowerCase().includes(termo);
-        const matchCliente = t.clienteNome.toLowerCase().includes(termo);
-        const matchIMEI = t.tradeIn.imei.replace(/-/g, '').includes(termo.replace(/-/g, ''));
-        const matchVenda = t.vendaId.toLowerCase().includes(termo);
-        if (!matchModelo && !matchCliente && !matchIMEI && !matchVenda) return false;
+      if (buscaIMEI) {
+        const termo = buscaIMEI.replace(/-/g, '').toLowerCase();
+        if (!t.tradeIn.imei.replace(/-/g, '').toLowerCase().includes(termo)) return false;
       }
-      if (filtroLoja && t.lojaVenda !== filtroLoja) return false;
+      if (filtroLoja && filtroLoja !== 'all' && t.lojaVenda !== filtroLoja) return false;
+      if (filtroVendedor && filtroVendedor !== 'all' && t.vendedorId !== filtroVendedor) return false;
       if (filtroSLA && filtroSLA !== 'all') {
         const faixa = t.status === 'Recebido' ? t.slaFaixaCongelada : calcularSLA(t.dataVenda).faixa;
         if (faixa !== filtroSLA) return false;
       }
       return true;
     });
-  }, [tradeIns, buscaGeral, filtroLoja, filtroSLA]);
+  }, [tradeIns, buscaIMEI, filtroLoja, filtroVendedor, filtroSLA]);
+
+  // Exportar CSV
+  const handleExportarCSV = () => {
+    const headers = ['Modelo', 'IMEI', 'Cliente', 'ID Venda', 'Loja', 'Data/Hora', 'Vendedor', 'Valor', 'SLA', 'Status'];
+    const rows = tradeInsFiltrados.map(t => {
+      const sla = t.status === 'Recebido' ? (t.slaCongelado || '-') : calcularSLA(t.dataVenda).texto;
+      return [
+        t.tradeIn.modelo,
+        t.tradeIn.imei,
+        t.clienteNome,
+        t.vendaId,
+        obterNomeLoja(t.lojaVenda),
+        formatDateTime(t.dataVenda),
+        t.vendedorNome || obterNomeColaborador(t.vendedorId),
+        formatarMoeda(t.tradeIn.valorCompraUsado),
+        sla,
+        t.status === 'Recebido' ? 'Finalizado' : 'Aguardando'
+      ];
+    });
+    const csvContent = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `base-trocas-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success('Dados exportados com sucesso!');
+  };
 
   // Abrir modal de recebimento
   const handleAbrirRecebimento = (tradeIn: TradeInPendente) => {
@@ -280,16 +310,38 @@ export default function EstoquePendenciasBaseTrocas() {
       {/* Filtros */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <ResponsiveFilterGrid cols={4}>
-            <div className="flex-1 relative col-span-2">
+          <ResponsiveFilterGrid cols={5}>
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por modelo, cliente, IMEI ou ID da venda..."
-                value={buscaGeral}
-                onChange={(e) => setBuscaGeral(e.target.value)}
+                placeholder="Buscar IMEI..."
+                value={buscaIMEI}
+                onChange={(e) => setBuscaIMEI(e.target.value)}
                 className="pl-10"
               />
             </div>
+            <Select value={filtroLoja} onValueChange={setFiltroLoja}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar Loja" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as Lojas</SelectItem>
+                {lojas.map(loja => (
+                  <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filtroVendedor} onValueChange={setFiltroVendedor}>
+              <SelectTrigger>
+                <SelectValue placeholder="Filtrar Vendedor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Vendedores</SelectItem>
+                {colaboradores.map(col => (
+                  <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={filtroSLA} onValueChange={setFiltroSLA}>
               <SelectTrigger>
                 <SelectValue placeholder="Filtrar SLA" />
@@ -302,9 +354,15 @@ export default function EstoquePendenciasBaseTrocas() {
                 <SelectItem value="72+ horas">72+ horas</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={() => { setBuscaGeral(''); setFiltroLoja(''); setFiltroSLA(''); }}>
-              Limpar
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => { setBuscaIMEI(''); setFiltroLoja(''); setFiltroVendedor(''); setFiltroSLA(''); }}>
+                Limpar
+              </Button>
+              <Button variant="outline" onClick={handleExportarCSV} className="gap-1.5">
+                <Download className="h-4 w-4" />
+                Exportar
+              </Button>
+            </div>
           </ResponsiveFilterGrid>
         </CardContent>
       </Card>
@@ -323,7 +381,7 @@ export default function EstoquePendenciasBaseTrocas() {
                   <TableHead>Loja</TableHead>
                   <TableHead>Data/Hora</TableHead>
                   <TableHead>Vendedor</TableHead>
-                  <TableHead className="text-right">Valor Trade-In</TableHead>
+                  <TableHead className="text-right">Valor</TableHead>
                   <TableHead>SLA Devolução</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
