@@ -693,7 +693,7 @@ export default function VendasConferenciaLancamento() {
 
       {/* Modal de Aprovação */}
       <Dialog open={modalAprovar} onOpenChange={setModalAprovar}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Conferir Lançamento</DialogTitle>
             <DialogDescription>
