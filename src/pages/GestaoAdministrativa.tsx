@@ -21,7 +21,7 @@ import { useAuthStore } from '@/store/authStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { toast } from 'sonner';
-import { format, startOfMonth, endOfMonth, parseISO, parse } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import {
@@ -52,8 +52,12 @@ export default function GestaoAdministrativa() {
   const [competencia, setCompetencia] = useState(format(new Date(), 'yyyy-MM'));
   const [lojaId, setLojaId] = useState<string>('');
   const [vendedorId, setVendedorId] = useState<string>('');
-  const [dataInicio, setDataInicio] = useState<Date | undefined>(undefined);
-  const [dataFim, setDataFim] = useState<Date | undefined>(undefined);
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(
+    startOfWeek(new Date(), { weekStartsOn: 0 })
+  );
+  const [dataFim, setDataFim] = useState<Date | undefined>(
+    endOfWeek(new Date(), { weekStartsOn: 0 })
+  );
   
   // Modal de confirmação do checkbox
   const [modalConfirmacaoCheck, setModalConfirmacaoCheck] = useState<{
