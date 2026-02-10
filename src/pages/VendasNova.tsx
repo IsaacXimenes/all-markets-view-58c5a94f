@@ -2702,9 +2702,9 @@ export default function VendasNova() {
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Selecionar Produto</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-hidden flex flex-col space-y-4">
             {/* Tabs para Estoque e Pendentes */}
-            <div className="flex border-b">
+            <div className="flex border-b flex-shrink-0">
               <button
                 className={`px-4 py-2 font-medium border-b-2 transition-colors ${
                   !showPendentesTab 
@@ -2727,12 +2727,12 @@ export default function VendasNova() {
               </button>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
               <Input 
                 placeholder="Buscar por IMEI..."
                 value={buscaProduto}
                 onChange={(e) => setBuscaProduto(e.target.value)}
-                className="w-[200px]"
+                className="sm:w-[200px]"
               />
               <Input 
                 placeholder="Buscar por modelo..."
@@ -2741,7 +2741,7 @@ export default function VendasNova() {
                 className="flex-1"
               />
               <Select value={filtroLojaProduto || 'all'} onValueChange={(val) => setFiltroLojaProduto(val === 'all' ? '' : val)}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="sm:w-[200px]">
                   <SelectValue placeholder="Todas as Lojas" />
                 </SelectTrigger>
                 <SelectContent>
