@@ -7,6 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ResponsiveTableContainer, ResponsiveFilterGrid } from '@/components/ui/ResponsiveContainers';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
@@ -74,6 +76,8 @@ export default function EstoqueMovimentacoesMatriz() {
   
   // Estados da tabela e filtros
   const [filtroStatus, setFiltroStatus] = useState<string>('');
+  const [filtroDataInicio, setFiltroDataInicio] = useState('');
+  const [filtroDataFim, setFiltroDataFim] = useState('');
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoMatriz[]>([]);
   
   // Refresh
@@ -92,8 +96,16 @@ export default function EstoqueMovimentacoesMatriz() {
     if (filtroStatus) {
       resultado = resultado.filter(m => m.statusMovimentacao === filtroStatus);
     }
+    if (filtroDataInicio) {
+      resultado = resultado.filter(m => new Date(m.dataHoraLancamento) >= new Date(filtroDataInicio));
+    }
+    if (filtroDataFim) {
+      const fim = new Date(filtroDataFim);
+      fim.setHours(23, 59, 59, 999);
+      resultado = resultado.filter(m => new Date(m.dataHoraLancamento) <= fim);
+    }
     return resultado;
-  }, [movimentacoes, filtroStatus]);
+  }, [movimentacoes, filtroStatus, filtroDataInicio, filtroDataFim]);
   
   // Navegar para detalhes da movimentação
   const handleAbrirDetalhes = (movId: string) => {
@@ -137,6 +149,8 @@ export default function EstoqueMovimentacoesMatriz() {
   // Limpar filtros
   const handleLimparFiltros = () => {
     setFiltroStatus('');
+    setFiltroDataInicio('');
+    setFiltroDataFim('');
   };
 
   return (
@@ -145,9 +159,25 @@ export default function EstoqueMovimentacoesMatriz() {
         {/* Barra de filtros */}
         <Card>
           <CardContent className="pt-4">
-            <ResponsiveFilterGrid cols={4}>
+            <ResponsiveFilterGrid cols={5}>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
+                <Label className="text-sm font-medium">Data Inicial</Label>
+                <Input
+                  type="date"
+                  value={filtroDataInicio}
+                  onChange={(e) => setFiltroDataInicio(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Data Final</Label>
+                <Input
+                  type="date"
+                  value={filtroDataFim}
+                  onChange={(e) => setFiltroDataFim(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Status</Label>
                 <Select value={filtroStatus} onValueChange={setFiltroStatus}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todos os status" />

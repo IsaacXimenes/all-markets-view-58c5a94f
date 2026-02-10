@@ -374,7 +374,7 @@ export default function EstoquePendenciasBaseTrocas() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Modelo</TableHead>
+                  <TableHead className="sticky left-0 z-20 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Produto</TableHead>
                   <TableHead>IMEI</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>ID Venda</TableHead>
@@ -395,7 +395,7 @@ export default function EstoquePendenciasBaseTrocas() {
                       tradeIn.status === 'Recebido' && 'bg-green-500/10'
                     )}
                   >
-                    <TableCell className="font-medium">{tradeIn.tradeIn.modelo}</TableCell>
+                    <TableCell className="font-medium sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{tradeIn.tradeIn.modelo}</TableCell>
                     <TableCell className="font-mono text-sm">{displayIMEI(tradeIn.tradeIn.imei)}</TableCell>
                     <TableCell>{tradeIn.clienteNome}</TableCell>
                     <TableCell>

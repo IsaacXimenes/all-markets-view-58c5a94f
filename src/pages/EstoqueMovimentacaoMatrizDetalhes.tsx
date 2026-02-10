@@ -35,6 +35,7 @@ import {
   MovimentacaoMatrizItem
 } from '@/utils/estoqueApi';
 import { formatIMEI } from '@/utils/imeiMask';
+import { cn } from '@/lib/utils';
 import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 
 // Timer Regressivo
@@ -542,11 +543,23 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
                   {itensPendentes.map(item => (
                     <div 
                       key={item.aparelhoId}
-                      className="p-2 text-sm bg-muted rounded cursor-pointer hover:bg-muted/80"
+                      className={cn(
+                        "p-2 text-sm rounded cursor-pointer transition-colors border",
+                        imeiDevolucao.replace(/\D/g, '') === item.imei
+                          ? "bg-primary/15 border-primary ring-1 ring-primary/30"
+                          : "bg-muted border-transparent hover:bg-muted/80"
+                      )}
                       onClick={() => setImeiDevolucao(formatIMEI(item.imei))}
                     >
-                      <span className="font-medium">{item.modelo}</span>
-                      <span className="text-muted-foreground ml-2 font-mono text-xs">{formatIMEI(item.imei)}</span>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-medium">{item.modelo}</span>
+                          <span className="text-muted-foreground ml-2 font-mono text-xs">{formatIMEI(item.imei)}</span>
+                        </div>
+                        {imeiDevolucao.replace(/\D/g, '') === item.imei && (
+                          <CheckCircle className="h-4 w-4 text-primary" />
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

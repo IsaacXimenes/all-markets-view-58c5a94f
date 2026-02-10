@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -294,68 +295,83 @@ export default function EstoqueMovimentacoes() {
   return (
     <EstoqueLayout title="Movimentações - Aparelhos">
       <div className="space-y-4">
-        <div className="flex flex-wrap gap-4">
-          <AutocompleteLoja
-            value={origemFilter === 'todas' ? '' : origemFilter}
-            onChange={(v) => setOrigemFilter(v || 'todas')}
-            placeholder="Todas as origens"
-          />
+        <Card>
+          <CardContent className="pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Origem</Label>
+                <AutocompleteLoja
+                  value={origemFilter === 'todas' ? '' : origemFilter}
+                  onChange={(v) => setOrigemFilter(v || 'todas')}
+                  placeholder="Todas as origens"
+                />
+              </div>
 
-          <AutocompleteLoja
-            value={destinoFilter === 'todas' ? '' : destinoFilter}
-            onChange={(v) => setDestinoFilter(v || 'todas')}
-            placeholder="Todos os destinos"
-          />
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Destino</Label>
+                <AutocompleteLoja
+                  value={destinoFilter === 'todas' ? '' : destinoFilter}
+                  onChange={(v) => setDestinoFilter(v || 'todas')}
+                  placeholder="Todos os destinos"
+                />
+              </div>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos status</SelectItem>
-              <SelectItem value="Pendente">Pendente</SelectItem>
-              <SelectItem value="Recebido">Recebido</SelectItem>
-            </SelectContent>
-          </Select>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Status</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos status</SelectItem>
+                    <SelectItem value="Pendente">Pendente</SelectItem>
+                    <SelectItem value="Recebido">Recebido</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="flex gap-2 items-center">
-            <Input
-              placeholder="Filtrar por IMEI..."
-              value={imeiFilter}
-              onChange={(e) => setImeiFilter(e.target.value)}
-              className="w-[180px]"
-            />
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setShowScanner(true)}
-              title="Escanear IMEI"
-            >
-              <Camera className="h-4 w-4" />
-            </Button>
-          </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">IMEI</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Filtrar por IMEI..."
+                    value={imeiFilter}
+                    onChange={(e) => setImeiFilter(e.target.value)}
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => setShowScanner(true)}
+                    title="Escanear IMEI"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
 
-          <Button 
-            variant="ghost" 
-            onClick={() => {
-              setOrigemFilter('todas');
-              setDestinoFilter('todas');
-              setStatusFilter('todos');
-              setImeiFilter('');
-            }}
-          >
-            <X className="mr-2 h-4 w-4" />
-            Limpar
-          </Button>
-
-          <div className="ml-auto flex gap-2">
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Registrar Nova Movimentação
+              <div className="flex items-end">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setOrigemFilter('todas');
+                    setDestinoFilter('todas');
+                    setStatusFilter('todos');
+                    setImeiFilter('');
+                  }}
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Limpar
                 </Button>
-              </DialogTrigger>
+              </div>
+
+              <div className="flex items-end gap-2 justify-end">
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Nova Movimentação
+                    </Button>
+                  </DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Registrar Movimentação</DialogTitle>
@@ -498,14 +514,16 @@ export default function EstoqueMovimentacoes() {
               <Download className="mr-2 h-4 w-4" />
               Exportar CSV
             </Button>
-          </div>
-        </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <ResponsiveTableContainer>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Modelo</TableHead>
+                <TableHead className="sticky left-0 z-20 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Produto</TableHead>
                 <TableHead>IMEI</TableHead>
                 <TableHead>ID</TableHead>
                 <TableHead>Responsável</TableHead>
@@ -526,7 +544,7 @@ export default function EstoqueMovimentacoes() {
                     mov.status === 'Recebido' && 'bg-green-500/10'
                   )}
                 >
-                  <TableCell>{mov.produto}</TableCell>
+                  <TableCell className="sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{mov.produto}</TableCell>
                   <TableCell className="font-mono text-xs">{formatIMEI(mov.imei)}</TableCell>
                   <TableCell className="font-mono text-xs">{mov.id}</TableCell>
                   <TableCell>{mov.responsavel}</TableCell>
