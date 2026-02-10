@@ -443,6 +443,7 @@ export default function VendasNova() {
   // Cálculo de prejuízo em acessórios
   const prejuizoAcessorios = useMemo(() => {
     const vendaAcessorios = acessoriosVenda.reduce((acc, a) => acc + a.valorTotal, 0);
+    if (vendaAcessorios <= 0) return 0;
     return valorCustoAcessorios > vendaAcessorios ? valorCustoAcessorios - vendaAcessorios : 0;
   }, [acessoriosVenda, valorCustoAcessorios]);
 
