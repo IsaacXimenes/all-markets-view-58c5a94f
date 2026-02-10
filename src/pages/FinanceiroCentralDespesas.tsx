@@ -101,11 +101,11 @@ export default function FinanceiroCentralDespesas() {
   // Filtrar despesas
   const despesasFiltradas = useMemo(() => {
     let result = despesas;
-    if (filtroCompetencia) result = result.filter(d => d.competencia === filtroCompetencia);
+    if (filtroCompetencia && filtroCompetencia !== 'all') result = result.filter(d => d.competencia === filtroCompetencia);
     if (filtroLoja) result = result.filter(d => d.lojaId === filtroLoja);
-    if (filtroCategoria) result = result.filter(d => d.categoria === filtroCategoria);
-    if (filtroStatus) result = result.filter(d => d.status === filtroStatus);
-    if (filtroTipo) result = result.filter(d => d.tipo === filtroTipo);
+    if (filtroCategoria && filtroCategoria !== 'all') result = result.filter(d => d.categoria === filtroCategoria);
+    if (filtroStatus && filtroStatus !== 'all') result = result.filter(d => d.status === filtroStatus);
+    if (filtroTipo && filtroTipo !== 'all') result = result.filter(d => d.tipo === filtroTipo);
     if (buscaGlobal) {
       const busca = buscaGlobal.toLowerCase();
       result = result.filter(d => d.descricao.toLowerCase().includes(busca) || d.categoria.toLowerCase().includes(busca));
