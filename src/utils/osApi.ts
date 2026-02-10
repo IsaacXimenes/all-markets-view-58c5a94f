@@ -57,7 +57,7 @@ export interface ProdutoPendente {
   parecerAssistencia?: ParecerAssistencia;
   timeline: TimelineEntry[];
   custoAssistencia: number;
-  statusGeral: 'Pendente Estoque' | 'Em Análise Assistência' | 'Aguardando Peça' | 'Liberado' | 'Retornado da Assistência' | 'Devolvido para Fornecedor';
+  statusGeral: 'Pendente Estoque' | 'Aguardando Recebimento Assistência' | 'Em Análise Assistência' | 'Aguardando Peça' | 'Liberado' | 'Retornado da Assistência' | 'Devolvido para Fornecedor';
   contadorEncaminhamentos: number;
 }
 
@@ -198,7 +198,7 @@ let produtosPendentes: ProdutoPendente[] = [
       }
     ],
     custoAssistencia: 0,
-    statusGeral: 'Em Análise Assistência',
+    statusGeral: 'Aguardando Recebimento Assistência',
     contadorEncaminhamentos: 1
   },
   {
@@ -243,7 +243,7 @@ let produtosPendentes: ProdutoPendente[] = [
       }
     ],
     custoAssistencia: 0,
-    statusGeral: 'Em Análise Assistência',
+    statusGeral: 'Aguardando Recebimento Assistência',
     contadorEncaminhamentos: 1
   }
 ];
@@ -471,7 +471,7 @@ export const salvarParecerEstoque = (
     return { produto, migrado: true, produtoMigrado };
   } else {
     // Encaminhado para assistência - criar registro na Análise de Tratativas
-    produto.statusGeral = 'Em Análise Assistência';
+    produto.statusGeral = 'Aguardando Recebimento Assistência';
     
     // Adicionar à Análise de Tratativas
     try {

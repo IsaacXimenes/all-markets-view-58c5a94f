@@ -49,6 +49,7 @@ import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
 // Tipos de status disponíveis
 type StatusAparelhosPendentes = 
   | 'Pendente Estoque' 
+  | 'Aguardando Recebimento Assistência'
   | 'Em Análise Assistência' 
   | 'Aguardando Peça' 
   | 'Retornado da Assistência' 
@@ -166,6 +167,8 @@ export default function EstoqueProdutosPendentes() {
           return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600">Aguardando Parecer</Badge>;
         }
         return <Badge variant="outline" className="bg-green-500/10 text-green-600">Aprovado</Badge>;
+      case 'Aguardando Recebimento Assistência':
+        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600">Aguard. Recebimento</Badge>;
       case 'Em Análise Assistência':
         return <Badge variant="outline" className="bg-accent text-accent-foreground">Em Assistência</Badge>;
       case 'Aguardando Peça':
@@ -245,7 +248,7 @@ export default function EstoqueProdutosPendentes() {
   const stats = {
     totalPendentes: filteredProdutos.length,
     pendenteEstoque: filteredProdutos.filter(p => p.statusGeral === 'Pendente Estoque').length,
-    emAssistencia: filteredProdutos.filter(p => p.statusGeral === 'Em Análise Assistência').length,
+    emAssistencia: filteredProdutos.filter(p => p.statusGeral === 'Em Análise Assistência' || p.statusGeral === 'Aguardando Recebimento Assistência').length,
     aguardandoPeca: filteredProdutos.filter(p => p.statusGeral === 'Aguardando Peça').length,
     retornados: filteredProdutos.filter(p => p.statusGeral === 'Retornado da Assistência').length,
     devolvidos: filteredProdutos.filter(p => p.statusGeral === 'Devolvido para Fornecedor').length,

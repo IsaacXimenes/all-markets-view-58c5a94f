@@ -20,6 +20,7 @@ import {
   RegistroAnaliseGarantia 
 } from '@/utils/garantiasApi';
 import { addOrdemServico } from '@/utils/assistenciaApi';
+import { updateProdutoPendente } from '@/utils/osApi';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 
 export default function OSAnaliseGarantia() {
@@ -142,12 +143,20 @@ export default function OSAnaliseGarantia() {
 
     // Criar OS na tela de Assistência com IDs corretos do CadastroStore
     if (registroAprovado) {
+      // Atualizar statusGeral do produto pendente para 'Em Análise Assistência'
+      // para que apareça em Produtos para Análise
+      if (registroAprovado.origemId) {
+        updateProdutoPendente(registroAprovado.origemId, {
+          statusGeral: 'Em Análise Assistência'
+        });
+      }
+
       addOrdemServico({
         dataHora: new Date().toISOString(),
         clienteId: '',
         setor: registroAprovado.origem === 'Garantia' ? 'GARANTIA' : 'ASSISTÊNCIA',
-        tecnicoId: tecnicoSelecionado, // UUID do técnico selecionado
-        lojaId: lojaSelecionada, // UUID da loja selecionada
+        tecnicoId: tecnicoSelecionado,
+        lojaId: lojaSelecionada,
         status: 'Em serviço',
         pecas: [],
         pagamentos: [],
