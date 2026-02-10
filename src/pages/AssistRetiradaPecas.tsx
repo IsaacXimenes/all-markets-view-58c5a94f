@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   getRetiradasPecas, 
   getEstatisticasRetiradas,
+  calcularSomaPecas,
   RetiradaPecas 
 } from '@/utils/retiradaPecasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -25,7 +26,8 @@ import {
   Wrench, 
   CheckCircle, 
   XCircle,
-  Package
+  Package,
+  TrendingDown
 } from 'lucide-react';
 import { ResponsiveCardGrid, ResponsiveFilterGrid } from '@/components/ui/ResponsiveContainers';
 
@@ -116,7 +118,7 @@ export default function AssistRetiradaPecas() {
     <AssistenciaLayout title="Retirada de Peças">
       <div className="space-y-6">
         {/* Dashboard Cards */}
-        <ResponsiveCardGrid cols={5}>
+        <ResponsiveCardGrid cols={6}>
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
@@ -183,6 +185,38 @@ export default function AssistRetiradaPecas() {
                   <p className="text-sm text-muted-foreground">Valor em Peças</p>
                   <p className="text-xl font-bold truncate" title={formatCurrency(stats.valorTotalPecasGeradas)}>
                     {formatCurrency(stats.valorTotalPecasGeradas)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-red-500/10">
+                  <TrendingDown className="h-5 w-5 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Prejuízo</p>
+                  <p className="text-xl font-bold truncate text-red-600" title={formatCurrency(
+                    retiradas
+                      .filter(r => r.status === 'Concluída')
+                      .reduce((acc, r) => {
+                        const somaPecas = calcularSomaPecas(r.id);
+                        const prejuizo = r.valorCustoAparelho - somaPecas;
+                        return acc + (prejuizo > 0 ? prejuizo : 0);
+                      }, 0)
+                  )}>
+                    {formatCurrency(
+                      retiradas
+                        .filter(r => r.status === 'Concluída')
+                        .reduce((acc, r) => {
+                          const somaPecas = calcularSomaPecas(r.id);
+                          const prejuizo = r.valorCustoAparelho - somaPecas;
+                          return acc + (prejuizo > 0 ? prejuizo : 0);
+                        }, 0)
+                    )}
                   </p>
                 </div>
               </div>
