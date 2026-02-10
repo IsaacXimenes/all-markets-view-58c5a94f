@@ -1,60 +1,37 @@
 
 
-# Plano Revisado: Correções no Assistência e Controle Financeiro na Desmontagem
+# Plano: Filtro IMEI em Produtos para Analise + Permitir Desmonte com Prejuizo
 
 ## Resumo
 
-Tres entregas sem criacao de nova aba no Estoque:
-1. Corrigir filtro de IMEI no modulo de Assistencia
-2. Adicionar coluna e filtro de IMEI na aba existente "Analise de Tratativas" (Assistencia)
-3. Controle financeiro de prejuizo na desmontagem (Retirada de Pecas)
-
-O fluxo Estoque > Aparelhos Pendentes > "Encaminhado para conferencia da Assistencia" ja envia corretamente para a aba existente "Analise de Tratativas" no modulo da Assistencia (`/os/analise-garantia`). Nenhuma nova aba sera criada no Estoque.
+Duas correcoes:
+1. Filtro de IMEI na aba "Produtos para Analise" (OS) nao funciona com mascara
+2. API de Retirada de Pecas bloqueia finalizacao quando valor das pecas e menor que custo do aparelho
 
 ---
 
-## 1. Correcao do Filtro de IMEI na Assistencia
+## 1. Filtro de IMEI em Produtos para Analise
 
-### Arquivo: `src/pages/OSAssistencia.tsx`
-- Linha 52: substituir `filtroIMEI.replace(/-/g, '')` por `unformatIMEI(filtroIMEI)` (remove todos os caracteres nao-digitos, nao apenas hifens)
-- Tambem aplicar `unformatIMEI` no valor do IMEI da peca e no `imeiAparelho` da OS para comparacao consistente
-- Importar `unformatIMEI` de `@/utils/imeiMask`
-
----
-
-## 2. Coluna e Filtro de IMEI na Analise de Tratativas
-
-### Arquivo: `src/pages/OSAnaliseGarantia.tsx`
-- Adicionar filtro de IMEI na area de filtros (input com busca por IMEI)
-- Adicionar coluna "IMEI" na tabela entre "ID" e "Origem"
-- Extrair IMEI da `clienteDescricao` (que ja contem "IMEI: XXXXXXX") ou do registro de origem
-- Filtrar usando `unformatIMEI` para comparacao sem mascara
+### Arquivo: `src/pages/OSProdutosAnalise.tsx`
+- Linha 88: a comparacao atual e `produto.imei.toLowerCase().includes(filters.imei.toLowerCase())` - nao remove mascara
+- Correcao: importar `unformatIMEI` de `@/utils/imeiMask` e comparar usando `unformatIMEI(produto.imei).includes(unformatIMEI(filters.imei))`
+- Tambem aplicar `formatIMEI` no input de IMEI (linha 308) para exibir mascara enquanto digita (consistencia com outras telas)
 
 ---
 
-## 3. Controle Financeiro na Desmontagem
+## 2. Permitir Finalizacao de Desmonte com Prejuizo
 
-### 3.1. Novas colunas na tabela de Retirada de Pecas
-- Arquivo: `src/pages/AssistRetiradaPecas.tsx`
-- Adicionar coluna "Valor Total Pecas": soma dos valores das pecas retiradas
-- Adicionar coluna "Prejuizo": diferenca negativa entre custo do aparelho e valor total das pecas (exibir em vermelho se negativo)
-
-### 3.2. Card de Somatorio de Prejuizo nos detalhes
-- Arquivo: `src/pages/AssistRetiradaPecasDetalhes.tsx`
-- Adicionar Card destacado (fundo vermelho) exibindo:
-  - Custo do Aparelho
-  - Valor Total das Pecas Retiradas
-  - Prejuizo (diferenca)
-- Exibido quando ha pecas registradas e soma das pecas e menor que o custo
+### Arquivo: `src/utils/retiradaPecasApi.ts`
+- Linhas 337-345: remover o bloqueio que impede finalizacao quando `validacao.valido === false`
+- A validacao de custo (`validarCustoRetirada`) permanece como funcao informativa (usada pelo card de prejuizo), mas nao bloqueia mais a finalizacao
+- Manter a validacao de pecas vazias (linha 333) como bloqueio obrigatorio
 
 ---
 
 ## Arquivos a editar
 
-- `src/pages/OSAssistencia.tsx` - correcao filtro IMEI
-- `src/pages/OSAnaliseGarantia.tsx` - coluna e filtro de IMEI
-- `src/pages/AssistRetiradaPecas.tsx` - colunas financeiras
-- `src/pages/AssistRetiradaPecasDetalhes.tsx` - card de prejuizo
+- `src/pages/OSProdutosAnalise.tsx` - correcao filtro IMEI com `unformatIMEI`
+- `src/utils/retiradaPecasApi.ts` - remover bloqueio de custo na finalizacao
 
-Nenhum arquivo novo sera criado. Nenhuma nova aba sera adicionada ao Estoque.
+Nenhum arquivo novo sera criado.
 
