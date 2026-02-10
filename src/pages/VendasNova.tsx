@@ -790,7 +790,7 @@ export default function VendasNova() {
       clienteId &&
       origemVenda &&
       (itens.length > 0 || acessoriosVenda.length > 0) &&
-      valorPendente <= 0 &&
+      valorPendente <= 0.01 &&
       !tradeInNaoValidado &&
       motoboyValido &&
       !temPagamentoSinal && // Não permite registrar venda normal se tem sinal
@@ -2295,9 +2295,15 @@ export default function VendasNova() {
               isMobilePreview ? "grid-cols-2" : "grid-cols-2 md:grid-cols-5 gap-4 mb-4"
             )}>
               <div className={cn("p-2 bg-muted rounded-lg", isMobilePreview && "p-2")}>
-                <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Produtos</p>
-                <p className={cn("font-bold", isMobilePreview ? "text-sm" : "text-xl")}>{formatCurrency(valorProdutos)}</p>
+                <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Aparelhos</p>
+                <p className={cn("font-bold", isMobilePreview ? "text-sm" : "text-xl")}>{formatCurrency(subtotal)}</p>
               </div>
+              {totalAcessorios > 0 && (
+                <div className={cn("p-2 bg-blue-100 dark:bg-blue-950/30 rounded-lg")}>
+                  <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Acessórios</p>
+                  <p className={cn("font-bold text-blue-600", isMobilePreview ? "text-sm" : "text-xl")}>{formatCurrency(totalAcessorios)}</p>
+                </div>
+              )}
               {valorGarantiaExtendida > 0 && (
                 <div className={cn("p-2 bg-purple-100 dark:bg-purple-950/30 rounded-lg")}>
                   <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Garantia Ext.</p>
@@ -2444,8 +2450,8 @@ export default function VendasNova() {
             const isDowngradeMode = hasValidDowngrade;
             const isNormalMode = !temPagamentoSinal && !hasValidDowngrade;
             
-            if (isNormalMode && valorPendente > 0) {
-              camposFaltando.push('Pagamento (valor pendente: ' + formatCurrency(valorPendente) + ')');
+            if (isNormalMode && valorPendente > 0.01) {
+              camposFaltando.push('Pagamento (valor pendente: ' + formatCurrency(Math.abs(valorPendente) <= 0.01 ? 0 : valorPendente) + ')');
             }
             
             if (isSinalMode) {
