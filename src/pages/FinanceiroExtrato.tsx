@@ -21,6 +21,7 @@ export default function FinanceiroExtrato() {
   const [despesas] = useState<Despesa[]>(getDespesas());
 
   // Filtros
+  const [periodoGrafico, setPeriodoGrafico] = useState<'1S' | '2S' | '3S' | '1M'>('1M');
   const [dataInicio, setDataInicio] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
   const [dataFim, setDataFim] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [filtroConta, setFiltroConta] = useState('todas');
@@ -111,12 +112,20 @@ export default function FinanceiroExtrato() {
     };
   }, [movimentacoesFiltradas]);
 
-  // Dados para o gráfico (agrupado por dia, usando movimentações filtradas)
+  // Dias do período do gráfico
+  const diasGrafico = useMemo(() => {
+    const map: Record<typeof periodoGrafico, number> = { '1S': 7, '2S': 14, '3S': 21, '1M': 30 };
+    return map[periodoGrafico];
+  }, [periodoGrafico]);
+
+  // Dados para o gráfico (agrupado por dia)
   const dadosGrafico = useMemo(() => {
+    const limite = subDays(new Date(), diasGrafico);
     const agrupado: Record<string, { data: string; dateISO: string; entradas: number; saidas: number }> = {};
 
-    movimentacoesFiltradas.forEach(mov => {
+    movimentacoes.forEach(mov => {
       const dataMov = parseISO(mov.data);
+      if (dataMov < limite) return;
       const dateISO = mov.data.slice(0, 10);
       const dataFormatada = format(dataMov, 'dd/MM');
       if (!agrupado[dateISO]) {
@@ -132,7 +141,7 @@ export default function FinanceiroExtrato() {
     return Object.values(agrupado)
       .sort((a, b) => a.dateISO.localeCompare(b.dateISO))
       .map(({ dateISO, ...rest }) => rest);
-  }, [movimentacoesFiltradas]);
+  }, [movimentacoes, diasGrafico]);
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -277,11 +286,24 @@ export default function FinanceiroExtrato() {
         {/* Gráfico */}
         {dadosGrafico.length > 0 && (
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
                 Fluxo de Caixa
               </CardTitle>
+              <div className="flex gap-1">
+                {(['1S', '2S', '3S', '1M'] as const).map(p => (
+                  <Button
+                    key={p}
+                    size="sm"
+                    variant={periodoGrafico === p ? 'default' : 'outline'}
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setPeriodoGrafico(p)}
+                  >
+                    {p}
+                  </Button>
+                ))}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="h-64">
