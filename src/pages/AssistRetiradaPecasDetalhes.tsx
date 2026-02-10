@@ -377,7 +377,7 @@ export default function AssistRetiradaPecasDetalhes() {
                 <Button 
                   className="w-full bg-green-500 hover:bg-green-600"
                   onClick={() => abrirConfirmacao('finalizar')}
-                  disabled={!validacao.valido || retirada.pecasRetiradas.length === 0}
+                  disabled={retirada.pecasRetiradas.length === 0}
                 >
                   <Check className="h-4 w-4 mr-2" />
                   Finalizar Desmonte
@@ -431,7 +431,7 @@ export default function AssistRetiradaPecasDetalhes() {
                     <AlertTriangle className="h-5 w-5 text-red-500" />
                   )}
                   <span className={cn("font-medium", validacao.valido ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400")}>
-                    {validacao.valido ? 'Validação OK' : 'Custo não coberto'}
+                    {validacao.valido ? 'Validação OK' : 'Desmonte com prejuízo'}
                   </span>
                 </div>
                 <div className="text-sm space-x-4">
@@ -444,7 +444,7 @@ export default function AssistRetiradaPecasDetalhes() {
               </div>
               {!validacao.valido && (
                 <p className="text-sm text-red-600 dark:text-red-400 mt-2">
-                  O valor total das peças deve cobrir o custo de aquisição do aparelho ({formatCurrency(validacao.custoAparelho)})
+                  O valor total das peças é inferior ao custo do aparelho ({formatCurrency(validacao.custoAparelho)}). O desmonte será finalizado com prejuízo.
                 </p>
               )}
             </div>
