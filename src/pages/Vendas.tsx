@@ -390,7 +390,7 @@ export default function Vendas() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Modelo</TableHead>
+                  <TableHead className="sticky left-0 z-20 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Produto</TableHead>
                   <TableHead>Loja</TableHead>
                   <TableHead>IMEI</TableHead>
                   <TableHead>ID Venda</TableHead>
@@ -442,7 +442,7 @@ export default function Vendas() {
                   
                   return (
                     <TableRow key={venda.id} className={getRowBgClass()}>
-                      <TableCell className="max-w-[200px] truncate" title={modelos}>{modelos || '-'}</TableCell>
+                      <TableCell className="max-w-[200px] truncate sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]" title={modelos}>{modelos || '-'}</TableCell>
                       <TableCell>{getLojaName(venda.lojaVenda)}</TableCell>
                       <TableCell className="font-mono text-xs min-w-[160px]" title={imeis}>{imeis || '-'}</TableCell>
                       <TableCell className="font-medium">{venda.id}</TableCell>
