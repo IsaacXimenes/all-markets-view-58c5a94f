@@ -466,7 +466,11 @@ export default function FinanceiroTetoBancario() {
   // Função auxiliar para obter nome da conta (definida antes do useMemo que a usa)
   const obterNomeConta = useCallback((contaId: string) => {
     const conta = contasFinanceiras.find(c => c.id === contaId);
-    return conta ? `${obterNomeLoja(conta.lojaVinculada)} - ${conta.nome}` : contaId;
+    if (!conta) return contaId;
+    const nomeLoja = obterNomeLoja(conta.lojaVinculada);
+    // Se obterNomeLoja retornou o próprio ID (não encontrou), exibir só o nome da conta
+    if (nomeLoja === conta.lojaVinculada) return conta.nome;
+    return `${nomeLoja} - ${conta.nome}`;
   }, [contasFinanceiras, obterNomeLoja]);
 
   // Criar linhas NFE (espelho de Conferência de Contas - 1 linha por método de pagamento)
