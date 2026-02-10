@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { Download, TrendingUp, TrendingDown, DollarSign, Filter, Calendar } from 'lucide-react';
 import { format, subDays, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { getContas, getPagamentos, getDespesas, Pagamento, Despesa } from '@/utils/financeApi';
 import { ContaFinanceira } from '@/utils/cadastrosApi';
 
@@ -113,21 +113,25 @@ export default function FinanceiroExtrato() {
 
   // Dados para o gráfico (agrupado por dia)
   const dadosGrafico = useMemo(() => {
-    const agrupado: Record<string, { data: string; entradas: number; saidas: number }> = {};
+    const agrupado: Record<string, { data: string; dateISO: string; entradas: number; saidas: number }> = {};
 
     movimentacoesFiltradas.forEach(mov => {
       const dataFormatada = format(parseISO(mov.data), 'dd/MM');
-      if (!agrupado[dataFormatada]) {
-        agrupado[dataFormatada] = { data: dataFormatada, entradas: 0, saidas: 0 };
+      const dateISO = mov.data.slice(0, 10);
+      if (!agrupado[dateISO]) {
+        agrupado[dateISO] = { data: dataFormatada, dateISO, entradas: 0, saidas: 0 };
       }
       if (mov.tipo === 'entrada') {
-        agrupado[dataFormatada].entradas += mov.valor;
+        agrupado[dateISO].entradas += mov.valor;
       } else {
-        agrupado[dataFormatada].saidas += mov.valor;
+        agrupado[dateISO].saidas += mov.valor;
       }
     });
 
-    return Object.values(agrupado).slice(-15); // Últimos 15 dias
+    return Object.values(agrupado)
+      .sort((a, b) => a.dateISO.localeCompare(b.dateISO))
+      .slice(-15)
+      .map(({ dateISO, ...rest }) => rest);
   }, [movimentacoesFiltradas]);
 
   const formatCurrency = (value: number) => {
@@ -282,7 +286,7 @@ export default function FinanceiroExtrato() {
             <CardContent>
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dadosGrafico}>
+                  <LineChart data={dadosGrafico}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="data" />
                     <YAxis 
@@ -295,9 +299,9 @@ export default function FinanceiroExtrato() {
                       labelFormatter={(label) => `Data: ${label}`}
                     />
                     <Legend />
-                    <Bar dataKey="entradas" name="Entradas" fill="#22c55e" />
-                    <Bar dataKey="saidas" name="Saídas" fill="#ef4444" />
-                  </BarChart>
+                    <Line type="monotone" dataKey="entradas" name="Entradas" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="saidas" name="Saídas" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} />
+                  </LineChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
