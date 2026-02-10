@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Download, TrendingUp, TrendingDown, DollarSign, Filter, Calendar } from 'lucide-react';
-import { format, subDays, isWithinInterval, parseISO } from 'date-fns';
+import { format, subDays, startOfDay, endOfDay, isWithinInterval, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { getContas, getPagamentos, getDespesas, Pagamento, Despesa } from '@/utils/financeApi';
@@ -21,9 +21,10 @@ export default function FinanceiroExtrato() {
   const [despesas] = useState<Despesa[]>(getDespesas());
 
   // Filtros
-  const [periodoGrafico, setPeriodoGrafico] = useState<'1S' | '2S' | '3S' | '1M'>('1M');
   const [dataInicio, setDataInicio] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
   const [dataFim, setDataFim] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [graficoDataInicio, setGraficoDataInicio] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [graficoDataFim, setGraficoDataFim] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [filtroConta, setFiltroConta] = useState('todas');
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'entrada' | 'saida'>('todos');
 
@@ -112,20 +113,16 @@ export default function FinanceiroExtrato() {
     };
   }, [movimentacoesFiltradas]);
 
-  // Dias do período do gráfico
-  const diasGrafico = useMemo(() => {
-    const map: Record<typeof periodoGrafico, number> = { '1S': 7, '2S': 14, '3S': 21, '1M': 30 };
-    return map[periodoGrafico];
-  }, [periodoGrafico]);
-
-  // Dados para o gráfico (agrupado por dia)
+  // Dados para o gráfico (agrupado por dia, filtro independente)
   const dadosGrafico = useMemo(() => {
-    const limite = subDays(new Date(), diasGrafico);
     const agrupado: Record<string, { data: string; dateISO: string; entradas: number; saidas: number }> = {};
 
     movimentacoes.forEach(mov => {
       const dataMov = parseISO(mov.data);
-      if (dataMov < limite) return;
+      if (!isWithinInterval(dataMov, {
+        start: startOfDay(parseISO(graficoDataInicio)),
+        end: endOfDay(parseISO(graficoDataFim))
+      })) return;
       const dateISO = mov.data.slice(0, 10);
       const dataFormatada = format(dataMov, 'dd/MM');
       if (!agrupado[dateISO]) {
@@ -141,7 +138,7 @@ export default function FinanceiroExtrato() {
     return Object.values(agrupado)
       .sort((a, b) => a.dateISO.localeCompare(b.dateISO))
       .map(({ dateISO, ...rest }) => rest);
-  }, [movimentacoes, diasGrafico]);
+  }, [movimentacoes, graficoDataInicio, graficoDataFim]);
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -284,25 +281,31 @@ export default function FinanceiroExtrato() {
         </div>
 
         {/* Gráfico */}
-        {dadosGrafico.length > 0 && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
                 Fluxo de Caixa
               </CardTitle>
-              <div className="flex gap-1">
-                {(['1S', '2S', '3S', '1M'] as const).map(p => (
-                  <Button
-                    key={p}
-                    size="sm"
-                    variant={periodoGrafico === p ? 'default' : 'outline'}
-                    className="h-7 px-2 text-xs"
-                    onClick={() => setPeriodoGrafico(p)}
-                  >
-                    {p}
-                  </Button>
-                ))}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <Label className="text-xs whitespace-nowrap">De</Label>
+                  <Input
+                    type="date"
+                    value={graficoDataInicio}
+                    onChange={(e) => setGraficoDataInicio(e.target.value)}
+                    className="h-7 text-xs w-[130px]"
+                  />
+                </div>
+                <div className="flex items-center gap-1">
+                  <Label className="text-xs whitespace-nowrap">Até</Label>
+                  <Input
+                    type="date"
+                    value={graficoDataFim}
+                    onChange={(e) => setGraficoDataFim(e.target.value)}
+                    className="h-7 text-xs w-[130px]"
+                  />
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -328,7 +331,7 @@ export default function FinanceiroExtrato() {
               </div>
             </CardContent>
           </Card>
-        )}
+
 
         {/* Tabela de Movimentações */}
         <Card>
