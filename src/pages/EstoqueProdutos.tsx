@@ -331,12 +331,12 @@ export default function EstoqueProdutos() {
           <Table className="min-w-[1200px]">
             <TableHeader>
               <TableRow>
-                <TableHead>Produto</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead className="sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Produto</TableHead>
                 <TableHead>Loja</TableHead>
                 <TableHead>Venda Recomendada</TableHead>
                 <TableHead>Custo</TableHead>
                 <TableHead>Custo Assist.</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>ID</TableHead>
                 <TableHead>IMEI</TableHead>
                 <TableHead>Tipo</TableHead>
@@ -363,8 +363,8 @@ export default function EstoqueProdutos() {
                   key={produto.id}
                   className={getRowClassByBattery(produto.saudeBateria)}
                 >
-                  {/* Produto */}
-                  <TableCell>
+                  {/* Produto (sticky) */}
+                  <TableCell className={cn("sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]", getRowClassByBattery(produto.saudeBateria) || 'bg-background')}>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium">{produto.modelo}</span>
@@ -378,18 +378,7 @@ export default function EstoqueProdutos() {
                       <span className="text-xs text-muted-foreground">{produto.cor}</span>
                     </div>
                   </TableCell>
-                  {/* Status do Aparelho */}
-                  <TableCell>
-                    {(() => {
-                      const status = getStatusAparelho(produto);
-                      return (
-                        <Badge variant="outline" className={getStatusBadgeClasses(status)}>
-                          {status}
-                        </Badge>
-                      );
-                    })()}
-                  </TableCell>
-                  {/* Loja - Sempre exibe o nome real da loja */}
+                  {/* Loja */}
                   <TableCell className="text-sm">{getLojaNome(produto.lojaAtualId || produto.loja)}</TableCell>
                   {/* Venda Recomendada */}
                   <TableCell>
@@ -440,6 +429,17 @@ export default function EstoqueProdutos() {
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
+                  </TableCell>
+                  {/* Status do Aparelho */}
+                  <TableCell>
+                    {(() => {
+                      const status = getStatusAparelho(produto);
+                      return (
+                        <Badge variant="outline" className={getStatusBadgeClasses(status)}>
+                          {status}
+                        </Badge>
+                      );
+                    })()}
                   </TableCell>
                   {/* ID */}
                   <TableCell className="font-mono text-xs">{produto.id}</TableCell>
