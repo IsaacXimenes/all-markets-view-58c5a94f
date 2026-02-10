@@ -2762,13 +2762,11 @@ export default function VendasNova() {
             
             <div className="flex-1 overflow-y-auto overflow-x-hidden">
               <div className="overflow-x-auto min-w-0">
-                <div className="min-w-[700px]">
             {!showPendentesTab ? (
               /* Aba Produtos Estoque */
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
                     <TableHead>Produto</TableHead>
                     <TableHead>Condição</TableHead>
                     <TableHead>IMEI</TableHead>
@@ -2781,7 +2779,6 @@ export default function VendasNova() {
                 <TableBody>
                   {produtosFiltrados.map(produto => (
                     <TableRow key={produto.id} className={produto.quantidade === 0 ? 'opacity-50' : ''}>
-                      <TableCell className="font-mono text-xs">{produto.id}</TableCell>
                       <TableCell className="font-medium">{produto.modelo}</TableCell>
                       <TableCell>
                         <Badge variant={produto.tipo === 'Novo' ? 'default' : 'secondary'}>
@@ -2820,7 +2817,7 @@ export default function VendasNova() {
                   ))}
                   {produtosFiltrados.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-4 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
                         Nenhum produto disponível nesta loja
                       </TableCell>
                     </TableRow>
@@ -2829,13 +2826,12 @@ export default function VendasNova() {
                   {lojaVenda && produtosOutrasLojas.length > 0 && (
                     <>
                       <TableRow className="bg-muted/50">
-                        <TableCell colSpan={8} className="text-center py-2 font-medium text-muted-foreground">
+                        <TableCell colSpan={7} className="text-center py-2 font-medium text-muted-foreground">
                           📍 Produtos em outras lojas (apenas visualização)
                         </TableCell>
                       </TableRow>
                       {produtosOutrasLojas.map(produto => (
                         <TableRow key={produto.id} className="opacity-60 bg-muted/20">
-                          <TableCell className="font-mono text-xs">{produto.id}</TableCell>
                           <TableCell className="font-medium">{produto.modelo}</TableCell>
                           <TableCell>
                             <Badge variant={produto.tipo === 'Novo' ? 'default' : 'secondary'}>
@@ -2880,7 +2876,6 @@ export default function VendasNova() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
                     <TableHead>Produto</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>Origem</TableHead>
@@ -2897,7 +2892,6 @@ export default function VendasNova() {
                     return true;
                   }).map(produto => (
                     <TableRow key={produto.id}>
-                      <TableCell className="font-mono text-xs">{produto.id}</TableCell>
                       <TableCell className="font-medium">{produto.modelo}</TableCell>
                       <TableCell className="font-mono text-sm">{displayIMEI(produto.imei)}</TableCell>
                       <TableCell>
@@ -2947,7 +2941,6 @@ export default function VendasNova() {
                 </TableBody>
               </Table>
             )}
-                </div>
               </div>
             </div>
           </div>
