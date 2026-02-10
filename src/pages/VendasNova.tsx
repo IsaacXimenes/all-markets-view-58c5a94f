@@ -2767,7 +2767,6 @@ export default function VendasNova() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Produto</TableHead>
-                    <TableHead>Condição</TableHead>
                     <TableHead>IMEI</TableHead>
                     
                     <TableHead className="text-right">Valor Recomendado</TableHead>
@@ -2779,11 +2778,6 @@ export default function VendasNova() {
                   {produtosFiltrados.map(produto => (
                     <TableRow key={produto.id} className={produto.quantidade === 0 ? 'opacity-50' : ''}>
                       <TableCell className="font-medium">{produto.modelo}</TableCell>
-                      <TableCell>
-                        <Badge variant={produto.tipo === 'Novo' ? 'default' : 'secondary'}>
-                          {produto.tipo || 'Semi-novo'}
-                        </Badge>
-                      </TableCell>
                       <TableCell className="font-mono text-sm">{displayIMEI(produto.imei)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(produto.vendaRecomendada || produto.valorVendaSugerido)}</TableCell>
                       <TableCell>{obterNomeLoja(produto.loja)}</TableCell>
@@ -2809,7 +2803,7 @@ export default function VendasNova() {
                   ))}
                   {produtosFiltrados.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
                         Nenhum produto disponível nesta loja
                       </TableCell>
                     </TableRow>
@@ -2818,20 +2812,15 @@ export default function VendasNova() {
                   {lojaVenda && produtosOutrasLojas.length > 0 && (
                     <>
                       <TableRow className="bg-muted/50">
-                        <TableCell colSpan={7} className="text-center py-2 font-medium text-muted-foreground">
+                        <TableCell colSpan={4} className="text-center py-2 font-medium text-muted-foreground">
                           📍 Produtos em outras lojas (apenas visualização)
                         </TableCell>
                       </TableRow>
                       {produtosOutrasLojas.map(produto => (
                         <TableRow key={produto.id} className="opacity-60 bg-muted/20">
                           <TableCell className="font-medium">{produto.modelo}</TableCell>
-                          <TableCell>
-                            <Badge variant={produto.tipo === 'Novo' ? 'default' : 'secondary'}>
-                              {produto.tipo || 'Semi-novo'}
-                            </Badge>
-                          </TableCell>
                           <TableCell className="font-mono text-sm">{displayIMEI(produto.imei)}</TableCell>
-                          <TableCell>{produto.quantidade}</TableCell>
+                          
                           <TableCell className="text-right">{formatCurrency(produto.vendaRecomendada || produto.valorVendaSugerido)}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
@@ -2925,7 +2914,7 @@ export default function VendasNova() {
                   ))}
                   {produtosPendentes.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         Nenhum produto pendente de conferência
                       </TableCell>
                     </TableRow>
