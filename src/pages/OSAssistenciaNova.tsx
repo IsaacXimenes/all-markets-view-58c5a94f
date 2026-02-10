@@ -38,13 +38,14 @@ import { getVendaById } from '@/utils/vendasApi';
 import { getGarantiaById } from '@/utils/garantiasApi';
 import { getProdutoPendenteById } from '@/utils/osApi';
 import { getPecas, Peca, darBaixaPeca } from '@/utils/pecasApi';
-import { Plus, Trash2, Search, AlertTriangle, Clock, User, History, ArrowLeft, Smartphone, Save, Package, Info } from 'lucide-react';
+import { Plus, Trash2, Search, AlertTriangle, Clock, User, History, ArrowLeft, Smartphone, Save, Package, Info, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { formatIMEI, applyIMEIMask } from '@/utils/imeiMask';
 import { InputComMascara } from '@/components/ui/InputComMascara';
 import { useDraftVenda } from '@/hooks/useDraftVenda';
 import { format } from 'date-fns';
+import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 
 const TIMER_DURATION = 1800; // 30 minutos em segundos
 const DRAFT_KEY = 'draft_os_assistencia';
@@ -148,6 +149,7 @@ export default function OSAssistenciaNova() {
   const [confirmarOpen, setConfirmarOpen] = useState(false);
   const [buscarClienteTermo, setBuscarClienteTermo] = useState('');
   const [historicoCliente, setHistoricoCliente] = useState<any[]>([]);
+  const [scannerOpen, setScannerOpen] = useState(false);
   
   // Timer
   const [timer, setTimer] = useState<number | null>(null);
@@ -821,12 +823,24 @@ export default function OSAssistenciaNova() {
               </div>
               <div className="space-y-2">
                 <Label>IMEI do Aparelho</Label>
-                <Input
-                  value={imeiAparelho}
-                  onChange={(e) => setImeiAparelho(applyIMEIMask(e.target.value))}
-                  placeholder="WW-XXXXXX-YYYYYY-Z"
-                  maxLength={18}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    value={imeiAparelho}
+                    onChange={(e) => setImeiAparelho(applyIMEIMask(e.target.value))}
+                    placeholder="WW-XXXXXX-YYYYYY-Z"
+                    maxLength={18}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setScannerOpen(true)}
+                    title="Escanear IMEI com câmera"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
             {origemAparelho && (
@@ -1017,7 +1031,7 @@ export default function OSAssistenciaNova() {
                               <SelectValue placeholder="Selecione a peça do estoque..." />
                             </SelectTrigger>
                             <SelectContent>
-                              {pecasEstoque
+                             {pecasEstoque
                                 .filter(p => !lojaId || p.lojaId === lojaId)
                                 .map(p => (
                                   <SelectItem key={p.id} value={p.id}>
@@ -1025,6 +1039,9 @@ export default function OSAssistenciaNova() {
                                       <span>{p.descricao}</span>
                                       <Badge variant="outline" className="ml-2">
                                         {p.quantidade} un.
+                                      </Badge>
+                                      <Badge variant="secondary" className="ml-1 text-xs">
+                                        {p.origem}
                                       </Badge>
                                     </div>
                                   </SelectItem>
@@ -1762,6 +1779,17 @@ export default function OSAssistenciaNova() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Scanner IMEI */}
+      <BarcodeScanner
+        open={scannerOpen}
+        onScan={(code) => {
+          setImeiAparelho(applyIMEIMask(code));
+          setScannerOpen(false);
+          toast({ title: 'IMEI escaneado', description: `IMEI ${applyIMEIMask(code)} capturado com sucesso` });
+        }}
+        onClose={() => setScannerOpen(false)}
+      />
     </PageLayout>
   );
 }
