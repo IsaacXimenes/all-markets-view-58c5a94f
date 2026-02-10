@@ -2763,7 +2763,7 @@ export default function VendasNova() {
             <div className="flex-1 overflow-y-auto overflow-x-hidden [&_table]:min-w-0 [&_[data-radix-scroll-area-viewport]]:!overflow-x-hidden [&_[data-radix-scroll-area-scrollbar][data-orientation=horizontal]]:hidden">
             {!showPendentesTab ? (
               /* Aba Produtos Estoque */
-              <Table className="min-w-full [&_th]:px-2 [&_td]:px-2 [&_th]:text-xs [&_td]:text-xs">
+              <Table className="min-w-full [&_th]:px-3 [&_td]:px-3 [&_th]:text-sm [&_td]:text-sm">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Produto</TableHead>
