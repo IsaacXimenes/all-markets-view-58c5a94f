@@ -433,9 +433,6 @@ export default function FinanceiroCentralDespesas() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[40px]">
-                      <Checkbox checked={selectedDespesas.length === despesasFiltradas.length && despesasFiltradas.length > 0} onCheckedChange={handleSelectAll} />
-                    </TableHead>
                     <TableHead>ID</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Categoria</TableHead>
@@ -454,9 +451,6 @@ export default function FinanceiroCentralDespesas() {
                 <TableBody>
                   {despesasFiltradas.map(d => (
                     <TableRow key={d.id} className={getRowClass(d.status)}>
-                      <TableCell>
-                        <Checkbox checked={selectedDespesas.includes(d.id)} onCheckedChange={() => handleSelectDespesa(d.id)} />
-                      </TableCell>
                       <TableCell className="font-mono text-xs">{d.id}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={d.tipo === 'Fixa' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400' : 'bg-orange-500/10 text-orange-700 dark:text-orange-400'}>
