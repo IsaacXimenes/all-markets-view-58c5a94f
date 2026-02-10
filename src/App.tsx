@@ -24,8 +24,7 @@ import RHAdiantamentos from "./pages/RHAdiantamentos";
 import RHMotoboyRemuneracao from "./pages/RHMotoboyRemuneracao";
 import FinanceiroConferencia from "./pages/FinanceiroConferencia";
 import FinanceiroContas from "./pages/FinanceiroContas";
-import FinanceiroDespesasFixas from "./pages/FinanceiroDespesasFixas";
-import FinanceiroDespesasVariaveis from "./pages/FinanceiroDespesasVariaveis";
+import FinanceiroCentralDespesas from "./pages/FinanceiroCentralDespesas";
 import FinanceiroConferenciaNotas from "./pages/FinanceiroConferenciaNotas";
 import Estoque from "./pages/Estoque";
 import EstoqueProdutos from "./pages/EstoqueProdutos";
@@ -165,8 +164,7 @@ const App = () => (
               <Route path="/financeiro/conferencia" element={<FinanceiroConferencia />} />
               <Route path="/financeiro/fiado" element={<FinanceiroFiado />} />
               <Route path="/financeiro/contas" element={<FinanceiroContas />} />
-              <Route path="/financeiro/despesas-fixas" element={<FinanceiroDespesasFixas />} />
-              <Route path="/financeiro/despesas-variaveis" element={<FinanceiroDespesasVariaveis />} />
+              <Route path="/financeiro/despesas" element={<FinanceiroCentralDespesas />} />
               <Route path="/financeiro/conferencia-notas-entrada" element={<FinanceiroConferenciaNotas />} />
               <Route path="/estoque" element={<Estoque />} />
               <Route path="/estoque/produtos" element={<EstoqueProdutos />} />
