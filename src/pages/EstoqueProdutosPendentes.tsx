@@ -577,13 +577,7 @@ export default function EstoqueProdutosPendentes() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-10">
-                    <Checkbox 
-                      checked={filteredProdutos.length > 0 && selectedProducts.length === filteredProdutos.length}
-                      onCheckedChange={handleSelectAllFiltered}
-                    />
-                  </TableHead>
-                  <TableHead>Produto</TableHead>
+                  <TableHead className="sticky left-0 z-20 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Produto</TableHead>
                   <TableHead>Loja</TableHead>
                   <TableHead>Valor Origem</TableHead>
                   <TableHead>ID</TableHead>
@@ -601,7 +595,7 @@ export default function EstoqueProdutosPendentes() {
               <TableBody>
                 {filteredProdutos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                       Nenhum produto pendente de conferência
                     </TableCell>
                   </TableRow>
@@ -615,13 +609,7 @@ export default function EstoqueProdutosPendentes() {
                       )}
                       onClick={() => setSelectedRowId(prev => prev === produto.id ? null : produto.id)}
                     >
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Checkbox 
-                          checked={selectedProducts.includes(produto.imei)}
-                          onCheckedChange={() => handleSelectProduct(produto.id, produto.imei)}
-                        />
-                      </TableCell>
-                      <TableCell>
+                      <TableCell className="sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                         <div>
                           <div className="font-medium">{produto.modelo}</div>
                           <div className="text-xs text-muted-foreground">{produto.cor}</div>

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -298,33 +299,43 @@ export default function EstoqueMovimentacoesAcessorios() {
   return (
     <EstoqueLayout title="Movimentações - Acessórios">
       <div className="space-y-4">
-        <div className="flex flex-wrap gap-4">
-          <AutocompleteLoja
-            value={origemFilter === 'todas' ? '' : origemFilter}
-            onChange={(v) => setOrigemFilter(v || 'todas')}
-            placeholder="Todas as origens"
-            apenasLojasTipoLoja
-          />
+        <Card>
+          <CardContent className="pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Origem</Label>
+                <AutocompleteLoja
+                  value={origemFilter === 'todas' ? '' : origemFilter}
+                  onChange={(v) => setOrigemFilter(v || 'todas')}
+                  placeholder="Todas as origens"
+                  apenasLojasTipoLoja
+                />
+              </div>
 
-          <AutocompleteLoja
-            value={destinoFilter === 'todas' ? '' : destinoFilter}
-            onChange={(v) => setDestinoFilter(v || 'todas')}
-            placeholder="Todos os destinos"
-            apenasLojasTipoLoja
-          />
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Destino</Label>
+                <AutocompleteLoja
+                  value={destinoFilter === 'todas' ? '' : destinoFilter}
+                  onChange={(v) => setDestinoFilter(v || 'todas')}
+                  placeholder="Todos os destinos"
+                  apenasLojasTipoLoja
+                />
+              </div>
 
-          <Button 
-            variant="ghost" 
-            onClick={() => {
-              setOrigemFilter('todas');
-              setDestinoFilter('todas');
-            }}
-          >
-            <X className="mr-2 h-4 w-4" />
-            Limpar
-          </Button>
+              <div className="flex items-end">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => {
+                    setOrigemFilter('todas');
+                    setDestinoFilter('todas');
+                  }}
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  Limpar
+                </Button>
+              </div>
 
-          <div className="ml-auto flex gap-2">
+              <div className="flex items-end gap-2 justify-end">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
@@ -418,14 +429,16 @@ export default function EstoqueMovimentacoesAcessorios() {
               <Download className="mr-2 h-4 w-4" />
               Exportar CSV
             </Button>
-          </div>
-        </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <ResponsiveTableContainer>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Acessório</TableHead>
+                <TableHead className="sticky left-0 z-20 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Acessório</TableHead>
                 <TableHead>ID</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Qtd</TableHead>
@@ -446,7 +459,7 @@ export default function EstoqueMovimentacoesAcessorios() {
                     mov.status === 'Recebido' && 'bg-green-500/10'
                   )}
                 >
-                  <TableCell>{mov.acessorio}</TableCell>
+                  <TableCell className="sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{mov.acessorio}</TableCell>
                   <TableCell className="font-mono text-xs">{mov.id}</TableCell>
                   <TableCell>{new Date(mov.data).toLocaleDateString('pt-BR')}</TableCell>
                   <TableCell>{mov.quantidade}</TableCell>
