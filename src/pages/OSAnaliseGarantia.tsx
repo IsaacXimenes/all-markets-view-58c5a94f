@@ -20,6 +20,7 @@ import {
   RegistroAnaliseGarantia 
 } from '@/utils/garantiasApi';
 import { addOrdemServico } from '@/utils/assistenciaApi';
+import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 
 export default function OSAnaliseGarantia() {
   const [registros, setRegistros] = useState<RegistroAnaliseGarantia[]>(getRegistrosAnaliseGarantia());
@@ -30,6 +31,12 @@ export default function OSAnaliseGarantia() {
   // Filtros
   const [filtroOrigem, setFiltroOrigem] = useState<string>('todos');
   const [filtroStatus, setFiltroStatus] = useState<string>('todos');
+  const [filtroIMEI, setFiltroIMEI] = useState('');
+
+  const extrairIMEI = (descricao: string): string => {
+    const match = descricao.match(/IMEI[:\s]*([0-9\-\s]+)/i);
+    return match ? match[1].replace(/\D/g, '') : '';
+  };
   
   // Modal aprovar
   const [showAprovarModal, setShowAprovarModal] = useState(false);
@@ -53,9 +60,13 @@ export default function OSAnaliseGarantia() {
     return registros.filter(r => {
       if (filtroOrigem !== 'todos' && r.origem !== filtroOrigem) return false;
       if (filtroStatus !== 'todos' && r.status !== filtroStatus) return false;
+      if (filtroIMEI) {
+        const imeiRegistro = extrairIMEI(r.clienteDescricao);
+        if (!imeiRegistro || !imeiRegistro.includes(unformatIMEI(filtroIMEI))) return false;
+      }
       return true;
     }).sort((a, b) => new Date(b.dataChegada).getTime() - new Date(a.dataChegada).getTime());
-  }, [registros, filtroOrigem, filtroStatus]);
+  }, [registros, filtroOrigem, filtroStatus, filtroIMEI]);
 
   const getOrigemBadge = (origem: string) => {
     switch (origem) {
@@ -199,6 +210,14 @@ export default function OSAnaliseGarantia() {
       <Card className="mb-6">
         <CardContent className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+           <div className="space-y-2">
+              <Label>IMEI</Label>
+              <Input
+                placeholder="Buscar por IMEI..."
+                value={filtroIMEI}
+                onChange={e => setFiltroIMEI(e.target.value)}
+              />
+            </div>
             <div className="space-y-2">
               <Label>Origem</Label>
               <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
@@ -221,8 +240,8 @@ export default function OSAnaliseGarantia() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-end md:col-span-2">
-              <Button variant="outline" onClick={() => { setFiltroOrigem('todos'); setFiltroStatus('todos'); }}>
+            <div className="flex items-end">
+              <Button variant="outline" onClick={() => { setFiltroOrigem('todos'); setFiltroStatus('todos'); setFiltroIMEI(''); }}>
                 Limpar Filtros
               </Button>
             </div>
@@ -236,6 +255,7 @@ export default function OSAnaliseGarantia() {
           <TableHeader>
             <TableRow>
               <TableHead>ID</TableHead>
+              <TableHead>IMEI</TableHead>
               <TableHead>Origem</TableHead>
               <TableHead>Cliente/Descrição</TableHead>
               <TableHead>Data Chegada</TableHead>
@@ -250,6 +270,9 @@ export default function OSAnaliseGarantia() {
               return (
                 <TableRow key={registro.id} className={sla > 3 ? 'bg-red-500/10' : ''}>
                   <TableCell className="font-mono text-xs">{registro.id}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {extrairIMEI(registro.clienteDescricao) ? formatIMEI(extrairIMEI(registro.clienteDescricao)) : '-'}
+                  </TableCell>
                   <TableCell>{getOrigemBadge(registro.origem)}</TableCell>
                   <TableCell className="font-medium">{registro.clienteDescricao}</TableCell>
                   <TableCell>{format(new Date(registro.dataChegada), 'dd/MM/yyyy HH:mm')}</TableCell>
@@ -277,7 +300,7 @@ export default function OSAnaliseGarantia() {
             })}
             {registrosFiltrados.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Nenhum registro encontrado
                 </TableCell>
               </TableRow>

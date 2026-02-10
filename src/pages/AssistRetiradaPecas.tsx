@@ -252,6 +252,8 @@ export default function AssistRetiradaPecas() {
                     <TableHead>Data Solicitação</TableHead>
                     <TableHead>Responsável</TableHead>
                     <TableHead>Valor Custo</TableHead>
+                    <TableHead>Valor Total Peças</TableHead>
+                    <TableHead>Prejuízo</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
@@ -273,6 +275,20 @@ export default function AssistRetiradaPecas() {
                       </TableCell>
                       <TableCell className="text-sm">{retirada.responsavelSolicitacao}</TableCell>
                       <TableCell className="font-medium">{formatCurrency(retirada.valorCustoAparelho)}</TableCell>
+                      <TableCell className="font-medium">
+                        {formatCurrency(retirada.pecasRetiradas.reduce((acc, p) => acc + (p.valorCustoPeca * p.quantidade), 0))}
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const totalPecas = retirada.pecasRetiradas.reduce((acc, p) => acc + (p.valorCustoPeca * p.quantidade), 0);
+                          const prejuizo = retirada.valorCustoAparelho - totalPecas;
+                          return prejuizo > 0.01 ? (
+                            <span className="font-medium text-red-600">-{formatCurrency(prejuizo)}</span>
+                          ) : (
+                            <span className="font-medium text-green-600">{formatCurrency(0)}</span>
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell>{getStatusBadge(retirada.status)}</TableCell>
                       <TableCell>
                         <Button 
@@ -287,7 +303,7 @@ export default function AssistRetiradaPecas() {
                   ))}
                   {retiradasFiltradas.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                         <Scissors className="h-12 w-12 mx-auto mb-2 opacity-20" />
                         <p>Nenhuma solicitação de retirada encontrada</p>
                       </TableCell>

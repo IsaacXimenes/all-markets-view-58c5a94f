@@ -15,7 +15,7 @@ import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
 import { Plus, Eye, FileText, Download, AlertTriangle, Clock, Edit, RefreshCcw, Wrench, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { formatIMEI } from '@/utils/imeiMask';
+import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 
 export default function OSAssistencia() {
   const navigate = useNavigate();
@@ -49,7 +49,9 @@ export default function OSAssistencia() {
 
       // Filtro por IMEI
       if (filtroIMEI) {
-        const hasIMEI = os.pecas.some(p => p.imei?.includes(filtroIMEI.replace(/-/g, '')));
+        const filtroDigits = unformatIMEI(filtroIMEI);
+        const hasIMEI = os.pecas.some(p => p.imei && unformatIMEI(p.imei).includes(filtroDigits)) ||
+          (os.imeiAparelho && unformatIMEI(os.imeiAparelho).includes(filtroDigits));
         if (!hasIMEI) return false;
       }
 

@@ -263,6 +263,36 @@ export default function AssistRetiradaPecasDetalhes() {
           {getStatusBadge(retirada.status)}
         </div>
 
+        {/* Card de Prejuízo na Desmontagem */}
+        {retirada.pecasRetiradas.length > 0 && validacao.somaPecas < validacao.custoAparelho && (
+          <Card className="border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
+            <CardHeader className="pb-2 pt-3 px-4">
+              <CardTitle className="text-sm font-medium flex items-center gap-2 text-red-700 dark:text-red-300">
+                <AlertTriangle className="h-4 w-4" />
+                Prejuízo na Desmontagem
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-3">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex gap-6">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Custo do Aparelho</p>
+                    <p className="text-lg font-bold">{formatCurrency(validacao.custoAparelho)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Valor Total Peças</p>
+                    <p className="text-lg font-bold">{formatCurrency(validacao.somaPecas)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Prejuízo</p>
+                    <p className="text-lg font-bold text-red-600">-{formatCurrency(validacao.custoAparelho - validacao.somaPecas)}</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Informações da Solicitação */}
           <Card className="lg:col-span-2">
