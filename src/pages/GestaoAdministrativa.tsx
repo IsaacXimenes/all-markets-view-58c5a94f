@@ -107,18 +107,28 @@ export default function GestaoAdministrativa() {
     });
   }, [conferencias, dataInicio, dataFim]);
 
-  // Agrupar por loja
+  // Agrupar por loja (sempre mostrar todas as lojas ativas tipo 'Loja')
+  const lojasAtivas = useMemo(() => {
+    return lojas.filter(l => l.tipo === 'Loja' && l.ativa !== false);
+  }, [lojas]);
+
   const conferenciasPorLoja = useMemo(() => {
     const mapa = new Map<string, { lojaId: string; lojaNome: string; conferencias: ConferenciaDiaria[] }>();
+    // Inicializar todas as lojas ativas (mesmo sem conferências)
+    for (const loja of lojasAtivas) {
+      mapa.set(loja.id, { lojaId: loja.id, lojaNome: loja.nome, conferencias: [] });
+    }
+    // Distribuir conferências nas lojas
     for (const conf of conferenciasFiltradas) {
-      if (!mapa.has(conf.lojaId)) {
+      if (mapa.has(conf.lojaId)) {
+        mapa.get(conf.lojaId)!.conferencias.push(conf);
+      } else {
         const loja = lojas.find(l => l.id === conf.lojaId);
-        mapa.set(conf.lojaId, { lojaId: conf.lojaId, lojaNome: loja?.nome || conf.lojaId, conferencias: [] });
+        mapa.set(conf.lojaId, { lojaId: conf.lojaId, lojaNome: loja?.nome || conf.lojaId, conferencias: [conf] });
       }
-      mapa.get(conf.lojaId)!.conferencias.push(conf);
     }
     return Array.from(mapa.values());
-  }, [conferenciasFiltradas, lojas]);
+  }, [conferenciasFiltradas, lojas, lojasAtivas]);
   
   const resumo = useMemo(() => {
     return calcularResumoConferencia(conferenciasFiltradas);
@@ -566,12 +576,12 @@ export default function GestaoAdministrativa() {
                 </div>
                 <ScrollBar orientation="horizontal" className="h-4" />
               </ScrollArea>
+              {confsLoja.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground text-sm">Nenhuma conferência registrada para este período.</div>
+              )}
             </CardContent>
           </Card>
         ))}
-        {conferenciasPorLoja.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">Nenhuma conferência encontrada para o período selecionado.</div>
-        )}
       </div>
       
       {/* Modal de Detalhes/Drill-Down */}
