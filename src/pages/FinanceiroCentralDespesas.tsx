@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Download, Plus, Trash2, Calendar, ChevronDown, DollarSign, CalendarDays, AlertTriangle, CheckCircle, Clock, TrendingUp } from 'lucide-react';
+import { Download, Plus, Trash2, Calendar, ChevronDown, DollarSign, CalendarDays, AlertTriangle, CheckCircle, Clock, TrendingUp, Eye } from 'lucide-react';
 import { getDespesas, addDespesa, deleteDespesa, updateDespesa, pagarDespesa, provisionarProximoPeriodo, atualizarStatusVencidos, CATEGORIAS_DESPESA, type Despesa } from '@/utils/financeApi';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -86,6 +86,7 @@ export default function FinanceiroCentralDespesas() {
   // Modals
   const [pagarModal, setPagarModal] = useState<Despesa | null>(null);
   const [provisionarModal, setProvisionarModal] = useState<Despesa | null>(null);
+  const [detalheModal, setDetalheModal] = useState<Despesa | null>(null);
   const [agendaOpen, setAgendaOpen] = useState(false);
   const [agendaDespesaId, setAgendaDespesaId] = useState('');
   const [agendaTitulo, setAgendaTitulo] = useState('');
@@ -440,10 +441,13 @@ export default function FinanceiroCentralDespesas() {
                     <TableHead>Categoria</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Loja</TableHead>
+                    <TableHead>Lançamento</TableHead>
                     <TableHead>Vencimento</TableHead>
                     <TableHead>Competência</TableHead>
+                    <TableHead>Conta de Origem</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Responsável</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -462,8 +466,10 @@ export default function FinanceiroCentralDespesas() {
                       <TableCell className="text-xs">{d.categoria}</TableCell>
                       <TableCell>{d.descricao}</TableCell>
                       <TableCell className="text-xs">{obterLojaById(d.lojaId)?.nome || '-'}</TableCell>
+                      <TableCell className="text-xs">{new Date(d.data + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell>{new Date(d.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell>{d.competencia}</TableCell>
+                      <TableCell className="text-xs">{d.conta}</TableCell>
                       <TableCell className="font-semibold">{formatCurrency(d.valor)}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={
@@ -474,8 +480,12 @@ export default function FinanceiroCentralDespesas() {
                           {d.status}
                         </Badge>
                       </TableCell>
+                      <TableCell className="text-xs">{d.pagoPor || '-'}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
+                          <Button size="sm" variant="ghost" onClick={() => setDetalheModal(d)} title="Detalhes">
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           {d.status !== 'Pago' && (
                             <Button size="sm" variant="ghost" onClick={() => setPagarModal(d)} title="Pagar">
                               <DollarSign className="h-4 w-4 text-green-600" />
@@ -497,7 +507,7 @@ export default function FinanceiroCentralDespesas() {
                     </TableRow>
                   ))}
                   {despesasFiltradas.length === 0 && (
-                    <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={14} className="text-center text-muted-foreground py-8">Nenhuma despesa encontrada</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
@@ -562,6 +572,51 @@ export default function FinanceiroCentralDespesas() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogLoteOpen(false)}>Cancelar</Button>
               <Button onClick={handleAlterarCompetenciaLote}>Alterar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal Detalhes */}
+        <Dialog open={!!detalheModal} onOpenChange={v => !v && setDetalheModal(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader><DialogTitle>Detalhes da Despesa</DialogTitle></DialogHeader>
+            {detalheModal && (
+              <div className="space-y-3 py-4">
+                <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                  <span className="text-muted-foreground">ID:</span><span className="font-mono">{detalheModal.id}</span>
+                  <span className="text-muted-foreground">Tipo:</span><span>{detalheModal.tipo}</span>
+                  <span className="text-muted-foreground">Categoria:</span><span>{detalheModal.categoria}</span>
+                  <span className="text-muted-foreground">Descrição:</span><span className="font-medium">{detalheModal.descricao}</span>
+                  <span className="text-muted-foreground">Loja:</span><span>{obterLojaById(detalheModal.lojaId)?.nome || '-'}</span>
+                  <span className="text-muted-foreground">Data de Lançamento:</span><span>{new Date(detalheModal.data + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                  <span className="text-muted-foreground">Data de Vencimento:</span><span>{new Date(detalheModal.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                  <span className="text-muted-foreground">Competência:</span><span>{detalheModal.competencia}</span>
+                  <span className="text-muted-foreground">Conta de Origem:</span><span>{detalheModal.conta}</span>
+                  <span className="text-muted-foreground">Valor:</span><span className="font-semibold">{formatCurrency(detalheModal.valor)}</span>
+                  <span className="text-muted-foreground">Status:</span>
+                  <span>
+                    <Badge variant="outline" className={
+                      detalheModal.status === 'Pago' ? 'bg-green-500/10 text-green-700 dark:text-green-400' :
+                      detalheModal.status === 'Vencido' ? 'bg-red-500/10 text-red-700 dark:text-red-400' :
+                      'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
+                    }>{detalheModal.status}</Badge>
+                  </span>
+                  <span className="text-muted-foreground">Recorrente:</span><span>{detalheModal.recorrente ? `Sim (${detalheModal.periodicidade})` : 'Não'}</span>
+                  <span className="text-muted-foreground">Responsável:</span><span>{detalheModal.pagoPor || '-'}</span>
+                  {detalheModal.dataPagamento && (
+                    <><span className="text-muted-foreground">Data Pagamento:</span><span>{new Date(detalheModal.dataPagamento + 'T00:00:00').toLocaleDateString('pt-BR')}</span></>
+                  )}
+                </div>
+                {detalheModal.observacoes && (
+                  <div className="pt-2 border-t">
+                    <span className="text-sm text-muted-foreground">Observações:</span>
+                    <p className="text-sm mt-1">{detalheModal.observacoes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDetalheModal(null)}>Fechar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
