@@ -2698,11 +2698,11 @@ export default function VendasNova() {
 
       {/* Modal Selecionar Produto */}
       <Dialog open={showProdutoModal} onOpenChange={setShowProdutoModal}>
-        <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Selecionar Produto</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
             {/* Tabs para Estoque e Pendentes */}
             <div className="flex border-b">
               <button
@@ -2753,6 +2753,8 @@ export default function VendasNova() {
               </Select>
             </div>
             
+            <div className="flex-1 overflow-auto">
+              <div className="min-w-[700px]">
             {!showPendentesTab ? (
               /* Aba Produtos Estoque */
               <Table>
@@ -2881,7 +2883,6 @@ export default function VendasNova() {
                 </TableHeader>
                 <TableBody>
                   {produtosPendentes.filter(p => {
-                    // Comparar pelo nome da loja (filtroLojaProduto contém nome)
                     if (filtroLojaProduto && obterNomeLoja(p.loja) !== filtroLojaProduto) return false;
                     if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
                     if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
@@ -2905,7 +2906,6 @@ export default function VendasNova() {
                           variant="ghost" 
                           size="icon"
                           onClick={() => {
-                            // Exibir detalhes do produto pendente
                             setProdutoDetalhe({
                               id: produto.id,
                               imei: produto.imei,
@@ -2939,6 +2939,8 @@ export default function VendasNova() {
                 </TableBody>
               </Table>
             )}
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
