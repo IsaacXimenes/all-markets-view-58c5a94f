@@ -13,6 +13,7 @@ import { Plus, Download, Eye, TrendingUp, DollarSign, Percent, ShoppingCart, Cre
 import { getVendas, exportVendasToCSV, formatCurrency, Venda, ItemTradeIn, AnexoTradeIn } from '@/utils/vendasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { getStatusConferenciaByVendaId, StatusConferencia } from '@/utils/conferenciaGestorApi';
+import { displayIMEI } from '@/utils/imeiMask';
 import { getGarantiasByVendaId, calcularStatusExpiracao } from '@/utils/garantiasApi';
 import { format, addMonths } from 'date-fns';
 
@@ -417,7 +418,7 @@ export default function Vendas() {
                   
                   // Pegar modelos e IMEIs dos itens
                   const modelos = venda.itens.map(i => i.produto).join(', ');
-                  const imeis = venda.itens.map(i => i.imei).join(', ');
+                  const imeis = venda.itens.map(i => displayIMEI(i.imei)).join(', ');
                   
                   const getStatusBadge = (status: StatusConferencia | null) => {
                     if (!status) return <Badge variant="outline">-</Badge>;
