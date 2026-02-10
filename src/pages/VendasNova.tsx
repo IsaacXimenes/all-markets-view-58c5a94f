@@ -438,7 +438,7 @@ export default function VendasNova() {
     if (valorCustoTotal === 0) return 0;
     return ((lucroProjetado / valorCustoTotal) * 100);
   }, [lucroProjetado, valorCustoTotal]);
-  const isPrejuizo = lucroProjetado < 0;
+  const isPrejuizo = total > 0 && lucroProjetado < 0;
   
   // Cálculo de prejuízo em acessórios
   const prejuizoAcessorios = useMemo(() => {
