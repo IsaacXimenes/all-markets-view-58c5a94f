@@ -2763,7 +2763,7 @@ export default function VendasNova() {
             <div className="flex-1 overflow-y-auto overflow-x-hidden [&_table]:min-w-0">
             {!showPendentesTab ? (
               /* Aba Produtos Estoque */
-              <Table>
+              <Table className="min-w-full">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Produto</TableHead>
@@ -2872,7 +2872,7 @@ export default function VendasNova() {
               </Table>
             ) : (
               /* Aba Produtos Pendentes (apenas consulta) */
-              <Table>
+              <Table className="min-w-full">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Produto</TableHead>
