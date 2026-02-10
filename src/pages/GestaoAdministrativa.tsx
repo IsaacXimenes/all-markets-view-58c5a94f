@@ -91,10 +91,15 @@ export default function GestaoAdministrativa() {
   const [agendaLojaId, setAgendaLojaId] = useState('');
   const [agendaLojaNome, setAgendaLojaNome] = useState('');
   
+  // Lojas ativas
+  const lojasAtivas = useMemo(() => {
+    return lojas.filter(l => l.tipo === 'Loja' && l.ativa !== false);
+  }, [lojas]);
+
   // Consolidar dados
   const conferencias = useMemo(() => {
-    return consolidarVendasPorDia(competencia, lojaId || 'todas', vendedorId || 'todos');
-  }, [competencia, lojaId, vendedorId, refreshKey]);
+    return consolidarVendasPorDia(competencia, lojaId || 'todas', vendedorId || 'todos', lojasAtivas.map(l => l.id));
+  }, [competencia, lojaId, vendedorId, refreshKey, lojasAtivas]);
   
   // Filtrar por período
   const conferenciasFiltradas = useMemo(() => {
@@ -106,11 +111,6 @@ export default function GestaoAdministrativa() {
       return true;
     });
   }, [conferencias, dataInicio, dataFim]);
-
-  // Agrupar por loja (sempre mostrar todas as lojas ativas tipo 'Loja')
-  const lojasAtivas = useMemo(() => {
-    return lojas.filter(l => l.tipo === 'Loja' && l.ativa !== false);
-  }, [lojas]);
 
   const conferenciasPorLoja = useMemo(() => {
     const mapa = new Map<string, { lojaId: string; lojaNome: string; conferencias: ConferenciaDiaria[] }>();

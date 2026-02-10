@@ -113,7 +113,8 @@ const saveLogs = (logs: LogAuditoria[]) => {
 export const consolidarVendasPorDia = (
   competencia: string, // "2026-02"
   lojaId?: string,
-  vendedorId?: string
+  vendedorId?: string,
+  todasLojasIds?: string[] // IDs de todas as lojas ativas para garantir exibição
 ): ConferenciaDiaria[] => {
   const vendas = getVendas();
   
@@ -148,19 +149,28 @@ export const consolidarVendasPorDia = (
   const lojasPresentes = new Set<string>();
   vendasFiltradas.forEach(v => lojasPresentes.add(v.lojaVenda));
   
+  // Se filtrou por loja específica, garantir que ela apareça mesmo sem vendas
+  if (lojaId && lojaId !== 'todas') {
+    lojasPresentes.add(lojaId);
+  }
+  // Se passou todas as lojas ativas, garantir que todas apareçam
+  if (todasLojasIds && todasLojasIds.length > 0 && (!lojaId || lojaId === 'todas')) {
+    todasLojasIds.forEach(id => lojasPresentes.add(id));
+  }
+  
   const conferencias: ConferenciaDiaria[] = [];
   
   for (const dia of diasDoMes) {
     const dataStr = format(dia, 'yyyy-MM-dd');
     
-    // Para cada loja presente, gerar uma linha
-    const lojasParaProcessar = lojasPresentes.size > 0 ? Array.from(lojasPresentes) : [];
+    // Para cada loja, gerar uma linha (inclusive dias sem vendas)
+    const lojasParaProcessar = Array.from(lojasPresentes);
     
     for (const lojaReal of lojasParaProcessar) {
       const key = `${dataStr}_${lojaReal}`;
       const vendasDoDiaLoja = vendasPorDiaLoja.get(key) || [];
       
-      if (vendasDoDiaLoja.length === 0) continue;
+      // Não pular dias sem vendas - exibir linha vazia
       
       // Buscar conferências salvas para esta loja específica
       const storedConferencias = getStoredConferencias(competencia, lojaReal);
