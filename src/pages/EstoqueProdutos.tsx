@@ -364,7 +364,7 @@ export default function EstoqueProdutos() {
                   className={getRowClassByBattery(produto.saudeBateria)}
                 >
                   {/* Produto (sticky) */}
-                  <TableCell className={cn("sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]", getRowClassByBattery(produto.saudeBateria) || 'bg-background')}>
+                  <TableCell className={cn("sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]", getRowClassByBattery(produto.saudeBateria))}>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium">{produto.modelo}</span>
