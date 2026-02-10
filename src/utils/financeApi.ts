@@ -17,6 +17,11 @@ export interface Pagamento {
   status: 'Pendente' | 'Conferido';
 }
 
+export const CATEGORIAS_DESPESA = [
+  'Aluguel', 'Energia', 'Água', 'Internet/Telefonia', 'Salários', 'Impostos',
+  'Marketing', 'Estoque', 'Manutenção', 'Material de Escritório', 'Frete/Logística', 'Outros'
+];
+
 export interface Despesa {
   id: string;
   tipo: 'Fixa' | 'Variável';
@@ -26,6 +31,14 @@ export interface Despesa {
   competencia: string;
   conta: string;
   observacoes?: string;
+  lojaId: string;
+  status: 'Agendado' | 'Vencido' | 'Pago';
+  categoria: string;
+  dataVencimento: string;
+  dataPagamento: string | null;
+  recorrente: boolean;
+  periodicidade: 'Mensal' | 'Trimestral' | 'Anual' | null;
+  pagoPor: string | null;
 }
 
 // IDs das lojas reais do useCadastroStore
@@ -152,7 +165,15 @@ let despesas: Despesa[] = [
     valor: 8500.00,
     competencia: 'JAN-2025',
     conta: 'Bradesco Thiago Eduardo',
-    observacoes: 'Pagamento mensal'
+    observacoes: 'Pagamento mensal',
+    lojaId: LOJAS_FINANCE.MATRIZ,
+    status: 'Pago',
+    categoria: 'Aluguel',
+    dataVencimento: '2025-01-10',
+    dataPagamento: '2025-01-05',
+    recorrente: true,
+    periodicidade: 'Mensal',
+    pagoPor: 'João Gestor'
   },
   {
     id: 'DES-2025-0002',
@@ -161,7 +182,15 @@ let despesas: Despesa[] = [
     descricao: 'Energia Elétrica - Todas as Lojas',
     valor: 4320.50,
     competencia: 'JAN-2025',
-    conta: 'Santander (Unicred)'
+    conta: 'Santander (Unicred)',
+    lojaId: LOJAS_FINANCE.MATRIZ,
+    status: 'Pago',
+    categoria: 'Energia',
+    dataVencimento: '2025-01-15',
+    dataPagamento: '2025-01-05',
+    recorrente: true,
+    periodicidade: 'Mensal',
+    pagoPor: 'João Gestor'
   },
   {
     id: 'DES-2025-0003',
@@ -171,7 +200,15 @@ let despesas: Despesa[] = [
     valor: 125600.00,
     competencia: 'JAN-2025',
     conta: 'Bradesco Thiago Eduardo',
-    observacoes: 'Salários + encargos'
+    observacoes: 'Salários + encargos',
+    lojaId: LOJAS_FINANCE.MATRIZ,
+    status: 'Pago',
+    categoria: 'Salários',
+    dataVencimento: '2025-01-10',
+    dataPagamento: '2025-01-10',
+    recorrente: true,
+    periodicidade: 'Mensal',
+    pagoPor: 'João Gestor'
   },
   {
     id: 'DES-2025-0004',
@@ -181,7 +218,15 @@ let despesas: Despesa[] = [
     valor: 89450.00,
     competencia: 'JAN-2025',
     conta: 'Bradesco Thiago Imports',
-    observacoes: '15 unidades iPhone 15 Pro'
+    observacoes: '15 unidades iPhone 15 Pro',
+    lojaId: LOJAS_FINANCE.ONLINE,
+    status: 'Pago',
+    categoria: 'Estoque',
+    dataVencimento: '2025-01-12',
+    dataPagamento: '2025-01-12',
+    recorrente: false,
+    periodicidade: null,
+    pagoPor: 'João Gestor'
   },
   {
     id: 'DES-2025-0005',
@@ -190,7 +235,15 @@ let despesas: Despesa[] = [
     descricao: 'Marketing Digital',
     valor: 3200.00,
     competencia: 'JAN-2025',
-    conta: 'Santander (Unicred)'
+    conta: 'Santander (Unicred)',
+    lojaId: LOJAS_FINANCE.MATRIZ,
+    status: 'Pago',
+    categoria: 'Marketing',
+    dataVencimento: '2025-01-15',
+    dataPagamento: '2025-01-15',
+    recorrente: false,
+    periodicidade: null,
+    pagoPor: 'João Gestor'
   },
   {
     id: 'DES-2025-0006',
@@ -199,7 +252,101 @@ let despesas: Despesa[] = [
     descricao: 'Internet + Telefonia',
     valor: 980.00,
     competencia: 'JAN-2025',
-    conta: 'Bradesco Thiago Eduardo'
+    conta: 'Bradesco Thiago Eduardo',
+    lojaId: LOJAS_FINANCE.MATRIZ,
+    status: 'Pago',
+    categoria: 'Internet/Telefonia',
+    dataVencimento: '2025-01-05',
+    dataPagamento: '2025-01-05',
+    recorrente: true,
+    periodicidade: 'Mensal',
+    pagoPor: 'João Gestor'
+  },
+  // FEV-2025 - Agendadas e Vencidas
+  {
+    id: 'DES-2025-0007',
+    tipo: 'Fixa',
+    data: '2025-02-01',
+    descricao: 'Aluguel Loja JK Shopping',
+    valor: 12000.00,
+    competencia: 'FEV-2025',
+    conta: 'Santander (Santander JK)',
+    lojaId: LOJAS_FINANCE.JK_SHOPPING,
+    status: 'Agendado',
+    categoria: 'Aluguel',
+    dataVencimento: '2025-02-10',
+    dataPagamento: null,
+    recorrente: true,
+    periodicidade: 'Mensal',
+    pagoPor: null
+  },
+  {
+    id: 'DES-2025-0008',
+    tipo: 'Fixa',
+    data: '2025-02-01',
+    descricao: 'Folha de Pagamento - Fevereiro',
+    valor: 128350.00,
+    competencia: 'FEV-2025',
+    conta: 'Bradesco Thiago Eduardo',
+    lojaId: LOJAS_FINANCE.MATRIZ,
+    status: 'Agendado',
+    categoria: 'Salários',
+    dataVencimento: '2025-02-10',
+    dataPagamento: null,
+    recorrente: true,
+    periodicidade: 'Mensal',
+    pagoPor: null
+  },
+  {
+    id: 'DES-2025-0009',
+    tipo: 'Variável',
+    data: '2025-02-03',
+    descricao: 'Manutenção Ar Condicionado',
+    valor: 1850.00,
+    competencia: 'FEV-2025',
+    conta: 'Bradesco Thiago Eduardo',
+    lojaId: LOJAS_FINANCE.SHOPPING_SUL,
+    status: 'Agendado',
+    categoria: 'Manutenção',
+    dataVencimento: '2025-02-15',
+    dataPagamento: null,
+    recorrente: false,
+    periodicidade: null,
+    pagoPor: null
+  },
+  {
+    id: 'DES-2025-0010',
+    tipo: 'Fixa',
+    data: '2025-02-01',
+    descricao: 'Impostos Trimestrais',
+    valor: 18500.00,
+    competencia: 'FEV-2025',
+    conta: 'Bradesco Thiago Imports',
+    lojaId: LOJAS_FINANCE.MATRIZ,
+    status: 'Agendado',
+    categoria: 'Impostos',
+    dataVencimento: '2025-02-20',
+    dataPagamento: null,
+    recorrente: true,
+    periodicidade: 'Trimestral',
+    pagoPor: null
+  },
+  {
+    id: 'DES-2025-0011',
+    tipo: 'Variável',
+    data: '2025-02-05',
+    descricao: 'Material de Escritório',
+    valor: 450.00,
+    competencia: 'FEV-2025',
+    conta: 'Santander (Unicred)',
+    lojaId: LOJAS_FINANCE.AGUAS_LINDAS,
+    status: 'Pago',
+    categoria: 'Material de Escritório',
+    dataVencimento: '2025-02-05',
+    dataPagamento: '2025-02-05',
+    recorrente: false,
+    periodicidade: null,
+    pagoPor: 'João Gestor'
   }
 ];
 
@@ -310,6 +457,63 @@ export const updateDespesa = (id: string, data: Partial<Despesa>): boolean => {
   if (index === -1) return false;
   despesas[index] = { ...despesas[index], ...data };
   return true;
+};
+
+// Marca despesa como Pago
+export const pagarDespesa = (id: string, usuarioNome: string): boolean => {
+  const index = despesas.findIndex(d => d.id === id);
+  if (index === -1) return false;
+  despesas[index] = {
+    ...despesas[index],
+    status: 'Pago',
+    dataPagamento: new Date().toISOString().split('T')[0],
+    pagoPor: usuarioNome,
+  };
+  return true;
+};
+
+// Provisiona próxima despesa recorrente
+export const provisionarProximoPeriodo = (id: string): Despesa | null => {
+  const despesa = despesas.find(d => d.id === id);
+  if (!despesa || !despesa.recorrente) return null;
+
+  const venc = new Date(despesa.dataVencimento + 'T00:00:00');
+  if (despesa.periodicidade === 'Mensal') venc.setMonth(venc.getMonth() + 1);
+  else if (despesa.periodicidade === 'Trimestral') venc.setMonth(venc.getMonth() + 3);
+  else if (despesa.periodicidade === 'Anual') venc.setFullYear(venc.getFullYear() + 1);
+
+  const meses = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+  const novaCompetencia = `${meses[venc.getMonth()]}-${venc.getFullYear()}`;
+
+  const year = new Date().getFullYear();
+  const num = despesas.filter(d => d.id.includes(String(year))).length + 1;
+  const newId = `DES-${year}-${String(num).padStart(4, '0')}`;
+
+  const nova: Despesa = {
+    ...despesa,
+    id: newId,
+    data: new Date().toISOString().split('T')[0],
+    competencia: novaCompetencia,
+    dataVencimento: venc.toISOString().split('T')[0],
+    dataPagamento: null,
+    status: 'Agendado',
+    pagoPor: null,
+  };
+  despesas.push(nova);
+  return nova;
+};
+
+// Atualiza automaticamente Agendado -> Vencido
+export const atualizarStatusVencidos = (): number => {
+  const hoje = new Date().toISOString().split('T')[0];
+  let count = 0;
+  despesas.forEach(d => {
+    if (d.status === 'Agendado' && d.dataVencimento < hoje) {
+      d.status = 'Vencido';
+      count++;
+    }
+  });
+  return count;
 };
 
 // Função helper para obter lojas ativas (usando os IDs reais)
