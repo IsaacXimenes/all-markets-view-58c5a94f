@@ -357,6 +357,13 @@ export default function EstoqueProdutos() {
                   if (saudeBateria >= 70) return 'bg-yellow-500/10'; // Atenção - amarelo
                   return 'bg-destructive/10'; // Crítico - vermelho
                 };
+
+                const getStickyBgByBattery = (saudeBateria: number) => {
+                  if (saudeBateria >= 90) return 'bg-[hsl(142,72%,95%)] dark:bg-[hsl(142,30%,14%)]';
+                  if (saudeBateria >= 80) return 'bg-background';
+                  if (saudeBateria >= 70) return 'bg-[hsl(38,92%,95%)] dark:bg-[hsl(38,40%,14%)]';
+                  return 'bg-[hsl(0,84%,95%)] dark:bg-[hsl(0,40%,14%)]';
+                };
                 
                 return (
                 <TableRow 
@@ -364,7 +371,7 @@ export default function EstoqueProdutos() {
                   className={getRowClassByBattery(produto.saudeBateria)}
                 >
                   {/* Produto (sticky) */}
-                  <TableCell className={cn("sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]", getRowClassByBattery(produto.saudeBateria))}>
+                  <TableCell className={cn("sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]", getStickyBgByBattery(produto.saudeBateria))}>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium">{produto.modelo}</span>
