@@ -115,7 +115,7 @@ export default function FinanceiroCentralDespesas() {
 
   // Dashboard cards
   const totalRealizado = useMemo(() => despesasFiltradas.filter(d => d.status === 'Pago').reduce((a, d) => a + d.valor, 0), [despesasFiltradas]);
-  const totalPrevisto = useMemo(() => despesasFiltradas.filter(d => d.status === 'Agendado' || d.status === 'Vencido').reduce((a, d) => a + d.valor, 0), [despesasFiltradas]);
+  const totalPrevisto = useMemo(() => despesasFiltradas.filter(d => d.status === 'À vencer' || d.status === 'Vencido').reduce((a, d) => a + d.valor, 0), [despesasFiltradas]);
   const totalPeriodo = totalRealizado + totalPrevisto;
   const qtdVencidas = useMemo(() => despesasFiltradas.filter(d => d.status === 'Vencido').length, [despesasFiltradas]);
 
@@ -141,7 +141,7 @@ export default function FinanceiroCentralDespesas() {
       conta: form.conta,
       observacoes: form.observacoes,
       lojaId: form.lojaId,
-      status: 'Agendado',
+      status: 'À vencer',
       categoria: form.categoria,
       dataVencimento: form.dataVencimento,
       dataPagamento: null,
@@ -289,7 +289,7 @@ export default function FinanceiroCentralDespesas() {
                   <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="Agendado">Agendado</SelectItem>
+                    <SelectItem value="À vencer">À vencer</SelectItem>
                     <SelectItem value="Vencido">Vencido</SelectItem>
                     <SelectItem value="Pago">Pago</SelectItem>
                   </SelectContent>
