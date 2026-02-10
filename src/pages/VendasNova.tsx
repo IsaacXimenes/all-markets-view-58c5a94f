@@ -2770,7 +2770,7 @@ export default function VendasNova() {
                     <TableHead>IMEI</TableHead>
                     <TableHead className="text-right">Valor Rec.</TableHead>
                     <TableHead>Loja</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
