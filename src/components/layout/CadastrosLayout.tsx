@@ -1,6 +1,6 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { TabsNavigation } from '@/components/layout/TabsNavigation';
-import { Store, Users, UserCog, Truck, ShoppingCart, Package, Percent, Briefcase, CreditCard, Building2, Wrench, Headphones, Shield, Palette, MapPinned, MessageSquare } from 'lucide-react';
+import { Store, Users, UserCog, Truck, ShoppingCart, Package, Percent, Briefcase, CreditCard, Building2, Wrench, Headphones, Shield, Palette, MapPinned, MessageSquare, ListChecks, History } from 'lucide-react';
 
 interface CadastrosLayoutProps {
   children: React.ReactNode;
@@ -25,6 +25,8 @@ const tabs = [
   { name: 'Planos Garantia', href: '/cadastros/planos-garantia', icon: Shield },
   { name: 'Taxas de Entrega', href: '/cadastros/taxas-entrega', icon: MapPinned },
   { name: 'Config. WhatsApp', href: '/cadastros/config-whatsapp', icon: MessageSquare },
+  { name: 'Atividades', href: '/cadastros/atividades', icon: ListChecks },
+  { name: 'Logs de Auditoria', href: '/cadastros/logs-auditoria', icon: History },
 ];
 
 export function CadastrosLayout({ children, title }: CadastrosLayoutProps) {

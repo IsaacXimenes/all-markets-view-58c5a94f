@@ -64,7 +64,9 @@ export const useAuthStore = create<AuthState>()(
             key.startsWith('gestao_conferencia_') ||
             key.startsWith('gestao_ajustes_') ||
             key === 'gestao_logs_auditoria' ||
-            key.startsWith('stories_lotes_')
+            key.startsWith('stories_lotes_') ||
+            key.startsWith('atividades_execucao_') ||
+            key === 'atividades_logs'
           )) {
             keysToRemove.push(key);
           }

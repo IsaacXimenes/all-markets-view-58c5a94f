@@ -116,6 +116,10 @@ import GestaoAdmStoriesLotes from "./pages/GestaoAdmStoriesLotes";
 import GestaoAdmStoriesConferencia from "./pages/GestaoAdmStoriesConferencia";
 import GestaoAdmStoriesValidacao from "./pages/GestaoAdmStoriesValidacao";
 import GestaoAdmStoriesIndicadores from "./pages/GestaoAdmStoriesIndicadores";
+import GestaoAdmIndicadores from "./pages/GestaoAdmIndicadores";
+import GestaoAdmAtividades from "./pages/GestaoAdmAtividades";
+import CadastrosAtividades from "./pages/CadastrosAtividades";
+import CadastrosLogsAuditoria from "./pages/CadastrosLogsAuditoria";
 
 const queryClient = new QueryClient();
 
@@ -223,6 +227,8 @@ const App = () => (
               <Route path="/cadastros/cores" element={<CadastrosCores />} />
               <Route path="/cadastros/taxas-entrega" element={<CadastrosTaxasEntrega />} />
               <Route path="/cadastros/config-whatsapp" element={<CadastrosConfigWhatsApp />} />
+              <Route path="/cadastros/atividades" element={<CadastrosAtividades />} />
+              <Route path="/cadastros/logs-auditoria" element={<CadastrosLogsAuditoria />} />
               <Route path="/vendas" element={<Vendas />} />
               <Route path="/vendas/nova" element={<VendasNova />} />
               <Route path="/vendas/nova-digital" element={<VendasNovaDigital />} />
@@ -253,6 +259,8 @@ const App = () => (
               <Route path="/gestao-administrativa/logs" element={<GestaoAdministrativaLogs />} />
               <Route path="/gestao-administrativa/stories" element={<GestaoAdmStoriesLotes />} />
               <Route path="/gestao-administrativa/stories/indicadores" element={<GestaoAdmStoriesIndicadores />} />
+              <Route path="/gestao-administrativa/indicadores" element={<GestaoAdmIndicadores />} />
+              <Route path="/gestao-administrativa/atividades" element={<GestaoAdmAtividades />} />
               <Route path="/gestao-administrativa/stories/lote/:id/conferencia" element={<GestaoAdmStoriesConferencia />} />
               <Route path="/gestao-administrativa/stories/lote/:id/validacao" element={<GestaoAdmStoriesValidacao />} />
             </Route>
