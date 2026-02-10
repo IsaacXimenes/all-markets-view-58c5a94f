@@ -15,7 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Building2, Lock, AlertTriangle, AlertCircle, 
   DollarSign, TrendingUp, Calendar, Landmark, Banknote,
-  Eye, FileText, Receipt, CheckCircle2
+  Eye, FileText, Receipt, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -234,6 +234,7 @@ export default function FinanceiroTetoBancario() {
   const [modalDetalhesAberto, setModalDetalhesAberto] = useState(false);
   const [sheetConfirmacaoAberto, setSheetConfirmacaoAberto] = useState(false);
   const [etapaConfirmacao, setEtapaConfirmacao] = useState<1 | 2>(1);
+  const [nfeOrdemData, setNfeOrdemData] = useState<'desc' | 'asc'>('desc');
   const [checkboxConfirmado, setCheckboxConfirmado] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -494,16 +495,17 @@ export default function FinanceiroTetoBancario() {
       });
     });
     
-    // Ordenar: pendentes primeiro, depois por data mais recente
+    // Ordenar: pendentes primeiro, depois por data conforme direção selecionada
     return linhas.sort((a, b) => {
       // Primeiro: pendentes (nota não emitida) no topo
       if (a.notaEmitida !== b.notaEmitida) {
         return a.notaEmitida ? 1 : -1;
       }
-      // Depois por data mais recente
-      return new Date(b.dataVenda).getTime() - new Date(a.dataVenda).getTime();
+      // Depois por data conforme ordenação
+      const diff = new Date(a.dataVenda).getTime() - new Date(b.dataVenda).getTime();
+      return nfeOrdemData === 'desc' ? -diff : diff;
     });
-  }, [vendasAgrupadas, obterNomeConta]);
+  }, [vendasAgrupadas, obterNomeConta, nfeOrdemData]);
 
   const mesNome = meses.find(m => m.valor === mesSelecionado)?.nome || '';
 
@@ -925,7 +927,21 @@ export default function FinanceiroTetoBancario() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>ID Venda</TableHead>
-                          <TableHead>Data</TableHead>
+                          <TableHead>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-auto p-0 font-medium text-muted-foreground hover:text-foreground"
+                              onClick={() => setNfeOrdemData(prev => prev === 'desc' ? 'asc' : 'desc')}
+                            >
+                              Data
+                              {nfeOrdemData === 'desc' ? (
+                                <ArrowDown className="ml-1 h-3 w-3" />
+                              ) : (
+                                <ArrowUp className="ml-1 h-3 w-3" />
+                              )}
+                            </Button>
+                          </TableHead>
                           <TableHead>SLA</TableHead>
                           <TableHead>Método Pagamento</TableHead>
                           <TableHead className="text-right">Valor</TableHead>
