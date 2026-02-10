@@ -2769,7 +2769,7 @@ export default function VendasNova() {
                     <TableHead>Produto</TableHead>
                     <TableHead>Condição</TableHead>
                     <TableHead>IMEI</TableHead>
-                    <TableHead>Qtd</TableHead>
+                    
                     <TableHead className="text-right">Valor Recomendado</TableHead>
                     <TableHead>Loja</TableHead>
                     <TableHead>Ações</TableHead>
@@ -2785,13 +2785,6 @@ export default function VendasNova() {
                         </Badge>
                       </TableCell>
                       <TableCell className="font-mono text-sm">{displayIMEI(produto.imei)}</TableCell>
-                      <TableCell>
-                        {produto.quantidade === 0 ? (
-                          <Badge variant="destructive">Indisponível</Badge>
-                        ) : (
-                          produto.quantidade
-                        )}
-                      </TableCell>
                       <TableCell className="text-right">{formatCurrency(produto.vendaRecomendada || produto.valorVendaSugerido)}</TableCell>
                       <TableCell>{obterNomeLoja(produto.loja)}</TableCell>
                       <TableCell>
