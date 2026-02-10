@@ -2753,8 +2753,9 @@ export default function VendasNova() {
               </Select>
             </div>
             
-            <div className="flex-1 overflow-auto">
-              <div className="min-w-[700px]">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+              <div className="overflow-x-auto min-w-0">
+                <div className="min-w-[700px]">
             {!showPendentesTab ? (
               /* Aba Produtos Estoque */
               <Table>
@@ -2939,6 +2940,7 @@ export default function VendasNova() {
                 </TableBody>
               </Table>
             )}
+                </div>
               </div>
             </div>
           </div>
@@ -3454,8 +3456,9 @@ export default function VendasNova() {
               className="flex-shrink-0"
             />
             
-            <div className="flex-1 overflow-auto">
-              <div className="min-w-[600px]">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden">
+              <div className="overflow-x-auto min-w-0">
+                <div className="min-w-[600px]">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -3501,6 +3504,7 @@ export default function VendasNova() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </div>
             </div>
           </div>
