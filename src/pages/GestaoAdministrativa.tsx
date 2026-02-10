@@ -54,12 +54,8 @@ export default function GestaoAdministrativa() {
   const [competencia, setCompetencia] = useState(format(new Date(), 'yyyy-MM'));
   const [lojaId, setLojaId] = useState<string>('');
   const [vendedorId, setVendedorId] = useState<string>('');
-  const [dataInicio, setDataInicio] = useState<Date | undefined>(
-    startOfWeek(new Date(), { weekStartsOn: 0 })
-  );
-  const [dataFim, setDataFim] = useState<Date | undefined>(
-    endOfWeek(new Date(), { weekStartsOn: 0 })
-  );
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(new Date());
+  const [dataFim, setDataFim] = useState<Date | undefined>(new Date());
   
   // Modal de confirmação do checkbox
   const [modalConfirmacaoCheck, setModalConfirmacaoCheck] = useState<{
