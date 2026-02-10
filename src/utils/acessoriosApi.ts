@@ -61,6 +61,8 @@ export interface VendaAcessorio {
 }
 
 // Dados mockados de acessórios
+// UUIDs reais do useCadastroStore:
+// Lojas: 3ac7e00c (Matriz), db894e7d (JK Shopping), 5b9446d5 (Shopping Sul), 0d06e7db (Águas Lindas)
 let acessorios: Acessorio[] = [
   {
     id: 'ACESS-0001',
@@ -69,7 +71,7 @@ let acessorios: Acessorio[] = [
     quantidade: 25,
     valorCusto: 45.00,
     valorRecomendado: 89.90,
-    loja: 'LOJA-001'
+    loja: '3ac7e00c'
   },
   {
     id: 'ACESS-0002',
@@ -78,7 +80,7 @@ let acessorios: Acessorio[] = [
     quantidade: 18,
     valorCusto: 89.00,
     valorRecomendado: 149.90,
-    loja: 'LOJA-001'
+    loja: '3ac7e00c'
   },
   {
     id: 'ACESS-0003',
@@ -87,7 +89,7 @@ let acessorios: Acessorio[] = [
     quantidade: 8,
     valorCusto: 120.00,
     valorRecomendado: 249.90,
-    loja: 'LOJA-004'
+    loja: '0d06e7db'
   },
   {
     id: 'ACESS-0004',
@@ -96,7 +98,7 @@ let acessorios: Acessorio[] = [
     quantidade: 32,
     valorCusto: 25.00,
     valorRecomendado: 49.90,
-    loja: 'LOJA-002'
+    loja: 'db894e7d'
   },
   {
     id: 'ACESS-0005',
@@ -105,7 +107,7 @@ let acessorios: Acessorio[] = [
     quantidade: 5,
     valorCusto: 35.00,
     valorRecomendado: 69.90,
-    loja: 'LOJA-003'
+    loja: '5b9446d5'
   }
 ];
 
