@@ -15,7 +15,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Eye, Edit3, DollarSign, CheckCircle2, Clock, AlertTriangle, ShieldAlert, TrendingUp, Calendar, Info, CalendarIcon } from 'lucide-react';
+import { Eye, Edit3, DollarSign, CheckCircle2, Clock, AlertTriangle, ShieldAlert, TrendingUp, Calendar, Info, CalendarIcon, CalendarDays, Store } from 'lucide-react';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
@@ -39,6 +39,8 @@ import {
   AjusteDivergencia
 } from '@/utils/gestaoAdministrativaApi';
 import { Venda } from '@/utils/vendasApi';
+import { AgendaEletronicaModal } from '@/components/gestao/AgendaEletronicaModal';
+import { temAnotacaoImportante } from '@/utils/agendaGestaoApi';
 
 export default function GestaoAdministrativa() {
   const { lojas, colaboradores } = useCadastroStore();
@@ -84,6 +86,11 @@ export default function GestaoAdministrativa() {
   // Forçar re-render após ações
   const [refreshKey, setRefreshKey] = useState(0);
   
+  // Agenda Eletrônica
+  const [agendaOpen, setAgendaOpen] = useState(false);
+  const [agendaLojaId, setAgendaLojaId] = useState('');
+  const [agendaLojaNome, setAgendaLojaNome] = useState('');
+  
   // Consolidar dados
   const conferencias = useMemo(() => {
     return consolidarVendasPorDia(competencia, lojaId || 'todas', vendedorId || 'todos');
@@ -99,6 +106,19 @@ export default function GestaoAdministrativa() {
       return true;
     });
   }, [conferencias, dataInicio, dataFim]);
+
+  // Agrupar por loja
+  const conferenciasPorLoja = useMemo(() => {
+    const mapa = new Map<string, { lojaId: string; lojaNome: string; conferencias: ConferenciaDiaria[] }>();
+    for (const conf of conferenciasFiltradas) {
+      if (!mapa.has(conf.lojaId)) {
+        const loja = lojas.find(l => l.id === conf.lojaId);
+        mapa.set(conf.lojaId, { lojaId: conf.lojaId, lojaNome: loja?.nome || conf.lojaId, conferencias: [] });
+      }
+      mapa.get(conf.lojaId)!.conferencias.push(conf);
+    }
+    return Array.from(mapa.values());
+  }, [conferenciasFiltradas, lojas]);
   
   const resumo = useMemo(() => {
     return calcularResumoConferencia(conferenciasFiltradas);
@@ -111,6 +131,13 @@ export default function GestaoAdministrativa() {
       setCompetencia(format(date, 'yyyy-MM'));
     }
   };
+
+  const handleAbrirAgenda = (lId: string, lNome: string) => {
+    setAgendaLojaId(lId);
+    setAgendaLojaNome(lNome);
+    setAgendaOpen(true);
+  };
+
   // Handlers
   const handleToggleConferencia = (conf: ConferenciaDiaria, metodo: string) => {
     if (!ehGestor) {
@@ -361,175 +388,191 @@ export default function GestaoAdministrativa() {
         </Card>
       </div>
       
-      {/* Tabela de Conferência */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Conferência Diária - {competencia}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ScrollArea className="w-full" type="always">
-            <div className="min-w-[1200px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-20">Data</TableHead>
-                    <TableHead className="w-32">Loja</TableHead>
-                    <TableHead className="w-28">Status</TableHead>
-                    <TableHead className="text-right w-32">Vendas (Bruto)</TableHead>
-                    {METODOS_PAGAMENTO.map(metodo => (
-                      <TableHead key={metodo} className="text-right w-28">{metodo}</TableHead>
-                    ))}
-                    {METODOS_PAGAMENTO.map(metodo => (
-                      <TableHead key={`conf-${metodo}`} className="text-center w-12">✓</TableHead>
-                    ))}
-                    <TableHead className="text-center w-20">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {conferenciasFiltradas.map(conf => {
-                    const hasValue = conf.vendasTotal > 0;
-                    return (
-                      <TableRow key={conf.id} className={getRowClass(conf.statusConferencia, hasValue)}>
-                        <TableCell className="font-medium">
-                          {formatarDataExibicao(conf.data)}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {getLojaNome(conf.lojaId)}
-                        </TableCell>
-                        <TableCell>
-                          {hasValue ? getStatusBadge(conf.statusConferencia) : (
-                            <span className="text-muted-foreground text-xs">Sem vendas</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {hasValue ? formatCurrency(conf.vendasTotal) : '-'}
-                        </TableCell>
-                        
-                        {/* Valores por método */}
-                        {METODOS_PAGAMENTO.map(metodo => {
-                          const valor = conf.totaisPorMetodo[metodo]?.bruto || 0;
-                          return (
-                            <TableCell key={metodo} className="text-right">
-                              {valor > 0 ? (
-                                <Button
-                                  variant="link"
-                                  className="p-0 h-auto font-normal text-foreground hover:text-primary"
-                                  onClick={() => handleAbrirDrillDown(conf, metodo)}
-                                >
-                                  {formatCurrency(valor)}
-                                </Button>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
+      {/* Quadros por Loja */}
+      <div className="space-y-6">
+        {conferenciasPorLoja.map(({ lojaId: lId, lojaNome, conferencias: confsLoja }) => (
+          <Card key={lId}>
+            <CardHeader>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="flex items-center gap-2">
+                  <Store className="h-5 w-5" /> Conferência Diária - {lojaNome}
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="relative"
+                  onClick={() => handleAbrirAgenda(lId, lojaNome)}
+                >
+                  <CalendarDays className="h-4 w-4 mr-1" />
+                  Agenda
+                  {temAnotacaoImportante(`conferencia_${lId}`) && (
+                    <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-destructive" />
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="w-full" type="always">
+                <div className="min-w-[1100px]">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-20">Data</TableHead>
+                        <TableHead className="w-28">Status</TableHead>
+                        <TableHead className="text-right w-32">Vendas (Bruto)</TableHead>
+                        {METODOS_PAGAMENTO.map(metodo => (
+                          <TableHead key={metodo} className="text-right w-28">{metodo}</TableHead>
+                        ))}
+                        {METODOS_PAGAMENTO.map(metodo => (
+                          <TableHead key={`conf-${metodo}`} className="text-center w-12">✓</TableHead>
+                        ))}
+                        <TableHead className="text-center w-20">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {confsLoja.map(conf => {
+                        const hasValue = conf.vendasTotal > 0;
+                        return (
+                          <TableRow key={conf.id} className={getRowClass(conf.statusConferencia, hasValue)}>
+                            <TableCell className="font-medium">
+                              {formatarDataExibicao(conf.data)}
+                            </TableCell>
+                            <TableCell>
+                              {hasValue ? getStatusBadge(conf.statusConferencia) : (
+                                <span className="text-muted-foreground text-xs">Sem vendas</span>
                               )}
                             </TableCell>
-                          );
-                        })}
-                        
-                        {/* Checkboxes de conferência */}
-                        {METODOS_PAGAMENTO.map(metodo => {
-                          const dados = conf.totaisPorMetodo[metodo];
-                          const temValor = (dados?.bruto || 0) > 0;
-                          return (
-                            <TableCell key={`conf-${metodo}`} className="text-center">
-                              {temValor ? (
+                            <TableCell className="text-right font-medium">
+                              {hasValue ? formatCurrency(conf.vendasTotal) : '-'}
+                            </TableCell>
+                            
+                            {/* Valores por método */}
+                            {METODOS_PAGAMENTO.map(metodo => {
+                              const valor = conf.totaisPorMetodo[metodo]?.bruto || 0;
+                              return (
+                                <TableCell key={metodo} className="text-right">
+                                  {valor > 0 ? (
+                                    <Button
+                                      variant="link"
+                                      className="p-0 h-auto font-normal text-foreground hover:text-primary"
+                                      onClick={() => handleAbrirDrillDown(conf, metodo)}
+                                    >
+                                      {formatCurrency(valor)}
+                                    </Button>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                            
+                            {/* Checkboxes de conferência */}
+                            {METODOS_PAGAMENTO.map(metodo => {
+                              const dados = conf.totaisPorMetodo[metodo];
+                              const temValor = (dados?.bruto || 0) > 0;
+                              return (
+                                <TableCell key={`conf-${metodo}`} className="text-center">
+                                  {temValor ? (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <div className="flex justify-center">
+                                            <Checkbox
+                                              checked={dados?.conferido || false}
+                                              onCheckedChange={() => handleToggleConferencia(conf, metodo)}
+                                            />
+                                          </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          {dados?.conferido ? (
+                                            <p>Conferido por {dados.conferidoPor} em {dados.dataConferencia ? format(new Date(dados.dataConferencia), 'dd/MM HH:mm') : '-'}</p>
+                                          ) : (
+                                            <p>Clique para marcar como conferido</p>
+                                          )}
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                            
+                            {/* Ações */}
+                            <TableCell>
+                              <div className="flex items-center justify-center gap-1">
                                 <TooltipProvider>
                                   <Tooltip>
                                     <TooltipTrigger asChild>
-                                      <div className="flex justify-center">
-                                        <Checkbox
-                                          checked={dados?.conferido || false}
-                                          onCheckedChange={() => handleToggleConferencia(conf, metodo)}
-                                        />
-                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => handleAbrirDetalhesDia(conf)}
+                                        disabled={!hasValue}
+                                      >
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent>
-                                      {dados?.conferido ? (
-                                        <p>Conferido por {dados.conferidoPor} em {dados.dataConferencia ? format(new Date(dados.dataConferencia), 'dd/MM HH:mm') : '-'}</p>
-                                      ) : (
-                                        <p>Clique para marcar como conferido</p>
-                                      )}
-                                    </TooltipContent>
+                                    <TooltipContent>Ver detalhes do dia</TooltipContent>
                                   </Tooltip>
                                 </TooltipProvider>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
+                                
+                                {conf.statusConferencia !== 'Conferido' && hasValue && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8"
+                                          onClick={() => handleAbrirModalAjuste(conf)}
+                                        >
+                                          <Edit3 className="h-4 w-4" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Registrar ajuste/divergência</TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                                
+                                {conf.ajustes.length > 0 && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="flex items-center">
+                                          <Info className="h-4 w-4 text-yellow-600" />
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs">
+                                        <p className="font-semibold mb-1">Ajustes registrados:</p>
+                                        {conf.ajustes.map(aj => (
+                                          <p key={aj.id} className="text-xs">
+                                            {aj.metodoPagamento}: {formatCurrency(aj.valorDiferenca)} - {aj.justificativa}
+                                          </p>
+                                        ))}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                              </div>
                             </TableCell>
-                          );
-                        })}
-                        
-                        {/* Ações */}
-                        <TableCell>
-                          <div className="flex items-center justify-center gap-1">
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={() => handleAbrirDetalhesDia(conf)}
-                                    disabled={!hasValue}
-                                  >
-                                    <Eye className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Ver detalhes do dia</TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            
-                            {conf.statusConferencia !== 'Conferido' && hasValue && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8"
-                                      onClick={() => handleAbrirModalAjuste(conf)}
-                                    >
-                                      <Edit3 className="h-4 w-4" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Registrar ajuste/divergência</TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            
-                            {conf.ajustes.length > 0 && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className="flex items-center">
-                                      <Info className="h-4 w-4 text-yellow-600" />
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="max-w-xs">
-                                    <p className="font-semibold mb-1">Ajustes registrados:</p>
-                                    {conf.ajustes.map(aj => (
-                                      <p key={aj.id} className="text-xs">
-                                        {aj.metodoPagamento}: {formatCurrency(aj.valorDiferenca)} - {aj.justificativa}
-                                      </p>
-                                    ))}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-            <ScrollBar orientation="horizontal" className="h-4" />
-          </ScrollArea>
-        </CardContent>
-      </Card>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                <ScrollBar orientation="horizontal" className="h-4" />
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        ))}
+        {conferenciasPorLoja.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">Nenhuma conferência encontrada para o período selecionado.</div>
+        )}
+      </div>
       
       {/* Modal de Detalhes/Drill-Down */}
       <Dialog open={modalDetalhesOpen} onOpenChange={setModalDetalhesOpen}>
@@ -728,6 +771,14 @@ export default function GestaoAdministrativa() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AgendaEletronicaModal
+        open={agendaOpen}
+        onOpenChange={setAgendaOpen}
+        chaveContexto={`conferencia_${agendaLojaId}`}
+        titulo="Agenda Eletrônica"
+        subtitulo={agendaLojaNome}
+      />
     </GestaoAdministrativaLayout>
   );
 }

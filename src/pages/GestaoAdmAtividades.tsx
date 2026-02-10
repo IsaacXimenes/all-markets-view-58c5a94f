@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { ListChecks, CalendarIcon, ShieldAlert, CheckCircle2, Clock, Target, Store } from 'lucide-react';
+import { ListChecks, CalendarIcon, ShieldAlert, CheckCircle2, Clock, Target, Store, CalendarDays } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,8 @@ import {
   calcularResumoExecucao,
   ExecucaoAtividade,
 } from '@/utils/atividadesGestoresApi';
+import { AgendaEletronicaModal } from '@/components/gestao/AgendaEletronicaModal';
+import { temAnotacaoImportante } from '@/utils/agendaGestaoApi';
 
 // Sort: fixed times earliest first, then open ones at the end
 const sortExecucoes = (execucoes: ExecucaoAtividade[]): ExecucaoAtividade[] => {
@@ -43,6 +45,9 @@ export default function GestaoAdmAtividades() {
 
   const [dataSelecionada, setDataSelecionada] = useState<Date>(new Date());
   const [refreshKey, setRefreshKey] = useState(0);
+  const [agendaOpen, setAgendaOpen] = useState(false);
+  const [agendaLojaId, setAgendaLojaId] = useState('');
+  const [agendaLojaNome, setAgendaLojaNome] = useState('');
 
   const dataStr = format(dataSelecionada, 'yyyy-MM-dd');
 
@@ -76,6 +81,12 @@ export default function GestaoAdmAtividades() {
     if (!user?.colaborador) return;
     toggleExecucao(dataStr, atividadeId, lojaId, user.colaborador.id, user.colaborador.nome);
     setRefreshKey(k => k + 1);
+  };
+
+  const handleAbrirAgenda = (lojaId: string, lojaNome: string) => {
+    setAgendaLojaId(lojaId);
+    setAgendaLojaNome(lojaNome);
+    setAgendaOpen(true);
   };
 
   if (!ehGestor) {
@@ -164,6 +175,18 @@ export default function GestaoAdmAtividades() {
                     <Badge variant={resumoLoja.percentual === 100 ? 'default' : 'outline'}>
                       {resumoLoja.percentual}%
                     </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="relative"
+                      onClick={() => handleAbrirAgenda(lojaId, lojaNome)}
+                    >
+                      <CalendarDays className="h-4 w-4 mr-1" />
+                      Agenda
+                      {temAnotacaoImportante(`atividades_${lojaId}`) && (
+                        <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-destructive" />
+                      )}
+                    </Button>
                   </div>
                 </div>
                 <Progress value={resumoLoja.percentual} className="h-1.5 mt-2" />
@@ -174,7 +197,6 @@ export default function GestaoAdmAtividades() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Atividade</TableHead>
-                        <TableHead>Loja</TableHead>
                         <TableHead>Horário Previsto</TableHead>
                         <TableHead>Horário Executado</TableHead>
                         <TableHead className="text-center">Executado</TableHead>
@@ -186,7 +208,6 @@ export default function GestaoAdmAtividades() {
                       {execucoes.map(exec => (
                         <TableRow key={exec.id} className={exec.status === 'executado_com_atraso' ? 'bg-yellow-500/10' : exec.executado ? 'bg-green-500/10' : ''}>
                           <TableCell className="font-medium">{exec.atividadeNome}</TableCell>
-                          <TableCell>{lojaNome}</TableCell>
                           <TableCell>{exec.tipoHorario === 'fixo' ? exec.horarioPrevisto : 'Aberto'}</TableCell>
                           <TableCell>
                             {exec.horarioExecutado ? format(new Date(exec.horarioExecutado), 'HH:mm') : '-'}
@@ -225,6 +246,14 @@ export default function GestaoAdmAtividades() {
           <div className="text-center py-12 text-muted-foreground">Nenhuma loja ativa encontrada.</div>
         )}
       </div>
+
+      <AgendaEletronicaModal
+        open={agendaOpen}
+        onOpenChange={setAgendaOpen}
+        chaveContexto={`atividades_${agendaLojaId}`}
+        titulo="Agenda Eletrônica"
+        subtitulo={agendaLojaNome}
+      />
     </GestaoAdministrativaLayout>
   );
 }
