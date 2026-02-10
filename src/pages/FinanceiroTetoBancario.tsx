@@ -221,7 +221,7 @@ const getDataEmissaoNota = (vendaId: string): string | undefined => {
 };
 
 export default function FinanceiroTetoBancario() {
-  const { obterNomeLoja } = useCadastroStore();
+  const { obterNomeLoja, lojas } = useCadastroStore();
   const [contasFinanceiras] = useState<ContaFinanceira[]>(getContasFinanceiras());
   const [abaAtiva, setAbaAtiva] = useState('visao-geral');
   
@@ -468,10 +468,8 @@ export default function FinanceiroTetoBancario() {
     const conta = contasFinanceiras.find(c => c.id === contaId);
     if (!conta) return contaId;
     const nomeLoja = obterNomeLoja(conta.lojaVinculada);
-    // Se obterNomeLoja retornou o próprio ID (não encontrou), exibir só o nome da conta
-    if (nomeLoja === conta.lojaVinculada) return conta.nome;
     return `${nomeLoja} - ${conta.nome}`;
-  }, [contasFinanceiras, obterNomeLoja]);
+  }, [contasFinanceiras, obterNomeLoja, lojas]);
 
   // Criar linhas NFE (espelho de Conferência de Contas - 1 linha por método de pagamento)
   const linhasNFE = useMemo((): LinhaNFE[] => {
