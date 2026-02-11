@@ -61,7 +61,7 @@ export function CarouselTabsNavigation({ tabs, size = 'default' }: CarouselTabsN
       >
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = location.pathname === tab.href || location.pathname.startsWith(tab.href + '/');
+          const isActive = location.pathname === tab.href || (tab.href !== tabs[0]?.href && location.pathname.startsWith(tab.href + '/'));
           return (
             <Link
               key={tab.href}
