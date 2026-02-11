@@ -416,48 +416,36 @@ export default function FinanceiroExtrato() {
           </Card>
 
 
-        {/* Comparativo de Períodos - Filtros */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ArrowLeftRight className="h-5 w-5" />
-              Comparativo de Períodos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="font-semibold">Período A (Atual)</Label>
-                <div className="flex items-center gap-2">
-                  <Input type="date" value={periodoAInicio} onChange={(e) => setPeriodoAInicio(e.target.value)} className="text-sm" />
-                  <span className="text-muted-foreground text-sm">até</span>
-                  <Input type="date" value={periodoAFim} onChange={(e) => setPeriodoAFim(e.target.value)} className="text-sm" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="font-semibold">Período B (Comparativo)</Label>
-                <div className="flex items-center gap-2">
-                  <Input type="date" value={periodoBInicio} onChange={(e) => setPeriodoBInicio(e.target.value)} className="text-sm" />
-                  <span className="text-muted-foreground text-sm">até</span>
-                  <Input type="date" value={periodoBFim} onChange={(e) => setPeriodoBFim(e.target.value)} className="text-sm" />
-                </div>
-              </div>
-            </div>
-            <div className="mt-4">
-              <Button variant="outline" size="sm" onClick={handleAnoAnterior} className="gap-2">
-                <Calendar className="h-4 w-4" />
-                Ano Anterior
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Gráficos Comparativos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Comparativo de Entradas */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Comparativo de Entradas</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-green-600" />
+                Comparativo de Entradas
+              </CardTitle>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Período A</Label>
+                  <div className="flex items-center gap-1">
+                    <Input type="date" value={periodoAInicio} onChange={(e) => setPeriodoAInicio(e.target.value)} className="h-7 text-xs" />
+                    <Input type="date" value={periodoAFim} onChange={(e) => setPeriodoAFim(e.target.value)} className="h-7 text-xs" />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-muted-foreground">Período B</Label>
+                    <Button variant="ghost" size="sm" onClick={handleAnoAnterior} className="h-5 text-[10px] px-1.5 text-muted-foreground hover:text-foreground">
+                      Ano Anterior
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Input type="date" value={periodoBInicio} onChange={(e) => setPeriodoBInicio(e.target.value)} className="h-7 text-xs" />
+                    <Input type="date" value={periodoBFim} onChange={(e) => setPeriodoBFim(e.target.value)} className="h-7 text-xs" />
+                  </div>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="h-64">
@@ -478,8 +466,32 @@ export default function FinanceiroExtrato() {
 
           {/* Comparativo de Saídas */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Comparativo de Saídas</CardTitle>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <TrendingDown className="h-4 w-4 text-red-600" />
+                Comparativo de Saídas
+              </CardTitle>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Período A</Label>
+                  <div className="flex items-center gap-1">
+                    <Input type="date" value={periodoAInicio} onChange={(e) => setPeriodoAInicio(e.target.value)} className="h-7 text-xs" />
+                    <Input type="date" value={periodoAFim} onChange={(e) => setPeriodoAFim(e.target.value)} className="h-7 text-xs" />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-muted-foreground">Período B</Label>
+                    <Button variant="ghost" size="sm" onClick={handleAnoAnterior} className="h-5 text-[10px] px-1.5 text-muted-foreground hover:text-foreground">
+                      Ano Anterior
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Input type="date" value={periodoBInicio} onChange={(e) => setPeriodoBInicio(e.target.value)} className="h-7 text-xs" />
+                    <Input type="date" value={periodoBFim} onChange={(e) => setPeriodoBFim(e.target.value)} className="h-7 text-xs" />
+                  </div>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="h-64">
