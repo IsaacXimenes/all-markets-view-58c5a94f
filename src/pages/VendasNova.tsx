@@ -1098,18 +1098,6 @@ export default function VendasNova() {
                 </div>
               )}
               <div>
-                <label className={cn("font-medium", isMobilePreview ? "text-xs" : "text-sm", !lojaVenda && 'text-destructive')}>
-                  Loja de Venda *
-                </label>
-                <AutocompleteLoja
-                  value={lojaVenda}
-                  onChange={setLojaVenda}
-                  placeholder="Selecione a loja"
-                  apenasLojasTipoLoja={true}
-                  className={cn(!lojaVenda && 'border-destructive', isMobilePreview && "h-8 text-xs")}
-                />
-              </div>
-              <div>
                 <label className={cn("font-medium", isMobilePreview ? "text-xs" : "text-sm", !vendedor && 'text-destructive')}>
                   Responsável *
                 </label>
@@ -1120,11 +1108,24 @@ export default function VendasNova() {
                     if (id) {
                       const col = obterColaboradorById(id);
                       if (col) setLojaVenda(col.loja_id);
+                    } else {
+                      setLojaVenda('');
                     }
                   }}
                   placeholder="Selecione"
                   filtrarPorTipo="vendedoresEGestores"
                   className={cn(!vendedor && 'border-destructive', isMobilePreview && "h-8 text-xs")}
+                />
+              </div>
+              <div>
+                <label className={cn("font-medium", isMobilePreview ? "text-xs" : "text-sm", !lojaVenda && 'text-destructive')}>
+                  Loja de Venda *
+                </label>
+                <Input
+                  value={lojaVenda ? obterNomeLoja(lojaVenda) : ''}
+                  disabled
+                  placeholder="Preenchido automaticamente"
+                  className={cn("bg-muted", !lojaVenda && 'border-destructive', isMobilePreview && "h-8 text-xs")}
                 />
               </div>
               <div>

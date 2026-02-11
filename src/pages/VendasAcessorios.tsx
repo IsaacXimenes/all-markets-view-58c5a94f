@@ -44,7 +44,7 @@ const DRAFT_KEY = 'draft_venda_acessorios';
 
 export default function VendasAcessorios() {
   const navigate = useNavigate();
-  const { obterLojasAtivas, obterLojasTipoLoja, obterVendedores, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
+  const { obterLojasAtivas, obterLojasTipoLoja, obterVendedores, obterNomeLoja, obterNomeColaborador, obterColaboradorById } = useCadastroStore();
   
   // Dados do cadastros - usando Zustand store
   const lojas = obterLojasAtivas();
@@ -487,27 +487,34 @@ export default function VendasAcessorios() {
                 <Input value={vendaInfo.numero} disabled className="bg-muted" />
               </div>
               <div>
-                <label className={`text-sm font-medium ${!lojaVenda ? 'text-destructive' : ''}`}>
-                  Loja de Venda *
-                </label>
-                <AutocompleteLoja
-                  value={lojaVenda}
-                  onChange={setLojaVenda}
-                  placeholder="Selecione a loja"
-                  apenasLojasTipoLoja={true}
-                  className={!lojaVenda ? 'border-destructive' : ''}
-                />
-              </div>
-              <div>
                 <label className={`text-sm font-medium ${!vendedor ? 'text-destructive' : ''}`}>
                   Responsável *
                 </label>
                 <AutocompleteColaborador
                   value={vendedor}
-                  onChange={setVendedor}
+                  onChange={(id: string) => {
+                    setVendedor(id);
+                    if (id) {
+                      const col = obterColaboradorById(id);
+                      if (col) setLojaVenda(col.loja_id);
+                    } else {
+                      setLojaVenda('');
+                    }
+                  }}
                   placeholder="Selecione o responsável"
                   filtrarPorTipo="vendedoresEGestores"
                   className={!vendedor ? 'border-destructive' : ''}
+                />
+              </div>
+              <div>
+                <label className={`text-sm font-medium ${!lojaVenda ? 'text-destructive' : ''}`}>
+                  Loja de Venda *
+                </label>
+                <Input
+                  value={lojaVenda ? obterNomeLoja(lojaVenda) : ''}
+                  disabled
+                  placeholder="Preenchido automaticamente"
+                  className={`bg-muted ${!lojaVenda ? 'border-destructive' : ''}`}
                 />
               </div>
               <div>
