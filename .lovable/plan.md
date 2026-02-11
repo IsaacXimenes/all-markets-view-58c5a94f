@@ -1,28 +1,38 @@
 
-# Plano - Manter posicao do carrossel ao clicar em uma aba
+
+# Plano - Corrigir loja automática considerando rodízio ativo
 
 ## Problema
 
-Quando o usuario rola o carrossel para encontrar uma aba e clica nela, a pagina atualiza e o componente remonta, fazendo o scroll voltar para a posicao inicial (esquerda). O usuario precisa rolar novamente para ver a aba que acabou de selecionar.
+Ao selecionar um colaborador que está em rodízio na "Nova Venda" ou "Venda Balcão", o sistema preenche a "Loja de Venda" com a loja base do colaborador (`col.loja_id`) ao invés da loja onde ele está atualmente alocado via rodízio.
 
-## Solucao
+## Solução
 
-Adicionar um `useEffect` que, apos a renderizacao, faz scroll automatico ate a aba ativa (a que corresponde a rota atual). Assim, ao navegar para uma aba que esta mais a direita, o carrossel se posiciona automaticamente para exibi-la.
+Nos dois arquivos onde ocorre o auto-preenchimento da loja, verificar se o colaborador possui um rodízio ativo. Se sim, usar a `loja_destino_id` do rodízio. Caso contrário, manter o comportamento atual (`col.loja_id`).
 
-## Alteracao
+## Alterações
 
-### Arquivo: `src/components/layout/CarouselTabsNavigation.tsx`
+### 1. `src/pages/VendasNova.tsx` (linha ~1108-1112)
 
-- Adicionar uma `ref` em cada link ativo para identificar o elemento DOM da aba selecionada.
-- Adicionar um `useEffect` que escuta mudancas em `location.pathname` e chama `scrollIntoView` no elemento da aba ativa, centralizando-a no carrossel de forma suave.
-- Isso garante que, ao clicar em qualquer aba (mesmo fora da area visivel), o carrossel se ajusta para mostrar a aba clicada sem que o usuario precise rolar manualmente novamente.
+- Importar `obterRodizioAtivoDoColaborador` do `useCadastroStore`
+- No callback de seleção do responsável, verificar rodízio ativo antes de definir a loja:
+  - Se houver rodízio ativo, usar `rodizio.loja_destino_id`
+  - Senão, usar `col.loja_id`
 
-## Detalhes Tecnicos
+### 2. `src/pages/VendasAcessorios.tsx` (linha ~497-502)
+
+- Mesma correção: importar e verificar rodízio ativo antes de definir a loja
+
+## Detalhes Técnicos
+
+Lógica atualizada (ambos os arquivos):
 
 ```text
-useEffect(() => {
-  activeTabRef -> scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
-}, [location.pathname])
+const col = obterColaboradorById(id);
+if (col) {
+  const rodizio = obterRodizioAtivoDoColaborador(col.id);
+  setLojaVenda(rodizio ? rodizio.loja_destino_id : col.loja_id);
+}
 ```
 
-Nenhum outro arquivo sera alterado. O Sidebar permanece intacto.
+Nenhum outro arquivo será alterado.
