@@ -42,7 +42,7 @@ const navigationItems = [
   { name: 'Estoque', href: '/estoque', icon: Package, keywords: ['produtos', 'inventario', 'notas'] },
   { name: 'Vendas', href: '/vendas', icon: ShoppingCart, keywords: ['pedidos', 'clientes', 'vender'] },
   { name: 'Garantias', href: '/garantias/nova', icon: Shield, keywords: ['troca', 'devolucao', 'garantia'] },
-  { name: 'Assistência', href: '/os/produtos-analise', icon: Wrench, keywords: ['os', 'conserto', 'reparo'] },
+  { name: 'Assistência', href: '/os/analise-garantia', icon: Wrench, keywords: ['os', 'conserto', 'reparo'] },
   { name: 'Relatórios', href: '/relatorios', icon: BarChart3, keywords: ['graficos', 'dados', 'metricas'] },
   { name: 'Cadastros', href: '/cadastros', icon: Database, keywords: ['registros', 'configuracoes', 'lojas'] },
 ];

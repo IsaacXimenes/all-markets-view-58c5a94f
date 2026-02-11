@@ -30,7 +30,7 @@ const navItems: NavItem[] = [
   { title: 'Estoque', icon: Package, href: '/estoque' },
   { title: 'Vendas', icon: ShoppingCart, href: '/vendas' },
   { title: 'Garantias', icon: Shield, href: '/garantias/nova' },
-  { title: 'Assistência', icon: Wrench, href: '/os/produtos-analise' },
+  { title: 'Assistência', icon: Wrench, href: '/os/analise-garantia' },
   { title: 'Gestão Administrativa', icon: ClipboardCheck, href: '/gestao-administrativa' },
   { title: 'Relatórios', icon: BarChart3, href: '/relatorios' },
   { title: 'Cadastros', icon: Database, href: '/cadastros' },
@@ -57,7 +57,7 @@ function SidebarContent({
     if (href === '/financeiro/conferencia') {
       return location.pathname.startsWith('/financeiro');
     }
-    if (href === '/os/produtos-analise') {
+    if (href === '/os/analise-garantia') {
       return location.pathname.startsWith('/os');
     }
     if (href === '/garantias/nova') {
