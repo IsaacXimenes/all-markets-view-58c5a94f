@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Download, Plus, Trash2, Calendar, ChevronDown, DollarSign, CalendarDays, AlertTriangle, CheckCircle, Clock, TrendingUp, Eye, XCircle } from 'lucide-react';
-import { getDespesas, addDespesa, deleteDespesa, updateDespesa, pagarDespesa, provisionarProximoPeriodo, encerrarRecorrencia, atualizarStatusVencidos, CATEGORIAS_DESPESA, type Despesa } from '@/utils/financeApi';
+import { getDespesas, addDespesa, deleteDespesa, updateDespesa, pagarDespesa, provisionarProximoPeriodo, provisionarRecorrenciaContinua, encerrarRecorrencia, atualizarStatusVencidos, CATEGORIAS_DESPESA, type Despesa } from '@/utils/financeApi';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
@@ -76,6 +76,7 @@ export default function FinanceiroCentralDespesas() {
     lojaId: '',
     categoria: '',
     dataVencimento: new Date().toISOString().split('T')[0],
+    diaVencimento: '' as string | number,
     competencia: '',
     conta: '',
     recorrente: false,
@@ -125,19 +126,47 @@ export default function FinanceiroCentralDespesas() {
   const qtdVencidas = useMemo(() => despesasFiltradas.filter(d => d.status === 'Vencido').length, [despesasFiltradas]);
 
   const resetForm = () => {
-    setForm({ tipo: '', descricao: '', valor: '', lojaId: '', categoria: '', dataVencimento: new Date().toISOString().split('T')[0], competencia: '', conta: '', recorrente: false, periodicidade: '', observacoes: '' });
+    setForm({ tipo: '', descricao: '', valor: '', lojaId: '', categoria: '', dataVencimento: new Date().toISOString().split('T')[0], diaVencimento: '', competencia: '', conta: '', recorrente: false, periodicidade: '', observacoes: '' });
+  };
+
+  // Helper: inferir data de vencimento a partir de dia + competência
+  const inferirDataVencimento = (dia: number, competencia: string): string => {
+    const mesesMap: Record<string, number> = { JAN: 0, FEV: 1, MAR: 2, ABR: 3, MAI: 4, JUN: 5, JUL: 6, AGO: 7, SET: 8, OUT: 9, NOV: 10, DEZ: 11 };
+    const [mesStr, anoStr] = competencia.split('-');
+    const mes = mesesMap[mesStr] ?? new Date().getMonth();
+    const ano = parseInt(anoStr) || new Date().getFullYear();
+    // Limitar dia ao último dia do mês
+    const ultimoDia = new Date(ano, mes + 1, 0).getDate();
+    const diaReal = Math.min(dia, ultimoDia);
+    return `${ano}-${String(mes + 1).padStart(2, '0')}-${String(diaReal).padStart(2, '0')}`;
   };
 
   const handleLancar = () => {
-    if (!form.tipo || !form.descricao || !form.valor || !form.lojaId || !form.categoria || !form.competencia || !form.conta || !form.dataVencimento) {
+    const isRecorrente = form.tipo === 'Fixa' && form.recorrente;
+    
+    if (!form.tipo || !form.descricao || !form.valor || !form.lojaId || !form.categoria || !form.competencia || !form.conta) {
       toast.error('Preencha todos os campos obrigatórios');
       return;
     }
-    if (form.tipo === 'Fixa' && form.recorrente && !form.periodicidade) {
+    if (isRecorrente && !form.periodicidade) {
       toast.error('Selecione a periodicidade');
       return;
     }
+    if (isRecorrente && (!form.diaVencimento || Number(form.diaVencimento) < 1 || Number(form.diaVencimento) > 31)) {
+      toast.error('Informe o dia do vencimento (1 a 31)');
+      return;
+    }
+    if (!isRecorrente && !form.dataVencimento) {
+      toast.error('Informe a data de vencimento');
+      return;
+    }
+
     const competenciaNova = form.competencia;
+    const diaVenc = isRecorrente ? Number(form.diaVencimento) : undefined;
+    const dataVencimento = isRecorrente 
+      ? inferirDataVencimento(diaVenc!, competenciaNova)
+      : form.dataVencimento;
+
     const novaDespesa = addDespesa({
       tipo: form.tipo,
       descricao: form.descricao,
@@ -149,17 +178,18 @@ export default function FinanceiroCentralDespesas() {
       lojaId: form.lojaId,
       status: 'À vencer',
       categoria: form.categoria,
-      dataVencimento: form.dataVencimento,
+      dataVencimento,
       dataPagamento: null,
-      recorrente: form.tipo === 'Fixa' ? form.recorrente : false,
-      periodicidade: form.tipo === 'Fixa' && form.recorrente ? (form.periodicidade as 'Mensal' | 'Trimestral' | 'Anual') : null,
+      recorrente: isRecorrente,
+      periodicidade: isRecorrente ? (form.periodicidade as 'Mensal' | 'Trimestral' | 'Anual') : null,
       pagoPor: null,
+      diaVencimento: diaVenc,
     });
-    // Auto-provisionamento para despesas recorrentes
-    if (form.tipo === 'Fixa' && form.recorrente && form.periodicidade) {
-      const proxima = provisionarProximoPeriodo(novaDespesa.id);
-      if (proxima) {
-        toast.success(`Próxima despesa provisionada automaticamente para ${proxima.competencia}`);
+    // Auto-provisionamento contínuo para despesas recorrentes (12 meses)
+    if (isRecorrente && form.periodicidade) {
+      const criadas = provisionarRecorrenciaContinua(novaDespesa.id, 12);
+      if (criadas.length > 0) {
+        toast.success(`${criadas.length} despesa(s) futura(s) agendada(s) automaticamente`);
       }
     }
     refreshDespesas();
@@ -307,9 +337,10 @@ export default function FinanceiroCentralDespesas() {
                   <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="À vencer">À vencer</SelectItem>
+                <SelectItem value="À vencer">À vencer</SelectItem>
                     <SelectItem value="Vencido">Vencido</SelectItem>
                     <SelectItem value="Pago">Pago</SelectItem>
+                    <SelectItem value="Agendado">Agendado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -375,10 +406,25 @@ export default function FinanceiroCentralDespesas() {
                       <SelectContent>{CATEGORIAS_DESPESA.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label>Data de Vencimento *</Label>
-                    <Input type="date" value={form.dataVencimento} onChange={e => setForm({ ...form, dataVencimento: e.target.value })} />
-                  </div>
+                  {form.tipo === 'Fixa' && form.recorrente ? (
+                    <div>
+                      <Label>Dia do Vencimento *</Label>
+                      <Input 
+                        type="number" 
+                        min={1} 
+                        max={31} 
+                        value={form.diaVencimento} 
+                        onChange={e => setForm({ ...form, diaVencimento: e.target.value })} 
+                        placeholder="Ex: 10" 
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Dia do mês (1-31). A data completa é inferida pela competência.</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <Label>Data de Vencimento *</Label>
+                      <Input type="date" value={form.dataVencimento} onChange={e => setForm({ ...form, dataVencimento: e.target.value })} />
+                    </div>
+                  )}
                   <div>
                     <Label>Competência *</Label>
                     <Select value={form.competencia} onValueChange={v => setForm({ ...form, competencia: v })}>
@@ -483,9 +529,10 @@ export default function FinanceiroCentralDespesas() {
                       <TableCell className="text-xs">{d.conta}</TableCell>
                       <TableCell className="font-semibold">{formatCurrency(d.valor)}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={
+                         <Badge variant="outline" className={
                           d.status === 'Pago' ? 'bg-green-500/10 text-green-700 dark:text-green-400' :
                           d.status === 'Vencido' ? 'bg-red-500/10 text-red-700 dark:text-red-400' :
+                          d.status === 'Agendado' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400' :
                           'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
                         }>
                           {d.status}
@@ -649,6 +696,7 @@ export default function FinanceiroCentralDespesas() {
                     <Badge variant="outline" className={
                       detalheModal.status === 'Pago' ? 'bg-green-500/10 text-green-700 dark:text-green-400' :
                       detalheModal.status === 'Vencido' ? 'bg-red-500/10 text-red-700 dark:text-red-400' :
+                      detalheModal.status === 'Agendado' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400' :
                       'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
                     }>{detalheModal.status}</Badge>
                     <div className="mt-1">

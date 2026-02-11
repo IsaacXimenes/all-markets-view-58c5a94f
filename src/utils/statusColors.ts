@@ -104,6 +104,7 @@ const statusColorMap: Record<string, StatusColor> = {
   'Retornado da Assistência': 'yellow',
   'Ajustes realizados': 'yellow',
   'Reservada': 'yellow',
+  'À vencer': 'yellow',
   
   // Status negativos (vermelho)
   'Cancelada': 'red',
@@ -123,6 +124,7 @@ const statusColorMap: Record<string, StatusColor> = {
   'Encaminhado para conferência da Assistência': 'blue',
   'Solicitação Enviada': 'blue',
   'Peça Recebida': 'blue',
+  'Agendado': 'blue',
   
   // Status neutros (cinza)
   'Rascunho': 'gray',

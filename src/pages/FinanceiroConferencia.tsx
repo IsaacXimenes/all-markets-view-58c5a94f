@@ -1087,8 +1087,8 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
 
         {/* Painel Lateral */}
         {vendaSelecionada && (
-          <div className="w-full xl:w-[380px] xl:min-w-[350px] xl:max-w-[420px] xl:sticky xl:top-4 h-fit flex-shrink-0">
-            <Card className="max-h-[80vh] xl:max-h-[calc(100vh-120px)] overflow-y-auto">
+          <div className="w-full xl:w-[480px] xl:min-w-[460px] xl:max-w-[520px] xl:fixed xl:right-0 xl:top-0 xl:bottom-0 h-fit xl:h-screen flex-shrink-0 xl:z-30">
+            <Card className="xl:h-full xl:rounded-none xl:border-l xl:border-t-0 xl:border-b-0 xl:border-r-0 overflow-y-auto">
               <CardHeader className="pb-3 sticky top-0 bg-card z-10 border-b">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">Detalhes da Venda</CardTitle>

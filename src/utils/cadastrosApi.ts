@@ -332,6 +332,12 @@ let contasFinanceiras: ContaFinanceira[] = [
   { id: 'CTA-013', nome: 'Bradesco Assistência', tipo: 'Conta Bancária', lojaVinculada: 'ba1802b9', banco: 'Bradesco', agencia: '', conta: '', cnpj: '54.872.234/0001-58', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
   // Assistência - Águas Lindas
   { id: 'CTA-014', nome: 'Bradesco Assistência', tipo: 'Conta Bancária', lojaVinculada: 'be961085', banco: 'Bradesco', agencia: '', conta: '', cnpj: '54.872.234/0001-58', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
+  // Contas de Dinheiro por Loja
+  { id: 'CTA-015', nome: 'Dinheiro - JK Shopping', tipo: 'Dinheiro', lojaVinculada: 'db894e7d', banco: '', agencia: '', conta: '', cnpj: '62.968.637/0001-23', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
+  { id: 'CTA-016', nome: 'Dinheiro - Shopping Sul', tipo: 'Dinheiro', lojaVinculada: '5b9446d5', banco: '', agencia: '', conta: '', cnpj: '55.449.390/0001-73', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
+  { id: 'CTA-017', nome: 'Dinheiro - Águas Lindas Shopping', tipo: 'Dinheiro', lojaVinculada: '0d06e7db', banco: '', agencia: '', conta: '', cnpj: '56.221.743/0001-46', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
+  { id: 'CTA-018', nome: 'Dinheiro - Online', tipo: 'Dinheiro', lojaVinculada: 'fcc78c1a', banco: '', agencia: '', conta: '', cnpj: '46.197.533/0001-06', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
+  { id: 'CTA-019', nome: 'Dinheiro - Loja Matriz', tipo: 'Dinheiro', lojaVinculada: '3ac7e00c', banco: '', agencia: '', conta: '', cnpj: '53.295.194/0001-66', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
 ];
 
 let maquinasCartao: MaquinaCartao[] = [

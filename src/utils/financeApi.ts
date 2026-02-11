@@ -32,7 +32,7 @@ export interface Despesa {
   conta: string;
   observacoes?: string;
   lojaId: string;
-  status: 'À vencer' | 'Vencido' | 'Pago';
+  status: 'À vencer' | 'Vencido' | 'Pago' | 'Agendado';
   categoria: string;
   dataVencimento: string;
   dataPagamento: string | null;
@@ -41,6 +41,7 @@ export interface Despesa {
   pagoPor: string | null;
   recorrenciaEncerrada?: boolean;
   dataEncerramentoRecorrencia?: string;
+  diaVencimento?: number; // Dia do mês (1-31) para recorrentes
 }
 
 // IDs das lojas reais do useCadastroStore
@@ -646,6 +647,10 @@ export const provisionarProximoPeriodo = (id: string): Despesa | null => {
   const meses = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
   const novaCompetencia = `${meses[venc.getMonth()]}-${venc.getFullYear()}`;
 
+  // Verificar se já existe despesa para esta competência com mesma descrição
+  const jaExiste = despesas.some(d => d.competencia === novaCompetencia && d.descricao === despesa.descricao && d.lojaId === despesa.lojaId);
+  if (jaExiste) return null;
+
   const year = new Date().getFullYear();
   const num = despesas.filter(d => d.id.includes(String(year))).length + 1;
   const newId = `DES-${year}-${String(num).padStart(4, '0')}`;
@@ -657,11 +662,25 @@ export const provisionarProximoPeriodo = (id: string): Despesa | null => {
     competencia: novaCompetencia,
     dataVencimento: venc.toISOString().split('T')[0],
     dataPagamento: null,
-    status: 'À vencer',
+    status: 'Agendado',
     pagoPor: null,
+    diaVencimento: despesa.diaVencimento || venc.getDate(),
   };
   despesas.push(nova);
   return nova;
+};
+
+// Provisiona múltiplos meses futuros para despesas recorrentes
+export const provisionarRecorrenciaContinua = (id: string, mesesFuturos: number = 12): Despesa[] => {
+  const criadas: Despesa[] = [];
+  let ultimaId = id;
+  for (let i = 0; i < mesesFuturos; i++) {
+    const nova = provisionarProximoPeriodo(ultimaId);
+    if (!nova) break;
+    criadas.push(nova);
+    ultimaId = nova.id;
+  }
+  return criadas;
 };
 
 // Encerrar recorrência de uma despesa
@@ -676,11 +695,21 @@ export const encerrarRecorrencia = (id: string, dataEncerramento: string): boole
   return true;
 };
 
-// Atualiza automaticamente Agendado -> Vencido
+// Atualiza automaticamente Agendado -> À vencer -> Vencido
 export const atualizarStatusVencidos = (): number => {
   const hoje = new Date().toISOString().split('T')[0];
+  const mesAtual = new Date().getMonth();
+  const anoAtual = new Date().getFullYear();
+  const meses = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+  const competenciaAtual = `${meses[mesAtual]}-${anoAtual}`;
   let count = 0;
   despesas.forEach(d => {
+    // Agendado -> À vencer quando entra na competência atual
+    if (d.status === 'Agendado' && d.competencia === competenciaAtual) {
+      d.status = 'À vencer';
+      count++;
+    }
+    // À vencer -> Vencido quando passou a data
     if (d.status === 'À vencer' && d.dataVencimento < hoje) {
       d.status = 'Vencido';
       count++;
