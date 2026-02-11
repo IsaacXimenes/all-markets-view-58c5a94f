@@ -28,11 +28,17 @@ export default function FinanceiroExtrato() {
   const [filtroConta, setFiltroConta] = useState('todas');
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'entrada' | 'saida'>('todos');
 
-  // Períodos comparativos
-  const [periodoAInicio, setPeriodoAInicio] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
-  const [periodoAFim, setPeriodoAFim] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [periodoBInicio, setPeriodoBInicio] = useState(format(subYears(subDays(new Date(), 30), 1), 'yyyy-MM-dd'));
-  const [periodoBFim, setPeriodoBFim] = useState(format(subYears(new Date(), 1), 'yyyy-MM-dd'));
+  // Períodos comparativos - Entradas (independente)
+  const [entAInicio, setEntAInicio] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [entAFim, setEntAFim] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [entBInicio, setEntBInicio] = useState(format(subYears(subDays(new Date(), 30), 1), 'yyyy-MM-dd'));
+  const [entBFim, setEntBFim] = useState(format(subYears(new Date(), 1), 'yyyy-MM-dd'));
+
+  // Períodos comparativos - Saídas (independente)
+  const [saiAInicio, setSaiAInicio] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [saiAFim, setSaiAFim] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [saiBInicio, setSaiBInicio] = useState(format(subYears(subDays(new Date(), 30), 1), 'yyyy-MM-dd'));
+  const [saiBFim, setSaiBFim] = useState(format(subYears(new Date(), 1), 'yyyy-MM-dd'));
 
   // Montar lista de movimentações
   const movimentacoes = useMemo(() => {
@@ -159,10 +165,10 @@ export default function FinanceiroExtrato() {
 
   // Dados comparativos de Entradas
   const dadosComparacaoEntradas = useMemo(() => {
-    const inicioA = parseISO(periodoAInicio);
-    const fimA = parseISO(periodoAFim);
-    const inicioB = parseISO(periodoBInicio);
-    const fimB = parseISO(periodoBFim);
+    const inicioA = parseISO(entAInicio);
+    const fimA = parseISO(entAFim);
+    const inicioB = parseISO(entBInicio);
+    const fimB = parseISO(entBFim);
     const diasA = differenceInDays(fimA, inicioA) + 1;
     const diasB = differenceInDays(fimB, inicioB) + 1;
     const maxDias = Math.max(diasA, diasB);
@@ -181,14 +187,14 @@ export default function FinanceiroExtrato() {
       resultado.push({ dia: `Dia ${i + 1}`, periodoA: valA, periodoB: valB });
     }
     return resultado;
-  }, [movimentacoes, periodoAInicio, periodoAFim, periodoBInicio, periodoBFim]);
+  }, [movimentacoes, entAInicio, entAFim, entBInicio, entBFim]);
 
   // Dados comparativos de Saídas
   const dadosComparacaoSaidas = useMemo(() => {
-    const inicioA = parseISO(periodoAInicio);
-    const fimA = parseISO(periodoAFim);
-    const inicioB = parseISO(periodoBInicio);
-    const fimB = parseISO(periodoBFim);
+    const inicioA = parseISO(saiAInicio);
+    const fimA = parseISO(saiAFim);
+    const inicioB = parseISO(saiBInicio);
+    const fimB = parseISO(saiBFim);
     const diasA = differenceInDays(fimA, inicioA) + 1;
     const diasB = differenceInDays(fimB, inicioB) + 1;
     const maxDias = Math.max(diasA, diasB);
@@ -207,7 +213,7 @@ export default function FinanceiroExtrato() {
       resultado.push({ dia: `Dia ${i + 1}`, periodoA: valA, periodoB: valB });
     }
     return resultado;
-  }, [movimentacoes, periodoAInicio, periodoAFim, periodoBInicio, periodoBFim]);
+  }, [movimentacoes, saiAInicio, saiAFim, saiBInicio, saiBFim]);
 
   // Variação percentual
   const variacaoEntradas = useMemo(() => {
@@ -222,9 +228,14 @@ export default function FinanceiroExtrato() {
     return { totalA, totalB, variacao: totalB > 0 ? ((totalA - totalB) / totalB) * 100 : 0 };
   }, [dadosComparacaoSaidas]);
 
-  const handleAnoAnterior = () => {
-    setPeriodoBInicio(format(subYears(parseISO(periodoAInicio), 1), 'yyyy-MM-dd'));
-    setPeriodoBFim(format(subYears(parseISO(periodoAFim), 1), 'yyyy-MM-dd'));
+  const handleAnoAnteriorEntradas = () => {
+    setEntBInicio(format(subYears(parseISO(entAInicio), 1), 'yyyy-MM-dd'));
+    setEntBFim(format(subYears(parseISO(entAFim), 1), 'yyyy-MM-dd'));
+  };
+
+  const handleAnoAnteriorSaidas = () => {
+    setSaiBInicio(format(subYears(parseISO(saiAInicio), 1), 'yyyy-MM-dd'));
+    setSaiBFim(format(subYears(parseISO(saiAFim), 1), 'yyyy-MM-dd'));
   };
 
   const getContaNome = (id: string) => {
@@ -429,20 +440,20 @@ export default function FinanceiroExtrato() {
                 <div>
                   <Label className="text-xs text-muted-foreground">Período A</Label>
                   <div className="flex items-center gap-1">
-                    <Input type="date" value={periodoAInicio} onChange={(e) => setPeriodoAInicio(e.target.value)} className="h-7 text-xs" />
-                    <Input type="date" value={periodoAFim} onChange={(e) => setPeriodoAFim(e.target.value)} className="h-7 text-xs" />
+                    <Input type="date" value={entAInicio} onChange={(e) => setEntAInicio(e.target.value)} className="h-7 text-xs" />
+                    <Input type="date" value={entAFim} onChange={(e) => setEntAFim(e.target.value)} className="h-7 text-xs" />
                   </div>
                 </div>
                 <div>
                   <div className="flex items-center justify-between">
                     <Label className="text-xs text-muted-foreground">Período B</Label>
-                    <Button variant="ghost" size="sm" onClick={handleAnoAnterior} className="h-5 text-[10px] px-1.5 text-muted-foreground hover:text-foreground">
+                    <Button variant="ghost" size="sm" onClick={handleAnoAnteriorEntradas} className="h-5 text-[10px] px-1.5 text-muted-foreground hover:text-foreground">
                       Ano Anterior
                     </Button>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Input type="date" value={periodoBInicio} onChange={(e) => setPeriodoBInicio(e.target.value)} className="h-7 text-xs" />
-                    <Input type="date" value={periodoBFim} onChange={(e) => setPeriodoBFim(e.target.value)} className="h-7 text-xs" />
+                    <Input type="date" value={entBInicio} onChange={(e) => setEntBInicio(e.target.value)} className="h-7 text-xs" />
+                    <Input type="date" value={entBFim} onChange={(e) => setEntBFim(e.target.value)} className="h-7 text-xs" />
                   </div>
                 </div>
               </div>
@@ -475,20 +486,20 @@ export default function FinanceiroExtrato() {
                 <div>
                   <Label className="text-xs text-muted-foreground">Período A</Label>
                   <div className="flex items-center gap-1">
-                    <Input type="date" value={periodoAInicio} onChange={(e) => setPeriodoAInicio(e.target.value)} className="h-7 text-xs" />
-                    <Input type="date" value={periodoAFim} onChange={(e) => setPeriodoAFim(e.target.value)} className="h-7 text-xs" />
+                    <Input type="date" value={saiAInicio} onChange={(e) => setSaiAInicio(e.target.value)} className="h-7 text-xs" />
+                    <Input type="date" value={saiAFim} onChange={(e) => setSaiAFim(e.target.value)} className="h-7 text-xs" />
                   </div>
                 </div>
                 <div>
                   <div className="flex items-center justify-between">
                     <Label className="text-xs text-muted-foreground">Período B</Label>
-                    <Button variant="ghost" size="sm" onClick={handleAnoAnterior} className="h-5 text-[10px] px-1.5 text-muted-foreground hover:text-foreground">
+                    <Button variant="ghost" size="sm" onClick={handleAnoAnteriorSaidas} className="h-5 text-[10px] px-1.5 text-muted-foreground hover:text-foreground">
                       Ano Anterior
                     </Button>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Input type="date" value={periodoBInicio} onChange={(e) => setPeriodoBInicio(e.target.value)} className="h-7 text-xs" />
-                    <Input type="date" value={periodoBFim} onChange={(e) => setPeriodoBFim(e.target.value)} className="h-7 text-xs" />
+                    <Input type="date" value={saiBInicio} onChange={(e) => setSaiBInicio(e.target.value)} className="h-7 text-xs" />
+                    <Input type="date" value={saiBFim} onChange={(e) => setSaiBFim(e.target.value)} className="h-7 text-xs" />
                   </div>
                 </div>
               </div>
