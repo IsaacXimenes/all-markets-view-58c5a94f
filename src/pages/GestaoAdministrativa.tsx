@@ -15,7 +15,8 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Eye, Edit3, DollarSign, CheckCircle2, Clock, AlertTriangle, ShieldAlert, TrendingUp, Calendar, Info, CalendarIcon, CalendarDays, Store } from 'lucide-react';
+import { Eye, Edit3, DollarSign, CheckCircle2, Clock, AlertTriangle, ShieldAlert, TrendingUp, Calendar, Info, CalendarIcon, CalendarDays, Store, ImageIcon } from 'lucide-react';
+import { ComprovantePreview } from '@/components/vendas/ComprovantePreview';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
@@ -465,7 +466,15 @@ export default function GestaoAdministrativa() {
                           
                           {/* Valor */}
                           <TableCell className="text-right font-medium">
-                            {temValor ? formatCurrency(valor) : <span className="text-muted-foreground">—</span>}
+                            {temValor ? (
+                              <button
+                                type="button"
+                                onClick={() => handleAbrirDrillDown(conf, metodo)}
+                                className="text-primary underline cursor-pointer hover:text-primary/80 transition-colors"
+                              >
+                                {formatCurrency(valor)}
+                              </button>
+                            ) : <span className="text-muted-foreground">—</span>}
                           </TableCell>
                           
                           {/* Checkbox Conferido */}
@@ -556,10 +565,10 @@ export default function GestaoAdministrativa() {
       <Dialog open={modalDetalhesOpen} onOpenChange={setModalDetalhesOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+             <DialogTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
               {metodoDrillDown ? (
-                <>Vendas do Dia {conferenciaSelecionada && formatarDataExibicao(conferenciaSelecionada.data)} - {metodoDrillDown}</>
+                <>Extrato de Composição do Valor — {conferenciaSelecionada && formatarDataExibicao(conferenciaSelecionada.data)} - {metodoDrillDown}</>
               ) : (
                 <>Todas as Vendas do Dia {conferenciaSelecionada && formatarDataExibicao(conferenciaSelecionada.data)}</>
               )}
@@ -569,26 +578,32 @@ export default function GestaoAdministrativa() {
           {metodoDrillDown ? (
             // Drill-down por método de pagamento
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID Venda</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Vendedor</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vendasDrillDown.map(v => (
-                    <TableRow key={`${v.id}-${v.valor}`}>
-                      <TableCell className="font-mono">{v.id}</TableCell>
-                      <TableCell>{v.clienteNome}</TableCell>
-                      <TableCell>{getVendedorNome(v.vendedorId)}</TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(v.valor)}</TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID Venda</TableHead>
+                      <TableHead>Colaborador/Vendedor</TableHead>
+                      <TableHead>Composição do Valor</TableHead>
+                      <TableHead className="text-right">Valor da Transação</TableHead>
+                      <TableHead className="text-center">Comprovante</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {vendasDrillDown.map(v => (
+                      <TableRow key={`${v.id}-${v.valor}`}>
+                        <TableCell className="font-mono text-xs">{v.id}</TableCell>
+                        <TableCell>{getVendedorNome(v.vendedorId)}</TableCell>
+                        <TableCell className="text-sm max-w-[200px] truncate" title={v.composicao}>{v.composicao}</TableCell>
+                        <TableCell className="text-right font-medium">{formatCurrency(v.valor)}</TableCell>
+                        <TableCell className="text-center">
+                          <ComprovantePreview comprovante={v.comprovante} comprovanteNome={v.comprovanteNome} size="sm" />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               <div className="border-t pt-4 mt-4">
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Total Bruto:</span>

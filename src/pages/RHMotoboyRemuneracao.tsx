@@ -7,14 +7,18 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Bike, DollarSign, Package, Clock, CheckCircle, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Download, Bike, DollarSign, Package, Clock, CheckCircle, X, TrendingUp } from 'lucide-react';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { 
   getRemuneracoes, 
   getEstatisticasMotoboys, 
   registrarPagamentoRemuneracao,
   formatCurrency,
-  gerarCompetencias 
+  gerarCompetencias,
+  getDetalheEntregasRemuneracao,
+  RemuneracaoMotoboy,
+  DetalheEntregaRemuneracao
 } from '@/utils/motoboyApi';
 import { toast } from 'sonner';
 import { exportToCSV } from '@/utils/formatUtils';
@@ -32,6 +36,18 @@ export default function RHMotoboyRemuneracao() {
       c.cargo?.toLowerCase().includes('entregador')
     );
   }, [obterColaboradoresAtivos]);
+
+  // Drill-down modal
+  const [modalDrilldownOpen, setModalDrilldownOpen] = useState(false);
+  const [remuneracaoSelecionada, setRemuneracaoSelecionada] = useState<RemuneracaoMotoboy | null>(null);
+  const [detalhesEntrega, setDetalhesEntrega] = useState<DetalheEntregaRemuneracao[]>([]);
+
+  const handleAbrirDrilldown = (rem: RemuneracaoMotoboy) => {
+    const detalhes = getDetalheEntregasRemuneracao(rem.motoboyId, rem.periodoInicio, rem.periodoFim);
+    setDetalhesEntrega(detalhes);
+    setRemuneracaoSelecionada(rem);
+    setModalDrilldownOpen(true);
+  };
 
   const [filters, setFilters] = useState({
     motoboyId: 'todos',
@@ -262,8 +278,14 @@ export default function RHMotoboyRemuneracao() {
                         {new Date(rem.periodoInicio).toLocaleDateString('pt-BR')} - {new Date(rem.periodoFim).toLocaleDateString('pt-BR')}
                       </TableCell>
                       <TableCell className="text-center font-semibold">{rem.qtdDemandas}</TableCell>
-                      <TableCell className="text-right font-semibold text-green-600">
-                        {formatCurrency(rem.valorTotal)}
+                      <TableCell className="text-right font-semibold">
+                        <button
+                          type="button"
+                          onClick={() => handleAbrirDrilldown(rem)}
+                          className="text-primary underline cursor-pointer hover:text-primary/80 transition-colors"
+                        >
+                          {formatCurrency(rem.valorTotal)}
+                        </button>
                       </TableCell>
                       <TableCell>{getStatusBadge(rem.status)}</TableCell>
                       <TableCell>
@@ -291,6 +313,66 @@ export default function RHMotoboyRemuneracao() {
           </div>
         </CardContent>
       </Card>
+      {/* Modal Drill-down Remuneração */}
+      <Dialog open={modalDrilldownOpen} onOpenChange={setModalDrilldownOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Detalhamento de Entregas e Remuneração
+              {remuneracaoSelecionada && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  {remuneracaoSelecionada.motoboyNome} — {remuneracaoSelecionada.competencia}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>ID da Venda</TableHead>
+                  <TableHead>Vendedor</TableHead>
+                  <TableHead>Produto</TableHead>
+                  <TableHead>Localização</TableHead>
+                  <TableHead className="text-right">Valor da Entrega</TableHead>
+                  <TableHead className="text-right">Valor da Venda</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {detalhesEntrega.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      Nenhuma entrega encontrada no período
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  detalhesEntrega.map(d => (
+                    <TableRow key={d.demandaId}>
+                      <TableCell className="font-mono text-xs">{d.vendaId}</TableCell>
+                      <TableCell>{d.vendedor}</TableCell>
+                      <TableCell className="text-sm max-w-[200px] truncate" title={d.produto}>{d.produto}</TableCell>
+                      <TableCell className="text-sm">{d.localizacao}</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(d.valorEntrega)}</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(d.valorVenda)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          {detalhesEntrega.length > 0 && (
+            <div className="border-t pt-4 mt-4">
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Total Entregas:</span>
+                <span className="text-xl font-bold">
+                  {formatCurrency(detalhesEntrega.reduce((acc, d) => acc + d.valorEntrega, 0))}
+                </span>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </RHLayout>
   );
 }
