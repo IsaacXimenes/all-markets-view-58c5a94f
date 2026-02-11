@@ -1,5 +1,5 @@
 import { PageLayout } from '@/components/layout/PageLayout';
-import { TabsNavigation } from '@/components/layout/TabsNavigation';
+import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
 import { LayoutDashboard, Package, FileText, ArrowRightLeft, Clock, Headphones, Building, RefreshCw } from 'lucide-react';
 
 interface EstoqueLayoutProps {
@@ -22,8 +22,8 @@ const tabs = [
 export function EstoqueLayout({ children, title }: EstoqueLayoutProps) {
   return (
     <PageLayout title={title}>
-      <div className="mb-6 border-b border-border">
-        <TabsNavigation tabs={tabs} />
+      <div className="mb-6">
+        <CarouselTabsNavigation tabs={tabs} />
       </div>
       {children}
     </PageLayout>

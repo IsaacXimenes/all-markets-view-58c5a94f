@@ -1,5 +1,5 @@
 import { PageLayout } from '@/components/layout/PageLayout';
-import { TabsNavigation } from '@/components/layout/TabsNavigation';
+import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
 import { History, Plus, Smartphone, ClipboardList, Headphones, ShieldCheck, FileCheck } from 'lucide-react';
 
 interface VendasLayoutProps {
@@ -40,8 +40,8 @@ const tabs = [...baseTabs, ...digitalTabs, ...finalizadorTabs, ...lancamentoTabs
 export function VendasLayout({ children, title }: VendasLayoutProps) {
   return (
     <PageLayout title={title}>
-      <div className="mb-6 border-b border-border">
-        <TabsNavigation tabs={tabs} />
+      <div className="mb-6">
+        <CarouselTabsNavigation tabs={tabs} />
       </div>
       {children}
     </PageLayout>

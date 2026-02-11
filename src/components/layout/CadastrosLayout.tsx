@@ -1,5 +1,5 @@
 import { PageLayout } from '@/components/layout/PageLayout';
-import { TabsNavigation } from '@/components/layout/TabsNavigation';
+import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
 import { Store, Users, UserCog, Truck, ShoppingCart, Package, Percent, Briefcase, CreditCard, Building2, Wrench, Headphones, Shield, Palette, MapPinned, MessageSquare, ListChecks, History } from 'lucide-react';
 
 interface CadastrosLayoutProps {
@@ -32,8 +32,8 @@ const tabs = [
 export function CadastrosLayout({ children, title }: CadastrosLayoutProps) {
   return (
     <PageLayout title={title}>
-      <div className="mb-6 border-b border-border">
-        <TabsNavigation tabs={tabs} size="sm" />
+      <div className="mb-6">
+        <CarouselTabsNavigation tabs={tabs} size="sm" />
       </div>
       {children}
     </PageLayout>

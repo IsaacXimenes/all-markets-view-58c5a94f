@@ -1,5 +1,5 @@
 import { PageLayout } from '@/components/layout/PageLayout';
-import { TabsNavigation } from '@/components/layout/TabsNavigation';
+import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
 import { Wrench, ClipboardList, Package, ShoppingCart, Scissors, ArrowRightLeft } from 'lucide-react';
 
 interface OSLayoutProps {
@@ -20,8 +20,8 @@ const tabs = [
 export function OSLayout({ children, title }: OSLayoutProps) {
   return (
     <PageLayout title={title}>
-      <div className="mb-6 border-b border-border">
-        <TabsNavigation tabs={tabs} />
+      <div className="mb-6">
+        <CarouselTabsNavigation tabs={tabs} />
       </div>
       {children}
     </PageLayout>
