@@ -603,15 +603,29 @@ export const cancelarSolicitacao = (id: string, observacao: string): Solicitacao
   const osId = solicitacao.osId;
   const os = getOrdemServicoById(osId);
   if (os) {
-    updateOrdemServico(osId, {
-      status: 'Em serviço',
+    // Verificar se existem outras solicitações ativas para esta OS
+    const outrasSolicitacoesAtivas = solicitacoes.filter(s => 
+      s.osId === osId && 
+      s.id !== id && 
+      s.status !== 'Cancelada' && 
+      s.status !== 'Rejeitada'
+    );
+    
+    const updates: any = {
       timeline: [...os.timeline, {
         data: new Date().toISOString(),
         tipo: 'peca',
         descricao: `Solicitação ${id} CANCELADA – ${solicitacao.peca} | Obs: ${observacao}`,
         responsavel: 'Usuário Sistema'
       }]
-    });
+    };
+    
+    // Só reverte status se não houver outras solicitações ativas
+    if (outrasSolicitacoesAtivas.length === 0) {
+      updates.status = 'Em serviço';
+    }
+    
+    updateOrdemServico(osId, updates);
   }
   
   return solicitacoes[index];
