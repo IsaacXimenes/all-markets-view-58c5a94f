@@ -14,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { 
   getNextOSNumber, 
   addOrdemServico, 
+  updateOrdemServico,
   getHistoricoOSCliente, 
   verificarIMEIEmOSAtiva,
   formatCurrency,
@@ -628,6 +629,12 @@ export default function OSAssistenciaNova() {
       }
     ];
 
+    // Mapear origem da OS
+    const origemOSFormatada = origemOS === 'venda' ? 'Venda' as const
+      : origemOS === 'garantia' ? 'Garantia' as const
+      : origemOS === 'estoque' ? 'Estoque' as const
+      : 'Avulso' as const;
+
     const novaOS = addOrdemServico({
       dataHora,
       clienteId,
@@ -640,7 +647,14 @@ export default function OSAssistenciaNova() {
       descricao,
       timeline,
       valorTotal: valorTotalPecas,
-      custoTotal: 0
+      custoTotal: 0,
+      origemOS: origemOSFormatada,
+      vendaId: vendaIdParam || undefined,
+      garantiaId: garantiaIdParam || undefined,
+      produtoId: produtoIdParam || undefined,
+      modeloAparelho: modeloAparelho || undefined,
+      imeiAparelho: imeiAparelho || undefined,
+      valorProdutoOrigem: dadosOrigem?.valorProduto || dadosOrigem?.valor || undefined
     });
 
     // Dar baixa automática nas peças do estoque
@@ -665,6 +679,11 @@ export default function OSAssistenciaNova() {
           variant: 'destructive'
         });
       }
+    }
+
+    // Persistir timeline de baixa de estoque na OS recém-criada
+    if (pecasComBaixa.length > 0 && timeline.length > 1) {
+      updateOrdemServico(novaOS.id, { timeline: [...timeline] });
     }
 
     // Limpar rascunho

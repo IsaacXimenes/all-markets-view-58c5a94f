@@ -130,6 +130,24 @@ export default function OSAssistenciaDetalhes() {
         return <Badge className="bg-blue-500 hover:bg-blue-600">Em serviço</Badge>;
       case 'Aguardando Peça':
         return <Badge className="bg-yellow-500 hover:bg-yellow-600">Aguardando Peça</Badge>;
+      case 'Solicitação Enviada':
+        return <Badge className="bg-orange-500 hover:bg-orange-600">Solicitação Enviada</Badge>;
+      case 'Em Análise':
+        return <Badge className="bg-indigo-500 hover:bg-indigo-600">Em Análise</Badge>;
+      case 'Aguardando Aprovação do Gestor':
+        return <Badge className="bg-amber-500 hover:bg-amber-600">Aguardando Aprovação</Badge>;
+      case 'Rejeitado pelo Gestor':
+        return <Badge className="bg-red-500 hover:bg-red-600">Rejeitado</Badge>;
+      case 'Pagamento - Financeiro':
+        return <Badge className="bg-purple-500 hover:bg-purple-600">Pagamento - Financeiro</Badge>;
+      case 'Pagamento Finalizado':
+        return <Badge className="bg-teal-500 hover:bg-teal-600">Pagamento Finalizado</Badge>;
+      case 'Aguardando Chegada da Peça':
+        return <Badge className="bg-cyan-500 hover:bg-cyan-600">Aguardando Chegada</Badge>;
+      case 'Peça Recebida':
+        return <Badge className="bg-emerald-500 hover:bg-emerald-600">Peça Recebida</Badge>;
+      case 'Peça em Estoque / Aguardando Reparo':
+        return <Badge className="bg-lime-500 hover:bg-lime-600">Aguardando Reparo</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -537,9 +555,14 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                         <SelectTrigger className="mt-1">
                           <SelectValue placeholder="Selecione o status" />
                         </SelectTrigger>
-                        <SelectContent>
+                      <SelectContent>
                           <SelectItem value="Em serviço">Em serviço</SelectItem>
                           <SelectItem value="Aguardando Peça">Aguardando Peça</SelectItem>
+                          <SelectItem value="Solicitação Enviada">Solicitação Enviada</SelectItem>
+                          <SelectItem value="Em Análise">Em Análise</SelectItem>
+                          <SelectItem value="Aguardando Aprovação do Gestor">Aguardando Aprovação do Gestor</SelectItem>
+                          <SelectItem value="Peça Recebida">Peça Recebida</SelectItem>
+                          <SelectItem value="Peça em Estoque / Aguardando Reparo">Peça em Estoque / Aguardando Reparo</SelectItem>
                           <SelectItem value="Serviço concluído">Serviço concluído</SelectItem>
                         </SelectContent>
                       </Select>

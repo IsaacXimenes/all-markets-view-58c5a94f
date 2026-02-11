@@ -212,18 +212,7 @@ export default function OSSolicitacoesPecas() {
         observacao: dados.observacao
       });
 
-      // Atualizar OS
-      const os = getOrdemServicoById(sol.osId);
-      if (os) {
-        updateOrdemServico(os.id, {
-          timeline: [...os.timeline, {
-            data: new Date().toISOString(),
-            tipo: 'peca',
-            descricao: `Solicitação de peça aprovada – ${sol.peca} x ${sol.quantidade} | Origem: ${dados.origemPeca} | Pagamento: ${dados.formaPagamento}`,
-            responsavel: 'Gestora Matriz'
-          }]
-        });
-      }
+      // Timeline já é atualizada pela API aprovarSolicitacao()
     }
 
     setSolicitacoes(getSolicitacoes());
