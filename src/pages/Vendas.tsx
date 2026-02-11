@@ -398,7 +398,7 @@ export default function Vendas() {
                   <TableHead>Data/Hora</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Resp. Venda</TableHead>
-                  <TableHead>Trade-In</TableHead>
+                  <TableHead>Base de Troca</TableHead>
                   <TableHead className="text-right">V. Custo</TableHead>
                   <TableHead className="text-right">V. Venda</TableHead>
                   <TableHead className="text-right">Lucro</TableHead>
