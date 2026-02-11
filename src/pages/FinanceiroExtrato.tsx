@@ -8,8 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Download, TrendingUp, TrendingDown, DollarSign, Filter, Calendar } from 'lucide-react';
-import { format, subDays, addDays, startOfDay, endOfDay, isWithinInterval, parseISO, eachDayOfInterval } from 'date-fns';
+import { Download, TrendingUp, TrendingDown, DollarSign, Filter, Calendar, ArrowLeftRight } from 'lucide-react';
+import { format, subDays, addDays, startOfDay, endOfDay, isWithinInterval, parseISO, eachDayOfInterval, subYears, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { getContas, getPagamentos, getDespesas, Pagamento, Despesa } from '@/utils/financeApi';
@@ -27,6 +27,12 @@ export default function FinanceiroExtrato() {
   const [dataFim, setDataFim] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [filtroConta, setFiltroConta] = useState('todas');
   const [filtroTipo, setFiltroTipo] = useState<'todos' | 'entrada' | 'saida'>('todos');
+
+  // Períodos comparativos
+  const [periodoAInicio, setPeriodoAInicio] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [periodoAFim, setPeriodoAFim] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [periodoBInicio, setPeriodoBInicio] = useState(format(subYears(subDays(new Date(), 30), 1), 'yyyy-MM-dd'));
+  const [periodoBFim, setPeriodoBFim] = useState(format(subYears(new Date(), 1), 'yyyy-MM-dd'));
 
   // Montar lista de movimentações
   const movimentacoes = useMemo(() => {
@@ -149,6 +155,76 @@ export default function FinanceiroExtrato() {
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  // Dados comparativos de Entradas
+  const dadosComparacaoEntradas = useMemo(() => {
+    const inicioA = parseISO(periodoAInicio);
+    const fimA = parseISO(periodoAFim);
+    const inicioB = parseISO(periodoBInicio);
+    const fimB = parseISO(periodoBFim);
+    const diasA = differenceInDays(fimA, inicioA) + 1;
+    const diasB = differenceInDays(fimB, inicioB) + 1;
+    const maxDias = Math.max(diasA, diasB);
+
+    const resultado: { dia: string; periodoA: number; periodoB: number }[] = [];
+    for (let i = 0; i < maxDias; i++) {
+      const diaA = i < diasA ? format(addDays(inicioA, i), 'yyyy-MM-dd') : null;
+      const diaB = i < diasB ? format(addDays(inicioB, i), 'yyyy-MM-dd') : null;
+      let valA = 0, valB = 0;
+      movimentacoes.forEach(m => {
+        if (m.tipo !== 'entrada') return;
+        const d = m.data.slice(0, 10);
+        if (diaA && d === diaA) valA += m.valor;
+        if (diaB && d === diaB) valB += m.valor;
+      });
+      resultado.push({ dia: `Dia ${i + 1}`, periodoA: valA, periodoB: valB });
+    }
+    return resultado;
+  }, [movimentacoes, periodoAInicio, periodoAFim, periodoBInicio, periodoBFim]);
+
+  // Dados comparativos de Saídas
+  const dadosComparacaoSaidas = useMemo(() => {
+    const inicioA = parseISO(periodoAInicio);
+    const fimA = parseISO(periodoAFim);
+    const inicioB = parseISO(periodoBInicio);
+    const fimB = parseISO(periodoBFim);
+    const diasA = differenceInDays(fimA, inicioA) + 1;
+    const diasB = differenceInDays(fimB, inicioB) + 1;
+    const maxDias = Math.max(diasA, diasB);
+
+    const resultado: { dia: string; periodoA: number; periodoB: number }[] = [];
+    for (let i = 0; i < maxDias; i++) {
+      const diaA = i < diasA ? format(addDays(inicioA, i), 'yyyy-MM-dd') : null;
+      const diaB = i < diasB ? format(addDays(inicioB, i), 'yyyy-MM-dd') : null;
+      let valA = 0, valB = 0;
+      movimentacoes.forEach(m => {
+        if (m.tipo !== 'saida') return;
+        const d = m.data.slice(0, 10);
+        if (diaA && d === diaA) valA += m.valor;
+        if (diaB && d === diaB) valB += m.valor;
+      });
+      resultado.push({ dia: `Dia ${i + 1}`, periodoA: valA, periodoB: valB });
+    }
+    return resultado;
+  }, [movimentacoes, periodoAInicio, periodoAFim, periodoBInicio, periodoBFim]);
+
+  // Variação percentual
+  const variacaoEntradas = useMemo(() => {
+    const totalA = dadosComparacaoEntradas.reduce((s, d) => s + d.periodoA, 0);
+    const totalB = dadosComparacaoEntradas.reduce((s, d) => s + d.periodoB, 0);
+    return { totalA, totalB, variacao: totalB > 0 ? ((totalA - totalB) / totalB) * 100 : 0 };
+  }, [dadosComparacaoEntradas]);
+
+  const variacaoSaidas = useMemo(() => {
+    const totalA = dadosComparacaoSaidas.reduce((s, d) => s + d.periodoA, 0);
+    const totalB = dadosComparacaoSaidas.reduce((s, d) => s + d.periodoB, 0);
+    return { totalA, totalB, variacao: totalB > 0 ? ((totalA - totalB) / totalB) * 100 : 0 };
+  }, [dadosComparacaoSaidas]);
+
+  const handleAnoAnterior = () => {
+    setPeriodoBInicio(format(subYears(parseISO(periodoAInicio), 1), 'yyyy-MM-dd'));
+    setPeriodoBFim(format(subYears(parseISO(periodoAFim), 1), 'yyyy-MM-dd'));
   };
 
   const getContaNome = (id: string) => {
@@ -340,7 +416,135 @@ export default function FinanceiroExtrato() {
           </Card>
 
 
-        {/* Tabela de Movimentações */}
+        {/* Comparativo de Períodos - Filtros */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ArrowLeftRight className="h-5 w-5" />
+              Comparativo de Períodos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-semibold">Período A (Atual)</Label>
+                <div className="flex items-center gap-2">
+                  <Input type="date" value={periodoAInicio} onChange={(e) => setPeriodoAInicio(e.target.value)} className="text-sm" />
+                  <span className="text-muted-foreground text-sm">até</span>
+                  <Input type="date" value={periodoAFim} onChange={(e) => setPeriodoAFim(e.target.value)} className="text-sm" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="font-semibold">Período B (Comparativo)</Label>
+                <div className="flex items-center gap-2">
+                  <Input type="date" value={periodoBInicio} onChange={(e) => setPeriodoBInicio(e.target.value)} className="text-sm" />
+                  <span className="text-muted-foreground text-sm">até</span>
+                  <Input type="date" value={periodoBFim} onChange={(e) => setPeriodoBFim(e.target.value)} className="text-sm" />
+                </div>
+              </div>
+            </div>
+            <div className="mt-4">
+              <Button variant="outline" size="sm" onClick={handleAnoAnterior} className="gap-2">
+                <Calendar className="h-4 w-4" />
+                Ano Anterior
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Gráficos Comparativos */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Comparativo de Entradas */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Comparativo de Entradas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={dadosComparacaoEntradas}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="dia" tick={{ fontSize: 11 }} />
+                    <YAxis tickFormatter={(v) => v.toLocaleString('pt-BR', { notation: 'compact', compactDisplay: 'short' })} />
+                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    <Legend />
+                    <Line type="monotone" dataKey="periodoA" name="Período A" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="periodoB" name="Período B" stroke="#6ee7b7" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Comparativo de Saídas */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Comparativo de Saídas</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={dadosComparacaoSaidas}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="dia" tick={{ fontSize: 11 }} />
+                    <YAxis tickFormatter={(v) => v.toLocaleString('pt-BR', { notation: 'compact', compactDisplay: 'short' })} />
+                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    <Legend />
+                    <Line type="monotone" dataKey="periodoA" name="Período A" stroke="#ef4444" strokeWidth={2} dot={{ r: 3 }} />
+                    <Line type="monotone" dataKey="periodoB" name="Período B" stroke="#fca5a5" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 3 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Cards de Variação Percentual */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Variação de Entradas</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    A: {formatCurrency(variacaoEntradas.totalA)} → B: {formatCurrency(variacaoEntradas.totalB)}
+                  </p>
+                  <p className={`text-2xl font-bold mt-1 ${variacaoEntradas.variacao >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {variacaoEntradas.variacao >= 0 ? '+' : ''}{variacaoEntradas.variacao.toFixed(2)}%
+                  </p>
+                </div>
+                {variacaoEntradas.variacao >= 0 ? (
+                  <TrendingUp className="h-8 w-8 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-8 w-8 text-red-500" />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Variação de Saídas</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    A: {formatCurrency(variacaoSaidas.totalA)} → B: {formatCurrency(variacaoSaidas.totalB)}
+                  </p>
+                  <p className={`text-2xl font-bold mt-1 ${variacaoSaidas.variacao <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {variacaoSaidas.variacao >= 0 ? '+' : ''}{variacaoSaidas.variacao.toFixed(2)}%
+                  </p>
+                </div>
+                {variacaoSaidas.variacao <= 0 ? (
+                  <TrendingDown className="h-8 w-8 text-green-500" />
+                ) : (
+                  <TrendingUp className="h-8 w-8 text-red-500" />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+
         <Card>
           <CardHeader>
             <CardTitle>Movimentações ({movimentacoesFiltradas.length})</CardTitle>
