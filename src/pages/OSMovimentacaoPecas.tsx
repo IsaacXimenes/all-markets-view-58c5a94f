@@ -486,7 +486,6 @@ export default function OSMovimentacaoPecas() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
                     <TableHead>Peça</TableHead>
                     <TableHead>Modelo</TableHead>
                     <TableHead>Qtd</TableHead>
@@ -498,14 +497,13 @@ export default function OSMovimentacaoPecas() {
                 <TableBody>
                   {pecasFiltradas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                         Nenhuma peça disponível encontrada
                       </TableCell>
                     </TableRow>
                   ) : (
                     pecasFiltradas.map(peca => (
                       <TableRow key={peca.id} className="cursor-pointer hover:bg-muted/50">
-                        <TableCell className="font-mono text-xs">{peca.id}</TableCell>
                         <TableCell className="font-medium">{peca.descricao}</TableCell>
                         <TableCell className="text-sm">{peca.modelo}</TableCell>
                         <TableCell>
