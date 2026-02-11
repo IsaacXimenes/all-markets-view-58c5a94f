@@ -624,6 +624,38 @@ export default function FinanceiroTetoBancario() {
                 </SelectContent>
               </Select>
 
+            </div>
+
+            <Separator className="my-3" />
+
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="space-y-1.5 w-56">
+                <Label className="text-xs text-muted-foreground">Filtrar por Loja</Label>
+                <AutocompleteLoja
+                  value={filtroLoja}
+                  onChange={setFiltroLoja}
+                  placeholder="Todas as lojas"
+                />
+              </div>
+              <div className="space-y-1.5 w-56">
+                <Label className="text-xs text-muted-foreground">Filtrar por Conta</Label>
+                <Select value={filtroConta} onValueChange={setFiltroConta}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as contas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todas as contas</SelectItem>
+                    {contasFinanceiras.filter(c => c.status === 'Ativo').map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {(filtroLoja || filtroConta) && (
+                <Button variant="ghost" size="sm" onClick={() => { setFiltroLoja(''); setFiltroConta(''); }}>
+                  Limpar filtros
+                </Button>
+              )}
               <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
                 <TrendingUp className="h-4 w-4" />
                 <span>Exibindo vendas finalizadas de <strong>{mesNome}/{anoSelecionado}</strong></span>
