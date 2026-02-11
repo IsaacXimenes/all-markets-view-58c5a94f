@@ -1,86 +1,42 @@
 
 
-# Plano - Graficos Comparativos no Extrato Geral
+# Plano - Navegacao em Carrossel Compacto (Gestao Administrativa)
 
 ## Resumo
 
-Adicionar 2 graficos de comparacao de periodos (Entradas e Saidas) abaixo do grafico principal "Fluxo de Caixa", com filtros independentes de Periodo A e Periodo B, botao de acao rapida "Ano Anterior" e cards de variacao percentual.
+Criar um novo componente `CarouselTabsNavigation` com estilo de "chips/tags" compactos e aplicar exclusivamente no modulo de Gestao Administrativa para teste. O componente atual `TabsNavigation` permanece inalterado para os demais modulos. O Sidebar nao sera tocado.
 
 ## Alteracoes
 
-**Arquivo:** `src/pages/FinanceiroExtrato.tsx`
+### 1. Novo componente: `src/components/layout/CarouselTabsNavigation.tsx`
 
-### 1. Novos estados para os periodos comparativos
+- Carrossel horizontal com scroll fluido e botoes de seta nas extremidades (visiveis apenas quando ha conteudo oculto)
+- Cada aba renderizada como "chip" compacto com cantos arredondados (`rounded-lg`)
+- Icone a esquerda + texto a direita, na mesma linha
+- **Estado ativo**: fundo azul suave (`bg-primary/10`), texto em cor primaria (`text-primary`), `font-semibold`
+- **Estado inativo**: fundo neutro (`bg-muted/50`), texto cinza (`text-muted-foreground`)
+- **Hover**: transicao suave de fundo (`hover:bg-muted`)
+- Altura reduzida: padding vertical minimo (`py-1.5`), texto `text-xs` ou `text-sm`
+- Espacamento entre chips: `gap-2`
+- Touch scroll fluido em mobile (`scroll-smooth`, `-webkit-overflow-scrolling: touch`)
+- Mesma interface de props do `TabsNavigation` para compatibilidade
 
-- `periodoAInicio` / `periodoAFim` (padrao: ultimos 30 dias)
-- `periodoBInicio` / `periodoBFim` (padrao: mesmo intervalo do ano anterior)
+### 2. Alterar: `src/components/layout/GestaoAdministrativaLayout.tsx`
 
-### 2. Dados dos graficos comparativos
-
-- `dadosComparacaoEntradas`: useMemo que gera dados de entradas para Periodo A e B, alinhados por "dia do periodo" (Dia 1, Dia 2, etc.)
-- `dadosComparacaoSaidas`: useMemo similar para saidas
-- Reutilizar a mesma logica de `movimentacoes` ja existente, filtrando por intervalo de data
-
-### 3. Calculo de variacao percentual
-
-- `variacaoEntradas`: ((totalEntradasA - totalEntradasB) / totalEntradasB) * 100
-- `variacaoSaidas`: ((totalSaidasA - totalSaidasB) / totalSaidasB) * 100
-
-### 4. UI - Bloco de filtros de comparacao
-
-Abaixo do grafico principal, adicionar um Card com:
-- Titulo: "Comparativo de Periodos"
-- Linha 1: Periodo A - Data Inicio + Data Fim
-- Linha 2: Periodo B - Data Inicio + Data Fim
-- Botao "Ano Anterior": preenche Periodo B com o mesmo intervalo de A, menos 1 ano
-
-### 5. UI - Grafico de Entradas
-
-- Card com titulo "Comparativo de Entradas"
-- LineChart com 2 linhas:
-  - "Periodo A" - verde solido (#10b981), strokeWidth 2
-  - "Periodo B" - verde claro (#6ee7b7), strokeDasharray="5 5" (pontilhada)
-- Eixo X: "Dia 1", "Dia 2", etc.
-- Eixo Y: valores monetarios formatados em R$
-- Tooltip com formatCurrency
-
-### 6. UI - Grafico de Saidas
-
-- Card com titulo "Comparativo de Saidas"
-- LineChart com 2 linhas:
-  - "Periodo A" - vermelho solido (#ef4444), strokeWidth 2
-  - "Periodo B" - vermelho claro (#fca5a5), strokeDasharray="5 5"
-- Mesma estrutura do grafico de entradas
-
-### 7. UI - Cards de variacao percentual
-
-Dois cards lado a lado abaixo dos graficos:
-- Card Entradas: exibe variacao % com icone TrendingUp/Down, verde se positivo, vermelho se negativo
-- Card Saidas: exibe variacao % com icone TrendingUp/Down, verde se negativo (menos gastos), vermelho se positivo (mais gastos)
-
-### 8. Imports adicionais
-
-- Adicionar `subYears` do date-fns para o botao "Ano Anterior"
+- Substituir o import de `TabsNavigation` por `CarouselTabsNavigation`
+- Remover o wrapper `div` com `border-b` (os chips nao precisam de borda inferior, o visual e autocontido)
+- Manter tudo o mais inalterado
 
 ## Detalhes Tecnicos
 
-Estrutura dos dados comparativos:
+Estrutura do chip:
 
 ```text
-dadosComparacaoEntradas = [
-  { dia: "Dia 1", periodoA: 5000, periodoB: 4200 },
-  { dia: "Dia 2", periodoA: 3000, periodoB: 3500 },
-  ...
-]
+[Icon Label]  [Icon Label]  [Icon Label]  ...
+  ativo          inativo       inativo
+  bg-primary/10  bg-muted/50   bg-muted/50
 ```
 
-A quantidade de dias sera determinada pelo maior intervalo entre Periodo A e B. Dias sem movimentacao retornam 0.
+O componente reutiliza a mesma logica de scroll do `TabsNavigation` (ResizeObserver, checkScroll, botoes condicionais), mas com visual de chip ao inves de border-bottom tabs.
 
-O botao "Ano Anterior" calcula:
-```text
-periodoBInicio = subYears(parseISO(periodoAInicio), 1)
-periodoBFim = subYears(parseISO(periodoAFim), 1)
-```
-
-Todos os valores monetarios seguem a mascara R$ XXX.XXX,XX conforme padrao do sistema.
-
+Nenhum outro layout ou modulo sera alterado. O Sidebar permanece intacto.
