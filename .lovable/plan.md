@@ -1,72 +1,156 @@
 
 
-# Plano de Implementacao - Ajustes em Vendas, Financeiro e RH
+# Plano de Reestruturacao - Modulo de Assistencia e Estoque
 
-## 1. Nova Venda - Preencher Loja automaticamente ao selecionar Responsavel
+## Visao Geral
 
-**Arquivo:** `src/pages/VendasNova.tsx`
+Este plano abrange uma reestruturacao significativa do modulo de Assistencia (renomeacao, reordenacao e integracao de abas) e ajustes no modulo de Estoque (status, filtros, cards e renomeacao de origem).
 
-Ao selecionar o colaborador no campo "Responsavel", o sistema consultara o `obterColaboradorById` do `useCadastroStore` para obter o `loja_id` do colaborador e preenchera automaticamente o campo "Loja de Venda" com essa loja.
+---
 
-- Alterar o `onChange` do `AutocompleteColaborador` (linha ~1118) para uma funcao que, alem de `setVendedor(id)`, busca o colaborador via `obterColaboradorById(id)` e chama `setLojaVenda(colaborador.loja_id)`.
+## 1. Reestruturacao das Abas do Modulo de Assistencia
 
-## 2. Venda Balcao - Modal de Acessorios e Valor Unit. editavel
+### 1.1 Renomear e Reordenar Abas
 
-**Arquivo:** `src/pages/VendasAcessorios.tsx`
+**Arquivos:** `src/components/layout/OSLayout.tsx`, `src/components/layout/AssistenciaLayout.tsx`
 
-### 2.1 Redimensionar modal de acessorios
-- Alterar `max-w-3xl` para `max-w-4xl` na DialogContent do modal de selecao de acessorios (linha 936).
+Alterar a lista de abas para:
+1. Analise de Tratativas (primeira)
+2. Nova Assistencia (renomeada de "Assistencia")
+3. Estoque - Assistencia
+4. Retirada de Pecas
+5. Solicitacoes de Pecas
+6. Historico de Notas
+7. Movimentacao - Pecas (nova aba)
 
-### 2.2 Tornar Valor Unit. editavel na tabela de acessorios
-- Na tabela de acessorios adicionados (linha ~658), substituir o texto estatico `formatCurrency(item.valorUnitario)` por um input editavel com mascara de moeda.
-- Ao alterar o valor unitario, recalcular `valorTotal = valorUnitario * quantidade`.
+Remover: "Produtos para Analise" e "Historico de Assistencia" como abas independentes.
 
-## 3. Financeiro - Conferencia de Contas: Remover Historico de Conferencias
+### 1.2 Integrar "Produtos para Analise" na aba "Analise de Tratativas"
 
-**Arquivo:** `src/pages/FinanceiroConferencia.tsx`
+**Arquivo:** `src/pages/OSAnaliseGarantia.tsx`
 
-- Remover o bloco "Historico de Conferencias" (linhas ~1282-1306) do painel lateral de detalhes da venda, que exibe o card com icone `History` e a lista de conferencias realizadas. Manter apenas as informacoes do registro atual (validacoes de pagamento, observacoes, aprovacao do gestor, etc.).
+- Adicionar sub-tabs internas: "Tratativas" e "Produtos para Analise"
+- Mover a logica completa de `OSProdutosAnalise.tsx` (filtros, tabela, modal de parecer) para dentro desta pagina como segunda sub-tab
+- Manter a rota `/os/produtos-analise` redirecionando para `/os/analise-garantia?tab=produtos`
+- Adicionar botao de tesoura (Scissors) para itens com Origem: Garantia aprovados, encaminhando para Retirada de Pecas
 
-## 4. RH Feedback - Scroll nos modais
+### 1.3 Integrar "Historico de Assistencia" na aba "Nova Assistencia"
 
-**Arquivo:** `src/pages/RHFeedback.tsx`
+**Arquivo:** `src/pages/OSAssistencia.tsx`
 
-### 4.1 Modal de Detalhes sem scroll
-- O modal de detalhes (linha 355) ja tem `max-h-[90vh]` e `ScrollArea`, mas pode estar com problema de overflow. Ajustar para garantir que o `ScrollArea` ocupe o espaco disponivel corretamente com `overflow-y-auto` e altura adequada.
+- Renomear titulo para "Nova Assistencia"
+- Adicionar botao "Historico" (icone History) que abre um Collapsible ou modal lateral com a tabela de historico (conteudo de `OSHistoricoAssistencia.tsx`)
 
-### 4.2 Modal de Registrar Feedback sem scroll
-- Mesmo ajuste no modal de registro (linha 532).
+### 1.4 Nova aba "Movimentacao - Pecas"
 
-### 4.3 Select de colaborador mostrando codigo + nome
-- Na linha 554-555, o `SelectItem` exibe `{c.id} - {c.nome} ({c.cargo})`. Remover o `c.id` para exibir apenas `{c.nome} ({c.cargo})`.
+**Arquivo novo:** `src/pages/OSMovimentacaoPecas.tsx`
 
-### 4.4 Layout do Anexar Documento + icone de camera
-- Substituir o input de arquivo (linhas 623-656) por um layout mais visual com dois botoes: um para upload de arquivo e outro com icone de camera para captura direta.
-- Adicionar import do icone `Camera` do lucide-react.
+- Criar pagina seguindo o layout de `EstoqueMovimentacoes.tsx` adaptado para pecas
+- Rota: `/os/movimentacao-pecas`
+- Registrar no `App.tsx`
+
+---
+
+## 2. Ajustes na Aba "Nova Assistencia" (formulario)
+
+**Arquivo:** `src/pages/OSAssistenciaNova.tsx`
+
+### 2.1 Remover campo "Setor"
+- Remover o Select de setor do formulario (linhas que referenciam `setor`, `setSetor`)
+- Manter a logica interna de setor como "ASSISTENCIA" por padrao ou inferido da origem
+
+### 2.2 Corrigir selecao de estoque
+- Revisar a filtragem de `pecasEstoque` para garantir que todos os aparelhos disponiveis aparecem
+- Corrigir o handler de clique para adicionar/selecionar aparelho corretamente
+
+### 2.3 Corrigir draft do vendedor
+- Adicionar `vendedorId` ao objeto salvo/carregado pelo draft (`saveDraft` e `handleLoadDraft`)
+
+### 2.4 Corrigir data D+1
+- Verificar se `dataHora` esta sendo convertida com timezone local, corrigindo para `new Date().toISOString()` sem offset
+
+### 2.5 Validacao visual com bordas vermelhas
+- Adicionar classes condicionais `border-destructive` nos campos obrigatorios nao preenchidos (loja, tecnico, cliente, status)
+
+---
+
+## 3. Ajustes na Aba "Solicitacoes de Pecas"
+
+**Arquivo:** `src/pages/OSSolicitacoesPecas.tsx` e `src/utils/solicitacaoPecasApi.ts`
+
+### 3.1 Corrigir coluna Loja (LOJA-001 para nome real)
+- Mock data em `solicitacaoPecasApi.ts` usa IDs legados ("LOJA-001", "LOJA-002", etc.)
+- Atualizar mock data para usar UUIDs reais das lojas do cadastro
+- Garantir que a coluna usa `obterNomeLoja(s.lojaSolicitante)` para exibicao
+
+### 3.2 Botao "Cancelar" solicitacao
+- Adicionar status "Cancelada" ao tipo `SolicitacaoPeca`
+- Adicionar funcao `cancelarSolicitacao(id, observacao)` na API
+- Adicionar botao de cancelar (icone X) com modal de observacao obrigatoria
+- Atualizar status da OS correspondente
+
+---
+
+## 4. Modulo de Estoque
+
+### 4.1 Aba "Assistencia" (Estoque - Assistencia / OSPecas)
+
+**Arquivo:** `src/pages/OSPecas.tsx`
+
+- Adicionar 2 cards no topo: "Valor Total - Notas de Compra" e "Valor Total - Retirada de Pecas"
+- Adicionar filtros: por Origem e por Modelo
+
+### 4.2 Aba "Aparelhos Pendentes" - Encaminhamento
+
+**Arquivo:** `src/pages/EstoqueProdutosPendentes.tsx` (ou detalhes)
+
+- Ao encaminhar para assistencia, redirecionar para `/os/analise-garantia` (nao `/os/produtos-analise`)
+
+### 4.3 Status de Aparelhos
+
+**Arquivo:** `src/utils/estoqueApi.ts` e logica de status
+
+- Quando OS tem setor "TROCA": status no estoque deve ser "Troca - Garantia" (nao "Vendido")
+- Quando parecer e "Emprestado": status deve ser "Emprestado" (nao "Vendido")
+- Registrar IMEI no retorno de emprestimo
+
+### 4.4 Renomear "Manual" para "Produto Thiago"
+
+- Buscar todas as referencias de origem "Manual" e renomear para "Produto Thiago"
+
+---
+
+## 5. Rotas e Navegacao
+
+**Arquivo:** `src/App.tsx`
+
+- Adicionar rota `/os/movimentacao-pecas` para `OSMovimentacaoPecas`
+- Manter `/os/produtos-analise` como redirect para `/os/analise-garantia?tab=produtos`
+
+---
 
 ## Detalhes Tecnicos
 
-### Arquivo: `src/pages/VendasNova.tsx`
-- Criar funcao `handleVendedorChange(id)` que faz:
-  ```
-  setVendedor(id);
-  if (id) {
-    const col = obterColaboradorById(id);
-    if (col) setLojaVenda(col.loja_id);
-  }
-  ```
-- Substituir `onChange={setVendedor}` por `onChange={handleVendedorChange}` no AutocompleteColaborador.
+### Arquivos a criar:
+- `src/pages/OSMovimentacaoPecas.tsx` - Nova aba de movimentacao de pecas
 
-### Arquivo: `src/pages/VendasAcessorios.tsx`
-- Modal: `max-w-3xl` -> `max-w-4xl`
-- Na tabela, coluna Valor Unit.: trocar de texto para `InputComMascara` com mascara "moeda", com `onBlur` para recalcular o total.
-- Funcao `handleUpdateValorUnitario(itemId, novoValor)` que atualiza o item no array `acessorios`.
+### Arquivos a modificar:
+- `src/components/layout/OSLayout.tsx` - Reordenar abas, remover "Produtos para Analise" e "Historico de Assistencia", adicionar "Movimentacao - Pecas"
+- `src/components/layout/AssistenciaLayout.tsx` - Mesma reestruturacao de abas
+- `src/pages/OSAnaliseGarantia.tsx` - Integrar conteudo de Produtos para Analise com sub-tabs, adicionar botao tesoura
+- `src/pages/OSAssistencia.tsx` - Renomear para "Nova Assistencia", integrar historico como modal/collapsible
+- `src/pages/OSAssistenciaNova.tsx` - Remover campo setor, corrigir draft vendedor, corrigir data D+1, validacao visual, corrigir selecao estoque
+- `src/pages/OSSolicitacoesPecas.tsx` - Corrigir nomes de loja, adicionar botao cancelar
+- `src/utils/solicitacaoPecasApi.ts` - Atualizar IDs legados de loja, adicionar funcao cancelar, adicionar status "Cancelada"
+- `src/pages/OSPecas.tsx` - Adicionar cards de valor por origem e filtros
+- `src/utils/estoqueApi.ts` - Logica de status "Troca - Garantia" e "Emprestado"
+- `src/App.tsx` - Adicionar rota de movimentacao pecas
 
-### Arquivo: `src/pages/FinanceiroConferencia.tsx`
-- Remover linhas 1282-1306 (bloco do Historico de Conferencias).
-
-### Arquivo: `src/pages/RHFeedback.tsx`
-- Modal detalhes e registro: ajustar ScrollArea para funcionar com scroll.
-- SelectItem: `{c.id} - {c.nome}` -> `{c.nome} ({c.cargo})`
-- Anexar documento: layout com dois botoes (Upload e Camera) em cards visuais, usando `useRef` para input file e input capture.
+### Sequenciamento:
+1. Primeiro: atualizar APIs (solicitacaoPecasApi, estoqueApi) com novos status e funcoes
+2. Segundo: reestruturar layouts de abas (OSLayout, AssistenciaLayout)
+3. Terceiro: modificar paginas existentes (OSAnaliseGarantia, OSAssistencia, OSAssistenciaNova, OSSolicitacoesPecas, OSPecas)
+4. Quarto: criar nova pagina OSMovimentacaoPecas
+5. Quinto: atualizar App.tsx com novas rotas
+6. Sexto: renomear "Manual" para "Produto Thiago" em todo o sistema
 
