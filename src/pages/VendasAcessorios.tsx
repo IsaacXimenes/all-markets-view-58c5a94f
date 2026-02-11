@@ -22,7 +22,8 @@ import {
   addCliente, calcularTipoPessoa
 } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
-import { getNextVendaNumber, getHistoricoComprasCliente, Pagamento } from '@/utils/vendasApi';
+import { getNextVendaNumber, getHistoricoComprasCliente, Pagamento, addVenda } from '@/utils/vendasApi';
+import { inicializarVendaNoFluxo } from '@/utils/fluxoVendasApi';
 import { formatarMoeda } from '@/utils/formatUtils';
 import { 
   getAcessorios, 
@@ -397,17 +398,44 @@ export default function VendasAcessorios() {
   };
 
   const handleConfirmarVenda = () => {
-    // Subtrair acessórios do estoque
-    acessorios.forEach(item => {
-      subtrairEstoqueAcessorio(item.acessorioId, item.quantidade);
-    });
+    // Criar venda no sistema (addVenda já subtrai estoque de acessórios automaticamente)
+    const novaVenda = addVenda({
+      dataHora: new Date().toISOString(),
+      lojaVenda,
+      vendedor,
+      clienteId,
+      clienteNome,
+      clienteCpf,
+      clienteTelefone,
+      clienteEmail: clienteEmail || '',
+      clienteCidade: clienteCidade || '',
+      origemVenda,
+      localRetirada: lojaVenda,
+      tipoRetirada,
+      taxaEntrega,
+      itens: [],
+      tradeIns: [],
+      acessorios: acessorios,
+      pagamentos,
+      subtotal,
+      totalTradeIn: 0,
+      total,
+      lucro: lucroProjetado,
+      margem: margemProjetada,
+      observacoes: observacoes || 'Venda Balcão - Acessórios',
+      status: 'Concluída',
+    } as any);
+
+    // Inicializar no fluxo de conferências
+    const vendedorNome = obterNomeColaborador(vendedor);
+    inicializarVendaNoFluxo(novaVenda.id, vendedor, vendedorNome);
 
     // Limpar rascunho
     clearDraft();
 
     toast({
       title: "Venda registrada com sucesso!",
-      description: `Venda de acessórios ${vendaInfo.id} registrada!`,
+      description: `Venda de acessórios ${novaVenda.id} registrada e enviada para conferência!`,
     });
 
     setShowConfirmacaoModal(false);

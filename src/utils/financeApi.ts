@@ -39,6 +39,8 @@ export interface Despesa {
   recorrente: boolean;
   periodicidade: 'Mensal' | 'Trimestral' | 'Anual' | null;
   pagoPor: string | null;
+  recorrenciaEncerrada?: boolean;
+  dataEncerramentoRecorrencia?: string;
 }
 
 // IDs das lojas reais do useCadastroStore
@@ -634,6 +636,7 @@ export const pagarDespesa = (id: string, usuarioNome: string): boolean => {
 export const provisionarProximoPeriodo = (id: string): Despesa | null => {
   const despesa = despesas.find(d => d.id === id);
   if (!despesa || !despesa.recorrente) return null;
+  if (despesa.recorrenciaEncerrada) return null;
 
   const venc = new Date(despesa.dataVencimento + 'T00:00:00');
   if (despesa.periodicidade === 'Mensal') venc.setMonth(venc.getMonth() + 1);
@@ -659,6 +662,18 @@ export const provisionarProximoPeriodo = (id: string): Despesa | null => {
   };
   despesas.push(nova);
   return nova;
+};
+
+// Encerrar recorrência de uma despesa
+export const encerrarRecorrencia = (id: string, dataEncerramento: string): boolean => {
+  const index = despesas.findIndex(d => d.id === id);
+  if (index === -1) return false;
+  despesas[index] = {
+    ...despesas[index],
+    recorrenciaEncerrada: true,
+    dataEncerramentoRecorrencia: dataEncerramento,
+  };
+  return true;
 };
 
 // Atualiza automaticamente Agendado -> Vencido

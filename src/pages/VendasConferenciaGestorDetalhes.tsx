@@ -181,7 +181,7 @@ export default function VendasConferenciaGestorDetalhes() {
         </div>
 
         {/* Coluna Lateral */}
-        <div className="space-y-6">
+        <div className="space-y-6 lg:sticky lg:top-4">
           {/* Resumo Financeiro */}
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-4 w-4" /> Resumo</CardTitle></CardHeader>

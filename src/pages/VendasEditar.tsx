@@ -195,7 +195,9 @@ export default function VendasEditar() {
     setPagamentos(venda.pagamentos || []);
     
     // Carregar acessórios se existirem
-    if ((venda as any).acessoriosVenda) {
+    if (venda.acessorios && venda.acessorios.length > 0) {
+      setAcessoriosVenda(venda.acessorios);
+    } else if ((venda as any).acessoriosVenda) {
       setAcessoriosVenda((venda as any).acessoriosVenda);
     }
     
@@ -630,10 +632,16 @@ export default function VendasEditar() {
       lucro: lucroProjetado,
       margem: margemProjetada,
       observacoes,
+      acessorios: acessoriosVenda,
       statusAtual: novoStatus as any,
       valorSinal: isSinalVenda ? valorSinalOriginal : undefined,
       valorPendenteSinal: isSinalVenda ? valorPendenteSinal : undefined
-    });
+    } as any);
+    
+    // Persistir garantia extendida como campo extra
+    if (garantiaExtendida) {
+      updateVenda(id, { garantiaExtendida } as any);
+    }
     
     toast({
       title: "Venda atualizada!",

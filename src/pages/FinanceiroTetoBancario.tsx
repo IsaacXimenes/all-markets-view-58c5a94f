@@ -21,6 +21,8 @@ import { toast } from 'sonner';
 
 import { getContasFinanceiras, ContaFinanceira } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { Label } from '@/components/ui/label';
 import { formatarMoeda } from '@/utils/formatUtils';
 import { getVendasPorStatus } from '@/utils/fluxoVendasApi';
 import { getVendas, Venda } from '@/utils/vendasApi';
@@ -237,6 +239,8 @@ export default function FinanceiroTetoBancario() {
   const [nfeOrdemData, setNfeOrdemData] = useState<'desc' | 'asc'>('desc');
   const [checkboxConfirmado, setCheckboxConfirmado] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [filtroLoja, setFiltroLoja] = useState('');
+  const [filtroConta, setFiltroConta] = useState('');
 
   // Buscar notas emitidas por conta para o período
   const notasEmitidasPorConta = useMemo(() => {
@@ -335,10 +339,20 @@ export default function FinanceiroTetoBancario() {
     return { saldosPorConta: saldos, qtdVendasPorConta: qtd };
   }, [mesSelecionado, anoSelecionado, refreshKey]);
 
-  // Separar contas por tipo de máquina + calcular total em dinheiro
-  const { contasProprias, contasTerceirizadas, totais, totalDinheiro, qtdVendasDinheiro } = useMemo(() => {
-    const proprias = contasFinanceiras.filter(c => c.statusMaquina === 'Própria' && c.status === 'Ativo');
-    const terceirizadas = contasFinanceiras.filter(c => c.statusMaquina === 'Terceirizada' && c.status === 'Ativo');
+  // Separar contas por tipo de máquina + calcular total em dinheiro por loja
+  const { contasProprias, contasTerceirizadas, totais, totalDinheiro, qtdVendasDinheiro, dinheiroPorLoja } = useMemo(() => {
+    let proprias = contasFinanceiras.filter(c => c.statusMaquina === 'Própria' && c.status === 'Ativo');
+    let terceirizadas = contasFinanceiras.filter(c => c.statusMaquina === 'Terceirizada' && c.status === 'Ativo');
+    
+    // Aplicar filtros de loja e conta
+    if (filtroLoja) {
+      proprias = proprias.filter(c => c.lojaVinculada === filtroLoja);
+      terceirizadas = terceirizadas.filter(c => c.lojaVinculada === filtroLoja);
+    }
+    if (filtroConta) {
+      proprias = proprias.filter(c => c.id === filtroConta);
+      terceirizadas = terceirizadas.filter(c => c.id === filtroConta);
+    }
     
     const totalProprias = proprias.reduce((acc, c) => acc + (saldosPorConta[c.id] || 0), 0);
     const totalTerceirizadas = terceirizadas.reduce((acc, c) => acc + (saldosPorConta[c.id] || 0), 0);
@@ -348,7 +362,8 @@ export default function FinanceiroTetoBancario() {
     }).length;
     const contasNoTeto = proprias.filter(c => (saldosPorConta[c.id] || 0) >= TETO_BANCARIO).length;
     
-    // Calcular total em dinheiro
+    // Calcular dinheiro por loja
+    const dinheiroPorLoja: Record<string, { total: number; qtd: number }> = {};
     let totalDinheiro = 0;
     let qtdVendasDinheiro = 0;
     try {
@@ -365,12 +380,17 @@ export default function FinanceiroTetoBancario() {
         ) || [];
         
         if (pagsDinheiro.length > 0) {
+          const lojaId = venda.lojaVenda || 'desconhecida';
+          if (!dinheiroPorLoja[lojaId]) dinheiroPorLoja[lojaId] = { total: 0, qtd: 0 };
+          const valorDinheiro = pagsDinheiro.reduce((a: number, p: any) => a + (p.valor || 0), 0);
+          dinheiroPorLoja[lojaId].total += valorDinheiro;
+          dinheiroPorLoja[lojaId].qtd++;
+          totalDinheiro += valorDinheiro;
           qtdVendasDinheiro++;
-          totalDinheiro += pagsDinheiro.reduce((a: number, p: any) => a + (p.valor || 0), 0);
         }
       });
     } catch (e) {
-      console.error('[TetoBancario] Erro ao calcular dinheiro:', e);
+      console.error('[TetoBancario] Erro ao calcular dinheiro por loja:', e);
     }
     
     return {
@@ -378,9 +398,10 @@ export default function FinanceiroTetoBancario() {
       contasTerceirizadas: terceirizadas,
       totais: { totalProprias, totalTerceirizadas, contasEmAlerta, contasNoTeto },
       totalDinheiro,
-      qtdVendasDinheiro
+      qtdVendasDinheiro,
+      dinheiroPorLoja
     };
-  }, [contasFinanceiras, saldosPorConta, mesSelecionado, anoSelecionado]);
+  }, [contasFinanceiras, saldosPorConta, mesSelecionado, anoSelecionado, filtroLoja, filtroConta]);
 
   // Buscar vendas finalizadas para aba NFE
   const vendasAgrupadas = useMemo((): VendaAgrupada[] => {
@@ -508,6 +529,19 @@ export default function FinanceiroTetoBancario() {
       return nfeOrdemData === 'desc' ? -diff : diff;
     });
   }, [vendasAgrupadas, obterNomeConta, nfeOrdemData]);
+
+  // Filtrar linhas NFE por loja e conta
+  const linhasNFEFiltradas = useMemo(() => {
+    let result = linhasNFE;
+    if (filtroLoja) {
+      const contasIds = contasFinanceiras.filter(c => c.lojaVinculada === filtroLoja).map(c => c.id);
+      result = result.filter(l => contasIds.includes(l.contaDestinoId));
+    }
+    if (filtroConta) {
+      result = result.filter(l => l.contaDestinoId === filtroConta);
+    }
+    return result;
+  }, [linhasNFE, filtroLoja, filtroConta, contasFinanceiras]);
 
   const mesNome = meses.find(m => m.valor === mesSelecionado)?.nome || '';
 
@@ -687,7 +721,7 @@ export default function FinanceiroTetoBancario() {
                 </CardContent>
               </Card>
               
-              {/* Card de Dinheiro */}
+              {/* Card de Dinheiro - Totalizador */}
               <Card className="bg-green-50 dark:bg-green-950/20 border-green-200">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-4">
@@ -695,7 +729,7 @@ export default function FinanceiroTetoBancario() {
                       <Banknote className="h-6 w-6 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Caixa Dinheiro</p>
+                      <p className="text-sm text-muted-foreground">Caixa Dinheiro (Total)</p>
                       <p className="text-2xl font-bold text-green-600">{formatCurrency(totalDinheiro)}</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {qtdVendasDinheiro} vendas no período
@@ -705,6 +739,42 @@ export default function FinanceiroTetoBancario() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Cards de Dinheiro por Loja */}
+            {Object.keys(dinheiroPorLoja).length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Banknote className="h-5 w-5 text-green-600" />
+                  <h2 className="text-lg font-bold">Caixa Dinheiro por Loja</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {Object.entries(dinheiroPorLoja)
+                    .filter(([lojaId]) => !filtroLoja || lojaId === filtroLoja)
+                    .map(([lojaId, dados]) => (
+                    <Card key={lojaId} className="bg-green-50 dark:bg-green-950/20 border-green-200">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Banknote className="h-4 w-4 text-green-600" />
+                          {obterNomeLoja(lojaId)}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Saldo em Dinheiro</span>
+                            <span className="text-xl font-bold text-green-600">{formatCurrency(dados.total)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs text-muted-foreground">
+                            <span>Vendas em Dinheiro</span>
+                            <Badge variant="outline">{dados.qtd}</Badge>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Seção: Contas Próprias */}
             <div className="space-y-4">
@@ -913,12 +983,12 @@ export default function FinanceiroTetoBancario() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">{vendasAgrupadas.length} vendas</Badge>
-                    <Badge variant="secondary">{linhasNFE.length} lançamentos</Badge>
+                    <Badge variant="secondary">{linhasNFEFiltradas.length} lançamentos</Badge>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                {linhasNFE.length === 0 ? (
+                {linhasNFEFiltradas.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground">
                     <Receipt className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>Nenhuma venda finalizada neste período</p>
@@ -954,7 +1024,7 @@ export default function FinanceiroTetoBancario() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {linhasNFE.map((linha, idx) => (
+                        {linhasNFEFiltradas.map((linha, idx) => (
                           <TableRow 
                             key={`${linha.vendaId}-${linha.metodoPagamento}-${idx}`}
                             className={linha.notaEmitida ? 'bg-green-500/10' : ''}

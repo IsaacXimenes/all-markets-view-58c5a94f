@@ -11,8 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Download, Plus, Trash2, Calendar, ChevronDown, DollarSign, CalendarDays, AlertTriangle, CheckCircle, Clock, TrendingUp, Eye } from 'lucide-react';
-import { getDespesas, addDespesa, deleteDespesa, updateDespesa, pagarDespesa, provisionarProximoPeriodo, atualizarStatusVencidos, CATEGORIAS_DESPESA, type Despesa } from '@/utils/financeApi';
+import { Download, Plus, Trash2, Calendar, ChevronDown, DollarSign, CalendarDays, AlertTriangle, CheckCircle, Clock, TrendingUp, Eye, XCircle } from 'lucide-react';
+import { getDespesas, addDespesa, deleteDespesa, updateDespesa, pagarDespesa, provisionarProximoPeriodo, encerrarRecorrencia, atualizarStatusVencidos, CATEGORIAS_DESPESA, type Despesa } from '@/utils/financeApi';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
@@ -134,7 +134,7 @@ export default function FinanceiroCentralDespesas() {
       return;
     }
     const competenciaNova = form.competencia;
-    addDespesa({
+    const novaDespesa = addDespesa({
       tipo: form.tipo,
       descricao: form.descricao,
       valor: parseMoeda(form.valor),
@@ -151,6 +151,13 @@ export default function FinanceiroCentralDespesas() {
       periodicidade: form.tipo === 'Fixa' && form.recorrente ? (form.periodicidade as 'Mensal' | 'Trimestral' | 'Anual') : null,
       pagoPor: null,
     });
+    // Auto-provisionamento para despesas recorrentes
+    if (form.tipo === 'Fixa' && form.recorrente && form.periodicidade) {
+      const proxima = provisionarProximoPeriodo(novaDespesa.id);
+      if (proxima) {
+        toast.success(`Próxima despesa provisionada automaticamente para ${proxima.competencia}`);
+      }
+    }
     refreshDespesas();
     // Ajustar filtro de competência para exibir a despesa recém-lançada
     if (filtroCompetencia !== 'all' && filtroCompetencia !== competenciaNova) {
@@ -491,6 +498,11 @@ export default function FinanceiroCentralDespesas() {
                               <DollarSign className="h-4 w-4 text-green-600" />
                             </Button>
                           )}
+                          {d.recorrente && d.status !== 'Pago' && !(d as any).recorrenciaEncerrada && (
+                            <Button size="sm" variant="ghost" onClick={() => { setEncerrarModal(d); setDataEncerramento(''); }} title="Encerrar Recorrência">
+                              <XCircle className="h-4 w-4 text-orange-600" />
+                            </Button>
+                          )}
                           <Button size="sm" variant="ghost" onClick={() => handleDelete(d.id)} title="Excluir">
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -572,6 +584,42 @@ export default function FinanceiroCentralDespesas() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogLoteOpen(false)}>Cancelar</Button>
               <Button onClick={handleAlterarCompetenciaLote}>Alterar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal Encerrar Recorrência */}
+        <Dialog open={!!encerrarModal} onOpenChange={v => !v && setEncerrarModal(null)}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Encerrar Recorrência</DialogTitle></DialogHeader>
+            {encerrarModal && (
+              <div className="space-y-4 py-4">
+                <p className="text-sm text-muted-foreground">
+                  Ao encerrar a recorrência de <strong>{encerrarModal.descricao}</strong>, nenhum novo lançamento será criado automaticamente a partir da data informada.
+                  Os lançamentos já criados serão mantidos.
+                </p>
+                <div>
+                  <Label>Data de Encerramento *</Label>
+                  <Input type="date" value={dataEncerramento} onChange={e => setDataEncerramento(e.target.value)} />
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEncerrarModal(null)}>Cancelar</Button>
+              <Button
+                variant="destructive"
+                disabled={!dataEncerramento}
+                onClick={() => {
+                  if (encerrarModal && dataEncerramento) {
+                    encerrarRecorrencia(encerrarModal.id, dataEncerramento);
+                    refreshDespesas();
+                    toast.success(`Recorrência de "${encerrarModal.descricao}" encerrada a partir de ${new Date(dataEncerramento + 'T00:00:00').toLocaleDateString('pt-BR')}`);
+                    setEncerrarModal(null);
+                  }
+                }}
+              >
+                <XCircle className="h-4 w-4 mr-2" /> Encerrar Recorrência
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
