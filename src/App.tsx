@@ -83,6 +83,7 @@ import OSAssistenciaEditar from "./pages/OSAssistenciaEditar";
 import OSSolicitacoesPecas from "./pages/OSSolicitacoesPecas";
 import OSHistoricoNotas from "./pages/OSHistoricoNotas";
 import OSPecas from "./pages/OSPecas";
+import OSMovimentacaoPecas from "./pages/OSMovimentacaoPecas";
 import FinanceiroNotasAssistencia from "./pages/FinanceiroNotasAssistencia";
 import FinanceiroExtrato from "./pages/FinanceiroExtrato";
 import FinanceiroFiado from "./pages/FinanceiroFiado";
@@ -196,6 +197,7 @@ const App = () => (
               <Route path="/os/historico-notas" element={<OSHistoricoNotas />} />
               <Route path="/os/analise-garantia" element={<OSAnaliseGarantia />} />
               <Route path="/os/pecas" element={<OSPecas />} />
+              <Route path="/os/movimentacao-pecas" element={<OSMovimentacaoPecas />} />
               <Route path="/os/retirada-pecas" element={<AssistRetiradaPecas />} />
               <Route path="/os/retirada-pecas/:id" element={<AssistRetiradaPecasDetalhes />} />
               <Route path="/financeiro/notas-assistencia" element={<FinanceiroNotasAssistencia />} />

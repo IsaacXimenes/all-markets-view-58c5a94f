@@ -317,6 +317,7 @@ export default function OSAssistenciaNova() {
       setImeiAparelho(draft.imeiAparelho || '');
       setLojaId(draft.lojaId || '');
       setTecnicoId(draft.tecnicoId || '');
+      setVendedorId(draft.vendedorId || '');
       setSetor(draft.setor || '');
       setClienteId(draft.clienteId || '');
       setDescricao(draft.descricao || '');
@@ -353,6 +354,7 @@ export default function OSAssistenciaNova() {
         imeiAparelho,
         lojaId,
         tecnicoId,
+        vendedorId,
         setor,
         clienteId,
         descricao,
@@ -364,7 +366,7 @@ export default function OSAssistenciaNova() {
     }, 2000);
 
     return () => clearTimeout(timeout);
-  }, [origemAparelho, modeloAparelho, imeiAparelho, lojaId, tecnicoId, setor, clienteId, descricao, status, pecas, pagamentos]);
+  }, [origemAparelho, modeloAparelho, imeiAparelho, lojaId, tecnicoId, vendedorId, setor, clienteId, descricao, status, pecas, pagamentos]);
 
   // Timer effect
   useEffect(() => {
@@ -550,10 +552,6 @@ export default function OSAssistenciaNova() {
       toast({ title: 'Erro', description: 'Selecione um técnico', variant: 'destructive' });
       return false;
     }
-    if (!setor) {
-      toast({ title: 'Erro', description: 'Selecione um setor', variant: 'destructive' });
-      return false;
-    }
     if (!clienteId) {
       toast({ title: 'Erro', description: 'Selecione um cliente', variant: 'destructive' });
       return false;
@@ -633,7 +631,7 @@ export default function OSAssistenciaNova() {
     const novaOS = addOrdemServico({
       dataHora,
       clienteId,
-      setor: setor as 'GARANTIA' | 'ASSISTÊNCIA' | 'TROCA',
+      setor: (setor || 'ASSISTÊNCIA') as 'GARANTIA' | 'ASSISTÊNCIA' | 'TROCA',
       tecnicoId,
       lojaId,
       status,
@@ -907,17 +905,6 @@ export default function OSAssistenciaNova() {
                   filtrarPorTipo="vendedoresEGestores"
                   placeholder="Selecione o vendedor..."
                 />
-              </div>
-              <div className="space-y-2">
-                <Label className={!setor ? 'text-destructive' : ''}>Setor *</Label>
-                <Select value={setor} onValueChange={(v) => setSetor(v as any)}>
-                  <SelectTrigger className={!setor ? 'border-destructive' : ''}><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="GARANTIA">Garantia</SelectItem>
-                    <SelectItem value="ASSISTÊNCIA">Assistência</SelectItem>
-                    <SelectItem value="TROCA">Troca</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div className="space-y-2">
                 <Label className={!status ? 'text-destructive' : ''}>Status *</Label>

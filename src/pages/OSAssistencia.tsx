@@ -217,7 +217,7 @@ export default function OSAssistencia() {
   const valorTotalTroca = produtosTroca.reduce((acc, p) => acc + (p.valorOrigem || 0), 0);
 
   return (
-    <OSLayout title="Assistência">
+    <OSLayout title="Nova Assistência">
       {/* Dashboard Cards - Sticky */}
       <div className="sticky top-0 z-10 bg-background pb-4">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">

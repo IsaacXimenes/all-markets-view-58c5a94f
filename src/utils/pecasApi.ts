@@ -9,7 +9,7 @@ export interface Peca {
   valorRecomendado: number;
   quantidade: number;
   dataEntrada: string;
-  origem: 'Nota de Compra' | 'Manual' | 'Solicitação' | 'Retirada de Peça';
+  origem: 'Nota de Compra' | 'Manual' | 'Produto Thiago' | 'Solicitação' | 'Retirada de Peça';
   notaCompraId?: string;
   status: 'Disponível' | 'Reservada' | 'Utilizada';
 }
@@ -53,7 +53,7 @@ const pecasBase: Omit<Peca, 'lojaId'>[] = [
     valorRecomendado: 400.00,
     quantidade: 2,
     dataEntrada: '2024-12-15T09:00:00',
-    origem: 'Manual',
+    origem: 'Produto Thiago',
     status: 'Disponível'
   },
   {

@@ -16,6 +16,7 @@ import {
   getSolicitacoes, 
   aprovarSolicitacao, 
   rejeitarSolicitacao,
+  cancelarSolicitacao,
   criarLote,
   enviarLote,
   getLotes,
@@ -74,6 +75,11 @@ export default function OSSolicitacoesPecas() {
   const [loteSelecionado, setLoteSelecionado] = useState<LotePecas | null>(null);
   const [editLoteValorTotal, setEditLoteValorTotal] = useState('');
 
+  // Modal cancelar solicitação
+  const [cancelarOpen, setCancelarOpen] = useState(false);
+  const [solicitacaoParaCancelar, setSolicitacaoParaCancelar] = useState<SolicitacaoPeca | null>(null);
+  const [observacaoCancelamento, setObservacaoCancelamento] = useState('');
+
   // Modal novo fornecedor
   const [novoFornecedorOpen, setNovoFornecedorOpen] = useState(false);
   const [novoFornecedorNome, setNovoFornecedorNome] = useState('');
@@ -103,6 +109,8 @@ export default function OSSolicitacoesPecas() {
         return <Badge className="bg-blue-500 hover:bg-blue-600">Aprovada</Badge>;
       case 'Rejeitada':
         return <Badge className="bg-red-500 hover:bg-red-600">Rejeitada</Badge>;
+      case 'Cancelada':
+        return <Badge className="bg-gray-500 hover:bg-gray-600">Cancelada</Badge>;
       case 'Enviada':
         return <Badge className="bg-purple-500 hover:bg-purple-600">Enviada</Badge>;
       case 'Recebida':
@@ -538,6 +546,21 @@ export default function OSSolicitacoesPecas() {
                             </Button>
                           </>
                         )}
+                        {(sol.status === 'Pendente' || sol.status === 'Aprovada') && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="text-gray-600"
+                            onClick={() => {
+                              setSolicitacaoParaCancelar(sol);
+                              setObservacaoCancelamento('');
+                              setCancelarOpen(true);
+                            }}
+                            title="Cancelar"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button 
                           variant="ghost" 
                           size="sm"
@@ -806,6 +829,55 @@ export default function OSSolicitacoesPecas() {
               disabled={!motivoRejeicao.trim()}
             >
               Confirmar Rejeição
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Cancelar Solicitação */}
+      <Dialog open={cancelarOpen} onOpenChange={setCancelarOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-gray-700">Cancelar Solicitação</DialogTitle>
+            <DialogDescription>
+              {solicitacaoParaCancelar && (
+                <>Você está cancelando a solicitação de <strong>{solicitacaoParaCancelar.peca}</strong> (OS: {solicitacaoParaCancelar.osId})</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Observação *</Label>
+              <Textarea
+                value={observacaoCancelamento}
+                onChange={(e) => setObservacaoCancelamento(e.target.value)}
+                placeholder="Informe o motivo do cancelamento..."
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">Campo obrigatório. A informação será registrada na timeline da OS.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCancelarOpen(false); setSolicitacaoParaCancelar(null); }}>
+              Voltar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                if (!solicitacaoParaCancelar) return;
+                if (!observacaoCancelamento.trim()) {
+                  toast({ title: 'Erro', description: 'Informe a observação do cancelamento', variant: 'destructive' });
+                  return;
+                }
+                cancelarSolicitacao(solicitacaoParaCancelar.id, observacaoCancelamento);
+                setSolicitacoes(getSolicitacoes());
+                setCancelarOpen(false);
+                setSolicitacaoParaCancelar(null);
+                toast({ title: 'Solicitação cancelada', description: `${solicitacaoParaCancelar.peca} foi cancelada.` });
+              }}
+              disabled={!observacaoCancelamento.trim()}
+            >
+              Confirmar Cancelamento
             </Button>
           </DialogFooter>
         </DialogContent>

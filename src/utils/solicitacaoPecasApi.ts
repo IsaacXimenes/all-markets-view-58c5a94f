@@ -9,7 +9,7 @@ export interface SolicitacaoPeca {
   modeloImei: string;
   lojaSolicitante: string;
   dataSolicitacao: string;
-  status: 'Pendente' | 'Aprovada' | 'Rejeitada' | 'Enviada' | 'Recebida' | 'Aguardando Aprovação' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Aguardando Chegada' | 'Em Estoque';
+  status: 'Pendente' | 'Aprovada' | 'Rejeitada' | 'Enviada' | 'Recebida' | 'Aguardando Aprovação' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Aguardando Chegada' | 'Em Estoque' | 'Cancelada';
   fornecedorId?: string;
   valorPeca?: number;
   responsavelCompra?: string;
@@ -72,7 +72,7 @@ let solicitacoes: SolicitacaoPeca[] = [
     quantidade: 1,
     justificativa: 'Bateria com saúde em 65%, cliente relatou desligamentos',
     modeloImei: '999888777666001',
-    lojaSolicitante: 'LOJA-001',
+    lojaSolicitante: 'db894e7d',
     dataSolicitacao: '2025-01-18T10:00:00',
     status: 'Pendente'
   },
@@ -83,7 +83,7 @@ let solicitacoes: SolicitacaoPeca[] = [
     quantidade: 1,
     justificativa: 'Tela com burn-in severo, necessário troca urgente para garantia',
     modeloImei: '789012345678901',
-    lojaSolicitante: 'LOJA-002',
+    lojaSolicitante: '3ac7e00c',
     dataSolicitacao: '2025-01-11T10:00:00',
     status: 'Pendente'
   },
@@ -94,7 +94,7 @@ let solicitacoes: SolicitacaoPeca[] = [
     quantidade: 1,
     justificativa: 'Câmera com defeito de foco automático',
     modeloImei: '678901234567890',
-    lojaSolicitante: 'LOJA-001',
+    lojaSolicitante: 'db894e7d',
     dataSolicitacao: '2025-01-16T09:30:00',
     status: 'Pendente'
   },
@@ -105,7 +105,7 @@ let solicitacoes: SolicitacaoPeca[] = [
     quantidade: 2,
     justificativa: 'Reposição de estoque para assistências futuras',
     modeloImei: '345678901234567',
-    lojaSolicitante: 'LOJA-001',
+    lojaSolicitante: 'db894e7d',
     dataSolicitacao: '2025-01-13T14:00:00',
     status: 'Aprovada',
     fornecedorId: 'FORN-003',
@@ -122,7 +122,7 @@ let solicitacoes: SolicitacaoPeca[] = [
     quantidade: 3,
     justificativa: 'Peça com alta demanda, reposição de estoque',
     modeloImei: '456789012345678',
-    lojaSolicitante: 'LOJA-003',
+    lojaSolicitante: '5b9446d5',
     dataSolicitacao: '2025-01-14T11:00:00',
     status: 'Aprovada',
     fornecedorId: 'FORN-003',
@@ -139,7 +139,7 @@ let solicitacoes: SolicitacaoPeca[] = [
     quantidade: 1,
     justificativa: 'Troca de tela para serviço de garantia',
     modeloImei: '123456789012345',
-    lojaSolicitante: 'LOJA-001',
+    lojaSolicitante: 'db894e7d',
     dataSolicitacao: '2025-01-10T11:00:00',
     status: 'Recebida',
     fornecedorId: 'FORN-005',
@@ -586,6 +586,35 @@ export const finalizarNotaAssistencia = (notaId: string, dados: {
   }
   
   return notasAssistencia[notaIndex];
+};
+
+export const cancelarSolicitacao = (id: string, observacao: string): SolicitacaoPeca | null => {
+  const index = solicitacoes.findIndex(s => s.id === id);
+  if (index === -1) return null;
+  
+  const solicitacao = solicitacoes[index];
+  solicitacoes[index] = {
+    ...solicitacao,
+    status: 'Cancelada',
+    observacao
+  };
+  
+  // Atualizar timeline da OS
+  const osId = solicitacao.osId;
+  const os = getOrdemServicoById(osId);
+  if (os) {
+    updateOrdemServico(osId, {
+      status: 'Em serviço',
+      timeline: [...os.timeline, {
+        data: new Date().toISOString(),
+        tipo: 'peca',
+        descricao: `Solicitação ${id} CANCELADA – ${solicitacao.peca} | Obs: ${observacao}`,
+        responsavel: 'Usuário Sistema'
+      }]
+    });
+  }
+  
+  return solicitacoes[index];
 };
 
 export const calcularSLASolicitacao = (dataSolicitacao: string): number => {

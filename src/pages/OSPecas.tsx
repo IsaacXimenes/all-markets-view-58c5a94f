@@ -48,6 +48,8 @@ export default function OSPecas() {
   const [filtroData, setFiltroData] = useState('');
   const [filtroLoja, setFiltroLoja] = useState('todos');
   const [filtroDescricao, setFiltroDescricao] = useState('');
+  const [filtroOrigem, setFiltroOrigem] = useState('todos');
+  const [filtroModelo, setFiltroModelo] = useState('');
 
   // Modal
   const [showModal, setShowModal] = useState(false);
@@ -70,9 +72,11 @@ export default function OSPecas() {
       }
       if (filtroLoja !== 'todos' && p.lojaId !== filtroLoja) return false;
       if (filtroDescricao && !p.descricao.toLowerCase().includes(filtroDescricao.toLowerCase())) return false;
+      if (filtroOrigem !== 'todos' && p.origem !== filtroOrigem) return false;
+      if (filtroModelo && !p.modelo.toLowerCase().includes(filtroModelo.toLowerCase())) return false;
       return true;
     }).sort((a, b) => new Date(b.dataEntrada).getTime() - new Date(a.dataEntrada).getTime());
-  }, [pecas, filtroData, filtroLoja, filtroDescricao]);
+  }, [pecas, filtroData, filtroLoja, filtroDescricao, filtroOrigem, filtroModelo]);
 
   const getLojaNome = (lojaId: string) => {
     return obterNomeLoja(lojaId);
@@ -95,8 +99,8 @@ export default function OSPecas() {
     switch (origem) {
       case 'Nota de Compra':
         return <Badge variant="outline" className="border-blue-500 text-blue-600">Nota de Compra</Badge>;
-      case 'Manual':
-        return <Badge variant="outline" className="border-purple-500 text-purple-600">Manual</Badge>;
+      case 'Produto Thiago':
+        return <Badge variant="outline" className="border-purple-500 text-purple-600">Produto Thiago</Badge>;
       case 'Solicitação':
         return <Badge variant="outline" className="border-green-500 text-green-600">Solicitação</Badge>;
       case 'Retirada de Peça':
@@ -136,7 +140,7 @@ export default function OSPecas() {
       valorRecomendado: parseFloat(novaPeca.valorRecomendado.replace(/\D/g, '')) / 100 || 0,
       quantidade: parseInt(novaPeca.quantidade) || 1,
       dataEntrada: new Date().toISOString(),
-      origem: 'Manual',
+      origem: 'Produto Thiago',
       status: 'Disponível'
     });
 
@@ -150,12 +154,14 @@ export default function OSPecas() {
   const totalPecas = pecasFiltradas.reduce((acc, p) => acc + p.quantidade, 0);
   const valorTotalCusto = pecasFiltradas.reduce((acc, p) => acc + (p.valorCusto * p.quantidade), 0);
   const pecasDisponiveis = pecasFiltradas.filter(p => p.status === 'Disponível').length;
+  const valorNotasCompra = pecas.filter(p => p.origem === 'Nota de Compra').reduce((acc, p) => acc + (p.valorCusto * p.quantidade), 0);
+  const valorRetiradaPecas = pecas.filter(p => p.origem === 'Retirada de Peça').reduce((acc, p) => acc + (p.valorCusto * p.quantidade), 0);
 
   return (
     <OSLayout title="Estoque - Assistência">
       {/* Dashboard Cards */}
       <div className="sticky top-0 z-10 bg-background pb-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold">{pecasFiltradas.length}</div>
@@ -180,13 +186,25 @@ export default function OSPecas() {
               <div className="text-xs text-muted-foreground">Valor em Estoque</div>
             </CardContent>
           </Card>
+          <Card className="border-blue-200 dark:border-blue-800">
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-blue-600">{formatCurrency(valorNotasCompra)}</div>
+              <div className="text-xs text-muted-foreground">Valor - Notas de Compra</div>
+            </CardContent>
+          </Card>
+          <Card className="border-orange-200 dark:border-orange-800">
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-orange-600">{formatCurrency(valorRetiradaPecas)}</div>
+              <div className="text-xs text-muted-foreground">Valor - Retirada de Peças</div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
       {/* Filtros */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-4">
             <div className="space-y-2">
               <Label>Data Entrada</Label>
               <Input
@@ -210,6 +228,27 @@ export default function OSPecas() {
                 placeholder="Buscar peça..."
                 value={filtroDescricao}
                 onChange={e => setFiltroDescricao(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Origem</Label>
+              <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
+                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas</SelectItem>
+                  <SelectItem value="Nota de Compra">Nota de Compra</SelectItem>
+                  <SelectItem value="Produto Thiago">Produto Thiago</SelectItem>
+                  <SelectItem value="Solicitação">Solicitação</SelectItem>
+                  <SelectItem value="Retirada de Peça">Retirada de Peça</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Modelo</Label>
+              <Input
+                placeholder="Buscar modelo..."
+                value={filtroModelo}
+                onChange={e => setFiltroModelo(e.target.value)}
               />
             </div>
             <div className="flex items-end gap-2 md:col-span-2">
