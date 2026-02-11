@@ -257,11 +257,11 @@ export default function OSAssistencia() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-yellow-500/10">
+                <div className="p-2 rounded-lg bg-yellow-500/10 shrink-0">
                   <AlertTriangle className="h-5 w-5 text-yellow-500" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Aguardando/Peças</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground truncate">Aguardando/Peças</p>
                   <p className="text-2xl font-bold text-yellow-600">{osAguardando}</p>
                 </div>
               </div>
@@ -270,12 +270,12 @@ export default function OSAssistencia() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/10">
+                <div className="p-2 rounded-lg bg-green-500/10 shrink-0">
                   <DollarSign className="h-5 w-5 text-green-500" />
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Valor Total</p>
-                  <p className="text-2xl font-bold">{formatCurrency(valorTotal)}</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground truncate">Valor Total</p>
+                  <p className="text-xl font-bold truncate">{formatCurrency(valorTotal)}</p>
                 </div>
               </div>
             </CardContent>
