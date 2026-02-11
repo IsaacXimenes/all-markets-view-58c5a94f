@@ -1279,31 +1279,6 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
                   </div>
                 )}
 
-                {/* Histórico de Conferências */}
-                <div className="p-3 bg-muted/50 rounded-lg border">
-                  <div className="flex items-center gap-2 mb-2">
-                    <History className="h-4 w-4 text-muted-foreground" />
-                    <Label className="font-semibold text-sm">Histórico de Conferências</Label>
-                  </div>
-                  {historicoConferencias.length > 0 ? (
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {historicoConferencias.map((hist, idx) => (
-                        <div key={idx} className="text-xs p-2 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800">
-                          <div className="flex justify-between items-start">
-                            <span className="font-medium">{hist.metodoPagamento}</span>
-                            <span className="font-semibold text-green-600">{formatCurrency(hist.valor)}</span>
-                          </div>
-                          <p className="text-muted-foreground">{hist.contaDestino}</p>
-                          <p className="text-muted-foreground">
-                            Por {hist.conferidoPor} em {new Date(hist.dataHora).toLocaleString('pt-BR')}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">Nenhuma conferência realizada</p>
-                  )}
-                </div>
 
                 {/* Data de Finalização */}
                 {dataFinalizacao && (

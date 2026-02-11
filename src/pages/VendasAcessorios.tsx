@@ -655,7 +655,33 @@ export default function VendasAcessorios() {
                       <TableCell className="text-right text-muted-foreground">
                         {formatCurrency(item.valorRecomendado)}
                       </TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.valorUnitario)}</TableCell>
+                      <TableCell className="text-right">
+                        <Input
+                          type="text"
+                          className="w-24 text-right h-8 text-sm ml-auto"
+                          value={formatCurrency(item.valorUnitario)}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/[^\d,]/g, '').replace(',', '.');
+                            const num = parseFloat(raw);
+                            if (!isNaN(num) && num >= 0) {
+                              setAcessorios(prev => prev.map(a => 
+                                a.id === item.id 
+                                  ? { ...a, valorUnitario: num, valorTotal: num * a.quantidade }
+                                  : a
+                              ));
+                            }
+                          }}
+                          onBlur={(e) => {
+                            const raw = e.target.value.replace(/[^\d,]/g, '').replace(',', '.');
+                            const num = parseFloat(raw) || 0;
+                            setAcessorios(prev => prev.map(a => 
+                              a.id === item.id 
+                                ? { ...a, valorUnitario: num, valorTotal: num * a.quantidade }
+                                : a
+                            ));
+                          }}
+                        />
+                      </TableCell>
                       <TableCell className="text-right font-medium">{formatCurrency(item.valorTotal)}</TableCell>
                       <TableCell className="text-right">
                         <span className={`font-bold ${lucroItem >= 0 ? 'text-green-600' : 'text-destructive'}`}>
@@ -933,7 +959,7 @@ export default function VendasAcessorios() {
 
       {/* Modal Selecionar Acessório */}
       <Dialog open={showAcessorioModal} onOpenChange={setShowAcessorioModal}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Selecionar Acessório</DialogTitle>
           </DialogHeader>
