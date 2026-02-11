@@ -229,7 +229,7 @@ export default function OSProdutoDetalhes() {
       <OSLayout title="Produto não encontrado">
         <div className="text-center py-12">
           <p className="text-muted-foreground">Produto não encontrado na lista de reparos.</p>
-          <Button className="mt-4" onClick={() => navigate('/os/produtos-analise')}>
+          <Button className="mt-4" onClick={() => navigate('/os/analise-garantia')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>
@@ -246,7 +246,7 @@ export default function OSProdutoDetalhes() {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4 flex-wrap">
-          <Button variant="outline" onClick={() => navigate('/os/produtos-analise')}>
+          <Button variant="outline" onClick={() => navigate('/os/analise-garantia')}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>

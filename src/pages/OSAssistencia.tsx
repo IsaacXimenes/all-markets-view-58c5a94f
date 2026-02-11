@@ -31,7 +31,6 @@ export default function OSAssistencia() {
   const [filtroIMEI, setFiltroIMEI] = useState('');
   const [filtroTecnico, setFiltroTecnico] = useState('todos');
   const [filtroStatus, setFiltroStatus] = useState('todos');
-  const [filtroSetor, setFiltroSetor] = useState('todos');
 
   const ordensFiltradas = useMemo(() => {
     return ordensServico.filter(os => {
@@ -65,14 +64,9 @@ export default function OSAssistencia() {
         if (os.status !== filtroStatus) return false;
       }
 
-      // Filtro por setor
-      if (filtroSetor && filtroSetor !== 'todos') {
-        if (os.setor !== filtroSetor) return false;
-      }
-
       return true;
     }).sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
-  }, [ordensServico, filtroDataInicio, filtroDataFim, filtroIMEI, filtroTecnico, filtroStatus, filtroSetor]);
+  }, [ordensServico, filtroDataInicio, filtroDataFim, filtroIMEI, filtroTecnico, filtroStatus]);
 
   const getClienteNome = (clienteId: string) => {
     return clientes.find(c => c.id === clienteId)?.nome || '-';
@@ -326,7 +320,7 @@ export default function OSAssistencia() {
       {/* Filtros */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div className="space-y-2">
               <Label>Data Início</Label>
               <Input
@@ -375,18 +369,6 @@ export default function OSAssistencia() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Setor</Label>
-              <Select value={filtroSetor} onValueChange={setFiltroSetor}>
-                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  <SelectItem value="GARANTIA">Garantia</SelectItem>
-                  <SelectItem value="ASSISTÊNCIA">Assistência</SelectItem>
-                  <SelectItem value="TROCA">Troca</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="flex items-end gap-2">
               <Button onClick={() => navigate('/os/assistencia/nova')} className="flex-1">
                 <Plus className="h-4 w-4 mr-2" />
@@ -414,7 +396,6 @@ export default function OSAssistencia() {
               <TableHead>IMEI</TableHead>
               <TableHead>Origem</TableHead>
               <TableHead>Valor Produto</TableHead>
-              <TableHead>Setor</TableHead>
               <TableHead>Técnico</TableHead>
               <TableHead>Loja</TableHead>
               <TableHead>Status</TableHead>
@@ -434,7 +415,6 @@ export default function OSAssistencia() {
                 <TableCell className="font-mono text-xs">{getIMEI(os)}</TableCell>
                 <TableCell>{getOrigemBadge(os)}</TableCell>
                 <TableCell>{getValorProduto(os)}</TableCell>
-                <TableCell>{getSetorBadge(os.setor)}</TableCell>
                 <TableCell>{getTecnicoNome(os.tecnicoId)}</TableCell>
                 <TableCell className="text-xs">{getLojaNome(os.lojaId)}</TableCell>
                 <TableCell>{getStatusBadge(os.status)}</TableCell>
@@ -474,7 +454,7 @@ export default function OSAssistencia() {
             ))}
             {ordensFiltradas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
                   Nenhuma ordem de serviço encontrada
                 </TableCell>
               </TableRow>
