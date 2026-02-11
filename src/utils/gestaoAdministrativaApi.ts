@@ -56,6 +56,9 @@ export interface VendaDrillDown {
   vendedorNome?: string;
   valor: number;
   metodoPagamento: string;
+  composicao: string;
+  comprovante?: string;
+  comprovanteNome?: string;
 }
 
 // Métodos de pagamento padrão
@@ -248,6 +251,11 @@ export const getVendasPorDiaMetodo = (
     
     v.pagamentos.forEach(p => {
       if (p.meioPagamento === metodoPagamento) {
+        // Composição: itens + acessórios
+        const itensDesc = v.itens?.map(i => i.produto).join(' + ') || '';
+        const acessoriosDesc = v.acessorios?.map(a => a.descricao).filter(Boolean).join(' + ') || '';
+        const composicao = [itensDesc, acessoriosDesc].filter(Boolean).join(' + ');
+
         resultado.push({
           id: v.id,
           numero: v.numero,
@@ -255,7 +263,10 @@ export const getVendasPorDiaMetodo = (
           clienteNome: v.clienteNome,
           vendedorId: v.vendedor,
           valor: p.valor,
-          metodoPagamento: p.meioPagamento
+          metodoPagamento: p.meioPagamento,
+          composicao: composicao || 'Sem itens',
+          comprovante: (p as any).comprovante,
+          comprovanteNome: (p as any).comprovanteNome
         });
       }
     });

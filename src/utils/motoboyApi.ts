@@ -255,6 +255,40 @@ export const gerarCompetencias = (): string[] => {
   return competencias;
 };
 
+// Detalhamento de entregas para drill-down da remuneração
+export interface DetalheEntregaRemuneracao {
+  demandaId: string;
+  vendaId: string;
+  vendedor: string;
+  produto: string;
+  localizacao: string;
+  valorEntrega: number;
+  valorVenda: number;
+}
+
+export const getDetalheEntregasRemuneracao = (
+  motoboyId: string,
+  periodoInicio: string,
+  periodoFim: string
+): DetalheEntregaRemuneracao[] => {
+  const demandasPeriodo = demandas.filter(d =>
+    d.motoboyId === motoboyId &&
+    d.data >= periodoInicio &&
+    d.data <= periodoFim &&
+    d.status === 'Concluída'
+  );
+
+  return demandasPeriodo.map(d => ({
+    demandaId: d.id,
+    vendaId: d.id.replace('DEM', 'VND'),
+    vendedor: d.motoboyNome,
+    produto: d.descricao,
+    localizacao: d.lojaDestino,
+    valorEntrega: d.valorDemanda,
+    valorVenda: d.valorDemanda * 10 // mock: valor referência
+  }));
+};
+
 // Estatísticas gerais de motoboys
 export const getEstatisticasMotoboys = () => {
   const hoje = new Date();
