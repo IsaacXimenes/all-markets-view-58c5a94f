@@ -22,6 +22,7 @@ import {
   Pagamento,
   TimelineOS
 } from '@/utils/assistenciaApi';
+import { addSolicitacao } from '@/utils/solicitacaoPecasApi';
 import { 
   getClientes, 
   getFornecedores,
@@ -684,6 +685,32 @@ export default function OSAssistenciaNova() {
     // Persistir timeline de baixa de estoque na OS recém-criada
     if (pecasComBaixa.length > 0 && timeline.length > 1) {
       updateOrdemServico(novaOS.id, { timeline: [...timeline] });
+    }
+
+    // Persistir solicitações de peças na API
+    if (solicitacoesPecas.length > 0) {
+      solicitacoesPecas.forEach(sol => {
+        addSolicitacao({
+          osId: novaOS.id,
+          peca: sol.peca,
+          quantidade: sol.quantidade,
+          justificativa: sol.justificativa,
+          modeloImei: imeiAparelho || modeloAparelho,
+          lojaSolicitante: lojaId
+        });
+      });
+
+      // Atualizar status da OS para "Solicitação Enviada"
+      const timelineAtual = novaOS.timeline || timeline;
+      updateOrdemServico(novaOS.id, {
+        status: 'Solicitação Enviada',
+        timeline: [...timelineAtual, {
+          data: new Date().toISOString(),
+          tipo: 'peca',
+          descricao: `${solicitacoesPecas.length} solicitação(ões) de peça(s) enviada(s) para a matriz`,
+          responsavel: tecnicoObj?.nome || ''
+        }]
+      });
     }
 
     // Limpar rascunho

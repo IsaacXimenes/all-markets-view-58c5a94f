@@ -17,10 +17,11 @@ import {
   updateOrdemServico
 } from '@/utils/assistenciaApi';
 import { getClientes, getFornecedores } from '@/utils/cadastrosApi';
+import { getSolicitacoesByOS, SolicitacaoPeca } from '@/utils/solicitacaoPecasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
-import { ArrowLeft, FileText, Clock, AlertTriangle, User, Wrench, MapPin, Calendar, CreditCard, Save, Edit } from 'lucide-react';
+import { ArrowLeft, FileText, Clock, AlertTriangle, User, Wrench, MapPin, Calendar, CreditCard, Save, Edit, Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import QRCode from 'qrcode';
 import { toast } from 'sonner';
@@ -32,6 +33,7 @@ export default function OSAssistenciaDetalhes() {
   const [os, setOS] = useState<OrdemServico | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [solicitacoesOS, setSolicitacoesOS] = useState<SolicitacaoPeca[]>([]);
 
   // Editable fields
   const [editClienteId, setEditClienteId] = useState('');
@@ -59,6 +61,9 @@ export default function OSAssistenciaDetalhes() {
         setEditSetor(ordem.setor);
         setEditDescricao(ordem.descricao || '');
       }
+      // Buscar solicitações de peças vinculadas à OS
+      const solicitacoes = getSolicitacoesByOS(id);
+      setSolicitacoesOS(solicitacoes);
     }
   }, [id]);
 
@@ -408,6 +413,56 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                 </Table>
               </CardContent>
             </Card>
+
+            {/* Solicitações de Peças */}
+            {solicitacoesOS.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-5 w-5" />
+                    Solicitações de Peças
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Peça</TableHead>
+                        <TableHead>Qtd</TableHead>
+                        <TableHead>Justificativa</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Data</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {solicitacoesOS.map((sol) => (
+                        <TableRow key={sol.id}>
+                          <TableCell className="font-medium">{sol.peca}</TableCell>
+                          <TableCell>{sol.quantidade}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">{sol.justificativa}</TableCell>
+                          <TableCell>
+                            {(() => {
+                              switch (sol.status) {
+                                case 'Pendente': return <Badge className="bg-yellow-500 hover:bg-yellow-600">Pendente</Badge>;
+                                case 'Aprovada': return <Badge className="bg-green-500 hover:bg-green-600">Aprovada</Badge>;
+                                case 'Rejeitada': return <Badge className="bg-red-500 hover:bg-red-600">Rejeitada</Badge>;
+                                case 'Enviada': return <Badge className="bg-blue-500 hover:bg-blue-600">Enviada</Badge>;
+                                case 'Recebida': return <Badge className="bg-emerald-500 hover:bg-emerald-600">Recebida</Badge>;
+                                case 'Cancelada': return <Badge className="bg-gray-500 hover:bg-gray-600">Cancelada</Badge>;
+                                default: return <Badge variant="secondary">{sol.status}</Badge>;
+                              }
+                            })()}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {new Date(sol.dataSolicitacao).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Pagamentos */}
             <Card>
