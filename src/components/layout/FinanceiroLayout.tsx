@@ -1,5 +1,5 @@
 import { PageLayout } from '@/components/layout/PageLayout';
-import { TabsNavigation } from '@/components/layout/TabsNavigation';
+import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
 import { FileCheck, MinusCircle, Wrench, Receipt, Wallet, Package, CreditCard, ArrowDownCircle, Building2, ReceiptText, Clock } from 'lucide-react';
 
 interface FinanceiroLayoutProps {
@@ -24,8 +24,8 @@ const tabs = [
 export function FinanceiroLayout({ children, title }: FinanceiroLayoutProps) {
   return (
     <PageLayout title={title}>
-      <div className="mb-6 border-b border-border">
-        <TabsNavigation tabs={tabs} />
+      <div className="mb-6">
+        <CarouselTabsNavigation tabs={tabs} />
       </div>
       {children}
     </PageLayout>

@@ -1,5 +1,5 @@
 import { PageLayout } from '@/components/layout/PageLayout';
-import { TabsNavigation } from '@/components/layout/TabsNavigation';
+import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
 import { Plus, Clock, History, Star, Phone } from 'lucide-react';
 
 interface GarantiasLayoutProps {
@@ -18,8 +18,8 @@ const tabs = [
 export function GarantiasLayout({ children, title }: GarantiasLayoutProps) {
   return (
     <PageLayout title={title}>
-      <div className="mb-6 border-b border-border">
-        <TabsNavigation tabs={tabs} />
+      <div className="mb-6">
+        <CarouselTabsNavigation tabs={tabs} />
       </div>
       {children}
     </PageLayout>
