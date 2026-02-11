@@ -32,7 +32,12 @@ const HISTORICO_KEY = 'thiago_imports_historico_comissao_por_loja';
 const inicializarComissoesPorLoja = (): ComissaoPorLoja[] => {
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
-    return JSON.parse(stored);
+    const parsed = JSON.parse(stored) as ComissaoPorLoja[];
+    // Detectar dados legados com IDs tipo "LOJA-001" e forçar re-inicialização
+    const temIdLegado = parsed.some(c => c.lojaId.startsWith('LOJA-'));
+    if (!temIdLegado) {
+      return parsed;
+    }
   }
   
   // Dados iniciais mockados com UUIDs reais
