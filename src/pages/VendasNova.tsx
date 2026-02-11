@@ -55,7 +55,7 @@ const DRAFT_KEY = 'draft_venda_nova';
 export default function VendasNova() {
   const isMobilePreview = useIsMobile();
   const navigate = useNavigate();
-  const { obterLojasAtivas, obterLojasTipoLoja, obterVendedores, obterMotoboys, obterLojaById, obterNomeLoja, obterNomeColaborador, obterLojaMatriz, obterLojaOnline } = useCadastroStore();
+  const { obterLojasAtivas, obterLojasTipoLoja, obterVendedores, obterMotoboys, obterLojaById, obterNomeLoja, obterNomeColaborador, obterLojaMatriz, obterLojaOnline, obterColaboradorById } = useCadastroStore();
   
   // Dados do cadastros - usando Zustand store
   const lojas = obterLojasAtivas();
@@ -1115,7 +1115,13 @@ export default function VendasNova() {
                 </label>
                 <AutocompleteColaborador
                   value={vendedor}
-                  onChange={setVendedor}
+                  onChange={(id: string) => {
+                    setVendedor(id);
+                    if (id) {
+                      const col = obterColaboradorById(id);
+                      if (col) setLojaVenda(col.loja_id);
+                    }
+                  }}
                   placeholder="Selecione"
                   filtrarPorTipo="vendedoresEGestores"
                   className={cn(!vendedor && 'border-destructive', isMobilePreview && "h-8 text-xs")}

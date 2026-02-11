@@ -26,7 +26,8 @@ import {
   Eye,
   Trash2,
   Upload,
-  FileText
+  FileText,
+  Camera
 } from 'lucide-react';
 import {
   getFeedbacks,
@@ -552,7 +553,7 @@ export default function RHFeedback() {
                   <SelectContent>
                     {todosColaboradores.map(c => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.id} - {c.nome} ({c.cargo})
+                        {c.nome} ({c.cargo})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -623,13 +624,28 @@ export default function RHFeedback() {
                     {/* Upload de Arquivo */}
                     <div className="space-y-2">
                       <Label>Anexar Documento (PDF ou Imagem)</Label>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png"
-                          onChange={(e) => setArquivoFeedback(e.target.files?.[0] || null)}
-                          className="flex-1"
-                        />
+                      <div className="grid grid-cols-2 gap-3">
+                        <label className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                          <Upload className="h-6 w-6 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Upload de Arquivo</span>
+                          <input
+                            type="file"
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            onChange={(e) => setArquivoFeedback(e.target.files?.[0] || null)}
+                            className="hidden"
+                          />
+                        </label>
+                        <label className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+                          <Camera className="h-6 w-6 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Tirar Foto</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={(e) => setArquivoFeedback(e.target.files?.[0] || null)}
+                            className="hidden"
+                          />
+                        </label>
                       </div>
                       {arquivoFeedback && (
                         <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
