@@ -1,6 +1,6 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
-import { Wrench, ClipboardList, Package, ShoppingCart, Scissors, ArrowRightLeft, Shield } from 'lucide-react';
+import { Wrench, ClipboardList, Package, Scissors, ArrowRightLeft, Shield } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useMemo } from 'react';
 
@@ -14,7 +14,6 @@ const baseTabs = [
   { name: 'Nova Assistência', href: '/os/assistencia', icon: Wrench },
   { name: 'Estoque - Assistência', href: '/os/pecas', icon: Package },
   { name: 'Retirada de Peças', href: '/os/retirada-pecas', icon: Scissors },
-  { name: 'Solicitações de Peças', href: '/os/solicitacoes-pecas', icon: ShoppingCart },
   { name: 'Histórico de Notas', href: '/os/historico-notas', icon: ClipboardList },
   { name: 'Movimentação - Peças', href: '/os/movimentacao-pecas', icon: ArrowRightLeft },
 ];
