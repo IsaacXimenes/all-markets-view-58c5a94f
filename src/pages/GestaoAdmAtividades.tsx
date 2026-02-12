@@ -19,8 +19,10 @@ import {
   getExecucoesDoDia,
   toggleExecucao,
   calcularResumoExecucao,
+  atualizarColaboradorExecucao,
   ExecucaoAtividade,
 } from '@/utils/atividadesGestoresApi';
+import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { AgendaEletronicaModal } from '@/components/gestao/AgendaEletronicaModal';
 import { temAnotacaoImportante } from '@/utils/agendaGestaoApi';
 
@@ -82,6 +84,12 @@ export default function GestaoAdmAtividades() {
   const handleToggle = (atividadeId: string, lojaId: string) => {
     if (!user?.colaborador) return;
     toggleExecucao(dataStr, atividadeId, lojaId, user.colaborador.id, user.colaborador.nome);
+    setRefreshKey(k => k + 1);
+  };
+
+  const handleDesignarColaborador = (atividadeId: string, lojaId: string, colaboradorId: string) => {
+    const colab = colaboradores.find(c => c.id === colaboradorId);
+    atualizarColaboradorExecucao(dataStr, atividadeId, lojaId, colaboradorId, colab?.nome || '');
     setRefreshKey(k => k + 1);
   };
 
@@ -189,6 +197,7 @@ export default function GestaoAdmAtividades() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Atividade</TableHead>
+                        <TableHead className="min-w-[200px]">Colaborador</TableHead>
                         <TableHead>Horário Previsto</TableHead>
                         <TableHead>Horário Executado</TableHead>
                         <TableHead className="text-center">Executado</TableHead>
@@ -201,6 +210,15 @@ export default function GestaoAdmAtividades() {
                       {execucoes.map(exec => (
                         <TableRow key={exec.id} className={exec.status === 'executado_com_atraso' ? 'bg-yellow-500/10' : exec.executado ? 'bg-green-500/10' : ''}>
                           <TableCell className="font-medium">{exec.atividadeNome}</TableCell>
+                          <TableCell>
+                            <AutocompleteColaborador
+                              value={exec.colaboradorDesignadoId || ''}
+                              onChange={(id) => handleDesignarColaborador(exec.atividadeId, lojaId, id)}
+                              filtrarPorLoja={lojaId}
+                              placeholder="Selecionar..."
+                              className="text-sm"
+                            />
+                          </TableCell>
                           <TableCell>{exec.tipoHorario === 'fixo' ? exec.horarioPrevisto : 'Aberto'}</TableCell>
                           <TableCell>
                             {exec.horarioExecutado ? format(new Date(exec.horarioExecutado), 'HH:mm') : '-'}

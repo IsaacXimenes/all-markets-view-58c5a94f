@@ -26,6 +26,8 @@ export interface ExecucaoAtividade {
   status: 'pendente' | 'executado' | 'executado_com_atraso';
   tipoHorario: 'fixo' | 'aberto';
   horarioPrevisto?: string;
+  colaboradorDesignadoId?: string;
+  colaboradorDesignadoNome?: string;
 }
 
 export interface LogAtividade {
@@ -204,12 +206,33 @@ export const toggleExecucao = (
     pontuacao,
     dataHora: agora.toISOString(),
     detalhes: novoExecutado
-      ? `Atividade "${exec.atividadeNome}" marcada como executada. Pontuação: ${pontuacao}. Status: ${status === 'executado_com_atraso' ? 'Executado com Atraso' : 'Executado'}`
+      ? `Atividade "${exec.atividadeNome}" marcada como executada. Pontuação: ${pontuacao}. Status: ${status === 'executado_com_atraso' ? 'Executado com Atraso' : 'Executado'}${exec.colaboradorDesignadoNome ? `. Colaborador designado: ${exec.colaboradorDesignadoNome}` : ''}`
       : `Atividade "${exec.atividadeNome}" desmarcada. Pontuação zerada.`,
   });
   localStorage.setItem(LOGS_KEY, JSON.stringify(logs));
 
   return execucoes[idx];
+};
+
+// === Atualizar Colaborador Designado ===
+
+export const atualizarColaboradorExecucao = (
+  data: string,
+  atividadeId: string,
+  lojaId: string,
+  colaboradorId: string,
+  colaboradorNome: string
+): void => {
+  const key = getExecucaoKey(data);
+  const execucoes: ExecucaoAtividade[] = JSON.parse(localStorage.getItem(key) || '[]');
+  const idx = execucoes.findIndex(e => e.atividadeId === atividadeId && e.lojaId === lojaId);
+  if (idx < 0) return;
+  execucoes[idx] = {
+    ...execucoes[idx],
+    colaboradorDesignadoId: colaboradorId || undefined,
+    colaboradorDesignadoNome: colaboradorNome || undefined,
+  };
+  localStorage.setItem(key, JSON.stringify(execucoes));
 };
 
 // === Logs ===
