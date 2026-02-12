@@ -934,16 +934,6 @@ export default function OSAssistenciaNova() {
                 </div>
               </div>
             </div>
-            {origemAparelho && (
-              <div className={cn(
-                "mt-4 p-3 rounded-lg text-sm",
-                origemAparelho === 'Thiago Imports' ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
-              )}>
-                {origemAparelho === 'Thiago Imports' 
-                  ? "✓ O aparelho foi adquirido na Thiago Imports e possui garantia da loja."
-                  : "⚠ O aparelho foi adquirido externamente. Verificar documentação."}
-              </div>
-            )}
             {origemAparelho === 'Thiago Imports' && (
               <div className="mt-4 space-y-2">
                 <Label>ID da Venda Antiga</Label>
@@ -978,7 +968,7 @@ export default function OSAssistenciaNova() {
                 <AutocompleteLoja
                   value={lojaId}
                   onChange={setLojaId}
-                  apenasLojasTipoLoja={true}
+                  filtrarPorTipo="Assistência"
                   className={!lojaId ? 'border-destructive' : ''}
                   placeholder="Selecione a loja..."
                 />
