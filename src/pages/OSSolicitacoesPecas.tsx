@@ -39,7 +39,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-export default function OSSolicitacoesPecas() {
+// Conteúdo reutilizável (sem layout wrapper)
+export function SolicitacoesPecasContent() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useUrlTabs('solicitacoes');
@@ -341,7 +342,7 @@ export default function OSSolicitacoesPecas() {
   const lotesAtivos = lotes.filter(l => l.status === 'Pendente' || l.status === 'Enviado');
 
   return (
-    <OSLayout title="Aprovações - Gestor">
+    <>
       {/* Dashboard Cards */}
       <div className="sticky top-0 z-10 bg-background pb-4">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
@@ -893,6 +894,15 @@ export default function OSSolicitacoesPecas() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </>
+  );
+}
+
+// Default export wraps content in layout for standalone page route
+export default function OSSolicitacoesPecas() {
+  return (
+    <OSLayout title="Solicitações de Peças">
+      <SolicitacoesPecasContent />
     </OSLayout>
   );
 }

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { Eye, DollarSign, CreditCard, FileText, Clock, Check, X, Package, AlertTriangle, Layers } from 'lucide-react';
+import { Eye, DollarSign, CreditCard, FileText, Clock } from 'lucide-react';
 import { getOrdensServico, updateOrdemServico, OrdemServico, formatCurrency } from '@/utils/assistenciaApi';
 import { getClientes } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -16,11 +16,7 @@ import { formatIMEI } from '@/utils/imeiMask';
 import { useUrlTabs } from '@/hooks/useUrlTabs';
 import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
 import { Pagamento } from '@/utils/vendasApi';
-import { 
-  getSolicitacoes, aprovarSolicitacao, rejeitarSolicitacao,
-  calcularSLASolicitacao, formatCurrency as formatCurrencySol,
-  SolicitacaoPeca
-} from '@/utils/solicitacaoPecasApi';
+import { SolicitacoesPecasContent } from '@/pages/OSSolicitacoesPecas';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -28,7 +24,6 @@ export default function OSAreaGestor() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useUrlTabs('tratativas');
   const [ordensServico, setOrdensServico] = useState(getOrdensServico());
-  const [solicitacoes, setSolicitacoes] = useState(getSolicitacoes());
   const clientes = getClientes();
   const { obterNomeLoja, obterNomeColaborador } = useCadastroStore();
 
@@ -36,13 +31,6 @@ export default function OSAreaGestor() {
   const [pagamentoOpen, setPagamentoOpen] = useState(false);
   const [osSelecionada, setOsSelecionada] = useState<OrdemServico | null>(null);
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
-
-  // Solicitações pendentes
-  const solicitacoesPendentes = useMemo(() => {
-    return solicitacoes
-      .filter(s => s.status === 'Pendente')
-      .sort((a, b) => new Date(b.dataSolicitacao).getTime() - new Date(a.dataSolicitacao).getTime());
-  }, [solicitacoes]);
 
   // Filtrar OS concluídas
   const osConcluidas = useMemo(() => {
@@ -237,105 +225,9 @@ export default function OSAreaGestor() {
           </div>
         </TabsContent>
 
-        {/* Sub-aba Aprovações */}
-        <TabsContent value="aprovacoes" className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-yellow-500/10">
-                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Pendentes</p>
-                    <p className="text-2xl font-bold text-yellow-600">{solicitacoesPendentes.length}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Package className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Solicitações</p>
-                    <p className="text-2xl font-bold">{solicitacoes.length}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>OS</TableHead>
-                  <TableHead>Peça</TableHead>
-                  <TableHead>Qtd</TableHead>
-                  <TableHead>Loja</TableHead>
-                  <TableHead>SLA</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-center">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {solicitacoesPendentes.map(sol => {
-                  const dias = calcularSLASolicitacao(sol.dataSolicitacao);
-                  return (
-                    <TableRow key={sol.id}>
-                      <TableCell className="font-mono text-xs">{sol.id}</TableCell>
-                      <TableCell className="font-mono text-xs">{sol.osId}</TableCell>
-                      <TableCell className="font-medium">{sol.peca}</TableCell>
-                      <TableCell>{sol.quantidade}</TableCell>
-                      <TableCell className="text-xs">{obterNomeLoja(sol.lojaSolicitante)}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded text-xs font-medium inline-flex items-center gap-1 ${
-                          dias >= 7 ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
-                          dias >= 4 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
-                          'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                        }`}>
-                          {dias} dias
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className="bg-yellow-500 hover:bg-yellow-600">Pendente</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1 justify-center">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            title="Ver detalhes completos"
-                            onClick={() => navigate('/os/solicitacoes-pecas')}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                {solicitacoesPendentes.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      Nenhuma solicitação pendente de aprovação
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="flex justify-center">
-            <Button variant="outline" onClick={() => navigate('/os/solicitacoes-pecas')}>
-              <Layers className="h-4 w-4 mr-2" />
-              Ver Todas as Solicitações e Lotes
-            </Button>
-          </div>
+        {/* Sub-aba Aprovações - Conteúdo completo de Solicitações de Peças */}
+        <TabsContent value="aprovacoes">
+          <SolicitacoesPecasContent />
         </TabsContent>
       </Tabs>
 
