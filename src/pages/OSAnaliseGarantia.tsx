@@ -20,7 +20,7 @@ import {
   getRegistrosAnaliseGarantia, aprovarAnaliseGarantia, 
   RegistroAnaliseGarantia, getGarantiaById
 } from '@/utils/garantiasApi';
-import { updateProdutoPendente } from '@/utils/osApi';
+import { updateProdutoPendente, getProdutoPendenteById } from '@/utils/osApi';
 import { addOrdemServico } from '@/utils/assistenciaApi';
 import { getClientes } from '@/utils/cadastrosApi';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
@@ -168,8 +168,15 @@ export default function OSAnaliseGarantia() {
           modeloAparelho = garantia.modelo || '';
           imeiAparelho = garantia.imei || '';
         }
-      } else if (registroAprovado.origem === 'Estoque') {
+    } else if (registroAprovado.origem === 'Estoque') {
         origemOS = 'Estoque';
+        if (registroAprovado.origemId) {
+          const produtoPendente = getProdutoPendenteById(registroAprovado.origemId);
+          if (produtoPendente) {
+            modeloAparelho = produtoPendente.modelo || '';
+            imeiAparelho = produtoPendente.imei || '';
+          }
+        }
       }
 
       addOrdemServico({

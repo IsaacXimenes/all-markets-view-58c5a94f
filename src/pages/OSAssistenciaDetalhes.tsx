@@ -27,6 +27,8 @@ import { ArrowLeft, FileText, Clock, AlertTriangle, User, Wrench, MapPin, Calend
 import { cn } from '@/lib/utils';
 import QRCode from 'qrcode';
 import { toast } from 'sonner';
+import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
+import { Pagamento as PagamentoVendaType } from '@/utils/vendasApi';
 
 export default function OSAssistenciaDetalhes() {
   const { id } = useParams<{ id: string }>();
@@ -34,7 +36,7 @@ export default function OSAssistenciaDetalhes() {
   const [searchParams] = useSearchParams();
   const [os, setOS] = useState<OrdemServico | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(searchParams.get('edit') === 'true');
   const [solicitacoesOS, setSolicitacoesOS] = useState<SolicitacaoPeca[]>([]);
 
   // Editable fields
@@ -45,6 +47,7 @@ export default function OSAssistenciaDetalhes() {
   const [editSetor, setEditSetor] = useState('');
   const [editDescricao, setEditDescricao] = useState('');
   const [editPecas, setEditPecas] = useState<OrdemServico['pecas']>([]);
+  const [editPagamentosQuadro, setEditPagamentosQuadro] = useState<PagamentoVendaType[]>([]);
 
   // Solicitação de peças form
   const [novaSolPeca, setNovaSolPeca] = useState('');
@@ -71,6 +74,15 @@ export default function OSAssistenciaDetalhes() {
         setEditSetor(ordem.setor);
         setEditDescricao(ordem.descricao || '');
         setEditPecas([...ordem.pecas]);
+        setEditPagamentosQuadro(ordem.pagamentos.map(p => ({
+          id: p.id,
+          meioPagamento: p.meio,
+          valor: p.valor,
+          contaDestino: '',
+          parcelas: p.parcelas || 1,
+          comprovante: '',
+          comprovanteNome: '',
+        })));
       }
       // Buscar solicitações de peças vinculadas à OS
       const solicitacoes = getSolicitacoesByOS(id);
@@ -92,6 +104,12 @@ export default function OSAssistenciaDetalhes() {
     if (!os) return;
     
     const valorTotal = editPecas.reduce((acc, p) => acc + p.valorTotal, 0);
+    const pagamentosConvertidos = editPagamentosQuadro.map(p => ({
+      id: p.id,
+      meio: p.meioPagamento,
+      valor: p.valor,
+      parcelas: p.parcelas
+    }));
     updateOrdemServico(os.id, {
       clienteId: editClienteId,
       lojaId: editLojaId,
@@ -100,12 +118,17 @@ export default function OSAssistenciaDetalhes() {
       setor: editSetor as 'GARANTIA' | 'ASSISTÊNCIA' | 'TROCA',
       descricao: editDescricao,
       pecas: editPecas,
+      pagamentos: pagamentosConvertidos,
       valorTotal
     });
     
     // Refresh OS data
     const updatedOS = getOrdemServicoById(os.id);
     setOS(updatedOS || null);
+    // Recarregar solicitações
+    if (os.id) {
+      setSolicitacoesOS(getSolicitacoesByOS(os.id));
+    }
     setIsEditing(false);
     toast.success('Alterações salvas com sucesso!');
   };
@@ -659,28 +682,39 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Meio de Pagamento</TableHead>
-                      <TableHead>Parcelas</TableHead>
-                      <TableHead>Valor</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {os.pagamentos.map((pag, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{pag.meio}</TableCell>
-                        <TableCell>{pag.parcelas || '-'}</TableCell>
-                        <TableCell className="font-medium">{formatCurrency(pag.valor)}</TableCell>
+                {isEditing ? (
+                  <PagamentoQuadro
+                    valorTotalProdutos={editPecas.reduce((acc, p) => acc + p.valorTotal, 0)}
+                    custoTotalProdutos={0}
+                    lojaVendaId={editLojaId}
+                    onPagamentosChange={setEditPagamentosQuadro}
+                    pagamentosIniciais={editPagamentosQuadro}
+                    ocultarCards={true}
+                  />
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Meio de Pagamento</TableHead>
+                        <TableHead>Parcelas</TableHead>
+                        <TableHead>Valor</TableHead>
                       </TableRow>
-                    ))}
-                    <TableRow className="bg-muted/50">
-                      <TableCell colSpan={2} className="font-bold">Total</TableCell>
-                      <TableCell className="font-bold text-lg">{formatCurrency(os.valorTotal)}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {os.pagamentos.map((pag, index) => (
+                        <TableRow key={index}>
+                          <TableCell className="font-medium">{pag.meio}</TableCell>
+                          <TableCell>{pag.parcelas || '-'}</TableCell>
+                          <TableCell className="font-medium">{formatCurrency(pag.valor)}</TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="bg-muted/50">
+                        <TableCell colSpan={2} className="font-bold">Total</TableCell>
+                        <TableCell className="font-bold text-lg">{formatCurrency(os.valorTotal)}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
 

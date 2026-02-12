@@ -886,7 +886,7 @@ export default function OSAssistenciaNova() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label className={!origemAparelho ? 'text-destructive' : ''}>Origem da Compra *</Label>
+                <Label>Origem da Compra</Label>
                 <Select value={origemAparelho} onValueChange={(v) => {
                   setOrigemAparelho(v as any);
                   if (!timerStart) {
@@ -894,7 +894,7 @@ export default function OSAssistenciaNova() {
                     setTimer(TIMER_DURATION);
                   }
                 }}>
-                  <SelectTrigger className={!origemAparelho ? 'border-destructive' : ''}><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Thiago Imports">Compra realizada na Thiago Imports</SelectItem>
                     <SelectItem value="Externo">Aparelho adquirido fora</SelectItem>
@@ -902,9 +902,9 @@ export default function OSAssistenciaNova() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className={!modeloAparelho ? 'text-destructive' : ''}>Modelo do Aparelho *</Label>
+                <Label>Modelo do Aparelho</Label>
                 <Select value={modeloAparelho} onValueChange={setModeloAparelho}>
-                  <SelectTrigger className={!modeloAparelho ? 'border-destructive' : ''}><SelectValue placeholder="Selecione o modelo..." /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Selecione o modelo..." /></SelectTrigger>
                   <SelectContent>
                     {produtosCadastro.map(p => (
                       <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
@@ -1181,7 +1181,7 @@ export default function OSAssistenciaNova() {
                       <AutocompleteLoja
                         value={peca.unidadeServico}
                         onChange={v => handlePecaChange(index, 'unidadeServico', v)}
-                        apenasLojasTipoLoja={true}
+                        filtrarPorTipo="Assistência"
                         placeholder="Selecione..."
                       />
                     </div>
@@ -1463,8 +1463,6 @@ export default function OSAssistenciaNova() {
         {/* Alerta de Campos Obrigatórios */}
         {(() => {
           const camposFaltando: string[] = [];
-          if (!origemAparelho) camposFaltando.push('Origem da Compra');
-          if (!modeloAparelho) camposFaltando.push('Modelo do Aparelho');
           if (!lojaId) camposFaltando.push('Loja');
           if (!tecnicoId) camposFaltando.push('Técnico');
           // Setor não é mais obrigatório

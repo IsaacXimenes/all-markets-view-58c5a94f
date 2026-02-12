@@ -426,7 +426,7 @@ export default function OSAssistencia() {
                       variant="ghost" 
                       size="sm"
                       title="Editar"
-                      onClick={() => navigate(`/os/assistencia/${os.id}/editar`)}
+                      onClick={() => navigate(`/os/assistencia/${os.id}?edit=true`)}
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
