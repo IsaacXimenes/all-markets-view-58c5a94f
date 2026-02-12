@@ -1414,6 +1414,7 @@ export default function OSAssistenciaNova() {
           custoTotalProdutos={0}
           lojaVendaId={lojaId}
           onPagamentosChange={(pags) => setPagamentosQuadro(pags)}
+          ocultarCards
         />
 
         {/* Descrição */}

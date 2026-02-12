@@ -31,6 +31,7 @@ export interface PagamentoQuadroProps {
     comissaoVenda?: ResultadoComissaoVenda;
   }) => void;
   pagamentosIniciais?: Pagamento[];
+  ocultarCards?: boolean;
 }
 
 interface NovoPagamentoState extends Partial<Pagamento> {
@@ -80,7 +81,8 @@ export function PagamentoQuadro({
   lojaVendaId,
   onPagamentosChange, 
   onValoresChange,
-  pagamentosIniciais = []
+  pagamentosIniciais = [],
+  ocultarCards = false
 }: PagamentoQuadroProps) {
   const [contasFinanceiras] = useState<ContaFinanceira[]>(getContasFinanceiras());
   const [maquinasCartao] = useState<MaquinaCartao[]>(getMaquinasCartao().filter(m => m.status === 'Ativo'));
@@ -449,76 +451,78 @@ export function PagamentoQuadro({
           )}
           
           {/* 4 Cards Proeminentes - Com Comissão */}
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Card 1: Valor com Taxas da Máquina */}
-            <Card className="bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Percent className="h-5 w-5 text-orange-600" />
-                  <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Taxas da Máquina</span>
-                </div>
-                <p className="text-2xl font-bold text-orange-600">
-                  {formatarMoeda(totalTaxas)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Taxa descontada do valor final
-                </p>
-              </CardContent>
-            </Card>
-            
-            {/* Card 2: Valor Total */}
-            <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <DollarSign className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Valor Total</span>
-                </div>
-                <p className="text-2xl font-bold text-blue-600">
-                  {formatarMoeda(totalPagamentos)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Valor bruto pago pelo cliente
-                </p>
-              </CardContent>
-            </Card>
-            
-            {/* Card 3: Lucro Residual */}
-            <Card className={`border-2 ${isPrejuizo ? 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800' : 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-800'}`}>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <TrendingUp className={`h-5 w-5 ${isPrejuizo ? 'text-red-600' : 'text-green-600'}`} />
-                  <span className={`text-sm font-medium ${isPrejuizo ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}`}>
-                    {isPrejuizo ? 'Prejuízo' : 'Lucro Residual'}
-                  </span>
-                </div>
-                <p className={`text-2xl font-bold ${isPrejuizo ? 'text-red-600' : 'text-green-600'}`}>
-                  {formatarMoeda(lucroResidual)}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Líquido - Custo
-                </p>
-              </CardContent>
-            </Card>
-            
-            {/* Card 4: Comissão da Venda */}
-            <Card className="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Store className="h-5 w-5 text-purple-600" />
-                  <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Comissão da Venda</span>
-                </div>
-                <p className="text-2xl font-bold text-purple-600">
-                  {comissaoVenda ? formatarMoeda(comissaoVenda.valorComissao) : '-'}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {comissaoVenda 
-                    ? `${comissaoVenda.percentualComissao}% - ${lojaVendaId === LOJA_ONLINE_ID ? 'Online' : 'Loja Física'}`
-                    : 'Selecione uma loja'
-                  }
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          {!ocultarCards && (
+            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Card 1: Valor com Taxas da Máquina */}
+              <Card className="bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Percent className="h-5 w-5 text-orange-600" />
+                    <span className="text-sm font-medium text-orange-700 dark:text-orange-300">Taxas da Máquina</span>
+                  </div>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {formatarMoeda(totalTaxas)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Taxa descontada do valor final
+                  </p>
+                </CardContent>
+              </Card>
+              
+              {/* Card 2: Valor Total */}
+              <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="h-5 w-5 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Valor Total</span>
+                  </div>
+                  <p className="text-2xl font-bold text-blue-600">
+                    {formatarMoeda(totalPagamentos)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Valor bruto pago pelo cliente
+                  </p>
+                </CardContent>
+              </Card>
+              
+              {/* Card 3: Lucro Residual */}
+              <Card className={`border-2 ${isPrejuizo ? 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-800' : 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-800'}`}>
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className={`h-5 w-5 ${isPrejuizo ? 'text-red-600' : 'text-green-600'}`} />
+                    <span className={`text-sm font-medium ${isPrejuizo ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}`}>
+                      {isPrejuizo ? 'Prejuízo' : 'Lucro Residual'}
+                    </span>
+                  </div>
+                  <p className={`text-2xl font-bold ${isPrejuizo ? 'text-red-600' : 'text-green-600'}`}>
+                    {formatarMoeda(lucroResidual)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Líquido - Custo
+                  </p>
+                </CardContent>
+              </Card>
+              
+              {/* Card 4: Comissão da Venda */}
+              <Card className="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Store className="h-5 w-5 text-purple-600" />
+                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Comissão da Venda</span>
+                  </div>
+                  <p className="text-2xl font-bold text-purple-600">
+                    {comissaoVenda ? formatarMoeda(comissaoVenda.valorComissao) : '-'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {comissaoVenda 
+                      ? `${comissaoVenda.percentualComissao}% - ${lojaVendaId === LOJA_ONLINE_ID ? 'Online' : 'Loja Física'}`
+                      : 'Selecione uma loja'
+                    }
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
           
           {valorPendente > 0 && (
             <div className="mt-4 p-3 bg-destructive/10 rounded-lg flex items-center gap-2 text-destructive">

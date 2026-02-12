@@ -18,9 +18,11 @@ import { format } from 'date-fns';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { 
   getRegistrosAnaliseGarantia, aprovarAnaliseGarantia, 
-  RegistroAnaliseGarantia 
+  RegistroAnaliseGarantia, getGarantiaById
 } from '@/utils/garantiasApi';
 import { updateProdutoPendente } from '@/utils/osApi';
+import { addOrdemServico } from '@/utils/assistenciaApi';
+import { getClientes } from '@/utils/cadastrosApi';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 
 export default function OSAnaliseGarantia() {
@@ -150,13 +152,57 @@ export default function OSAnaliseGarantia() {
         });
       }
 
-      // Navegar para Nova Assistência com parâmetros em vez de criar OS diretamente
-      navigate(`/os/assistencia/nova?analiseId=${registroAprovado.id}&origemAnalise=true`);
+      // Criar OS diretamente
+      const clientes = getClientes();
+      let clienteId = '';
+      let modeloAparelho = '';
+      let imeiAparelho = '';
+      let origemOS: 'Garantia' | 'Estoque' | 'Venda' | 'Avulso' = 'Avulso';
+
+      if (registroAprovado.origem === 'Garantia' && registroAprovado.origemId) {
+        origemOS = 'Garantia';
+        const garantia = getGarantiaById(registroAprovado.origemId);
+        if (garantia) {
+          const cliente = clientes.find(c => c.nome === garantia.clienteNome || c.id === garantia.clienteId);
+          if (cliente) clienteId = cliente.id;
+          modeloAparelho = garantia.modelo || '';
+          imeiAparelho = garantia.imei || '';
+        }
+      } else if (registroAprovado.origem === 'Estoque') {
+        origemOS = 'Estoque';
+      }
+
+      addOrdemServico({
+        dataHora: new Date().toISOString(),
+        clienteId,
+        lojaId: lojaSelecionada,
+        tecnicoId: tecnicoSelecionado,
+        setor: registroAprovado.origem === 'Garantia' ? 'GARANTIA' : 'ASSISTÊNCIA',
+        status: 'Em serviço',
+        pecas: [],
+        pagamentos: [],
+        valorTotal: 0,
+        custoTotal: 0,
+        descricao: `Origem: ${registroAprovado.origem} - ${registroAprovado.clienteDescricao}`,
+        timeline: [{
+          data: new Date().toISOString(),
+          tipo: 'registro' as const,
+          descricao: `OS criada a partir da Análise de Tratativas (${registroAprovado.id})`,
+          responsavel: 'Sistema'
+        }],
+        origemOS,
+        garantiaId: registroAprovado.origem === 'Garantia' ? registroAprovado.origemId : undefined,
+        modeloAparelho,
+        imeiAparelho,
+      });
+
+      toast.success('Solicitação aprovada e OS criada com sucesso!');
+      // Navegar para a aba Nova Assistência (lista)
+      navigate('/os/assistencia');
     }
 
     setRegistros(getRegistrosAnaliseGarantia());
     setShowAprovarModal(false);
-    toast.success('Solicitação aprovada! Redirecionando para Nova Assistência...');
   };
 
   // Stats
