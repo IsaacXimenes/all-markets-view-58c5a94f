@@ -217,6 +217,7 @@ export default function GestaoAdmAtividades() {
                               filtrarPorLoja={lojaId}
                               placeholder="Selecionar..."
                               className="text-sm"
+                              ocultarCargo
                             />
                           </TableCell>
                           <TableCell>{exec.tipoHorario === 'fixo' ? exec.horarioPrevisto : 'Aberto'}</TableCell>

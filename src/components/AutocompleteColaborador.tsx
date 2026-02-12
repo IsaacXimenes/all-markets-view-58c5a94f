@@ -18,6 +18,7 @@ interface AutocompleteColaboradorProps {
   apenasAtivos?: boolean;
   className?: string;
   disabled?: boolean;
+  ocultarCargo?: boolean;
 }
 
 export function AutocompleteColaborador({ 
@@ -29,7 +30,8 @@ export function AutocompleteColaborador({
   filtrarPorLoja,
   apenasAtivos = true,
   className,
-  disabled = false
+  disabled = false,
+  ocultarCargo = false
 }: AutocompleteColaboradorProps) {
   const { 
     colaboradores, 
@@ -160,9 +162,11 @@ export function AutocompleteColaborador({
         <div className="flex items-center gap-2 flex-wrap">
           <User className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm">{colaboradorSelecionado.nome}</span>
-          <Badge variant="outline" className={cn("text-xs", getCargoBadgeColor(colaboradorSelecionado.cargo))}>
-            {colaboradorSelecionado.cargo}
-          </Badge>
+          {!ocultarCargo && (
+            <Badge variant="outline" className={cn("text-xs", getCargoBadgeColor(colaboradorSelecionado.cargo))}>
+              {colaboradorSelecionado.cargo}
+            </Badge>
+          )}
           {selecionadoEmRodizio && (
             <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">
               <RefreshCw className="h-3 w-3 mr-1" />
@@ -220,9 +224,11 @@ export function AutocompleteColaborador({
                       {emRodizio && rodizio && ` → ${obterNomeLoja(rodizio.loja_destino_id)}`}
                     </span>
                   </div>
-                  <Badge variant="outline" className={cn("text-xs flex-shrink-0", getCargoBadgeColor(col.cargo))}>
-                    {col.cargo}
-                  </Badge>
+                  {!ocultarCargo && (
+                    <Badge variant="outline" className={cn("text-xs flex-shrink-0", getCargoBadgeColor(col.cargo))}>
+                      {col.cargo}
+                    </Badge>
+                  )}
                 </div>
               );
             })}
