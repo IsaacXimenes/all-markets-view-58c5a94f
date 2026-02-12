@@ -17,9 +17,13 @@ import {
 } from '@/utils/solicitacaoPecasApi';
 import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
 import { getOrdemServicoById, updateOrdemServico } from '@/utils/assistenciaApi';
-import { Eye, Check, Download, Filter, X } from 'lucide-react';
+import { Eye, Check, Download, Filter, X, FileText, Clock, CheckCircle, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCadastroStore } from '@/store/cadastroStore';
+import { ResponsiveCardGrid, ResponsiveFilterGrid } from '@/components/ui/ResponsiveContainers';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
+import { getStatusRowClass } from '@/utils/statusColors';
 
 export default function FinanceiroNotasAssistencia() {
   const [notas, setNotas] = useState(getNotasAssistencia());
@@ -45,9 +49,6 @@ export default function FinanceiroNotasAssistencia() {
     lojaSolicitante: 'todos',
     status: 'todos'
   });
-
-  // Usar lojas do store ao invés de array hardcoded
-  const lojasSolicitantes = lojas.map(l => l.nome);
 
   // Filtrar e ordenar notas
   const filteredNotas = useMemo(() => {
@@ -148,113 +149,93 @@ export default function FinanceiroNotasAssistencia() {
     <FinanceiroLayout title="Notas Pendentes - Assistência">
       <div className="space-y-6">
         {/* Cards de Resumo */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <ResponsiveCardGrid cols={4}>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Qtd de Notas</p>
+                  <p className="text-xs text-muted-foreground">Qtd de Notas</p>
                   <p className="text-2xl font-bold">{estatisticas.qtdNotas}</p>
                 </div>
-                <Filter className="h-10 w-10 text-muted-foreground opacity-50" />
+                <FileText className="h-8 w-8 text-muted-foreground opacity-40" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Pendentes</p>
-                  <p className="text-2xl font-bold text-destructive">{estatisticas.qtdPendentes}</p>
+                  <p className="text-xs text-muted-foreground">Pendentes</p>
+                  <p className="text-2xl font-bold text-yellow-600">{estatisticas.qtdPendentes}</p>
                 </div>
-                <X className="h-10 w-10 text-destructive opacity-50" />
+                <Clock className="h-8 w-8 text-yellow-600 opacity-40" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Conferidas</p>
+                  <p className="text-xs text-muted-foreground">Conferidas</p>
                   <p className="text-2xl font-bold text-green-600">{estatisticas.qtdConferidas}</p>
                 </div>
-                <Check className="h-10 w-10 text-green-600 opacity-50" />
+                <CheckCircle className="h-8 w-8 text-green-600 opacity-40" />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total Pendente</p>
-                  <p className="text-2xl font-bold text-destructive">{formatCurrency(totalPendente)}</p>
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">Total Pendente</p>
+                  <p className="text-2xl font-bold text-yellow-600 truncate">{formatCurrency(totalPendente)}</p>
                 </div>
-                <Eye className="h-10 w-10 text-muted-foreground opacity-50" />
+                <DollarSign className="h-8 w-8 text-yellow-600 opacity-40 shrink-0" />
               </div>
             </CardContent>
           </Card>
-        </div>
+        </ResponsiveCardGrid>
 
         {/* Filtros */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filtros
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-              <div>
-                <Label htmlFor="dataInicio">Data Início</Label>
+          <CardContent className="p-4">
+            <ResponsiveFilterGrid cols={5}>
+              <div className="space-y-1">
+                <Label className="text-xs">Data Início</Label>
                 <Input
-                  id="dataInicio"
                   type="date"
                   value={filters.dataInicio}
                   onChange={(e) => setFilters({ ...filters, dataInicio: e.target.value })}
                 />
               </div>
-              <div>
-                <Label htmlFor="dataFim">Data Fim</Label>
+              <div className="space-y-1">
+                <Label className="text-xs">Data Fim</Label>
                 <Input
-                  id="dataFim"
                   type="date"
                   value={filters.dataFim}
                   onChange={(e) => setFilters({ ...filters, dataFim: e.target.value })}
                 />
               </div>
-              <div>
-                <Label htmlFor="fornecedor">Fornecedor</Label>
-                <Select value={filters.fornecedor} onValueChange={(value) => setFilters({ ...filters, fornecedor: value })}>
-                  <SelectTrigger id="fornecedor">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    {fornecedoresList.map(f => (
-                      <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-1">
+                <Label className="text-xs">Fornecedor</Label>
+                <AutocompleteFornecedor
+                  value={filters.fornecedor === 'todos' ? '' : filters.fornecedor}
+                  onChange={(v) => setFilters({ ...filters, fornecedor: v || 'todos' })}
+                  placeholder="Todos"
+                />
               </div>
-              <div>
-                <Label htmlFor="lojaSolicitante">Loja Solicitante</Label>
-                <Select value={filters.lojaSolicitante} onValueChange={(value) => setFilters({ ...filters, lojaSolicitante: value })}>
-                  <SelectTrigger id="lojaSolicitante">
-                    <SelectValue placeholder="Todas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todas</SelectItem>
-                    {lojasSolicitantes.map(l => (
-                      <SelectItem key={l} value={l}>{l}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-1">
+                <Label className="text-xs">Loja Solicitante</Label>
+                <AutocompleteLoja
+                  value={filters.lojaSolicitante === 'todos' ? '' : filters.lojaSolicitante}
+                  onChange={(v) => setFilters({ ...filters, lojaSolicitante: v || 'todos' })}
+                  placeholder="Todas"
+                />
               </div>
-              <div>
-                <Label htmlFor="status">Status</Label>
+              <div className="space-y-1">
+                <Label className="text-xs">Status</Label>
                 <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
-                  <SelectTrigger id="status">
+                  <SelectTrigger>
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -264,10 +245,10 @@ export default function FinanceiroNotasAssistencia() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="flex justify-end mt-4">
-              <Button variant="outline" onClick={handleLimpar}>
-                <X className="h-4 w-4 mr-2" />
+            </ResponsiveFilterGrid>
+            <div className="flex justify-end mt-3">
+              <Button variant="outline" size="sm" onClick={handleLimpar}>
+                <X className="h-4 w-4 mr-1" />
                 Limpar
               </Button>
             </div>
@@ -312,12 +293,12 @@ export default function FinanceiroNotasAssistencia() {
                     filteredNotas.map(nota => (
                       <TableRow 
                         key={nota.id}
-                        className={nota.status === 'Pendente' ? 'bg-destructive/20' : 'bg-green-500/20'}
+                        className={getStatusRowClass(nota.status)}
                       >
                         <TableCell className="font-mono text-xs">{nota.id}</TableCell>
                         <TableCell>{new Date(nota.dataCriacao).toLocaleDateString('pt-BR')}</TableCell>
                         <TableCell>{getFornecedorNome(nota.fornecedor)}</TableCell>
-                        <TableCell>{nota.lojaSolicitante}</TableCell>
+                        <TableCell>{obterNomeLoja(nota.lojaSolicitante)}</TableCell>
                         <TableCell className="font-mono text-xs">{nota.osId || '-'}</TableCell>
                         <TableCell>
                           <Badge variant="outline">Peças</Badge>

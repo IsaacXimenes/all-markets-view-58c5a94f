@@ -338,7 +338,7 @@ export default function OSSolicitacoesPecas() {
   const totalAprovadas = solicitacoes.filter(s => s.status === 'Aprovada').length;
   const totalEnviadas = solicitacoes.filter(s => s.status === 'Enviada').length;
   const totalRecebidas = solicitacoes.filter(s => s.status === 'Recebida').length;
-  const lotesPendentes = lotes.filter(l => l.status === 'Pendente');
+  const lotesAtivos = lotes.filter(l => l.status === 'Pendente' || l.status === 'Enviado');
 
   return (
     <OSLayout title="Aprovações - Gestor">
@@ -371,8 +371,8 @@ export default function OSSolicitacoesPecas() {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold">{lotesPendentes.length}</div>
-              <div className="text-xs text-muted-foreground">Lotes Pendentes</div>
+              <div className="text-2xl font-bold">{lotesAtivos.length}</div>
+              <div className="text-xs text-muted-foreground">Lotes</div>
             </CardContent>
           </Card>
         </div>
@@ -381,7 +381,7 @@ export default function OSSolicitacoesPecas() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="solicitacoes">Solicitações</TabsTrigger>
-          <TabsTrigger value="lotes">Lotes Pendentes ({lotesPendentes.length})</TabsTrigger>
+          <TabsTrigger value="lotes">Lotes ({lotesAtivos.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="solicitacoes" className="space-y-4">
@@ -588,8 +588,14 @@ export default function OSSolicitacoesPecas() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lotesPendentes.map(lote => (
-                  <TableRow key={lote.id}>
+                {lotesAtivos.map(lote => (
+                  <TableRow 
+                    key={lote.id}
+                    className={cn(
+                      lote.status === 'Pendente' && 'bg-yellow-500/10',
+                      lote.status === 'Enviado' && 'bg-purple-500/10'
+                    )}
+                  >
                     <TableCell className="font-mono text-xs">{lote.id}</TableCell>
                     <TableCell className="text-xs">
                       {new Date(lote.dataCriacao).toLocaleDateString('pt-BR')}
@@ -598,23 +604,39 @@ export default function OSSolicitacoesPecas() {
                     <TableCell>{lote.solicitacoes.length}</TableCell>
                     <TableCell className="font-medium">{formatCurrency(lote.valorTotal)}</TableCell>
                     <TableCell>
-                      <Badge className="bg-yellow-500">Pendente</Badge>
+                      {lote.status === 'Pendente' && <Badge className="bg-yellow-500 hover:bg-yellow-600">Pendente</Badge>}
+                      {lote.status === 'Enviado' && <Badge className="bg-purple-500 hover:bg-purple-600">Enviado</Badge>}
+                      {lote.status === 'Finalizado' && <Badge className="bg-green-500 hover:bg-green-600">Finalizado</Badge>}
                     </TableCell>
                     <TableCell>
-                      <Button 
-                        size="sm"
-                        onClick={() => handleEnviarLote(lote.id)}
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        Enviar Lote
-                      </Button>
+                      {lote.status === 'Pendente' ? (
+                        <div className="flex gap-1">
+                          <Button 
+                            size="sm"
+                            onClick={() => handleEnviarLote(lote.id)}
+                          >
+                            <Send className="h-4 w-4 mr-2" />
+                            Enviar Lote
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleVerLote(lote)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-1 items-center">
+                          <Badge variant="outline" className="text-purple-600 border-purple-300">Enviado ao Financeiro</Badge>
+                          <Button variant="ghost" size="sm" onClick={() => handleVerLote(lote)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
-                {lotesPendentes.length === 0 && (
+                {lotesAtivos.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      Nenhum lote pendente
+                      Nenhum lote encontrado
                     </TableCell>
                   </TableRow>
                 )}
