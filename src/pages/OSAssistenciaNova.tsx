@@ -38,9 +38,12 @@ import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { getVendaById } from '@/utils/vendasApi';
 import { getGarantiaById } from '@/utils/garantiasApi';
+import { getRegistrosAnaliseGarantia } from '@/utils/garantiasApi';
 import { getProdutoPendenteById } from '@/utils/osApi';
 import { getPecas, Peca, darBaixaPeca, initializePecasWithLojaIds } from '@/utils/pecasApi';
 import { Plus, Trash2, Search, AlertTriangle, Clock, User, History, ArrowLeft, Smartphone, Save, Package, Info, Camera } from 'lucide-react';
+import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
+import { Pagamento as PagamentoVenda } from '@/utils/vendasApi';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { formatIMEI, applyIMEIMask } from '@/utils/imeiMask';
@@ -90,6 +93,8 @@ export default function OSAssistenciaNova() {
   const garantiaIdParam = searchParams.get('garantiaId');
   const produtoIdParam = searchParams.get('produtoId');
   const itemIndexParam = searchParams.get('itemIndex');
+  const analiseIdParam = searchParams.get('analiseId');
+  const origemAnaliseParam = searchParams.get('origemAnalise');
   
   const [osInfo] = useState(getNextOSNumber());
   const [dataHora] = useState(new Date().toISOString());
@@ -112,6 +117,7 @@ export default function OSAssistenciaNova() {
   const [origemAparelho, setOrigemAparelho] = useState<'Thiago Imports' | 'Externo' | ''>('');
   const [modeloAparelho, setModeloAparelho] = useState('');
   const [imeiAparelho, setImeiAparelho] = useState('');
+  const [idVendaAntiga, setIdVendaAntiga] = useState('');
 
   // Form state
   const [lojaId, setLojaId] = useState('');
@@ -138,10 +144,11 @@ export default function OSAssistenciaNova() {
 
   const pecasEstoque = useMemo(() => getPecas().filter(p => p.status === 'Disponível'), [lojas]);
 
-  // Pagamentos
+  // Pagamentos (usando PagamentoQuadro)
   const [pagamentos, setPagamentos] = useState<PagamentoForm[]>([
     { meio: '', valor: '', parcelas: '' }
   ]);
+  const [pagamentosQuadro, setPagamentosQuadro] = useState<PagamentoVenda[]>([]);
 
   // Solicitações de Peças
   const [solicitacoesPecas, setSolicitacoesPecas] = useState<SolicitacaoPecaForm[]>([]);
@@ -206,7 +213,7 @@ export default function OSAssistenciaNova() {
 
   // Verificar se existe rascunho ao montar (apenas se não houver origem)
   useEffect(() => {
-    if (!vendaIdParam && !garantiaIdParam && !produtoIdParam && hasDraft()) {
+    if (!vendaIdParam && !garantiaIdParam && !produtoIdParam && !analiseIdParam && hasDraft()) {
       setDraftAge(getDraftAge());
       setShowDraftModal(true);
     }
@@ -246,6 +253,38 @@ export default function OSAssistenciaNova() {
       }
     }
   }, [vendaIdParam, garantiaIdParam, produtoIdParam, itemIndexParam]);
+
+  // Pré-preencher dados da Análise de Tratativas
+  useEffect(() => {
+    if (analiseIdParam && origemAnaliseParam) {
+      const registros = getRegistrosAnaliseGarantia();
+      const registro = registros.find(r => r.id === analiseIdParam);
+      if (registro) {
+        setOrigemOS(registro.origem === 'Garantia' ? 'garantia' : 'estoque');
+        setDescricao(`Origem: ${registro.origem} - ${registro.clienteDescricao}`);
+        
+        if (registro.origem === 'Garantia' && registro.origemId) {
+          const garantia = getGarantiaById(registro.origemId);
+          if (garantia) {
+            setDadosOrigem(garantia);
+            const cliente = clientes.find(c => c.nome === garantia.clienteNome || c.id === garantia.clienteId);
+            if (cliente) setClienteId(cliente.id);
+            setModeloAparelho(garantia.modelo || '');
+            setImeiAparelho(garantia.imei || '');
+            setOrigemAparelho('Thiago Imports');
+            const loja = lojas.find(l => l.nome === garantia.lojaVenda || l.id === garantia.lojaVenda);
+            if (loja) setLojaId(loja.id);
+            setSetor('GARANTIA');
+            setCamposBloqueados(['clienteId', 'modeloAparelho', 'imeiAparelho', 'lojaId', 'origemAparelho']);
+          }
+        }
+        
+        if (registro.tecnicoId) setTecnicoId(registro.tecnicoId);
+        
+        toast({ title: 'Dados pré-preenchidos', description: `Origem: Análise de Tratativas (${registro.id})` });
+      }
+    }
+  }, [analiseIdParam, origemAnaliseParam]);
 
   // Funções de pré-preenchimento
   const preencherDadosVenda = (venda: any, item: any) => {
@@ -612,14 +651,13 @@ export default function OSAssistenciaNova() {
       pecaDeFornecedor: p.pecaDeFornecedor
     }));
 
-    const pagamentosFormatados: Pagamento[] = pagamentos
-      .filter(p => p.meio && p.valor)
-      .map((p, i) => ({
-        id: `PAG-${Date.now()}-${i}`,
-        meio: p.meio,
-        valor: parseFloat(p.valor.replace(/\D/g, '')) / 100 || 0,
-        parcelas: p.parcelas ? parseInt(p.parcelas) : undefined
-      }));
+    // Usar pagamentos do PagamentoQuadro
+    const pagamentosFormatados: Pagamento[] = pagamentosQuadro.map((p, i) => ({
+      id: p.id || `PAG-${Date.now()}-${i}`,
+      meio: p.meioPagamento || '',
+      valor: p.valor || 0,
+      parcelas: p.parcelas
+    }));
 
     const timeline: TimelineOS[] = [
       {
@@ -655,7 +693,8 @@ export default function OSAssistenciaNova() {
       produtoId: produtoIdParam || undefined,
       modeloAparelho: modeloAparelho || undefined,
       imeiAparelho: imeiAparelho || undefined,
-      valorProdutoOrigem: dadosOrigem?.valorProduto || dadosOrigem?.valor || undefined
+      valorProdutoOrigem: dadosOrigem?.valorProduto || dadosOrigem?.valor || undefined,
+      idVendaAntiga: idVendaAntiga || undefined
     });
 
     // Dar baixa automática nas peças do estoque
@@ -903,6 +942,17 @@ export default function OSAssistenciaNova() {
                 {origemAparelho === 'Thiago Imports' 
                   ? "✓ O aparelho foi adquirido na Thiago Imports e possui garantia da loja."
                   : "⚠ O aparelho foi adquirido externamente. Verificar documentação."}
+              </div>
+            )}
+            {origemAparelho === 'Thiago Imports' && (
+              <div className="mt-4 space-y-2">
+                <Label>ID da Venda Antiga</Label>
+                <Input
+                  value={idVendaAntiga}
+                  onChange={(e) => setIdVendaAntiga(e.target.value)}
+                  placeholder="Insira o ID da venda no sistema antigo..."
+                  disabled={camposBloqueados.includes('idVendaAntiga')}
+                />
               </div>
             )}
           </CardContent>
@@ -1359,61 +1409,12 @@ export default function OSAssistenciaNova() {
         </Card>
 
         {/* Pagamentos */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Pagamentos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {pagamentos.map((pag, index) => (
-                <div key={index} className="flex gap-4 items-end">
-                  <div className="space-y-2 flex-1">
-                    <Label>Meio de Pagamento</Label>
-                    <Select value={pag.meio} onValueChange={v => handlePagamentoChange(index, 'meio', v)}>
-                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Pix">Pix</SelectItem>
-                        <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                        <SelectItem value="Cartão Débito">Cartão Débito</SelectItem>
-                        <SelectItem value="Cartão Crédito">Cartão Crédito</SelectItem>
-                        <SelectItem value="Boleto">Boleto</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2 flex-1">
-                    <Label>Valor</Label>
-                    <Input
-                      value={pag.valor}
-                      onChange={e => handlePagamentoChange(index, 'valor', formatCurrencyInput(e.target.value))}
-                      placeholder="R$ 0,00"
-                    />
-                  </div>
-                  {(pag.meio === 'Cartão Crédito' || pag.meio === 'Boleto') && (
-                    <div className="space-y-2 w-24">
-                      <Label>Parcelas</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="12"
-                        value={pag.parcelas}
-                        onChange={e => handlePagamentoChange(index, 'parcelas', e.target.value)}
-                        placeholder="1"
-                      />
-                    </div>
-                  )}
-                  <Button variant="ghost" size="sm" onClick={() => removePagamento(index)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              ))}
-
-              <Button variant="outline" onClick={addPagamento}>
-                <Plus className="mr-2 h-4 w-4" />
-                Adicionar Pagamento
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <PagamentoQuadro
+          valorTotalProdutos={valorTotalPecas}
+          custoTotalProdutos={0}
+          lojaVendaId={lojaId}
+          onPagamentosChange={(pags) => setPagamentosQuadro(pags)}
+        />
 
         {/* Descrição */}
         <Card>
@@ -1436,22 +1437,22 @@ export default function OSAssistenciaNova() {
             <CardTitle>Resumo</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="p-4 bg-muted rounded-lg">
                 <div className="text-sm text-muted-foreground">Total Peças/Serviços</div>
                 <div className="text-2xl font-bold">{formatCurrency(valorTotalPecas)}</div>
               </div>
               <div className="p-4 bg-muted rounded-lg">
                 <div className="text-sm text-muted-foreground">Total Pagamentos</div>
-                <div className="text-2xl font-bold">{formatCurrency(valorTotalPagamentos)}</div>
+                <div className="text-2xl font-bold">{formatCurrency(pagamentosQuadro.reduce((acc, p) => acc + p.valor, 0))}</div>
               </div>
               <div className={cn(
                 "p-4 rounded-lg",
-                valorTotalPagamentos >= valorTotalPecas ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"
+                pagamentosQuadro.reduce((acc, p) => acc + p.valor, 0) >= valorTotalPecas ? "bg-green-100 dark:bg-green-900/30" : "bg-red-100 dark:bg-red-900/30"
               )}>
                 <div className="text-sm text-muted-foreground">Diferença</div>
                 <div className="text-2xl font-bold">
-                  {formatCurrency(valorTotalPagamentos - valorTotalPecas)}
+                  {formatCurrency(pagamentosQuadro.reduce((acc, p) => acc + p.valor, 0) - valorTotalPecas)}
                 </div>
               </div>
             </div>
@@ -1465,7 +1466,7 @@ export default function OSAssistenciaNova() {
           if (!modeloAparelho) camposFaltando.push('Modelo do Aparelho');
           if (!lojaId) camposFaltando.push('Loja');
           if (!tecnicoId) camposFaltando.push('Técnico');
-          if (!setor) camposFaltando.push('Setor');
+          // Setor não é mais obrigatório
           if (!clienteId) camposFaltando.push('Cliente');
           if (!status) camposFaltando.push('Status');
           
@@ -1500,7 +1501,7 @@ export default function OSAssistenciaNova() {
           </Button>
           <Button 
             onClick={handleAbrirConfirmacao}
-            disabled={!lojaId || !tecnicoId || !setor || !clienteId || !status}
+            disabled={!lojaId || !tecnicoId || !clienteId || !status}
           >
             Registrar Assistência
           </Button>

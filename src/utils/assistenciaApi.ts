@@ -95,6 +95,7 @@ export interface OrdemServico {
   valorProdutoOrigem?: number; // Valor do produto da origem (Base de Troca)
   modeloAparelho?: string;
   imeiAparelho?: string;
+  idVendaAntiga?: string; // ID da venda no sistema antigo (quando origem = Thiago Imports)
 }
 
 // Mock data

@@ -27,7 +27,8 @@ import {
   CheckCircle, 
   XCircle,
   Package,
-  TrendingDown
+  TrendingDown,
+  Edit
 } from 'lucide-react';
 import { ResponsiveCardGrid, ResponsiveFilterGrid } from '@/components/ui/ResponsiveContainers';
 
@@ -325,13 +326,24 @@ export default function AssistRetiradaPecas() {
                       </TableCell>
                       <TableCell>{getStatusBadge(retirada.status)}</TableCell>
                       <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => navigate(`/os/retirada-pecas/${retirada.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => navigate(`/os/retirada-pecas/${retirada.id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          {(retirada.status === 'Pendente Assistência' || retirada.status === 'Em Desmonte') && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => navigate(`/os/retirada-pecas/${retirada.id}?editar=true`)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

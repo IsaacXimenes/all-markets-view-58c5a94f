@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { OSLayout } from '@/components/layout/OSLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,11 +20,11 @@ import {
   getRegistrosAnaliseGarantia, aprovarAnaliseGarantia, 
   RegistroAnaliseGarantia 
 } from '@/utils/garantiasApi';
-import { addOrdemServico } from '@/utils/assistenciaApi';
 import { updateProdutoPendente } from '@/utils/osApi';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 
 export default function OSAnaliseGarantia() {
+  const navigate = useNavigate();
   const [registros, setRegistros] = useState<RegistroAnaliseGarantia[]>(getRegistrosAnaliseGarantia());
   const { obterTecnicos, obterLojasTipoLoja, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   const tecnicos = obterTecnicos();
@@ -141,42 +142,21 @@ export default function OSAnaliseGarantia() {
       usuarioAprovacao: 'Usuário Sistema'
     });
 
-    // Criar OS na tela de Assistência com IDs corretos do CadastroStore
     if (registroAprovado) {
-      // Atualizar statusGeral do produto pendente para 'Em Análise Assistência'
-      // para que apareça em Produtos para Análise
+      // Atualizar statusGeral do produto pendente
       if (registroAprovado.origemId) {
         updateProdutoPendente(registroAprovado.origemId, {
           statusGeral: 'Em Análise Assistência'
         });
       }
 
-      addOrdemServico({
-        dataHora: new Date().toISOString(),
-        clienteId: '',
-        setor: registroAprovado.origem === 'Garantia' ? 'GARANTIA' : 'ASSISTÊNCIA',
-        tecnicoId: tecnicoSelecionado,
-        lojaId: lojaSelecionada,
-        status: 'Em serviço',
-        pecas: [],
-        pagamentos: [],
-        descricao: `Origem: ${registroAprovado.origem} - ${registroAprovado.clienteDescricao}`,
-        timeline: [{
-          data: new Date().toISOString(),
-          tipo: 'registro',
-          descricao: `OS criada a partir de Análise de Tratativas (${registroAprovado.id})`,
-          responsavel: tecnico?.nome || 'Sistema'
-        }],
-        valorTotal: 0,
-        custoTotal: 0,
-        origemOS: registroAprovado.origem === 'Garantia' ? 'Garantia' : 'Estoque',
-        garantiaId: registroAprovado.origem === 'Garantia' ? registroAprovado.origemId : undefined
-      });
+      // Navegar para Nova Assistência com parâmetros em vez de criar OS diretamente
+      navigate(`/os/assistencia/nova?analiseId=${registroAprovado.id}&origemAnalise=true`);
     }
 
     setRegistros(getRegistrosAnaliseGarantia());
     setShowAprovarModal(false);
-    toast.success('Solicitação aprovada e OS criada na Assistência!');
+    toast.success('Solicitação aprovada! Redirecionando para Nova Assistência...');
   };
 
   // Stats

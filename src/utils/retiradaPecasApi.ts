@@ -30,6 +30,14 @@ export interface RetiradaPecasTimeline {
   responsavel: string;
 }
 
+export interface LogAuditoriaRetirada {
+  id: string;
+  dataHora: string;
+  usuario: string;
+  detalhes: string;
+  tipoAlteracao: 'criacao' | 'inicio_desmonte' | 'adicionar_peca' | 'remover_peca' | 'finalizar' | 'cancelar' | 'edicao';
+}
+
 export interface RetiradaPecas {
   id: string;
   aparelhoId: string;
@@ -47,6 +55,7 @@ export interface RetiradaPecas {
   pecasRetiradas: PecaRetiradaItem[];
   timeline: RetiradaPecasTimeline[];
   lojaId: string;
+  logsAuditoria: LogAuditoriaRetirada[];
 }
 
 // ============= DADOS MOCKADOS =============
@@ -129,6 +138,7 @@ export const solicitarRetiradaPecas = (
     dataSolicitacao: agora,
     status: 'Pendente Assistência',
     pecasRetiradas: [],
+    logsAuditoria: [],
     timeline: [{
       id: `TL-RET-${Date.now()}`,
       dataHora: agora,
@@ -140,6 +150,15 @@ export const solicitarRetiradaPecas = (
     lojaId: produto.loja
   };
   
+  // Adicionar log de auditoria na criação
+  novaRetirada.logsAuditoria = [{
+    id: `LOG-RET-${Date.now()}`,
+    dataHora: agora,
+    usuario: responsavel,
+    detalhes: `Solicitação de retirada criada. Motivo: ${motivo}`,
+    tipoAlteracao: 'criacao'
+  }];
+
   retiradasPecas.push(novaRetirada);
   
   // Atualizar status do produto - mantém visível mas com status de retirada
@@ -203,8 +222,16 @@ export const iniciarDesmonte = (
     descricao: `Desmonte iniciado pelo técnico ${tecnicoResponsavel}`,
     responsavel: tecnicoResponsavel
   });
-  
-  // Atualizar timeline e status do produto original
+
+  // Log de auditoria
+  if (!retirada.logsAuditoria) retirada.logsAuditoria = [];
+  retirada.logsAuditoria.push({
+    id: `LOG-RET-${Date.now()}-inicio`,
+    dataHora: agora,
+    usuario: tecnicoResponsavel,
+    detalhes: `Desmonte iniciado`,
+    tipoAlteracao: 'inicio_desmonte'
+  });
   const produto = getProdutoById(retirada.aparelhoId);
   if (produto) {
     updateProduto(retirada.aparelhoId, {
@@ -255,8 +282,16 @@ export const adicionarPecaRetirada = (
   };
   
   retirada.pecasRetiradas.push(novaPeca);
-  
-  return { sucesso: true, mensagem: 'Peça adicionada com sucesso', retirada };
+
+  // Log de auditoria
+  if (!retirada.logsAuditoria) retirada.logsAuditoria = [];
+  retirada.logsAuditoria.push({
+    id: `LOG-RET-${Date.now()}-add`,
+    dataHora: new Date().toISOString(),
+    usuario: 'Usuário Sistema',
+    detalhes: `Peça adicionada: ${peca.nome} (${peca.quantidade}x ${peca.valorCustoPeca.toFixed(2)})`,
+    tipoAlteracao: 'adicionar_peca'
+  });
 };
 
 // Remover peça da lista
@@ -274,9 +309,18 @@ export const removerPecaRetirada = (
     return { sucesso: false, mensagem: 'Não é possível remover peças neste status' };
   }
   
+  const pecaRemovida = retirada.pecasRetiradas.find(p => p.id === pecaId);
   retirada.pecasRetiradas = retirada.pecasRetiradas.filter(p => p.id !== pecaId);
-  
-  return { sucesso: true, mensagem: 'Peça removida com sucesso', retirada };
+
+  // Log de auditoria
+  if (!retirada.logsAuditoria) retirada.logsAuditoria = [];
+  retirada.logsAuditoria.push({
+    id: `LOG-RET-${Date.now()}-rem`,
+    dataHora: new Date().toISOString(),
+    usuario: 'Usuário Sistema',
+    detalhes: `Peça removida: ${pecaRemovida?.nome || pecaId}`,
+    tipoAlteracao: 'remover_peca'
+  });
 };
 
 // Calcular soma das peças
@@ -369,6 +413,16 @@ export const finalizarDesmonte = (
   // Finalizar retirada
   retirada.status = 'Concluída';
   retirada.dataConclusao = agora;
+
+  // Log de auditoria
+  if (!retirada.logsAuditoria) retirada.logsAuditoria = [];
+  retirada.logsAuditoria.push({
+    id: `LOG-RET-${Date.now()}-final`,
+    dataHora: agora,
+    usuario: tecnicoResponsavel,
+    detalhes: `Desmonte finalizado. ${retirada.pecasRetiradas.length} peça(s) gerada(s). Valor total: R$ ${validacao.somaPecas.toFixed(2)}`,
+    tipoAlteracao: 'finalizar'
+  });
   
   retirada.timeline.unshift({
     id: `TL-RET-${Date.now()}-final`,
@@ -439,6 +493,16 @@ export const cancelarRetiradaPecas = (
   const agora = new Date().toISOString();
   
   retirada.status = 'Cancelada';
+
+  // Log de auditoria
+  if (!retirada.logsAuditoria) retirada.logsAuditoria = [];
+  retirada.logsAuditoria.push({
+    id: `LOG-RET-${Date.now()}-cancel`,
+    dataHora: agora,
+    usuario: responsavel,
+    detalhes: `Retirada cancelada. Motivo: ${motivo}`,
+    tipoAlteracao: 'cancelar'
+  });
   
   retirada.timeline.unshift({
     id: `TL-RET-${Date.now()}-cancel`,

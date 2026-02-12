@@ -530,6 +530,40 @@ export default function AssistRetiradaPecasDetalhes() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Logs de Auditoria */}
+        {retirada.logsAuditoria && retirada.logsAuditoria.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Logs de Auditoria
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data/Hora</TableHead>
+                    <TableHead>Usuário</TableHead>
+                    <TableHead>Detalhes da Alteração</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {retirada.logsAuditoria.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="text-sm whitespace-nowrap">
+                        {new Date(log.dataHora).toLocaleString('pt-BR')}
+                      </TableCell>
+                      <TableCell className="font-medium">{log.usuario}</TableCell>
+                      <TableCell className="text-sm">{log.detalhes}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Modal Adicionar Peça */}

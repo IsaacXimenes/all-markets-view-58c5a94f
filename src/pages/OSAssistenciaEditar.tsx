@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   getOrdemServicoById,
   updateOrdemServico,
@@ -22,6 +23,7 @@ import {
   getClientes, 
   getFornecedores
 } from '@/utils/cadastrosApi';
+import { getSolicitacoesByOS, addSolicitacao, SolicitacaoPeca } from '@/utils/solicitacaoPecasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
@@ -91,6 +93,12 @@ export default function OSAssistenciaEditar() {
   // Timeline
   const [timeline, setTimeline] = useState<TimelineOS[]>([]);
 
+  // Solicitações de Peças
+  const [solicitacoesOS, setSolicitacoesOS] = useState<SolicitacaoPeca[]>([]);
+  const [novaSolPeca, setNovaSolPeca] = useState('');
+  const [novaSolQtd, setNovaSolQtd] = useState(1);
+  const [novaSolJustificativa, setNovaSolJustificativa] = useState('');
+
   useEffect(() => {
     if (!id) {
       navigate('/os/assistencia');
@@ -118,6 +126,10 @@ export default function OSAssistenciaEditar() {
     setModeloAparelho(os.modeloAparelho || '');
     setImeiAparelho(os.imeiAparelho || '');
     setTimeline(os.timeline || []);
+
+    // Carregar solicitações de peças vinculadas à OS
+    const solicitacoes = getSolicitacoesByOS(id);
+    setSolicitacoesOS(solicitacoes);
 
     // Converter peças
     if (os.pecas && os.pecas.length > 0) {
@@ -671,6 +683,97 @@ export default function OSAssistenciaEditar() {
                   <span className="text-muted-foreground text-sm">Total Pago:</span>
                   <p className="text-xl font-bold text-green-600">{formatCurrency(calcularValorTotalPagamentos())}</p>
                 </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Solicitações de Peças */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Solicitações de Peças
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {solicitacoesOS.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Peça</TableHead>
+                    <TableHead>Qtd</TableHead>
+                    <TableHead>Justificativa</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Data</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {solicitacoesOS.map((sol) => (
+                    <TableRow key={sol.id}>
+                      <TableCell className="font-medium">{sol.peca}</TableCell>
+                      <TableCell>{sol.quantidade}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{sol.justificativa}</TableCell>
+                      <TableCell>
+                        {(() => {
+                          switch (sol.status) {
+                            case 'Pendente': return <Badge className="bg-yellow-500">Pendente</Badge>;
+                            case 'Aprovada': return <Badge className="bg-green-500">Aprovada</Badge>;
+                            case 'Rejeitada': return <Badge className="bg-red-500">Rejeitada</Badge>;
+                            case 'Enviada': return <Badge className="bg-blue-500">Enviada</Badge>;
+                            case 'Recebida': return <Badge className="bg-emerald-500">Recebida</Badge>;
+                            case 'Cancelada': return <Badge className="bg-gray-500">Cancelada</Badge>;
+                            default: return <Badge variant="secondary">{sol.status}</Badge>;
+                          }
+                        })()}
+                      </TableCell>
+                      <TableCell className="text-sm">{new Date(sol.dataSolicitacao).toLocaleDateString('pt-BR')}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhuma solicitação de peça vinculada a esta OS.</p>
+            )}
+
+            {/* Adicionar nova solicitação */}
+            <div className="mt-4 pt-4 border-t space-y-3">
+              <p className="text-sm font-medium">Nova Solicitação</p>
+              <div className="flex gap-2 items-end">
+                <div className="flex-1 space-y-1">
+                  <Label className="text-xs">Peça</Label>
+                  <Input value={novaSolPeca} onChange={e => setNovaSolPeca(e.target.value)} placeholder="Nome da peça..." />
+                </div>
+                <div className="w-20 space-y-1">
+                  <Label className="text-xs">Qtd</Label>
+                  <Input type="number" min="1" value={novaSolQtd} onChange={e => setNovaSolQtd(parseInt(e.target.value) || 1)} />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <Label className="text-xs">Justificativa</Label>
+                  <Input value={novaSolJustificativa} onChange={e => setNovaSolJustificativa(e.target.value)} placeholder="Motivo..." />
+                </div>
+                <Button size="sm" onClick={() => {
+                  if (!novaSolPeca || !novaSolJustificativa) {
+                    toast({ title: 'Preencha peça e justificativa', variant: 'destructive' });
+                    return;
+                  }
+                  const nova = addSolicitacao({
+                    osId: id!,
+                    peca: novaSolPeca,
+                    quantidade: novaSolQtd,
+                    justificativa: novaSolJustificativa,
+                    modeloImei: osOriginal?.imeiAparelho || osOriginal?.modeloAparelho || '',
+                    lojaSolicitante: lojaId
+                  });
+                  setSolicitacoesOS([...solicitacoesOS, nova]);
+                  setNovaSolPeca('');
+                  setNovaSolQtd(1);
+                  setNovaSolJustificativa('');
+                  toast({ title: 'Solicitação adicionada' });
+                }}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar
+                </Button>
               </div>
             </div>
           </CardContent>
