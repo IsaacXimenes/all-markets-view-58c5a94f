@@ -6,6 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { User, X, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+function primeiroESegundoNome(nome: string): string {
+  const partes = nome.trim().split(/\s+/);
+  return partes.slice(0, 2).join(' ');
+}
+
 type FiltroTipo = 'todos' | 'gestores' | 'vendedores' | 'vendedoresEGestores' | 'estoquistas' | 'tecnicos' | 'motoboys';
 
 interface AutocompleteColaboradorProps {
@@ -161,7 +166,7 @@ export function AutocompleteColaborador({
       >
         <div className="flex items-center gap-2 flex-wrap">
           <User className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm">{colaboradorSelecionado.nome}</span>
+          <span className="text-sm">{primeiroESegundoNome(colaboradorSelecionado.nome)}</span>
           {!ocultarCargo && (
             <Badge variant="outline" className={cn("text-xs", getCargoBadgeColor(colaboradorSelecionado.cargo))}>
               {colaboradorSelecionado.cargo}
@@ -212,7 +217,7 @@ export function AutocompleteColaborador({
                 >
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{col.nome}</span>
+                      <span className="text-sm font-medium">{primeiroESegundoNome(col.nome)}</span>
                       {emRodizio && (
                         <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">
                           <RefreshCw className="h-3 w-3" />
