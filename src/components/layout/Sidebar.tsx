@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  Package, Settings, ChevronRight, ChevronLeft, Home, Banknote, Users, Database, ShoppingCart, Wrench, BarChart3, Shield, ClipboardCheck
+  Package, Settings, ChevronRight, ChevronLeft, Home, Banknote, Users, Database, ShoppingCart, Wrench, BarChart3, Shield, ClipboardCheck, Archive
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -34,7 +34,7 @@ const navItems: NavItem[] = [
   { title: 'Gestão Administrativa', icon: ClipboardCheck, href: '/gestao-administrativa' },
   { title: 'Relatórios', icon: BarChart3, href: '/relatorios' },
   { title: 'Cadastros', icon: Database, href: '/cadastros' },
-  { title: 'Dados - Sistema Antigo', icon: Database, href: '/dados-sistema-antigo/clientes' },
+  { title: 'Dados - Sistema Antigo', icon: Archive, href: '/dados-sistema-antigo/clientes' },
   { title: 'Configurações', icon: Settings, href: '/settings' },
 ];
 
