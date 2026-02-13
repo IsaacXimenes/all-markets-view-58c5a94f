@@ -284,6 +284,7 @@ export default function CadastrosContasFinanceiras() {
                   <SelectItem value="Pix">Pix</SelectItem>
                   <SelectItem value="Cartão">Cartão</SelectItem>
                   <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="Dinheiro - Geral">Dinheiro - Geral</SelectItem>
                   <SelectItem value="Outros">Outros</SelectItem>
                 </SelectContent>
               </Select>

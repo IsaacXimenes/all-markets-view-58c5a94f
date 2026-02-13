@@ -4,12 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Wallet, TrendingUp, TrendingDown, Calendar, ArrowUpCircle, 
-  ArrowDownCircle, X, Building2, Landmark, Eye
+  ArrowDownCircle, X, Building2, Landmark, Eye, ArrowLeftRight
 } from 'lucide-react';
 
 import { getContasFinanceiras, ContaFinanceira } from '@/utils/cadastrosApi';
@@ -17,6 +20,10 @@ import { useCadastroStore } from '@/store/cadastroStore';
 import { formatarMoeda } from '@/utils/formatUtils';
 import { getVendasPorStatus } from '@/utils/fluxoVendasApi';
 import { getDespesas } from '@/utils/financeApi';
+import { getMovimentacoesEntreConta, addMovimentacaoEntreConta, addLogMovimentacao, MovimentacaoEntreConta } from '@/utils/movimentacoesEntreContasApi';
+import { InputComMascara } from '@/components/ui/InputComMascara';
+import { toast } from 'sonner';
+import { useAuthStore } from '@/store/authStore';
 
 const formatCurrency = formatarMoeda;
 
@@ -50,7 +57,9 @@ interface Movimentacao {
 
 export default function FinanceiroExtratoContas() {
   const { obterNomeLoja, obterLojasAtivas } = useCadastroStore();
-  const [contasFinanceiras] = useState<ContaFinanceira[]>(getContasFinanceiras());
+  const user = useAuthStore((s) => s.user);
+  const [contasFinanceiras, setContasFinanceiras] = useState<ContaFinanceira[]>(getContasFinanceiras());
+  const [movimentacoesEntreConta, setMovimentacoesEntreConta] = useState<MovimentacaoEntreConta[]>(getMovimentacoesEntreConta());
   const lojas = obterLojasAtivas();
   
   // Estados para filtro de período
@@ -61,6 +70,16 @@ export default function FinanceiroExtratoContas() {
   // Modal de detalhes
   const [contaSelecionada, setContaSelecionada] = useState<ContaFinanceira | null>(null);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
+
+  // Modal de movimentação entre contas
+  const [showMovimentacaoModal, setShowMovimentacaoModal] = useState(false);
+  const [movForm, setMovForm] = useState({
+    contaOrigemId: '',
+    contaDestinoId: '',
+    valor: 0,
+    dataHora: new Date().toISOString().slice(0, 16),
+    observacao: '',
+  });
 
   // Calcular movimentações por conta
   const { movimentacoesPorConta, entradasPorConta, saidasPorConta } = useMemo(() => {
@@ -156,12 +175,53 @@ export default function FinanceiroExtratoContas() {
       console.error('[ExtratoContas] Erro ao processar despesas:', e);
     }
     
+    // Processar movimentações entre contas
+    try {
+      movimentacoesEntreConta.forEach(mov => {
+        const dataMov = new Date(mov.dataHora);
+        const mesMov = dataMov.getMonth();
+        const anoMov = dataMov.getFullYear();
+        
+        if (mesMov !== mesSelecionado || anoMov !== anoSelecionado) return;
+        
+        // Saída da conta de origem
+        if (mov.contaOrigemId) {
+          saidas[mov.contaOrigemId] = (saidas[mov.contaOrigemId] || 0) + mov.valor;
+          if (!movimentacoes[mov.contaOrigemId]) movimentacoes[mov.contaOrigemId] = [];
+          movimentacoes[mov.contaOrigemId].push({
+            id: `${mov.id}-saida`,
+            tipo: 'saida',
+            descricao: `Transferência para ${contasFinanceiras.find(c => c.id === mov.contaDestinoId)?.nome || mov.contaDestinoId}${mov.observacao ? ` - ${mov.observacao}` : ''}`,
+            valor: mov.valor,
+            data: mov.dataHora,
+            contaId: mov.contaOrigemId,
+          });
+        }
+        
+        // Entrada na conta de destino
+        if (mov.contaDestinoId) {
+          entradas[mov.contaDestinoId] = (entradas[mov.contaDestinoId] || 0) + mov.valor;
+          if (!movimentacoes[mov.contaDestinoId]) movimentacoes[mov.contaDestinoId] = [];
+          movimentacoes[mov.contaDestinoId].push({
+            id: `${mov.id}-entrada`,
+            tipo: 'entrada',
+            descricao: `Transferência de ${contasFinanceiras.find(c => c.id === mov.contaOrigemId)?.nome || mov.contaOrigemId}${mov.observacao ? ` - ${mov.observacao}` : ''}`,
+            valor: mov.valor,
+            data: mov.dataHora,
+            contaId: mov.contaDestinoId,
+          });
+        }
+      });
+    } catch (e) {
+      console.error('[ExtratoContas] Erro ao processar movimentações entre contas:', e);
+    }
+    
     return { 
       movimentacoesPorConta: movimentacoes, 
       entradasPorConta: entradas, 
       saidasPorConta: saidas 
     };
-  }, [contasFinanceiras, mesSelecionado, anoSelecionado]);
+  }, [contasFinanceiras, mesSelecionado, anoSelecionado, movimentacoesEntreConta]);
 
   // Filtrar contas por loja
   const contasFiltradas = useMemo(() => {
@@ -185,6 +245,36 @@ export default function FinanceiroExtratoContas() {
   }, [contasFiltradas, entradasPorConta, saidasPorConta]);
 
   const mesNome = meses.find(m => m.valor === mesSelecionado)?.nome || '';
+
+  const contasAtivas = contasFinanceiras.filter(c => c.status === 'Ativo');
+
+  const handleConfirmarMovimentacao = () => {
+    if (!movForm.contaOrigemId || !movForm.contaDestinoId || movForm.valor <= 0) {
+      toast.error('Preencha todos os campos obrigatórios (Conta de Origem, Destino e Valor > 0).');
+      return;
+    }
+    if (movForm.contaOrigemId === movForm.contaDestinoId) {
+      toast.error('Conta de Origem e Destino não podem ser iguais.');
+      return;
+    }
+
+    const nova = addMovimentacaoEntreConta({
+      contaOrigemId: movForm.contaOrigemId,
+      contaDestinoId: movForm.contaDestinoId,
+      valor: movForm.valor,
+      dataHora: new Date(movForm.dataHora).toISOString(),
+      observacao: movForm.observacao,
+      usuarioId: user?.colaborador?.id || 'USR-SISTEMA',
+      usuarioNome: user?.colaborador?.nome || user?.username || 'Sistema',
+    });
+
+    addLogMovimentacao(nova);
+    setMovimentacoesEntreConta(getMovimentacoesEntreConta());
+    setShowMovimentacaoModal(false);
+    setMovForm({ contaOrigemId: '', contaDestinoId: '', valor: 0, dataHora: new Date().toISOString().slice(0, 16), observacao: '' });
+    toast.success('Movimentação realizada com sucesso!');
+  };
+
 
   // Abrir detalhes de uma conta
   const handleAbrirDetalhes = (conta: ContaFinanceira) => {
@@ -313,6 +403,11 @@ export default function FinanceiroExtratoContas() {
                   ))}
                 </SelectContent>
               </Select>
+
+              <Button onClick={() => setShowMovimentacaoModal(true)} className="ml-auto">
+                <ArrowLeftRight className="h-4 w-4 mr-2" />
+                Nova Movimentação
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -506,6 +601,76 @@ export default function FinanceiroExtratoContas() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Movimentação entre Contas */}
+      <Dialog open={showMovimentacaoModal} onOpenChange={setShowMovimentacaoModal}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowLeftRight className="h-5 w-5" />
+              Nova Movimentação entre Contas
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Conta de Origem *</Label>
+              <Select value={movForm.contaOrigemId} onValueChange={v => setMovForm({ ...movForm, contaOrigemId: v })}>
+                <SelectTrigger className={!movForm.contaOrigemId ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Selecione a conta de origem" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contasAtivas.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.nome} ({obterNomeLoja(c.lojaVinculada)})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Conta de Destino *</Label>
+              <Select value={movForm.contaDestinoId} onValueChange={v => setMovForm({ ...movForm, contaDestinoId: v })}>
+                <SelectTrigger className={!movForm.contaDestinoId ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Selecione a conta de destino" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contasAtivas.filter(c => c.id !== movForm.contaOrigemId).map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.nome} ({obterNomeLoja(c.lojaVinculada)})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Valor *</Label>
+              <InputComMascara
+                mascara="moeda"
+                value={movForm.valor}
+                onChange={(_, rawValue) => setMovForm({ ...movForm, valor: rawValue as number })}
+                placeholder="0,00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Data/Hora</Label>
+              <Input
+                type="datetime-local"
+                value={movForm.dataHora}
+                onChange={e => setMovForm({ ...movForm, dataHora: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Observação / Motivo</Label>
+              <Textarea
+                value={movForm.observacao}
+                onChange={e => setMovForm({ ...movForm, observacao: e.target.value })}
+                placeholder="Ex: Sangria, Suprimento, Depósito..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowMovimentacaoModal(false)}>Cancelar</Button>
+            <Button onClick={handleConfirmarMovimentacao}>Confirmar Movimentação</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </FinanceiroLayout>

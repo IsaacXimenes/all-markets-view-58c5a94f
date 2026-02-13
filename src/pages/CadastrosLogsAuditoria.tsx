@@ -14,6 +14,8 @@ import { cn } from '@/lib/utils';
 import { format, isWithinInterval, parseISO } from 'date-fns';
 import { getLogsAuditoria, LogAuditoria } from '@/utils/gestaoAdministrativaApi';
 import { getLogsAtividades, LogAtividade } from '@/utils/atividadesGestoresApi';
+import { getLogsMovimentacoes, LogMovimentacao } from '@/utils/movimentacoesEntreContasApi';
+import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { exportToCSV } from '@/utils/formatUtils';
 import { toast } from 'sonner';
 
@@ -66,6 +68,24 @@ export default function CadastrosLogsAuditoria() {
       });
     }
 
+    // Logs de movimentações entre contas
+    if (moduloFiltro === 'todos' || moduloFiltro === 'movimentacoes') {
+      const contasFinanceiras = getContasFinanceiras();
+      const logsMov = getLogsMovimentacoes();
+      logsMov.forEach(log => {
+        const contaOrigem = contasFinanceiras.find(c => c.id === log.contaOrigemId)?.nome || log.contaOrigemId;
+        const contaDestino = contasFinanceiras.find(c => c.id === log.contaDestinoId)?.nome || log.contaDestinoId;
+        resultado.push({
+          id: log.id,
+          modulo: 'Movimentação entre Contas',
+          dataHora: log.dataHora,
+          usuario: log.usuarioNome,
+          acao: 'Transferência Realizada',
+          detalhes: `De: ${contaOrigem} → Para: ${contaDestino} | Valor: R$ ${log.valor.toFixed(2).replace('.', ',')}${log.observacao ? ` | Motivo: ${log.observacao}` : ''}`,
+        });
+      });
+    }
+
     // Filtros
     let filtrado = resultado;
 
@@ -108,6 +128,7 @@ export default function CadastrosLogsAuditoria() {
   const getModuloBadgeVariant = (modulo: string) => {
     if (modulo === 'Conferência de Caixa') return 'default';
     if (modulo === 'Atividades Gestores') return 'secondary';
+    if (modulo === 'Movimentação entre Contas') return 'outline';
     return 'outline';
   };
 
@@ -137,6 +158,7 @@ export default function CadastrosLogsAuditoria() {
                   <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="conferencia">Conferência de Caixa</SelectItem>
                   <SelectItem value="atividades">Atividades Gestores</SelectItem>
+                  <SelectItem value="movimentacoes">Movimentação entre Contas</SelectItem>
                 </SelectContent>
               </Select>
             </div>
