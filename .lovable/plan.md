@@ -1,32 +1,41 @@
 
 
-# Correcao - Retirada de Pecas nao registra pecas e soma incorreta
+# Plano - Correcoes no Modulo de Recursos Humanos (2 problemas)
 
-## Causa Raiz
+## Problema 1: Modal "Registrar Novo FeedBack" com scroll horizontal
 
-As funcoes `adicionarPecaRetirada` (linha 290-320) e `removerPecaRetirada` (linha 322-349) em `src/utils/retiradaPecasApi.ts` estao **sem instrucao `return`**. Ambas declaram retorno do tipo `{ sucesso: boolean; mensagem: string; retirada?: RetiradaPecas }`, mas o codigo termina apos o push do log de auditoria sem retornar nada.
+O `DialogContent` do modal de registro (linha 533) usa `max-w-2xl` com `overflow-hidden`, e o `ScrollArea` interno (linha 541) permite scroll vertical. Porem, os elementos internos como o grid de anexos (`grid-cols-2`, linha 627) e os cards de info/timeline podem ultrapassar a largura disponivel em telas menores ou no preview mobile, gerando scroll horizontal indesejado.
 
-Consequencia: na tela de detalhes (`AssistRetiradaPecasDetalhes.tsx`, linha 170), o `if (resultado.sucesso)` avalia `undefined` como falso, entao o toast de sucesso nunca aparece, o modal nao fecha e o `carregarDados()` nunca e chamado. A peca e adicionada internamente na API mock, mas a UI nao recarrega os dados, por isso a tabela e a soma ficam desatualizadas.
+**Correcao em `src/pages/RHFeedback.tsx`:**
+- Adicionar `overflow-x-hidden` no ScrollArea ou no container interno para impedir scroll horizontal
+- Garantir que os elementos internos usem `min-w-0` e `overflow-hidden` para respeitar os limites do container
+- Aplicar `w-full` explicito nos containers de grid para forcar confinamento
 
-## Correcao
+---
 
-Adicionar `return { sucesso: true, mensagem: '...', retirada }` ao final de ambas as funcoes em `src/utils/retiradaPecasApi.ts`:
+## Problema 2: Adicionar campo "Conta de Saida" no modal de Adiantamentos
 
-1. **`adicionarPecaRetirada`** (linha ~320): adicionar `return { sucesso: true, mensagem: 'Peca adicionada com sucesso', retirada };` antes do fechamento da funcao.
+O modal de Novo/Editar Adiantamento (linhas 590-704) nao possui campo para selecionar a conta financeira de onde o dinheiro sera retirado. O usuario precisa de um seletor de contas financeiras (usando as contas do cadastroStore).
 
-2. **`removerPecaRetirada`** (linha ~349): adicionar `return { sucesso: true, mensagem: 'Peca removida com sucesso', retirada };` antes do fechamento da funcao.
+**Correcao em `src/utils/adiantamentosApi.ts`:**
+- Adicionar campo `contaSaidaId: string` na interface `Adiantamento`
+- Atualizar os mocks existentes com valores de conta validos (ex: CTA-015 a CTA-019, que sao contas Dinheiro)
 
-## Impacto
+**Correcao em `src/pages/RHAdiantamentos.tsx`:**
+- Adicionar `contaSaidaId` ao estado do formulario (`formData`)
+- Adicionar um campo `Select` ou usar as contas financeiras do `cadastroStore` (via `obterContasFinanceiras()`) para selecionar a conta de saida
+- Incluir o campo na validacao de campos obrigatorios
+- Exibir a conta na tabela principal (nova coluna "Conta de Saida")
+- Incluir no registro de historico de alteracoes ao editar
+- Incluir no export CSV
 
-Com o retorno correto:
-- O botao "Adicionar Peca" vai registrar a peca, fechar o modal e recarregar a tabela
-- A soma do valor das pecas sera recalculada automaticamente via `carregarDados()` que chama `validarCustoRetirada`
-- O card de "Prejuizo na Desmontagem" atualizara corretamente
-- A remocao de pecas tambem funcionara e atualizara a soma
+---
 
 ## Secao Tecnica
 
-| Arquivo | Alteracao |
+| Arquivo | Alteracoes |
 |---------|-----------|
-| `src/utils/retiradaPecasApi.ts` | Adicionar return statements em `adicionarPecaRetirada` (linha 320) e `removerPecaRetirada` (linha 349) |
+| `src/pages/RHFeedback.tsx` | Adicionar `overflow-x-hidden` e `min-w-0` no ScrollArea do modal de registro para eliminar scroll horizontal |
+| `src/utils/adiantamentosApi.ts` | Adicionar campo `contaSaidaId` na interface `Adiantamento` e nos mocks |
+| `src/pages/RHAdiantamentos.tsx` | Adicionar campo Select de "Conta de Saida" no modal; nova coluna na tabela; incluir na validacao, historico e CSV |
 
