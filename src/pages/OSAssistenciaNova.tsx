@@ -126,7 +126,7 @@ export default function OSAssistenciaNova() {
   const [setor, setSetor] = useState<'GARANTIA' | 'ASSISTÊNCIA' | 'TROCA' | ''>('');
   const [clienteId, setClienteId] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [status, setStatus] = useState<'Serviço concluído' | 'Em serviço' | 'Aguardando Peça' | 'Em Aberto'>('Em Aberto');
+  const [status, setStatus] = useState<'Serviço concluído' | 'Em serviço' | 'Aguardando Peça' | 'Em Aberto' | 'Aguardando Análise'>('Aguardando Análise');
 
   // Peças
   const [pecas, setPecas] = useState<PecaForm[]>([
@@ -699,7 +699,7 @@ export default function OSAssistenciaNova() {
       imeiAparelho: imeiAparelho || undefined,
       valorProdutoOrigem: dadosOrigem?.valorProduto || dadosOrigem?.valor || undefined,
       idVendaAntiga: idVendaAntiga || undefined,
-      proximaAtuacao: 'Técnico: Avaliar/Executar',
+      proximaAtuacao: 'Técnico',
       fotosEntrada: fotosEntrada.length > 0 ? fotosEntrada : undefined
     });
 

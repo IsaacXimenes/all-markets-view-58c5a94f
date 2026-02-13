@@ -1,6 +1,6 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
-import { Wrench, ClipboardList, Package, Wallet, ShoppingCart, Scissors, ArrowRightLeft } from 'lucide-react';
+import { Wrench, HardHat, ClipboardCheck, ShoppingCart, History } from 'lucide-react';
 
 interface AssistenciaLayoutProps {
   children: React.ReactNode;
@@ -8,14 +8,11 @@ interface AssistenciaLayoutProps {
 }
 
 const tabs = [
-  { name: 'Análise de Tratativas', href: '/os/analise-garantia', icon: ClipboardList },
   { name: 'Nova Assistência', href: '/os/assistencia', icon: Wrench },
-  { name: 'Estoque - Assistência', href: '/os/pecas', icon: Package },
-  { name: 'Retirada de Peças', href: '/os/retirada-pecas', icon: Scissors },
+  { name: 'Oficina / Bancada', href: '/os/oficina', icon: HardHat },
+  { name: 'Conferência Gestor', href: '/os/conferencia-gestor', icon: ClipboardCheck },
   { name: 'Solicitações de Peças', href: '/os/solicitacoes-pecas', icon: ShoppingCart },
-  { name: 'Histórico de Notas', href: '/os/historico-notas', icon: ClipboardList },
-  { name: 'Movimentação - Peças', href: '/os/movimentacao-pecas', icon: ArrowRightLeft },
-  { name: 'Lotes de Pagamento', href: '/assistencia/lotes-pagamento', icon: Wallet },
+  { name: 'Histórico', href: '/os/historico-assistencia', icon: History },
 ];
 
 export function AssistenciaLayout({ children, title }: AssistenciaLayoutProps) {

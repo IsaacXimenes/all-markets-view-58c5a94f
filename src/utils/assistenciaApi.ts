@@ -81,7 +81,7 @@ export interface OrdemServico {
   setor: 'GARANTIA' | 'ASSISTÊNCIA' | 'TROCA';
   tecnicoId: string;
   lojaId: string;
-  status: 'Em Aberto' | 'Serviço concluído' | 'Em serviço' | 'Aguardando Peça' | 'Solicitação Enviada' | 'Em Análise' | 'Peça Recebida' | 'Aguardando Aprovação do Gestor' | 'Rejeitado pelo Gestor' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Pagamento Concluído' | 'Aguardando Chegada da Peça' | 'Peça em Estoque / Aguardando Reparo' | 'Aguardando Recebimento' | 'Em Execução' | 'Aguardando Pagamento' | 'Aguardando Conferência' | 'Concluído' | 'Finalizado';
+  status: 'Em Aberto' | 'Serviço concluído' | 'Em serviço' | 'Aguardando Peça' | 'Solicitação Enviada' | 'Em Análise' | 'Peça Recebida' | 'Aguardando Aprovação do Gestor' | 'Rejeitado pelo Gestor' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Pagamento Concluído' | 'Aguardando Chegada da Peça' | 'Peça em Estoque / Aguardando Reparo' | 'Aguardando Recebimento' | 'Em Execução' | 'Aguardando Pagamento' | 'Aguardando Conferência' | 'Concluído' | 'Finalizado' | 'Aguardando Análise' | 'Solicitação de Peça' | 'Pendente de Pagamento' | 'Aguardando Financeiro' | 'Liquidado';
   pecas: PecaServico[];
   pagamentos: Pagamento[];
   descricao: string;
@@ -93,15 +93,16 @@ export interface OrdemServico {
   vendaId?: string;
   garantiaId?: string;
   produtoId?: string;
-  valorProdutoOrigem?: number; // Valor do produto da origem (Base de Troca)
+  valorProdutoOrigem?: number;
   modeloAparelho?: string;
   imeiAparelho?: string;
-  idVendaAntiga?: string; // ID da venda no sistema antigo (quando origem = Thiago Imports)
+  idVendaAntiga?: string;
   // Campos do fluxo de 3 etapas
-  proximaAtuacao?: 'Técnico: Avaliar/Executar' | 'Vendedor: Registrar Pagamento' | 'Financeiro: Conferir Lançamento' | 'Gestor: Aprovar Peça' | 'Logística: Enviar Peça' | 'Concluído';
+  proximaAtuacao?: 'Técnico: Avaliar/Executar' | 'Vendedor: Registrar Pagamento' | 'Financeiro: Conferir Lançamento' | 'Gestor: Aprovar Peça' | 'Logística: Enviar Peça' | 'Concluído' | 'Técnico' | 'Gestor (Suprimentos)' | 'Técnico (Recebimento)' | 'Gestor/Vendedor' | 'Gestor (Conferência)' | 'Financeiro' | '-';
   valorCustoTecnico?: number;
   valorVendaTecnico?: number;
   fotosEntrada?: string[];
+  resumoConclusao?: string;
 }
 
 // Mock data

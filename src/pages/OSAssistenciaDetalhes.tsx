@@ -173,6 +173,8 @@ export default function OSAssistenciaDetalhes() {
     switch (status) {
       case 'Em Aberto':
         return <Badge className="bg-slate-500 hover:bg-slate-600">Em Aberto</Badge>;
+      case 'Aguardando Análise':
+        return <Badge className="bg-slate-500 hover:bg-slate-600">Aguardando Análise</Badge>;
       case 'Serviço concluído':
         return <Badge className="bg-green-500 hover:bg-green-600">Serviço Concluído</Badge>;
       case 'Em serviço':
@@ -180,7 +182,8 @@ export default function OSAssistenciaDetalhes() {
       case 'Aguardando Peça':
         return <Badge className="bg-yellow-500 hover:bg-yellow-600">Aguardando Peça</Badge>;
       case 'Solicitação Enviada':
-        return <Badge className="bg-orange-500 hover:bg-orange-600">Solicitação Enviada</Badge>;
+      case 'Solicitação de Peça':
+        return <Badge className="bg-orange-500 hover:bg-orange-600">Solicitação de Peça</Badge>;
       case 'Em Análise':
         return <Badge className="bg-indigo-500 hover:bg-indigo-600">Em Análise</Badge>;
       case 'Aguardando Aprovação do Gestor':
@@ -206,11 +209,16 @@ export default function OSAssistenciaDetalhes() {
       case 'Aguardando Pagamento':
         return <Badge className="bg-amber-500 hover:bg-amber-600">Aguardando Pagamento</Badge>;
       case 'Aguardando Conferência':
-        return <Badge className="bg-violet-500 hover:bg-violet-600">Aguardando Conferência</Badge>;
+      case 'Pendente de Pagamento':
+        return <Badge className="bg-violet-500 hover:bg-violet-600">Pendente de Pagamento</Badge>;
       case 'Concluído':
         return <Badge className="bg-emerald-600 hover:bg-emerald-700">Concluído</Badge>;
       case 'Finalizado':
         return <Badge className="bg-emerald-700 hover:bg-emerald-800">Finalizado</Badge>;
+      case 'Aguardando Financeiro':
+        return <Badge className="bg-purple-600 hover:bg-purple-700">Aguardando Financeiro</Badge>;
+      case 'Liquidado':
+        return <Badge className="bg-green-700 hover:bg-green-800">Liquidado</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -223,20 +231,20 @@ export default function OSAssistenciaDetalhes() {
       return;
     }
     updateOrdemServico(os.id, {
-      status: 'Serviço concluído',
-      proximaAtuacao: 'Vendedor: Registrar Pagamento',
+      status: 'Finalizado',
+      proximaAtuacao: 'Gestor/Vendedor',
       valorCustoTecnico,
       valorVendaTecnico,
       timeline: [...os.timeline, {
         data: new Date().toISOString(),
         tipo: 'conclusao_servico',
-        descricao: `Serviço concluído pelo técnico. Custo: R$ ${valorCustoTecnico.toFixed(2)}, Venda: R$ ${valorVendaTecnico.toFixed(2)}`,
+        descricao: `Serviço finalizado pelo técnico. Custo: R$ ${valorCustoTecnico.toFixed(2)}, Venda: R$ ${valorVendaTecnico.toFixed(2)}`,
         responsavel: tecnico?.nome || 'Técnico'
       }]
     });
     const updatedOS = getOrdemServicoById(os.id);
     setOS(updatedOS || null);
-    toast.success('Serviço concluído! Aguardando pagamento do vendedor.');
+    toast.success('OS finalizada! Aguardando pagamento do vendedor.');
   };
 
   const handleSalvarPagamentoVendedor = () => {
@@ -255,8 +263,8 @@ export default function OSAssistenciaDetalhes() {
     updateOrdemServico(os.id, {
       pagamentos: pagamentosConvertidos,
       valorTotal,
-      status: 'Aguardando Conferência' as any,
-      proximaAtuacao: 'Financeiro: Conferir Lançamento',
+      status: 'Pendente de Pagamento' as any,
+      proximaAtuacao: 'Gestor (Conferência)',
       timeline: [...os.timeline, {
         data: new Date().toISOString(),
         tipo: 'pagamento',
@@ -266,24 +274,24 @@ export default function OSAssistenciaDetalhes() {
     });
     const updatedOS = getOrdemServicoById(os.id);
     setOS(updatedOS || null);
-    toast.success('Pagamento registrado! Aguardando validação do financeiro.');
+    toast.success('Pagamento registrado! Enviado para conferência do gestor.');
   };
 
   const handleValidarFinanceiro = () => {
     if (!os) return;
     updateOrdemServico(os.id, {
-      status: 'Finalizado' as any,
-      proximaAtuacao: 'Concluído',
+      status: 'Liquidado' as any,
+      proximaAtuacao: '-',
       timeline: [...os.timeline, {
         data: new Date().toISOString(),
         tipo: 'validacao_financeiro',
-        descricao: 'Lançamento validado pelo financeiro. OS concluída.',
+        descricao: 'Lançamento validado pelo financeiro. OS liquidada.',
         responsavel: 'Financeiro'
       }]
     });
     const updatedOS = getOrdemServicoById(os.id);
     setOS(updatedOS || null);
-    toast.success('Lançamento validado! OS concluída com sucesso.');
+    toast.success('Lançamento validado! OS liquidada com sucesso.');
   };
 
   const getSetorBadge = (setor: string) => {
@@ -821,10 +829,10 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                     <p className="text-xs text-muted-foreground mt-1">Valor cobrado do cliente</p>
                   </div>
                 </div>
-                {os.proximaAtuacao === 'Técnico: Avaliar/Executar' && (
+                {(os.proximaAtuacao === 'Técnico: Avaliar/Executar' || os.proximaAtuacao === 'Técnico') && os.status !== 'Finalizado' && os.status !== 'Liquidado' && (
                   <Button onClick={handleConcluirServico} className="w-full">
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Concluir Serviço
+                    Finalizar OS
                   </Button>
                 )}
               </CardContent>
@@ -839,7 +847,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {os.proximaAtuacao === 'Vendedor: Registrar Pagamento' ? (
+                {(os.proximaAtuacao === 'Vendedor: Registrar Pagamento' || os.proximaAtuacao === 'Gestor/Vendedor') ? (
                   (!os.valorCustoTecnico || !os.valorVendaTecnico) ? (
                     <div className="bg-destructive/10 p-4 rounded-lg text-destructive text-sm flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4" />
@@ -861,7 +869,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                       </Button>
                     </div>
                   )
-                ) : os.proximaAtuacao === 'Financeiro: Conferir Lançamento' || os.proximaAtuacao === 'Concluído' ? (
+                ) : os.proximaAtuacao === 'Financeiro: Conferir Lançamento' || os.proximaAtuacao === 'Financeiro' || os.proximaAtuacao === 'Concluído' || os.proximaAtuacao === '-' ? (
                   <>
                     <Table>
                       <TableHeader>
@@ -885,7 +893,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                         </TableRow>
                       </TableBody>
                     </Table>
-                    {os.proximaAtuacao === 'Financeiro: Conferir Lançamento' && (
+                    {(os.proximaAtuacao === 'Financeiro: Conferir Lançamento' || os.proximaAtuacao === 'Financeiro') && (
                       <Button onClick={handleValidarFinanceiro} className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700">
                         <ShieldCheck className="h-4 w-4 mr-2" />
                         Validar Lançamento (Financeiro)
