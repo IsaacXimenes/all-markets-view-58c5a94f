@@ -17,7 +17,7 @@ export function PageLayout({ children, title }: PageLayoutProps) {
   
   return (
     <div className="page-layout-wrapper">
-      <div className="min-h-screen flex overflow-x-hidden">
+      <div className="min-h-screen flex overflow-x-hidden overflow-y-auto">
         <Sidebar 
           isCollapsed={isSidebarCollapsed} 
           onToggle={toggleSidebar}

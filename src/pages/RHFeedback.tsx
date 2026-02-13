@@ -210,7 +210,7 @@ export default function RHFeedback() {
 
   return (
     <RHLayout title="Recursos Humanos - FeedBack">
-      <div className="space-y-4">
+      <div className="space-y-4 overflow-y-auto">
         {/* Mensagem para não gestores */}
         {!usuarioLogado.isGestor && (
           <Card className="border-warning bg-warning/10">

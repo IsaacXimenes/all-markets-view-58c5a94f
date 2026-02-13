@@ -1024,7 +1024,7 @@ export default function OSAssistenciaNova() {
                 <AutocompleteLoja
                   value={lojaId}
                   onChange={setLojaId}
-                  apenasLojasTipoLoja={true}
+                  filtrarPorTipo="Assistência"
                   className={!lojaId ? 'border-destructive' : ''}
                   placeholder="Selecione a loja..."
                 />
@@ -1140,9 +1140,14 @@ export default function OSAssistenciaNova() {
         </Card>
 
         {/* Peças/Serviços */}
-        <Card>
+        <Card className={status !== 'Serviço concluído' ? 'opacity-50 pointer-events-none' : ''}>
           <CardHeader>
-            <CardTitle>Peças/Serviços</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Peças/Serviços
+              {status !== 'Serviço concluído' && (
+                <Badge variant="outline" className="text-xs font-normal">Bloqueado até conclusão do serviço</Badge>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -1153,15 +1158,18 @@ export default function OSAssistenciaNova() {
                       <Label>Peça/Serviço</Label>
                       {peca.pecaNoEstoque ? (
                         <div className="space-y-2">
-                          <Select
+                        <Select
                             value={peca.pecaEstoqueId}
                             onValueChange={(v) => {
                               const pecaSelecionada = pecasEstoque.find(p => p.id === v);
-                              handlePecaChange(index, 'pecaEstoqueId', v);
-                              if (pecaSelecionada) {
-                                handlePecaChange(index, 'peca', pecaSelecionada.descricao);
-                                handlePecaChange(index, 'valor', formatCurrencyInput(String(pecaSelecionada.valorRecomendado * 100)));
-                              }
+                              const newPecas = [...pecas];
+                              newPecas[index] = {
+                                ...newPecas[index],
+                                pecaEstoqueId: v,
+                                peca: pecaSelecionada?.descricao || newPecas[index].peca,
+                                valor: pecaSelecionada ? formatCurrencyInput(String(pecaSelecionada.valorRecomendado * 100)) : newPecas[index].valor
+                              };
+                              setPecas(newPecas);
                             }}
                           >
                             <SelectTrigger>
@@ -1455,13 +1463,21 @@ export default function OSAssistenciaNova() {
         </Card>
 
         {/* Pagamentos */}
-        <PagamentoQuadro
-          valorTotalProdutos={valorTotalPecas}
-          custoTotalProdutos={0}
-          lojaVendaId={lojaId}
-          onPagamentosChange={(pags) => setPagamentosQuadro(pags)}
-          ocultarCards
-        />
+        <div className={status !== 'Serviço concluído' ? 'opacity-50 pointer-events-none' : ''}>
+          {status !== 'Serviço concluído' && (
+            <div className="mb-2 p-3 bg-muted rounded-lg flex items-center gap-2 text-sm text-muted-foreground">
+              <AlertTriangle className="h-4 w-4" />
+              O quadro de pagamento será liberado quando o técnico finalizar o serviço.
+            </div>
+          )}
+          <PagamentoQuadro
+            valorTotalProdutos={valorTotalPecas}
+            custoTotalProdutos={0}
+            lojaVendaId={lojaId}
+            onPagamentosChange={(pags) => setPagamentosQuadro(pags)}
+            ocultarCards
+          />
+        </div>
 
         {/* Descrição */}
         <Card>
