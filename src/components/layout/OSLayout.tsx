@@ -1,6 +1,6 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
-import { Wrench, HardHat, ClipboardCheck, ShoppingCart, History, Scissors, Package, ArrowRightLeft } from 'lucide-react';
+import { Wrench, HardHat, ClipboardCheck, ShoppingCart, History, Scissors, Package, ArrowRightLeft, FileSearch } from 'lucide-react';
 
 interface OSLayoutProps {
   children: React.ReactNode;
@@ -8,6 +8,7 @@ interface OSLayoutProps {
 }
 
 const tabs = [
+  { name: 'Análise de Tratativas', href: '/os/analise-garantia', icon: FileSearch },
   { name: 'Nova Assistência', href: '/os/assistencia', icon: Wrench },
   { name: 'Oficina / Bancada', href: '/os/oficina', icon: HardHat },
   { name: 'Conferência Gestor', href: '/os/conferencia-gestor', icon: ClipboardCheck },
