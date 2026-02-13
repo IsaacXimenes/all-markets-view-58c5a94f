@@ -15,7 +15,7 @@ import {
 import { getFornecedores } from '@/utils/cadastrosApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { TabelaNotasPendencias } from '@/components/estoque/TabelaNotasPendencias';
-import { ModalDetalhePendencia, PendenciaModalData } from '@/components/estoque/ModalDetalhePendencia';
+
 import { ModalFinalizarPagamento, DadosPagamento, PendenciaPagamentoData } from '@/components/estoque/ModalFinalizarPagamento';
 import { 
   Download, 
@@ -36,7 +36,7 @@ export default function FinanceiroNotasPendencias() {
   // Consumir novo sistema de notas diretamente
   const [notas, setNotas] = useState<NotaEntrada[]>(getNotasParaFinanceiro());
   const [notaSelecionada, setNotaSelecionada] = useState<NotaEntrada | null>(null);
-  const [dialogDetalhes, setDialogDetalhes] = useState(false);
+  
   const [dialogPagamento, setDialogPagamento] = useState(false);
   
   const fornecedoresList = getFornecedores();
@@ -104,8 +104,7 @@ export default function FinanceiroNotasPendencias() {
   }, [notasFiltradas]);
 
   const handleVerDetalhes = (nota: NotaEntrada) => {
-    setNotaSelecionada(nota);
-    setDialogDetalhes(true);
+    navigate(`/estoque/nota/${nota.id}`);
   };
 
   const handleAbrirPagamento = (nota: NotaEntrada) => {
@@ -140,7 +139,7 @@ export default function FinanceiroNotasPendencias() {
       toast.success(`Pagamento de ${formatCurrency(valorPagar)} da nota ${notaSelecionada.id} confirmado!`);
       setNotas(getNotasParaFinanceiro());
       setDialogPagamento(false);
-      setDialogDetalhes(false);
+      
     } else {
       toast.error('Erro ao processar pagamento. Verifique se a nota está no status correto.');
     }
@@ -190,36 +189,6 @@ export default function FinanceiroNotasPendencias() {
     toast.success('Dados atualizados!');
   };
 
-  // Converter para formato compatível com modal existente
-  const notaParaModalDetalhes: PendenciaModalData | null = notaSelecionada ? {
-    id: notaSelecionada.id,
-    notaId: notaSelecionada.id,
-    fornecedor: notaSelecionada.fornecedor,
-    valorTotal: notaSelecionada.valorTotal,
-    valorConferido: notaSelecionada.valorConferido,
-    valorPendente: notaSelecionada.valorPendente,
-    percentualConferencia: notaSelecionada.qtdCadastrada > 0 
-      ? Math.round((notaSelecionada.qtdConferida / notaSelecionada.qtdCadastrada) * 100) 
-      : 0,
-    statusPagamento: notaSelecionada.valorPago >= notaSelecionada.valorTotal ? 'Pago' : 
-                      notaSelecionada.valorPago > 0 ? 'Parcial' : 'Aguardando',
-    statusConferencia: notaSelecionada.status,
-    dataCriacao: notaSelecionada.dataCriacao.split('T')[0],
-    diasDecorridos: calcularDiasDecorridos(notaSelecionada.data),
-    slaStatus: calcularDiasDecorridos(notaSelecionada.data) >= 7 ? 'critico' :
-               calcularDiasDecorridos(notaSelecionada.data) >= 5 ? 'aviso' : 'normal',
-    slaAlerta: calcularDiasDecorridos(notaSelecionada.data) >= 5,
-    aparelhosTotal: notaSelecionada.qtdInformada,
-    aparelhosConferidos: notaSelecionada.qtdConferida,
-    timeline: notaSelecionada.timeline.map(t => ({
-      id: t.id,
-      dataHora: t.dataHora,
-      acao: t.acao,
-      usuario: t.usuario,
-      detalhes: t.detalhes
-    })),
-    produtos: []
-  } : null;
 
   const notaParaModalPagamento: PendenciaPagamentoData | null = notaSelecionada ? {
     id: notaSelecionada.id,
@@ -422,18 +391,6 @@ export default function FinanceiroNotasPendencias() {
             />
           </CardContent>
         </Card>
-
-        {/* Modal de Detalhes */}
-        <ModalDetalhePendencia
-          pendencia={notaParaModalDetalhes}
-          open={dialogDetalhes}
-          onClose={() => setDialogDetalhes(false)}
-          showPaymentButton={notaSelecionada ? podeEditarNota(notaSelecionada, 'Financeiro') && notaSelecionada.valorPago < notaSelecionada.valorTotal : false}
-          onPayment={() => {
-            setDialogDetalhes(false);
-            setDialogPagamento(true);
-          }}
-        />
 
         {/* Modal de Pagamento */}
         <ModalFinalizarPagamento
