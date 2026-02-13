@@ -31,7 +31,8 @@ import {
   DialogFooter,
   DialogDescription
 } from '@/components/ui/dialog';
-import { Eye, Download, Filter, X, Pencil, Check, XCircle, AlertTriangle, Clock, Undo2, CreditCard, Banknote, Smartphone, Wallet, ChevronRight, Lock, MessageSquare, ArrowLeftRight } from 'lucide-react';
+import { Eye, Download, Filter, X, Pencil, Check, XCircle, AlertTriangle, Clock, Undo2, CreditCard, Banknote, Smartphone, Wallet, ChevronRight, Lock, MessageSquare, ArrowLeftRight, Shield, Package } from 'lucide-react';
+import { ComprovantePreview } from '@/components/vendas/ComprovantePreview';
 import { useFluxoVendas } from '@/hooks/useFluxoVendas';
 import { 
   aprovarGestor, 
@@ -396,9 +397,9 @@ export default function VendasConferenciaGestor() {
 
   return (
     <VendasLayout title="Conferência de Vendas - Gestor">
-      <div className="flex gap-6">
-        {/* Painel Principal - Tabela (70%) */}
-        <div className={`transition-all ${vendaSelecionada ? 'w-[70%]' : 'w-full'}`}>
+      <div className="flex flex-col xl:flex-row gap-4 xl:gap-6">
+        {/* Painel Principal - Tabela */}
+        <div className={`transition-all ${vendaSelecionada ? 'w-full xl:flex-1 xl:mr-[480px]' : 'w-full'}`}>
           {/* Cards de somatório por método de pagamento - DINÂMICO */}
           {/* Cards Pendente - vermelho */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
@@ -769,10 +770,10 @@ export default function VendasConferenciaGestor() {
           </div>
         </div>
 
-        {/* Painel Lateral (30%) */}
+        {/* Painel Lateral - Fixed full-height (modelo Financeiro) */}
         {vendaSelecionada && (
-          <div className="w-[30%] sticky top-4 h-fit min-w-[350px]">
-            <Card className="max-h-[calc(100vh-120px)] overflow-y-auto">
+          <div className="w-full xl:w-[480px] xl:min-w-[460px] xl:max-w-[520px] xl:fixed xl:right-0 xl:top-0 xl:bottom-0 h-fit xl:h-screen flex-shrink-0 xl:z-30">
+            <Card className="xl:h-full xl:rounded-none xl:border-l xl:border-t-0 xl:border-b-0 xl:border-r-0 overflow-y-auto">
               <CardHeader className="pb-3 sticky top-0 bg-card z-10 border-b">
                 <div className="flex justify-between items-start">
                   <CardTitle className="text-lg">Detalhes da Venda</CardTitle>
@@ -835,6 +836,16 @@ export default function VendasConferenciaGestor() {
                     <p className="text-muted-foreground text-xs">Loja</p>
                     <p className="font-medium truncate">{getLojaNome(vendaSelecionada.lojaVenda)}</p>
                   </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Valor Total</p>
+                    <p className="font-medium text-lg">{formatCurrency(vendaSelecionada.total)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground text-xs">Lucro</p>
+                    <p className={`font-medium ${vendaSelecionada.lucro >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {formatCurrency(vendaSelecionada.lucro)}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Itens da venda */}
@@ -847,8 +858,82 @@ export default function VendasConferenciaGestor() {
                         <span className="font-medium ml-2">{formatCurrency(item.valorVenda)}</span>
                       </div>
                     ))}
+                    {(!vendaSelecionada.itens || vendaSelecionada.itens.length === 0) && (
+                      <p className="text-xs text-muted-foreground italic">Nenhum item de aparelho</p>
+                    )}
                   </div>
                 </div>
+
+                {/* Acessórios */}
+                {(vendaSelecionada as any).acessorios && (vendaSelecionada as any).acessorios.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Acessórios
+                    </h4>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {(vendaSelecionada as any).acessorios.map((acessorio: any, idx: number) => (
+                        <div key={idx} className="text-xs p-2 bg-muted/50 rounded flex justify-between">
+                          <span className="truncate flex-1">{acessorio.descricao} (x{acessorio.quantidade})</span>
+                          <span className="font-medium ml-2">{formatCurrency(acessorio.valorTotal)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Trade-Ins */}
+                {vendaSelecionada.tradeIns && vendaSelecionada.tradeIns.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                      <ArrowLeftRight className="h-4 w-4" />
+                      Trade-Ins
+                    </h4>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {vendaSelecionada.tradeIns.map((trade: any, idx: number) => (
+                        <div key={idx} className="text-xs p-2 bg-muted/50 rounded flex justify-between">
+                          <span className="truncate flex-1">{trade.modelo}</span>
+                          <span className="font-medium ml-2 text-green-600">-{formatCurrency(trade.valorCompraUsado)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-1 text-xs text-right font-medium text-green-600">
+                      Total Abatimento: -{formatCurrency(vendaSelecionada.totalTradeIn || 0)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Garantia Extendida */}
+                {(vendaSelecionada as any).garantiaExtendida && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Shield className="h-4 w-4 text-blue-600" />
+                      <h4 className="font-semibold text-sm text-blue-700 dark:text-blue-400">Garantia Extendida</h4>
+                    </div>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Plano:</span>
+                        <span className="font-medium">{(vendaSelecionada as any).garantiaExtendida.planoNome}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Valor:</span>
+                        <span className="font-medium">{formatCurrency((vendaSelecionada as any).garantiaExtendida.valor)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Vigência:</span>
+                        <span className="font-medium">{(vendaSelecionada as any).garantiaExtendida.meses} meses</span>
+                      </div>
+                      {(vendaSelecionada as any).garantiaExtendida.dataInicio && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Período:</span>
+                          <span className="font-medium text-xs">
+                            {new Date((vendaSelecionada as any).garantiaExtendida.dataInicio).toLocaleDateString('pt-BR')} a {new Date((vendaSelecionada as any).garantiaExtendida.dataFim).toLocaleDateString('pt-BR')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Resumo de pagamento */}
                 <div className="p-3 bg-muted rounded-lg">
@@ -871,15 +956,23 @@ export default function VendasConferenciaGestor() {
                   </div>
                 </div>
 
-                {/* Pagamentos - Oculto para Downgrade */}
+                {/* Pagamentos com Comprovantes */}
                 {!((vendaSelecionada as any).tipoOperacao === 'Downgrade' && (vendaSelecionada as any).saldoDevolver > 0) && (
                   <div>
                     <h4 className="font-semibold text-sm mb-2">Pagamentos</h4>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {vendaSelecionada.pagamentos?.map((pag, idx) => (
-                        <div key={idx} className="text-xs p-2 bg-muted/50 rounded flex justify-between">
-                          <span>{pag.meioPagamento}</span>
-                          <span className="font-medium">{formatCurrency(pag.valor)}</span>
+                        <div key={idx} className="text-xs p-2 bg-muted/50 rounded space-y-1">
+                          <div className="flex justify-between">
+                            <span>{pag.meioPagamento}</span>
+                            <span className="font-medium">{formatCurrency(pag.valor)}</span>
+                          </div>
+                          {pag.comprovante && (
+                            <ComprovantePreview
+                              comprovante={pag.comprovante}
+                              comprovanteNome={pag.comprovanteNome || 'Comprovante'}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>

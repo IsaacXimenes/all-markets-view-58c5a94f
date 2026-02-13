@@ -143,10 +143,14 @@ export default function Vendas() {
       if (vendedorFiltro && v.vendedor !== vendedorFiltro) return false;
       
       if (modeloFiltro) {
+        const termoLower = modeloFiltro.toLowerCase();
         const temModelo = v.itens.some(item => 
-          item.produto.toLowerCase().includes(modeloFiltro.toLowerCase())
+          item.produto.toLowerCase().includes(termoLower)
         );
-        if (!temModelo) return false;
+        const temAcessorio = v.acessorios?.some(a => 
+          a.descricao.toLowerCase().includes(termoLower)
+        );
+        if (!temModelo && !temAcessorio) return false;
       }
       
       if (imeiFiltro) {
@@ -314,9 +318,9 @@ export default function Vendas() {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">Modelo</label>
+              <label className="text-sm font-medium mb-2 block">Produto</label>
               <Input
-                placeholder="Buscar modelo..."
+                placeholder="Buscar produto..."
                 value={modeloFiltro}
                 onChange={(e) => setModeloFiltro(e.target.value)}
               />
@@ -416,8 +420,11 @@ export default function Vendas() {
                   const garantiaInfo = getGarantiaInfo(venda);
                   const vendaIsFiado = isFiadoVenda(venda);
                   
-                  // Pegar modelos e IMEIs dos itens
-                  const modelos = venda.itens.map(i => i.produto).join(', ');
+                  // Pegar modelos e IMEIs dos itens - identificar vendas de acessórios
+                  const isAcessorioOnly = venda.itens.length === 0 && (venda.acessorios?.length ?? 0) > 0;
+                  const modelos = isAcessorioOnly 
+                    ? venda.acessorios!.map(a => a.descricao).join(', ')
+                    : venda.itens.map(i => i.produto).join(', ');
                   const imeis = venda.itens.map(i => displayIMEI(i.imei)).join(', ');
                   
                   const getStatusBadge = (status: StatusConferencia | null) => {
@@ -443,7 +450,16 @@ export default function Vendas() {
                   
                   return (
                     <TableRow key={venda.id} className={getRowBgClass()}>
-                      <TableCell className="max-w-[200px] truncate sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]" title={modelos}>{modelos || '-'}</TableCell>
+                      <TableCell className="max-w-[200px] truncate sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]" title={modelos}>
+                        {isAcessorioOnly ? (
+                          <div className="flex items-center gap-1.5">
+                            <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 text-xs whitespace-nowrap">Acessório</Badge>
+                            <span className="truncate">{modelos}</span>
+                          </div>
+                        ) : (
+                          modelos || '-'
+                        )}
+                      </TableCell>
                       <TableCell>{getLojaName(venda.lojaVenda)}</TableCell>
                       <TableCell className="font-mono text-xs min-w-[160px]" title={imeis}>{imeis || '-'}</TableCell>
                       <TableCell className="font-medium">{venda.id}</TableCell>

@@ -16,9 +16,11 @@ import {
   exportVendasDigitaisToCSV,
   VendaDigital
 } from '@/utils/vendasDigitalApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 
 export default function VendasPendentesDigitais() {
   const navigate = useNavigate();
+  const { obterNomeColaborador } = useCadastroStore();
   const [vendas] = useState<VendaDigital[]>(getVendasDigitais());
   const [statusFiltro, setStatusFiltro] = useState('');
   const [busca, setBusca] = useState('');
@@ -156,7 +158,7 @@ export default function VendasPendentesDigitais() {
                       <TableCell className="whitespace-nowrap">
                         {new Date(venda.dataHora).toLocaleString('pt-BR')}
                       </TableCell>
-                      <TableCell>{venda.responsavelVendaNome}</TableCell>
+                      <TableCell>{obterNomeColaborador(venda.responsavelVendaId) || venda.responsavelVendaNome}</TableCell>
                       <TableCell className="font-medium">{venda.clienteNome}</TableCell>
                       <TableCell className="text-right font-semibold">
                         {formatCurrency(venda.valorTotal)}

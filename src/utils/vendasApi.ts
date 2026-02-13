@@ -160,6 +160,17 @@ export interface Venda {
   valorPendenteSinal?: number;
   dataSinal?: string;
   observacaoSinal?: string;
+  
+  // Garantia Extendida
+  garantiaExtendida?: {
+    planoId: string;
+    planoNome: string;
+    valor: number;
+    meses: number;
+    dataInicio: string;
+    dataFim: string;
+  } | null;
+  garantiaItens?: any[];
 }
 
 export interface HistoricoCompraCliente {

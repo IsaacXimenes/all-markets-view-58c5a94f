@@ -658,7 +658,45 @@ export default function VendasAcessorios() {
                     return (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.descricao}</TableCell>
-                      <TableCell className="text-center">{item.quantidade}</TableCell>
+                      <TableCell className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={item.quantidade <= 1}
+                            onClick={() => {
+                              setAcessorios(prev => prev.map(a =>
+                                a.id === item.id
+                                  ? { ...a, quantidade: a.quantidade - 1, valorTotal: a.valorUnitario * (a.quantidade - 1) }
+                                  : a
+                              ));
+                            }}
+                          >
+                            <span className="text-sm font-bold">−</span>
+                          </Button>
+                          <span className="w-8 text-center font-medium">{item.quantidade}</span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => {
+                              const acessorioOriginal = acessoriosEstoque.find(a => a.id === item.acessorioId);
+                              if (acessorioOriginal && item.quantidade >= acessorioOriginal.quantidade) {
+                                toast({ title: "Estoque insuficiente", description: `Máximo disponível: ${acessorioOriginal.quantidade}`, variant: "destructive" });
+                                return;
+                              }
+                              setAcessorios(prev => prev.map(a =>
+                                a.id === item.id
+                                  ? { ...a, quantidade: a.quantidade + 1, valorTotal: a.valorUnitario * (a.quantidade + 1) }
+                                  : a
+                              ));
+                            }}
+                          >
+                            <span className="text-sm font-bold">+</span>
+                          </Button>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-right text-muted-foreground text-sm">
                         {formatCurrency(custoUnit)}
                       </TableCell>

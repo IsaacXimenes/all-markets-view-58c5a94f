@@ -979,7 +979,10 @@ export default function VendasNova() {
       // Campos de Downgrade
       tipoOperacao: tipoOperacaoTroca,
       saldoDevolver: hasValidDowngrade ? saldoDevolver : 0,
-      chavePix: hasValidDowngrade ? chavePix : undefined
+      chavePix: hasValidDowngrade ? chavePix : undefined,
+      // Garantia Extendida
+      garantiaExtendida: garantiaExtendida || null,
+      garantiaItens: garantiaItens.length > 0 ? garantiaItens : undefined
     };
     
     const venda = addVenda(vendaData);

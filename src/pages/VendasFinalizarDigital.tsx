@@ -88,7 +88,7 @@ export default function VendasFinalizarDigital() {
   const [novoCliente, setNovoCliente] = useState<Partial<Cliente>>({});
   
   // Origem e retirada
-  const [origemVenda, setOrigemVenda] = useState('Digital');
+  const [origemVenda, setOrigemVenda] = useState('Loja Online');
   const [localRetirada, setLocalRetirada] = useState('');
   const [tipoRetirada, setTipoRetirada] = useState<'Retirada Balcão' | 'Entrega' | 'Retirada em Outra Loja'>('Retirada Balcão');
   const [taxaEntrega, setTaxaEntrega] = useState(0);
@@ -177,7 +177,7 @@ export default function VendasFinalizarDigital() {
       setClienteTelefone(draft.clienteTelefone || '');
       setClienteEmail(draft.clienteEmail || '');
       setClienteCidade(draft.clienteCidade || '');
-      setOrigemVenda(draft.origemVenda || 'Digital');
+      setOrigemVenda(draft.origemVenda || 'Loja Online');
       setLocalRetirada(draft.localRetirada || '');
       setTipoRetirada(draft.tipoRetirada || 'Retirada Balcão');
       setTaxaEntrega(draft.taxaEntrega || 0);
@@ -692,7 +692,7 @@ export default function VendasFinalizarDigital() {
               </div>
               <div>
                 <label className="text-sm font-medium">Origem da Venda</label>
-                <Input value="Digital" disabled className="bg-muted" />
+                <Input value="Loja Online" disabled className="bg-muted" />
               </div>
               <div>
                 <label className={`text-sm font-medium ${!localRetirada ? 'text-destructive' : ''}`}>
@@ -1210,6 +1210,23 @@ export default function VendasFinalizarDigital() {
             )}
           </CardContent>
         </Card>
+
+        {/* Garantia Extendida - Alinhado com VendasNova */}
+        {itens.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Garantia Extendida
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-4 text-muted-foreground">
+                <p className="text-sm">Planos de garantia extendida serão configurados na tela de Nova Venda quando disponíveis para o modelo selecionado.</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Pagamentos - Usando PagamentoQuadro */}
         <PagamentoQuadro
@@ -1858,7 +1875,7 @@ export default function VendasFinalizarDigital() {
 
       {/* Modal Selecionar Acessórios */}
       <Dialog open={showAcessorioModal} onOpenChange={setShowAcessorioModal}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Selecionar Acessórios</DialogTitle>
           </DialogHeader>
