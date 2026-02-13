@@ -58,6 +58,7 @@ const MOCK_ATIVIDADES: AtividadeCadastro[] = [
   { id: 'ATV-005', nome: 'Alinhamento com Equipe', tipoHorario: 'aberto', pontuacaoBase: 1, lojasAtribuidas: 'todas', ativa: true },
   { id: 'ATV-006', nome: 'Fechamento de Caixa', tipoHorario: 'fixo', horarioPrevisto: '18:00', pontuacaoBase: 1, lojasAtribuidas: 'todas', ativa: true },
   { id: 'ATV-007', nome: 'Envio de Relatório Final', tipoHorario: 'fixo', horarioPrevisto: '18:30', pontuacaoBase: 1, lojasAtribuidas: 'todas', ativa: true },
+  { id: 'ATV-008', nome: 'Conferir Lançamentos da Assistência', tipoHorario: 'fixo', horarioPrevisto: '10:00', pontuacaoBase: 1, lojasAtribuidas: 'todas', ativa: true },
 ];
 
 // === CRUD Atividades ===

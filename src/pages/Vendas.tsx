@@ -184,7 +184,7 @@ export default function Vendas() {
       }
       
       return true;
-    });
+    }).sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
   }, [vendasVisiveis, dataInicio, dataFim, lojaFiltro, vendedorFiltro, modeloFiltro, imeiFiltro, filtroGarantia, tipoPagamentoFiltro]);
 
   const totais = useMemo(() => {
