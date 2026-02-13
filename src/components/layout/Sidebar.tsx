@@ -34,6 +34,7 @@ const navItems: NavItem[] = [
   { title: 'Gestão Administrativa', icon: ClipboardCheck, href: '/gestao-administrativa' },
   { title: 'Relatórios', icon: BarChart3, href: '/relatorios' },
   { title: 'Cadastros', icon: Database, href: '/cadastros' },
+  { title: 'Dados - Sistema Antigo', icon: Database, href: '/dados-sistema-antigo/clientes' },
   { title: 'Configurações', icon: Settings, href: '/settings' },
 ];
 
@@ -65,6 +66,9 @@ function SidebarContent({
     }
     if (href === '/gestao-administrativa') {
       return location.pathname.startsWith('/gestao-administrativa');
+    }
+    if (href === '/dados-sistema-antigo/clientes') {
+      return location.pathname.startsWith('/dados-sistema-antigo');
     }
     return location.pathname.startsWith(href);
   };
