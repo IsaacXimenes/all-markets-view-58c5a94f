@@ -353,7 +353,7 @@ export default function RHFeedback() {
 
       {/* Modal de Ver Detalhes */}
       <Dialog open={isDetalhesDialogOpen} onOpenChange={setIsDetalhesDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquareWarning className="h-5 w-5" />
@@ -366,7 +366,7 @@ export default function RHFeedback() {
               {/* Info do feedback */}
               <Card className="bg-muted/50">
                 <CardContent className="pt-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-2 gap-4 text-sm min-w-0 overflow-x-auto">
                     <div>
                       <span className="text-muted-foreground">ID Feedback:</span>
                       <span className="ml-2 font-mono font-medium">{selectedFeedback?.id}</span>

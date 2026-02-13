@@ -175,7 +175,7 @@ export default function OSOficina() {
   };
 
   return (
-    <OSLayout title="Oficina / Bancada">
+    <OSLayout title="Serviços">
       {/* Cards de resumo */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>

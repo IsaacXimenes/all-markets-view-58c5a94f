@@ -1,6 +1,6 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
-import { Wrench, HardHat, ClipboardCheck, ShoppingCart, History, Scissors, Package, ArrowRightLeft, FileSearch } from 'lucide-react';
+import { Wrench, Settings, ClipboardCheck, ShoppingCart, History, Scissors, Package, ArrowRightLeft, FileSearch } from 'lucide-react';
 
 interface AssistenciaLayoutProps {
   children: React.ReactNode;
@@ -10,7 +10,7 @@ interface AssistenciaLayoutProps {
 const tabs = [
   { name: 'Análise de Tratativas', href: '/os/analise-garantia', icon: FileSearch },
   { name: 'Nova Assistência', href: '/os/assistencia', icon: Wrench },
-  { name: 'Oficina / Bancada', href: '/os/oficina', icon: HardHat },
+  { name: 'Serviços', href: '/os/oficina', icon: Settings },
   { name: 'Conferência Gestor', href: '/os/conferencia-gestor', icon: ClipboardCheck },
   { name: 'Solicitações de Peças', href: '/os/solicitacoes-pecas', icon: ShoppingCart },
   { name: 'Estoque - Assistência', href: '/os/pecas', icon: Package },
