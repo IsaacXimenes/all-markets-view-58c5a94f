@@ -5,8 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   getNotasParaFinanceiro, 
   registrarPagamento,
@@ -27,7 +25,8 @@ import {
   FileText,
   DollarSign,
   Landmark,
-  Archive
+  Archive,
+  ArrowLeft
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -36,7 +35,7 @@ export default function FinanceiroNotasPendencias() {
   const [notaSelecionada, setNotaSelecionada] = useState<NotaEntrada | null>(null);
   
   const [dialogPagamento, setDialogPagamento] = useState(false);
-  const [dialogDetalhes, setDialogDetalhes] = useState(false);
+  const [modoDetalhes, setModoDetalhes] = useState(false);
   
   const fornecedoresList = getFornecedores();
 
@@ -104,7 +103,7 @@ export default function FinanceiroNotasPendencias() {
 
   const handleVerDetalhes = (nota: NotaEntrada) => {
     setNotaSelecionada(nota);
-    setDialogDetalhes(true);
+    setModoDetalhes(true);
   };
 
   const handleAbrirPagamento = (nota: NotaEntrada) => {
@@ -205,217 +204,211 @@ export default function FinanceiroNotasPendencias() {
   } : null;
 
   return (
-    <FinanceiroLayout title="Notas - Pendências">
-      <div className="space-y-6">
-        {/* Cards de Resumo */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Total de Notas</p>
-                  <p className="text-2xl font-bold">{resumo.total}</p>
+    <FinanceiroLayout title={modoDetalhes && notaSelecionada ? `Detalhes da Nota ${notaSelecionada.numeroNota}` : "Notas - Pendências"}>
+      {modoDetalhes && notaSelecionada ? (
+        <div className="space-y-6">
+          <div className="flex justify-start">
+            <Button variant="ghost" onClick={() => setModoDetalhes(false)}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Voltar para Notas Pendências
+            </Button>
+          </div>
+          <NotaDetalhesContent nota={notaSelecionada} showActions={false} />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Cards de Resumo */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total de Notas</p>
+                    <p className="text-2xl font-bold">{resumo.total}</p>
+                  </div>
+                  <FileText className="h-10 w-10 text-muted-foreground opacity-50" />
                 </div>
-                <FileText className="h-10 w-10 text-muted-foreground opacity-50" />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Aguardando Financeiro</p>
+                    <p className="text-2xl font-bold text-primary">{resumo.aguardandoFinanceiro}</p>
+                  </div>
+                  <Landmark className="h-10 w-10 text-primary opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-primary/20">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Finalizadas</p>
+                    <p className="text-2xl font-bold text-primary">{resumo.finalizadas}</p>
+                  </div>
+                  <Archive className="h-10 w-10 text-primary opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Valor Pendente</p>
+                    <p className="text-2xl font-bold text-destructive">{formatCurrency(resumo.valorPendente)}</p>
+                  </div>
+                  <DollarSign className="h-10 w-10 text-destructive opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Valor Conferido</p>
+                    <p className="text-2xl font-bold text-primary">{formatCurrency(resumo.valorConferido)}</p>
+                  </div>
+                  <CheckCircle className="h-10 w-10 text-primary opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Alertas SLA</p>
+                    <p className="text-2xl font-bold text-destructive">{resumo.alertasSLA}</p>
+                  </div>
+                  <AlertTriangle className="h-10 w-10 text-destructive opacity-50" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filtros */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                Filtros
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div>
+                  <Label htmlFor="dataInicio">Data Início</Label>
+                  <Input
+                    id="dataInicio"
+                    type="date"
+                    value={filters.dataInicio}
+                    onChange={(e) => setFilters({ ...filters, dataInicio: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="dataFim">Data Fim</Label>
+                  <Input
+                    id="dataFim"
+                    type="date"
+                    value={filters.dataFim}
+                    onChange={(e) => setFilters({ ...filters, dataFim: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="fornecedor">Fornecedor</Label>
+                  <Select value={filters.fornecedor} onValueChange={(value) => setFilters({ ...filters, fornecedor: value })}>
+                    <SelectTrigger id="fornecedor">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      {fornecedoresList.map(f => (
+                        <SelectItem key={f.id} value={f.nome}>{f.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="tipoPagamento">Tipo Pagamento</Label>
+                  <Select value={filters.tipoPagamento} onValueChange={(value) => setFilters({ ...filters, tipoPagamento: value })}>
+                    <SelectTrigger id="tipoPagamento">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="Pagamento 100% Antecipado">100% Antecipado</SelectItem>
+                      <SelectItem value="Pagamento Parcial">Parcial</SelectItem>
+                      <SelectItem value="Pagamento Pos">Pós</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="atuacaoAtual">Atuação Atual</Label>
+                  <Select value={filters.atuacaoAtual} onValueChange={(value) => setFilters({ ...filters, atuacaoAtual: value })}>
+                    <SelectTrigger id="atuacaoAtual">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="Financeiro">Financeiro</SelectItem>
+                      <SelectItem value="Estoque">Estoque</SelectItem>
+                      <SelectItem value="Encerrado">Encerrado (Histórico)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="palavraChave">Palavra-chave</Label>
+                  <Input
+                    id="palavraChave"
+                    placeholder="Buscar..."
+                    value={filters.palavraChave}
+                    onChange={(e) => setFilters({ ...filters, palavraChave: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end mt-4">
+                <Button variant="outline" onClick={handleLimpar}>
+                  <X className="h-4 w-4 mr-2" />
+                  Limpar
+                </Button>
               </div>
             </CardContent>
           </Card>
+
+          {/* Tabela de Notas */}
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Aguardando Financeiro</p>
-                  <p className="text-2xl font-bold text-primary">{resumo.aguardandoFinanceiro}</p>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <CardTitle>Notas Pendentes</CardTitle>
+                <div className="flex gap-2">
+                  <Button onClick={handleRefresh} variant="outline">
+                    Atualizar
+                  </Button>
+                  <Button onClick={handleExport} variant="outline">
+                    <Download className="h-4 w-4 mr-2" />
+                    Exportar CSV
+                  </Button>
                 </div>
-                <Landmark className="h-10 w-10 text-primary opacity-50" />
               </div>
-            </CardContent>
-          </Card>
-          <Card className="border-primary/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Finalizadas</p>
-                  <p className="text-2xl font-bold text-primary">{resumo.finalizadas}</p>
-                </div>
-                <Archive className="h-10 w-10 text-primary opacity-50" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Valor Pendente</p>
-                  <p className="text-2xl font-bold text-destructive">{formatCurrency(resumo.valorPendente)}</p>
-                </div>
-                <DollarSign className="h-10 w-10 text-destructive opacity-50" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Valor Conferido</p>
-                  <p className="text-2xl font-bold text-primary">{formatCurrency(resumo.valorConferido)}</p>
-                </div>
-                <CheckCircle className="h-10 w-10 text-primary opacity-50" />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Alertas SLA</p>
-                  <p className="text-2xl font-bold text-destructive">{resumo.alertasSLA}</p>
-                </div>
-                <AlertTriangle className="h-10 w-10 text-destructive opacity-50" />
-              </div>
+            </CardHeader>
+            <CardContent>
+              <TabelaNotasPendencias 
+                notas={notasFiltradas}
+                modulo="Financeiro"
+                onVerDetalhes={handleVerDetalhes}
+                onPagar={handleAbrirPagamento}
+              />
             </CardContent>
           </Card>
         </div>
-
-        {/* Filtros */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filtros
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              <div>
-                <Label htmlFor="dataInicio">Data Início</Label>
-                <Input
-                  id="dataInicio"
-                  type="date"
-                  value={filters.dataInicio}
-                  onChange={(e) => setFilters({ ...filters, dataInicio: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="dataFim">Data Fim</Label>
-                <Input
-                  id="dataFim"
-                  type="date"
-                  value={filters.dataFim}
-                  onChange={(e) => setFilters({ ...filters, dataFim: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label htmlFor="fornecedor">Fornecedor</Label>
-                <Select value={filters.fornecedor} onValueChange={(value) => setFilters({ ...filters, fornecedor: value })}>
-                  <SelectTrigger id="fornecedor">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    {fornecedoresList.map(f => (
-                      <SelectItem key={f.id} value={f.nome}>{f.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="tipoPagamento">Tipo Pagamento</Label>
-                <Select value={filters.tipoPagamento} onValueChange={(value) => setFilters({ ...filters, tipoPagamento: value })}>
-                  <SelectTrigger id="tipoPagamento">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="Pagamento 100% Antecipado">100% Antecipado</SelectItem>
-                    <SelectItem value="Pagamento Parcial">Parcial</SelectItem>
-                    <SelectItem value="Pagamento Pos">Pós</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="atuacaoAtual">Atuação Atual</Label>
-                <Select value={filters.atuacaoAtual} onValueChange={(value) => setFilters({ ...filters, atuacaoAtual: value })}>
-                  <SelectTrigger id="atuacaoAtual">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="Financeiro">Financeiro</SelectItem>
-                    <SelectItem value="Estoque">Estoque</SelectItem>
-                    <SelectItem value="Encerrado">Encerrado (Histórico)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="palavraChave">Palavra-chave</Label>
-                <Input
-                  id="palavraChave"
-                  placeholder="Buscar..."
-                  value={filters.palavraChave}
-                  onChange={(e) => setFilters({ ...filters, palavraChave: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end mt-4">
-              <Button variant="outline" onClick={handleLimpar}>
-                <X className="h-4 w-4 mr-2" />
-                Limpar
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tabela de Notas - Usando componente reutilizável */}
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <CardTitle>Notas Pendentes</CardTitle>
-              <div className="flex gap-2">
-                <Button onClick={handleRefresh} variant="outline">
-                  Atualizar
-                </Button>
-                <Button onClick={handleExport} variant="outline">
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar CSV
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <TabelaNotasPendencias 
-              notas={notasFiltradas}
-              modulo="Financeiro"
-              onVerDetalhes={handleVerDetalhes}
-              onPagar={handleAbrirPagamento}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Modal de Pagamento */}
-        <ModalFinalizarPagamento
-          pendencia={notaParaModalPagamento}
-          open={dialogPagamento}
-          onClose={() => setDialogPagamento(false)}
-          onConfirm={handleFinalizarPagamento}
-        />
-
-        {/* Modal de Detalhes da Nota */}
-        <Dialog open={dialogDetalhes} onOpenChange={setDialogDetalhes}>
-          <DialogContent className="max-w-5xl max-h-[90vh] p-0">
-            <DialogHeader className="p-6 pb-0">
-              <DialogTitle>
-                Detalhes da Nota {notaSelecionada?.numeroNota}
-              </DialogTitle>
-            </DialogHeader>
-            <ScrollArea className="max-h-[calc(90vh-80px)] px-6 pb-6">
-              {notaSelecionada && (
-                <NotaDetalhesContent nota={notaSelecionada} showActions={false} />
-              )}
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
-      </div>
+      )}
+      <ModalFinalizarPagamento
+        pendencia={notaParaModalPagamento}
+        open={dialogPagamento}
+        onClose={() => setDialogPagamento(false)}
+        onConfirm={handleFinalizarPagamento}
+      />
     </FinanceiroLayout>
   );
 }
