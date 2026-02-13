@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { FinanceiroLayout } from '@/components/layout/FinanceiroLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   getNotasParaFinanceiro, 
   registrarPagamento,
@@ -15,8 +16,8 @@ import {
 import { getFornecedores } from '@/utils/cadastrosApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { TabelaNotasPendencias } from '@/components/estoque/TabelaNotasPendencias';
-
 import { ModalFinalizarPagamento, DadosPagamento, PendenciaPagamentoData } from '@/components/estoque/ModalFinalizarPagamento';
+import { NotaDetalhesContent } from '@/components/estoque/NotaDetalhesContent';
 import { 
   Download, 
   Filter, 
@@ -31,13 +32,11 @@ import {
 import { toast } from 'sonner';
 
 export default function FinanceiroNotasPendencias() {
-  const navigate = useNavigate();
-  
-  // Consumir novo sistema de notas diretamente
   const [notas, setNotas] = useState<NotaEntrada[]>(getNotasParaFinanceiro());
   const [notaSelecionada, setNotaSelecionada] = useState<NotaEntrada | null>(null);
   
   const [dialogPagamento, setDialogPagamento] = useState(false);
+  const [dialogDetalhes, setDialogDetalhes] = useState(false);
   
   const fornecedoresList = getFornecedores();
 
@@ -104,7 +103,8 @@ export default function FinanceiroNotasPendencias() {
   }, [notasFiltradas]);
 
   const handleVerDetalhes = (nota: NotaEntrada) => {
-    navigate(`/estoque/nota/${nota.id}`);
+    setNotaSelecionada(nota);
+    setDialogDetalhes(true);
   };
 
   const handleAbrirPagamento = (nota: NotaEntrada) => {
@@ -399,6 +399,22 @@ export default function FinanceiroNotasPendencias() {
           onClose={() => setDialogPagamento(false)}
           onConfirm={handleFinalizarPagamento}
         />
+
+        {/* Modal de Detalhes da Nota */}
+        <Dialog open={dialogDetalhes} onOpenChange={setDialogDetalhes}>
+          <DialogContent className="max-w-5xl max-h-[90vh] p-0">
+            <DialogHeader className="p-6 pb-0">
+              <DialogTitle>
+                Detalhes da Nota {notaSelecionada?.numeroNota}
+              </DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-[calc(90vh-80px)] px-6 pb-6">
+              {notaSelecionada && (
+                <NotaDetalhesContent nota={notaSelecionada} showActions={false} />
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
       </div>
     </FinanceiroLayout>
   );
