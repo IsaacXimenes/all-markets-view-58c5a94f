@@ -1,144 +1,197 @@
 
-# Plano - Maquina de Estados da Assistencia e Correcoes de Persistencia
+
+# Plano - Reestruturacao do Modulo de Assistencia (Abas Operacionais + Nova Maquina de Estados)
 
 ## Resumo
 
-Implementar a maquina de estados correta com transicoes rigidas via `proximaAtuacao`, corrigir persistencia de solicitacoes de pecas na edicao, remover quadro de pagamentos da tela do tecnico, e adicionar novos status (`Em Aberto`, `Pagamento Concluído`, `Aguardando Conferência`, `Finalizado`).
+Reorganizar completamente o modulo de Assistencia em 5 abas operacionais por perfil, implementar uma nova maquina de estados com 9 etapas, criar a aba "Conferencia Gestor - Assistencia" e ajustar todas as travas de seguranca.
 
 ---
 
-## 1. Maquina de Estados - Tabela de Transicoes
+## 1. Nova Arquitetura de Abas
 
-A tabela de transicoes estrita que sera implementada:
+As 7 abas atuais serao substituidas por 5 abas operacionais:
 
-| Evento | Status da OS | Proxima Atuacao |
-|--------|-------------|-----------------|
-| Registro da OS | Em Aberto | Tecnico: Avaliar/Executar |
-| Tecnico solicita peca | Aguardando Peca | Gestor: Aprovar Peca |
-| Financeiro paga a peca | Pagamento Concluido | Logistica: Enviar Peca |
-| Peca recebida na loja | Peca Recebida | Tecnico: Avaliar/Executar |
-| Tecnico clica em Concluir | Servico Concluido | Vendedor: Registrar Pagamento |
-| Vendedor registra pagamento | Aguardando Conferencia | Financeiro: Conferir Lancamento |
-| Financeiro valida lancamento | Finalizado | - |
+| # | Aba | Rota | Perfil | Descricao |
+|---|-----|------|--------|-----------|
+| 1 | Nova Assistencia | `/os/assistencia` | Vendedor/Gestor | Central de entrada. Botao "Nova OS (Balcao)". Lista OSs em status de registro ou pendentes de pagamento |
+| 2 | Oficina / Bancada | `/os/oficina` | Tecnico | Execucao tecnica. Exibe apenas OSs com Proxima Atuacao = "Tecnico" |
+| 3 | Conferencia Gestor | `/os/conferencia-gestor` | Gestor | Nova aba de governanca. Valida pagamentos antes do financeiro |
+| 4 | Solicitacoes de Pecas | `/os/solicitacoes-pecas` | Matriz | Gestao de suprimentos (mantida) |
+| 5 | Historico | `/os/historico-assistencia` | Todos | Consulta geral de todos os registros |
 
-### 1.1 Alteracoes na interface `OrdemServico` (assistenciaApi.ts)
+### 1.1 Alteracoes em `OSLayout.tsx`
 
-- Adicionar novos status ao tipo union: `'Em Aberto'`, `'Pagamento Concluído'`, `'Aguardando Conferência'`, `'Finalizado'`
-- Adicionar novas opcoes de `proximaAtuacao`: `'Gestor: Aprovar Peça'`, `'Logística: Enviar Peça'`
-- Atualizar mocks existentes para usar os novos nomes de status conforme a tabela
-
-### 1.2 Correcao critica: Tecnico Concluir -> Vendedor
-
-Em `OSAssistenciaDetalhes.tsx`, a funcao `handleConcluirServico` ja seta corretamente `proximaAtuacao: 'Vendedor: Registrar Pagamento'` (linha 219). Porem, na tela de edicao (`OSAssistenciaEditar.tsx`), ao alterar o status manualmente para "Servico concluido", o `proximaAtuacao` NAO e atualizado automaticamente.
-
-**Correcao em `OSAssistenciaEditar.tsx` (handleSave, ~linha 295):**
-- Adicionar logica: se o novo status for `'Serviço concluído'`, forcar `proximaAtuacao = 'Vendedor: Registrar Pagamento'`
-
-### 1.3 Novas transicoes automaticas
-
-**Em `solicitacaoPecasApi.ts`:**
-- `aprovarSolicitacao`: Ja atualiza OS para `'Aguardando Recebimento'`. Alterar para manter o fluxo: status permanece `'Aguardando Peça'`, `proximaAtuacao = 'Gestor: Aprovar Peça'` ate o pagamento do financeiro
-- Criar funcao `registrarPagamentoPeca`: Muda status para `'Pagamento Concluído'`, `proximaAtuacao = 'Logística: Enviar Peça'`
-- Na funcao de recebimento (quando peca chega na loja): Status `'Peça Recebida'`, `proximaAtuacao = 'Técnico: Avaliar/Executar'`
-
-### 1.4 Status de Registro
-
-**Em `OSAssistenciaNova.tsx`:**
-- Alterar o status inicial de `'Em serviço'` para `'Em Aberto'`
-- Confirmar que `proximaAtuacao` e setado para `'Técnico: Avaliar/Executar'`
-
-### 1.5 Finalizacao
-
-**Em `OSAssistenciaDetalhes.tsx`:**
-- `handleSalvarPagamentoVendedor`: Alterar status de `'Aguardando Pagamento'` para `'Aguardando Conferência'`
-- `handleValidarFinanceiro`: Alterar status final de `'Concluído'` para `'Finalizado'`
-
----
-
-## 2. Persistencia de Solicitacoes de Pecas
-
-### 2.1 Problema
-
-Na tela de edicao (`OSAssistenciaEditar.tsx`), as solicitacoes de pecas ja sao carregadas via `getSolicitacoesByOS(id)` no useEffect (linha 131). Porem, ao salvar a OS via `handleSave`, a funcao `updateOrdemServico` sobrescreve a timeline sem incluir os eventos de solicitacao, causando perda de historico.
-
-### 2.2 Correcoes em `OSAssistenciaEditar.tsx`
-
-- **Fetch completo no carregamento**: Ja implementado (linha 131). Garantir que a lista e recarregada apos adicionar nova solicitacao (ja feito, linha 768).
-- **Protecao na funcao handleSave**: Ao salvar, recarregar solicitacoes para garantir sincronismo: `setSolicitacoesOS(getSolicitacoesByOS(id!))` apos o save.
-- **Timeline imutavel**: Nunca sobrescrever entradas existentes na timeline. No `handleSave`, usar spread do array original da OS recarregada (nao do state local que pode estar desatualizado).
-
-### 2.3 Timeline automatica para movimentacao de pecas
-
-Cada transicao gera log na timeline:
-- Solicitada: "Peca X solicitada pelo tecnico Y"
-- Aprovada: "Solicitacao aprovada pelo gestor"
-- Paga: "Pagamento da peca registrado pelo financeiro"
-- Recebida: "Peca recebida na loja Z"
-
-Estes logs ja sao gerados parcialmente em `solicitacaoPecasApi.ts`. Garantir que TODOS os estados geram timeline.
-
----
-
-## 3. Refinamento da Interface
-
-### 3.1 Remover Quadro de Pagamentos da Edicao do Tecnico
-
-**Em `OSAssistenciaEditar.tsx` (linhas 607-689):**
-- Remover completamente o card "Pagamentos" com os campos de meio de pagamento, valor e parcelas
-- A tela do tecnico deve conter apenas: Dados do Atendimento, Aparelho, Pecas/Servicos, Solicitacoes de Pecas, Avaliacao Tecnica (Valor Custo/Venda) e Timeline
-
-**Em `OSAssistenciaDetalhes.tsx` (linhas 886-918):**
-- Quando `proximaAtuacao === 'Técnico: Avaliar/Executar'`, ocultar completamente a secao de pagamentos (nao exibir nem em modo leitura)
-
-### 3.2 Adicionar campos Valor de Custo e Valor de Venda na Edicao
-
-**Em `OSAssistenciaEditar.tsx`:**
-- Adicionar card "Avaliacao Tecnica" com campos `valorCustoTecnico` e `valorVendaTecnico` (similar ao que ja existe em `OSAssistenciaDetalhes.tsx`)
-- Incluir botao "Concluir Servico" que valida os valores e faz a transicao de estado
-- Salvar estes valores via `updateOrdemServico`
-
-### 3.3 Campo Loja - Filtro Assistencia
-
-**Em `OSAssistenciaEditar.tsx` (linha 400-405):**
-- O `AutocompleteLoja` ja usa `apenasLojasTipoLoja={true}`, mas esta funcao pode nao filtrar por "Assistencia". Verificar e alterar para `filtrarPorTipo="Assistência"` (mesmo padrao do Detalhes, linha 1018)
-
-### 3.4 Camera na tela de edicao
-
-**Em `OSAssistenciaEditar.tsx`:**
-- Adicionar o mesmo componente de camera que existe em `OSAssistenciaNova.tsx` para documentar progresso durante a atuacao tecnica
-- As novas fotos devem ser adicionadas a timeline como eventos tipo `'foto'`
-
----
-
-## 4. Regras de Pagamento (Etapa Vendedor)
-
-### 4.1 Trava de Seguranca
-
-Ja implementado em `OSAssistenciaDetalhes.tsx` (linhas 833-854). A validacao verifica `!os.valorCustoTecnico && !os.valorVendaTecnico`. Corrigir para usar `||` em vez de `&&` (ambos devem estar preenchidos, nao apenas um):
+Substituir as 7 tabs atuais pelas 5 novas:
 ```
-if (!os.valorCustoTecnico || !os.valorVendaTecnico)
+{ name: 'Nova Assistencia', href: '/os/assistencia', icon: Wrench }
+{ name: 'Oficina / Bancada', href: '/os/oficina', icon: HardHat }
+{ name: 'Conferencia Gestor', href: '/os/conferencia-gestor', icon: ClipboardCheck }
+{ name: 'Solicitacoes de Pecas', href: '/os/solicitacoes-pecas', icon: ShoppingCart }
+{ name: 'Historico', href: '/os/historico-assistencia', icon: History }
 ```
 
-### 4.2 Metodos de Pagamento
+### 1.2 Alteracoes em `AssistenciaLayout.tsx`
 
-O `PagamentoQuadro` ja e usado com `lojaVendaId={os.lojaId}`. Verificar que internamente filtra maquinas pela loja. Adicionar prop para restringir metodos a Dinheiro, Pix e Cartao (se ainda nao implementado).
+Replicar as mesmas 5 tabs (manter sincronizado com OSLayout).
+
+### 1.3 Remocao de abas/rotas excedentes
+
+As seguintes abas/rotas serao removidas da navegacao por tabs (as paginas continuam existindo como sub-rotas acessiveis):
+- `Analise de Tratativas` (/os/analise-garantia) - funcionalidade absorvida pela aba "Nova Assistencia"
+- `Estoque - Assistencia` (/os/pecas) - acessivel via sub-rota
+- `Retirada de Pecas` (/os/retirada-pecas) - acessivel via sub-rota
+- `Historico de Notas` (/os/historico-notas) - acessivel via sub-rota
+- `Movimentacao - Pecas` (/os/movimentacao-pecas) - acessivel via sub-rota
+- `Lotes de Pagamento` (/assistencia/lotes-pagamento) - acessivel via sub-rota
 
 ---
 
-## 5. Atualizacao de Badges e Status em Telas de Listagem
+## 2. Nova Maquina de Estados (9 Etapas)
 
-### 5.1 `OSAssistencia.tsx`
+| Etapa | Acao | Status da OS | Proxima Atuacao |
+|-------|------|-------------|-----------------|
+| 1. Registro | Vendedor salva OS | Aguardando Analise | Tecnico |
+| 2. Check-in | Tecnico clica "Assumir OS" | Em Servico | Tecnico |
+| 3. Pecas | Tecnico solicita peca | Solicitacao de Peca | Gestor (Suprimentos) |
+| 4. Logistica | Gestor aprova e Financeiro paga | Pagamento Concluido | Tecnico (Recebimento) |
+| 5. Retorno | Tecnico confirma recebimento | Em Servico | Tecnico |
+| 6. Check-out | Tecnico preenche resumo e finaliza | Finalizado | Gestor/Vendedor |
+| 7. Pagamento | Vendedor registra pagamento | Pendente de Pagamento | Gestor (Conferencia) |
+| 8. Auditoria | Gestor aprova conferencia | Aguardando Financeiro | Financeiro |
+| 9. Fim | Financeiro valida e registra | Liquidado | - |
 
-- Adicionar badges para novos status: `'Em Aberto'`, `'Pagamento Concluído'`, `'Aguardando Conferência'`, `'Finalizado'`
-- Adicionar badges para novas atuacoes: `'Gestor: Aprovar Peça'`, `'Logística: Enviar Peça'`
-- Atualizar filtros de status no select para incluir os novos status
-- Atualizar filtros rapidos de atuacao para incluir "Gestor" e "Logistica" se necessario
+### 2.1 Alteracoes na interface `OrdemServico` (assistenciaApi.ts)
 
-### 5.2 `OSAssistenciaDetalhes.tsx` e `OSAssistenciaEditar.tsx`
+Atualizar o tipo `status` para incluir os novos valores:
+- Adicionar: `'Aguardando Análise'`, `'Solicitação de Peça'`, `'Pendente de Pagamento'`, `'Aguardando Financeiro'`, `'Liquidado'`
+- Manter compatibilidade com status existentes durante transicao
 
-- Atualizar `getStatusBadge` para cobrir todos os novos status
-- Atualizar select de Status na edicao para incluir os novos status
-- Atualizar select de Status na barra lateral de detalhes
+Atualizar o tipo `proximaAtuacao` para usar os novos valores simplificados:
+- `'Técnico'`, `'Gestor (Suprimentos)'`, `'Técnico (Recebimento)'`, `'Gestor/Vendedor'`, `'Gestor (Conferência)'`, `'Financeiro'`, `'-'`
+
+Adicionar campo `resumoConclusao` (string) na interface OrdemServico.
+
+### 2.2 Transicoes automaticas por arquivo
+
+**`OSAssistenciaNova.tsx`:**
+- Status inicial: `'Aguardando Análise'` (em vez de `'Em Aberto'`)
+- proximaAtuacao: `'Técnico'`
+
+**Nova pagina `OSOficina.tsx`:**
+- Listar apenas OSs onde `proximaAtuacao` contem "Tecnico"
+- Botao "Assumir OS": muda status para `'Em Serviço'`, proximaAtuacao = `'Técnico'`
+- Botao "Solicitar Peca": muda status para `'Solicitação de Peça'`, proximaAtuacao = `'Gestor (Suprimentos)'`
+- Botao "Confirmar Recebimento": muda status para `'Em Serviço'`, proximaAtuacao = `'Técnico'`
+- Botao "Finalizar OS": exige resumoConclusao + valorCusto + valorVenda. Muda status para `'Finalizado'`, proximaAtuacao = `'Gestor/Vendedor'`
+
+**`OSAssistencia.tsx` (Nova Assistencia):**
+- Filtrar para mostrar OSs em `'Aguardando Análise'` ou `'Pendente de Pagamento'` ou `'Finalizado'` (com atuacao Gestor/Vendedor)
+- Botao "Registrar Pagamento" visivel apenas quando status = `'Finalizado'` e atuacao = `'Gestor/Vendedor'`
+- Apos pagamento: status = `'Pendente de Pagamento'`, proximaAtuacao = `'Gestor (Conferência)'`
+
+**Nova pagina `OSConferenciaGestor.tsx`:**
+- Espelhar logica da `VendasConferenciaGestor.tsx`
+- Listar OSs com status `'Pendente de Pagamento'` e proximaAtuacao `'Gestor (Conferência)'`
+- Ao aprovar: status = `'Aguardando Financeiro'`, proximaAtuacao = `'Financeiro'`
+- Ao final do financeiro: status = `'Liquidado'`, proximaAtuacao = `'-'`
+
+**`solicitacaoPecasApi.ts`:**
+- `aprovarSolicitacao`: Manter status `'Solicitação de Peça'`, proximaAtuacao = `'Gestor (Suprimentos)'`
+- Apos pagamento financeiro: status = `'Pagamento Concluído'`, proximaAtuacao = `'Técnico (Recebimento)'`
+
+---
+
+## 3. Novas Paginas
+
+### 3.1 `OSOficina.tsx` (Oficina / Bancada)
+
+Pagina focada no tecnico com:
+- Cards de resumo: OSs aguardando check-in, Em servico, Aguardando peca
+- Tabela filtrada por `proximaAtuacao` contendo "Tecnico"
+- Acoes: Assumir OS, Ver Detalhes, Finalizar
+- Na linha da OS, exibir badge com sub-status (Aguardando Analise, Em Servico, Peca Recebida)
+
+### 3.2 `OSConferenciaGestor.tsx` (Conferencia Gestor - Assistencia)
+
+Pagina espelho da Conferencia de Vendas:
+- Tabela de OSs com status `'Pendente de Pagamento'`
+- Drawer lateral com detalhes da OS + pagamentos registrados
+- Botoes: Aprovar (envia para financeiro), Recusar (volta para vendedor)
+- Exibir: Valor Custo (tecnico), Valor Venda (tecnico), Pagamentos registrados, Comprovantes
+
+---
+
+## 4. Travas de Seguranca
+
+### 4.1 Trava de Pagamento
+
+O quadro de pagamentos deve estar **bloqueado** ate que:
+- Status = `'Finalizado'`
+- proximaAtuacao = `'Gestor/Vendedor'`
+
+Em `OSAssistenciaDetalhes.tsx`, o card de Pagamentos so exibe o PagamentoQuadro quando estas condicoes sao atendidas. Caso contrario, exibe mensagem informativa.
+
+### 4.2 Obrigatoriedade Tecnica (Check-out)
+
+Para finalizar, o tecnico DEVE preencher:
+- `resumoConclusao` (novo campo Textarea)
+- `valorCustoTecnico` (numero > 0)
+- `valorVendaTecnico` (numero > 0)
+
+Se algum estiver vazio/zerado, o botao "Finalizar OS" exibe toast de erro.
+
+### 4.3 Persistencia de Solicitacoes de Pecas
+
+Manter a correcao ja implementada: ao editar/salvar OS, recarregar solicitacoes via `getSolicitacoesByOS(id)` e usar timeline imutavel do servidor.
+
+### 4.4 Camera
+
+Manter comportamento atual: captura de fotos no registro (OSAssistenciaNova) e durante edicao tecnica (OSAssistenciaEditar/Detalhes).
+
+### 4.5 Filtro de Loja
+
+Manter `filtrarPorTipo="Assistência"` em todos os AutocompleteLoja do modulo.
+
+---
+
+## 5. Integracao Financeira e Pagamento
+
+### 5.1 Valor automatico
+
+O modal de pagamento (PagamentoQuadro) deve carregar `valorTotalProdutos = os.valorVendaTecnico` automaticamente.
+
+### 5.2 Filtro de destino
+
+`PagamentoQuadro` ja recebe `lojaVendaId={os.lojaId}` que filtra maquinas por loja.
+
+### 5.3 Metodos restritos
+
+Apenas Dinheiro, Pix (manual) e Cartao. Verificar se o PagamentoQuadro ja suporta prop de restricao de metodos ou adicionar `metodosPermitidos={['Dinheiro', 'Pix', 'Cartão']}`.
+
+---
+
+## 6. Timeline Automatica
+
+Cada mudanca de status gera um registro automatico na Timeline com:
+- `responsavel`: Nome do usuario logado (do authStore)
+- `data`: ISO timestamp
+- `descricao`: Texto descritivo da acao (ex: "OS assumida pelo tecnico", "Pagamento registrado pelo vendedor")
+- `tipo`: Tipo do evento correspondente
+
+---
+
+## 7. Atualizacao de Rotas e Sidebar
+
+### 7.1 Sidebar
+
+O href do item "Assistencia" permanece `/os/assistencia` (primeira aba = Nova Assistencia). A logica `isActiveModule` para `/os` ja funciona.
+
+### 7.2 Novas rotas em App.tsx
+
+Adicionar:
+- `/os/oficina` -> `OSOficina`
+- `/os/conferencia-gestor` -> `OSConferenciaGestor`
 
 ---
 
@@ -146,11 +199,16 @@ O `PagamentoQuadro` ja e usado com `lojaVendaId={os.lojaId}`. Verificar que inte
 
 | Arquivo | Alteracoes |
 |---------|-----------|
-| `src/utils/assistenciaApi.ts` | Novos status no type union: `'Em Aberto'`, `'Pagamento Concluído'`, `'Aguardando Conferência'`, `'Finalizado'`. Novas atuacoes: `'Gestor: Aprovar Peça'`, `'Logística: Enviar Peça'`. Atualizar mocks |
-| `src/pages/OSAssistenciaNova.tsx` | Status inicial = `'Em Aberto'` em vez de `'Em serviço'` |
-| `src/pages/OSAssistenciaEditar.tsx` | Remover card Pagamentos. Adicionar card Avaliacao Tecnica (Custo/Venda + botao Concluir). Adicionar camera. Corrigir AutocompleteLoja para `filtrarPorTipo="Assistência"`. Forcar proximaAtuacao ao mudar status para concluido. Proteger timeline ao salvar |
-| `src/pages/OSAssistenciaDetalhes.tsx` | Ocultar pagamentos quando atuacao = Tecnico. Corrigir trava `&&` para `\|\|`. Status `'Aguardando Conferência'` no pagamento vendedor. Status `'Finalizado'` na validacao financeiro. Novos badges |
-| `src/pages/OSAssistencia.tsx` | Novos badges de status e atuacao. Filtros atualizados |
-| `src/utils/solicitacaoPecasApi.ts` | Ajustar proximaAtuacao para `'Gestor: Aprovar Peça'` na solicitacao. Criar funcao registrarPagamentoPeca. Timeline automatica em todas as transicoes |
-| `src/pages/OSHistoricoAssistencia.tsx` | Novos badges de status |
-| `src/pages/OSAnaliseGarantia.tsx` | Status inicial `'Em Aberto'` ao criar OS |
+| `src/utils/assistenciaApi.ts` | Novos status: `'Aguardando Análise'`, `'Solicitação de Peça'`, `'Pendente de Pagamento'`, `'Aguardando Financeiro'`, `'Liquidado'`. Novas atuacoes simplificadas. Campo `resumoConclusao`. Atualizar mocks |
+| `src/components/layout/OSLayout.tsx` | 5 tabs novas: Nova Assistencia, Oficina, Conferencia Gestor, Solicitacoes, Historico |
+| `src/components/layout/AssistenciaLayout.tsx` | Sincronizar com as mesmas 5 tabs |
+| `src/pages/OSOficina.tsx` | **NOVO** - Bancada do tecnico. Lista OSs com atuacao "Tecnico". Botoes Assumir/Finalizar |
+| `src/pages/OSConferenciaGestor.tsx` | **NOVO** - Conferencia gestor assistencia. Espelho da conferencia de vendas |
+| `src/pages/OSAssistencia.tsx` | Filtrar para "Aguardando Analise" + "Pendente de Pagamento" + "Finalizado". Registrar pagamento |
+| `src/pages/OSAssistenciaNova.tsx` | Status inicial `'Aguardando Análise'`, proximaAtuacao `'Técnico'` |
+| `src/pages/OSAssistenciaEditar.tsx` | Adicionar campo `resumoConclusao`. Ajustar transicoes de status. Manter travas |
+| `src/pages/OSAssistenciaDetalhes.tsx` | Bloquear pagamento ate status "Finalizado". Ajustar badges. Conferencia financeiro -> "Liquidado" |
+| `src/pages/OSHistoricoAssistencia.tsx` | Novos badges para todos os 9 status |
+| `src/utils/solicitacaoPecasApi.ts` | Ajustar transicoes: `'Solicitação de Peça'` e `'Técnico (Recebimento)'` |
+| `src/App.tsx` | Adicionar rotas `/os/oficina` e `/os/conferencia-gestor` |
+
