@@ -13,7 +13,7 @@ import { getClientes } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
-import { Plus, Eye, FileText, Download, AlertTriangle, Clock, Edit, RefreshCcw, Wrench, DollarSign } from 'lucide-react';
+import { Plus, Eye, FileText, Download, AlertTriangle, Clock, Edit, RefreshCcw, Wrench, DollarSign, UserCheck, CreditCard, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 
@@ -31,6 +31,7 @@ export default function OSAssistencia() {
   const [filtroIMEI, setFiltroIMEI] = useState('');
   const [filtroTecnico, setFiltroTecnico] = useState('todos');
   const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [filtroAtuacao, setFiltroAtuacao] = useState<string>('todos');
 
   const ordensFiltradas = useMemo(() => {
     return ordensServico.filter(os => {
@@ -64,9 +65,20 @@ export default function OSAssistencia() {
         if (os.status !== filtroStatus) return false;
       }
 
+      // Filtro por atuação
+      if (filtroAtuacao && filtroAtuacao !== 'todos') {
+        if (filtroAtuacao === 'tecnico') {
+          if (os.proximaAtuacao !== 'Técnico: Avaliar/Executar') return false;
+        } else if (filtroAtuacao === 'aguardando_pagamento') {
+          if (os.proximaAtuacao !== 'Vendedor: Registrar Pagamento') return false;
+        } else if (filtroAtuacao === 'pendentes_financeiro') {
+          if (os.proximaAtuacao !== 'Financeiro: Conferir Lançamento') return false;
+        }
+      }
+
       return true;
     }).sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
-  }, [ordensServico, filtroDataInicio, filtroDataFim, filtroIMEI, filtroTecnico, filtroStatus]);
+  }, [ordensServico, filtroDataInicio, filtroDataFim, filtroIMEI, filtroTecnico, filtroStatus, filtroAtuacao]);
 
   const getClienteNome = (clienteId: string) => {
     return clientes.find(c => c.id === clienteId)?.nome || '-';
@@ -94,8 +106,31 @@ export default function OSAssistencia() {
         return <Badge className="bg-purple-500 hover:bg-purple-600">Em Análise</Badge>;
       case 'Peça Recebida':
         return <Badge className="bg-teal-500 hover:bg-teal-600">Peça Recebida</Badge>;
+      case 'Aguardando Recebimento':
+        return <Badge className="bg-cyan-500 hover:bg-cyan-600">Aguardando Recebimento</Badge>;
+      case 'Em Execução':
+        return <Badge className="bg-indigo-500 hover:bg-indigo-600">Em Execução</Badge>;
+      case 'Aguardando Pagamento':
+        return <Badge className="bg-amber-500 hover:bg-amber-600">Aguardando Pagamento</Badge>;
+      case 'Concluído':
+        return <Badge className="bg-emerald-600 hover:bg-emerald-700">Concluído</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const getProximaAtuacaoBadge = (atuacao?: string) => {
+    switch (atuacao) {
+      case 'Técnico: Avaliar/Executar':
+        return <Badge variant="outline" className="border-blue-500 text-blue-600 text-xs">Técnico</Badge>;
+      case 'Vendedor: Registrar Pagamento':
+        return <Badge variant="outline" className="border-amber-500 text-amber-600 text-xs">Vendedor</Badge>;
+      case 'Financeiro: Conferir Lançamento':
+        return <Badge variant="outline" className="border-purple-500 text-purple-600 text-xs">Financeiro</Badge>;
+      case 'Concluído':
+        return <Badge variant="outline" className="border-green-500 text-green-600 text-xs">Concluído</Badge>;
+      default:
+        return <span className="text-muted-foreground text-xs">-</span>;
     }
   };
 
@@ -146,8 +181,8 @@ export default function OSAssistencia() {
   };
 
   const getOrigemBadge = (os: OrdemServico) => {
-    if (!os.origemOS || os.origemOS === 'Avulso') {
-      return <Badge variant="outline" className="text-muted-foreground">Avulso</Badge>;
+    if (!os.origemOS || os.origemOS === 'Balcão') {
+      return <Badge variant="outline" className="text-muted-foreground">Balcão</Badge>;
     }
     switch (os.origemOS) {
       case 'Venda':
@@ -317,6 +352,44 @@ export default function OSAssistencia() {
         )}
       </div>
 
+      {/* Filtros Rápidos de Atuação */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <Button
+          variant={filtroAtuacao === 'todos' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFiltroAtuacao('todos')}
+        >
+          Todas
+        </Button>
+        <Button
+          variant={filtroAtuacao === 'tecnico' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFiltroAtuacao('tecnico')}
+          className="gap-1"
+        >
+          <Wrench className="h-3.5 w-3.5" />
+          Técnico
+        </Button>
+        <Button
+          variant={filtroAtuacao === 'aguardando_pagamento' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFiltroAtuacao('aguardando_pagamento')}
+          className="gap-1"
+        >
+          <CreditCard className="h-3.5 w-3.5" />
+          Aguardando Pagamento
+        </Button>
+        <Button
+          variant={filtroAtuacao === 'pendentes_financeiro' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setFiltroAtuacao('pendentes_financeiro')}
+          className="gap-1"
+        >
+          <CheckCircle className="h-3.5 w-3.5" />
+          Pendentes Financeiro
+        </Button>
+      </div>
+
       {/* Filtros */}
       <Card className="mb-6">
         <CardContent className="p-4">
@@ -362,10 +435,14 @@ export default function OSAssistencia() {
                   <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="Serviço concluído">Serviço concluído</SelectItem>
                   <SelectItem value="Em serviço">Em serviço</SelectItem>
+                  <SelectItem value="Em Execução">Em Execução</SelectItem>
                   <SelectItem value="Aguardando Peça">Aguardando Peça</SelectItem>
+                  <SelectItem value="Aguardando Recebimento">Aguardando Recebimento</SelectItem>
+                  <SelectItem value="Aguardando Pagamento">Aguardando Pagamento</SelectItem>
                   <SelectItem value="Solicitação Enviada">Solicitação Enviada</SelectItem>
                   <SelectItem value="Em Análise">Em Análise</SelectItem>
                   <SelectItem value="Peça Recebida">Peça Recebida</SelectItem>
+                  <SelectItem value="Concluído">Concluído</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -395,10 +472,10 @@ export default function OSAssistencia() {
               <TableHead>Cliente</TableHead>
               <TableHead>IMEI</TableHead>
               <TableHead>Origem</TableHead>
-              <TableHead>Valor Produto</TableHead>
               <TableHead>Técnico</TableHead>
               <TableHead>Loja</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Próxima Atuação</TableHead>
               <TableHead>SLA</TableHead>
               <TableHead>Valor Total</TableHead>
               <TableHead className="text-center">Ações</TableHead>
@@ -414,10 +491,10 @@ export default function OSAssistencia() {
                 <TableCell>{getClienteNome(os.clienteId)}</TableCell>
                 <TableCell className="font-mono text-xs">{getIMEI(os)}</TableCell>
                 <TableCell>{getOrigemBadge(os)}</TableCell>
-                <TableCell>{getValorProduto(os)}</TableCell>
                 <TableCell>{getTecnicoNome(os.tecnicoId)}</TableCell>
                 <TableCell className="text-xs">{getLojaNome(os.lojaId)}</TableCell>
                 <TableCell>{getStatusBadge(os.status)}</TableCell>
+                <TableCell>{getProximaAtuacaoBadge(os.proximaAtuacao)}</TableCell>
                 <TableCell>{getSLADisplay(os.dataHora)}</TableCell>
                 <TableCell className="font-medium">{formatCurrency(os.valorTotal)}</TableCell>
                 <TableCell>

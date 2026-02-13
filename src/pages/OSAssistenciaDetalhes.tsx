@@ -23,7 +23,7 @@ import { getPecas } from '@/utils/pecasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
-import { ArrowLeft, FileText, Clock, AlertTriangle, User, Wrench, MapPin, Calendar, CreditCard, Save, Edit, Package, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, Clock, AlertTriangle, User, Wrench, MapPin, Calendar, CreditCard, Save, Edit, Package, Plus, Trash2, CheckCircle, ImageIcon, DollarSign, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import QRCode from 'qrcode';
 import { toast } from 'sonner';
@@ -48,6 +48,10 @@ export default function OSAssistenciaDetalhes() {
   const [editDescricao, setEditDescricao] = useState('');
   const [editPecas, setEditPecas] = useState<OrdemServico['pecas']>([]);
   const [editPagamentosQuadro, setEditPagamentosQuadro] = useState<PagamentoVendaType[]>([]);
+
+  // Campos Etapa 2 - Avaliação Técnica
+  const [valorCustoTecnico, setValorCustoTecnico] = useState<number>(0);
+  const [valorVendaTecnico, setValorVendaTecnico] = useState<number>(0);
 
   // Solicitação de peças form
   const [novaSolPeca, setNovaSolPeca] = useState('');
@@ -83,8 +87,9 @@ export default function OSAssistenciaDetalhes() {
           comprovante: '',
           comprovanteNome: '',
         })));
+        setValorCustoTecnico(ordem.valorCustoTecnico || 0);
+        setValorVendaTecnico(ordem.valorVendaTecnico || 0);
       }
-      // Buscar solicitações de peças vinculadas à OS
       const solicitacoes = getSolicitacoesByOS(id);
       setSolicitacoesOS(solicitacoes);
     }
@@ -190,9 +195,86 @@ export default function OSAssistenciaDetalhes() {
         return <Badge className="bg-emerald-500 hover:bg-emerald-600">Peça Recebida</Badge>;
       case 'Peça em Estoque / Aguardando Reparo':
         return <Badge className="bg-lime-500 hover:bg-lime-600">Aguardando Reparo</Badge>;
+      case 'Aguardando Recebimento':
+        return <Badge className="bg-cyan-500 hover:bg-cyan-600">Aguardando Recebimento</Badge>;
+      case 'Em Execução':
+        return <Badge className="bg-indigo-500 hover:bg-indigo-600">Em Execução</Badge>;
+      case 'Aguardando Pagamento':
+        return <Badge className="bg-amber-500 hover:bg-amber-600">Aguardando Pagamento</Badge>;
+      case 'Concluído':
+        return <Badge className="bg-emerald-600 hover:bg-emerald-700">Concluído</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
+  };
+
+  const handleConcluirServico = () => {
+    if (!os) return;
+    if (!valorCustoTecnico && !valorVendaTecnico) {
+      toast.error('Preencha os valores de Custo e Venda antes de concluir o serviço.');
+      return;
+    }
+    updateOrdemServico(os.id, {
+      status: 'Aguardando Pagamento',
+      proximaAtuacao: 'Vendedor: Registrar Pagamento',
+      valorCustoTecnico,
+      valorVendaTecnico,
+      timeline: [...os.timeline, {
+        data: new Date().toISOString(),
+        tipo: 'conclusao_servico',
+        descricao: `Serviço concluído pelo técnico. Custo: R$ ${valorCustoTecnico.toFixed(2)}, Venda: R$ ${valorVendaTecnico.toFixed(2)}`,
+        responsavel: tecnico?.nome || 'Técnico'
+      }]
+    });
+    const updatedOS = getOrdemServicoById(os.id);
+    setOS(updatedOS || null);
+    toast.success('Serviço concluído! Aguardando pagamento do vendedor.');
+  };
+
+  const handleSalvarPagamentoVendedor = () => {
+    if (!os) return;
+    if (!os.valorCustoTecnico && !os.valorVendaTecnico) {
+      toast.error('O técnico precisa preencher os campos de Valor de Custo e Valor de Venda antes do registro de pagamento.');
+      return;
+    }
+    const pagamentosConvertidos = editPagamentosQuadro.map(p => ({
+      id: p.id,
+      meio: p.meioPagamento,
+      valor: p.valor,
+      parcelas: p.parcelas
+    }));
+    const valorTotal = editPagamentosQuadro.reduce((acc, p) => acc + p.valor, 0);
+    updateOrdemServico(os.id, {
+      pagamentos: pagamentosConvertidos,
+      valorTotal,
+      proximaAtuacao: 'Financeiro: Conferir Lançamento',
+      timeline: [...os.timeline, {
+        data: new Date().toISOString(),
+        tipo: 'pagamento',
+        descricao: `Pagamento registrado pelo vendedor: R$ ${valorTotal.toFixed(2)}`,
+        responsavel: 'Vendedor'
+      }]
+    });
+    const updatedOS = getOrdemServicoById(os.id);
+    setOS(updatedOS || null);
+    toast.success('Pagamento registrado! Aguardando validação do financeiro.');
+  };
+
+  const handleValidarFinanceiro = () => {
+    if (!os) return;
+    updateOrdemServico(os.id, {
+      status: 'Concluído',
+      proximaAtuacao: 'Concluído',
+      timeline: [...os.timeline, {
+        data: new Date().toISOString(),
+        tipo: 'validacao_financeiro',
+        descricao: 'Lançamento validado pelo financeiro. OS concluída.',
+        responsavel: 'Financeiro'
+      }]
+    });
+    const updatedOS = getOrdemServicoById(os.id);
+    setOS(updatedOS || null);
+    toast.success('Lançamento validado! OS concluída com sucesso.');
   };
 
   const getSetorBadge = (setor: string) => {

@@ -356,12 +356,12 @@ export const aprovarSolicitacao = (id: string, dados: {
     status: 'Aprovada'
   };
 
-  // Atualizar status da OS correspondente para "Em Análise"
+  // Atualizar status da OS correspondente para "Aguardando Recebimento"
   const osId = solicitacoes[index].osId;
   const os = getOrdemServicoById(osId);
   if (os) {
     updateOrdemServico(osId, {
-      status: 'Em Análise',
+      status: 'Aguardando Recebimento',
       timeline: [...os.timeline, {
         data: new Date().toISOString(),
         tipo: 'peca',

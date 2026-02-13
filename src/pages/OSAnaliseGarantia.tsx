@@ -157,7 +157,7 @@ export default function OSAnaliseGarantia() {
       let clienteId = '';
       let modeloAparelho = '';
       let imeiAparelho = '';
-      let origemOS: 'Garantia' | 'Estoque' | 'Venda' | 'Avulso' = 'Avulso';
+      let origemOS: 'Garantia' | 'Estoque' | 'Venda' | 'Balcão' = 'Balcão';
 
       if (registroAprovado.origem === 'Garantia' && registroAprovado.origemId) {
         origemOS = 'Garantia';
@@ -198,6 +198,7 @@ export default function OSAnaliseGarantia() {
           responsavel: 'Sistema'
         }],
         origemOS,
+        proximaAtuacao: 'Técnico: Avaliar/Executar',
         garantiaId: registroAprovado.origem === 'Garantia' ? registroAprovado.origemId : undefined,
         modeloAparelho,
         imeiAparelho,

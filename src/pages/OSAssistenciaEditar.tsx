@@ -55,7 +55,7 @@ interface PagamentoForm {
   parcelas: string;
 }
 
-type OSStatus = 'Serviço concluído' | 'Em serviço' | 'Aguardando Peça' | 'Solicitação Enviada' | 'Em Análise' | 'Peça Recebida' | 'Aguardando Aprovação do Gestor' | 'Rejeitado pelo Gestor' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Aguardando Chegada da Peça' | 'Peça em Estoque / Aguardando Reparo';
+type OSStatus = 'Serviço concluído' | 'Em serviço' | 'Aguardando Peça' | 'Solicitação Enviada' | 'Em Análise' | 'Peça Recebida' | 'Aguardando Aprovação do Gestor' | 'Rejeitado pelo Gestor' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Aguardando Chegada da Peça' | 'Peça em Estoque / Aguardando Reparo' | 'Aguardando Recebimento' | 'Em Execução' | 'Aguardando Pagamento' | 'Concluído';
 
 export default function OSAssistenciaEditar() {
   const navigate = useNavigate();
@@ -380,7 +380,7 @@ export default function OSAssistenciaEditar() {
               <div>
                 <span className="text-muted-foreground">Origem:</span>
                 <Badge variant="outline">
-                  {osOriginal?.origemOS || 'Avulso'}
+                  {osOriginal?.origemOS || 'Balcão'}
                 </Badge>
               </div>
             </div>

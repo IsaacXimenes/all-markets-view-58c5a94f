@@ -67,7 +67,8 @@ export interface Pagamento {
 
 export interface TimelineOS {
   data: string;
-  tipo: 'registro' | 'status' | 'peca' | 'pagamento' | 'aprovacao' | 'rejeicao' | 'financeiro' | 'baixa_estoque';
+  fotos?: string[]; // URLs/base64 de fotos associadas ao evento
+  tipo: 'registro' | 'status' | 'peca' | 'pagamento' | 'aprovacao' | 'rejeicao' | 'financeiro' | 'baixa_estoque' | 'foto' | 'conclusao_servico' | 'validacao_financeiro';
   descricao: string;
   responsavel: string;
   motivo?: string;
@@ -80,7 +81,7 @@ export interface OrdemServico {
   setor: 'GARANTIA' | 'ASSISTÊNCIA' | 'TROCA';
   tecnicoId: string;
   lojaId: string;
-  status: 'Serviço concluído' | 'Em serviço' | 'Aguardando Peça' | 'Solicitação Enviada' | 'Em Análise' | 'Peça Recebida' | 'Aguardando Aprovação do Gestor' | 'Rejeitado pelo Gestor' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Aguardando Chegada da Peça' | 'Peça em Estoque / Aguardando Reparo';
+  status: 'Serviço concluído' | 'Em serviço' | 'Aguardando Peça' | 'Solicitação Enviada' | 'Em Análise' | 'Peça Recebida' | 'Aguardando Aprovação do Gestor' | 'Rejeitado pelo Gestor' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Aguardando Chegada da Peça' | 'Peça em Estoque / Aguardando Reparo' | 'Aguardando Recebimento' | 'Em Execução' | 'Aguardando Pagamento' | 'Concluído';
   pecas: PecaServico[];
   pagamentos: Pagamento[];
   descricao: string;
@@ -88,7 +89,7 @@ export interface OrdemServico {
   valorTotal: number;
   custoTotal: number;
   // Novos campos para origem e valor do produto
-  origemOS?: 'Venda' | 'Garantia' | 'Estoque' | 'Avulso';
+  origemOS?: 'Venda' | 'Garantia' | 'Estoque' | 'Balcão';
   vendaId?: string;
   garantiaId?: string;
   produtoId?: string;
@@ -96,6 +97,11 @@ export interface OrdemServico {
   modeloAparelho?: string;
   imeiAparelho?: string;
   idVendaAntiga?: string; // ID da venda no sistema antigo (quando origem = Thiago Imports)
+  // Campos do fluxo de 3 etapas
+  proximaAtuacao?: 'Técnico: Avaliar/Executar' | 'Vendedor: Registrar Pagamento' | 'Financeiro: Conferir Lançamento' | 'Concluído';
+  valorCustoTecnico?: number;
+  valorVendaTecnico?: number;
+  fotosEntrada?: string[];
 }
 
 // Mock data

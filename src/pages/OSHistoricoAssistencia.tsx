@@ -55,12 +55,12 @@ export default function OSHistoricoAssistencia() {
   const [filtroCliente, setFiltroCliente] = useState('');
 
   // Determinar origem da OS
-  const getOrigemOS = (os: OrdemServico): 'Garantia' | 'Estoque' | 'Trade-In' | 'Avulso' => {
+  const getOrigemOS = (os: OrdemServico): 'Garantia' | 'Estoque' | 'Trade-In' | 'Balcão' => {
     if ((os as any).origemGarantiaId) return 'Garantia';
     if ((os as any).origemProdutoId) return 'Estoque';
     if ((os as any).origemVendaId && os.setor === 'TROCA') return 'Trade-In';
     if (os.setor === 'GARANTIA') return 'Garantia';
-    return 'Avulso';
+    return 'Balcão';
   };
 
   const ordensFiltradas = useMemo(() => {
@@ -136,7 +136,7 @@ export default function OSHistoricoAssistencia() {
         return (
           <Badge className="bg-gray-500/10 text-gray-600 border-gray-500/30 gap-1">
             <User className="h-3 w-3" />
-            Avulso
+            Balcão
           </Badge>
         );
     }
@@ -178,7 +178,7 @@ export default function OSHistoricoAssistencia() {
     garantia: ordensFiltradas.filter(os => getOrigemOS(os) === 'Garantia').length,
     estoque: ordensFiltradas.filter(os => getOrigemOS(os) === 'Estoque').length,
     tradeIn: ordensFiltradas.filter(os => getOrigemOS(os) === 'Trade-In').length,
-    avulso: ordensFiltradas.filter(os => getOrigemOS(os) === 'Avulso').length
+    balcao: ordensFiltradas.filter(os => getOrigemOS(os) === 'Balcão').length
   };
 
   return (
@@ -237,11 +237,11 @@ export default function OSHistoricoAssistencia() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <User className="h-4 w-4 text-gray-500" />
-              Avulso
+              Balcão
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{stats.avulso}</div>
+            <div className="text-2xl font-bold text-gray-600">{stats.balcao}</div>
           </CardContent>
         </Card>
       </div>
@@ -281,7 +281,7 @@ export default function OSHistoricoAssistencia() {
                   <SelectItem value="Garantia">Garantia</SelectItem>
                   <SelectItem value="Estoque">Estoque</SelectItem>
                   <SelectItem value="Trade-In">Trade-In</SelectItem>
-                  <SelectItem value="Avulso">Avulso</SelectItem>
+                  <SelectItem value="Balcão">Balcão</SelectItem>
                 </SelectContent>
               </Select>
             </div>

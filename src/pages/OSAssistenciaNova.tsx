@@ -41,7 +41,7 @@ import { getGarantiaById } from '@/utils/garantiasApi';
 import { getRegistrosAnaliseGarantia } from '@/utils/garantiasApi';
 import { getProdutoPendenteById } from '@/utils/osApi';
 import { getPecas, Peca, darBaixaPeca, initializePecasWithLojaIds } from '@/utils/pecasApi';
-import { Plus, Trash2, Search, AlertTriangle, Clock, User, History, ArrowLeft, Smartphone, Save, Package, Info, Camera } from 'lucide-react';
+import { Plus, Trash2, Search, AlertTriangle, Clock, User, History, ArrowLeft, Smartphone, Save, Package, Info, Camera, ImageIcon, X } from 'lucide-react';
 import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
 import { Pagamento as PagamentoVenda } from '@/utils/vendasApi';
 import { useToast } from '@/hooks/use-toast';
@@ -159,6 +159,10 @@ export default function OSAssistenciaNova() {
     modeloCompativel: '',
     prioridade: 'Normal'
   });
+
+  // Fotos de entrada (câmera)
+  const [fotosEntrada, setFotosEntrada] = useState<string[]>([]);
+  const fotoInputRef = useRef<HTMLInputElement>(null);
 
   // Dialogs
   const [buscarClienteOpen, setBuscarClienteOpen] = useState(false);
@@ -672,7 +676,7 @@ export default function OSAssistenciaNova() {
     const origemOSFormatada = origemOS === 'venda' ? 'Venda' as const
       : origemOS === 'garantia' ? 'Garantia' as const
       : origemOS === 'estoque' ? 'Estoque' as const
-      : 'Avulso' as const;
+      : 'Balcão' as const;
 
     const novaOS = addOrdemServico({
       dataHora,
@@ -694,7 +698,9 @@ export default function OSAssistenciaNova() {
       modeloAparelho: modeloAparelho || undefined,
       imeiAparelho: imeiAparelho || undefined,
       valorProdutoOrigem: dadosOrigem?.valorProduto || dadosOrigem?.valor || undefined,
-      idVendaAntiga: idVendaAntiga || undefined
+      idVendaAntiga: idVendaAntiga || undefined,
+      proximaAtuacao: 'Técnico: Avaliar/Executar',
+      fotosEntrada: fotosEntrada.length > 0 ? fotosEntrada : undefined
     });
 
     // Dar baixa automática nas peças do estoque
@@ -934,16 +940,56 @@ export default function OSAssistenciaNova() {
                 </div>
               </div>
             </div>
-            {origemAparelho && (
-              <div className={cn(
-                "mt-4 p-3 rounded-lg text-sm",
-                origemAparelho === 'Thiago Imports' ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300"
-              )}>
-                {origemAparelho === 'Thiago Imports' 
-                  ? "✓ O aparelho foi adquirido na Thiago Imports e possui garantia da loja."
-                  : "⚠ O aparelho foi adquirido externamente. Verificar documentação."}
+            {/* Fotos do Estado Físico */}
+            <div className="mt-4 space-y-3">
+              <Label className="flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" />
+                Fotos do Estado Físico
+              </Label>
+              <div className="flex flex-wrap gap-3">
+                {fotosEntrada.map((foto, idx) => (
+                  <div key={idx} className="relative group">
+                    <img src={foto} alt={`Foto ${idx + 1}`} className="w-20 h-20 object-cover rounded-lg border" />
+                    <button
+                      type="button"
+                      onClick={() => setFotosEntrada(prev => prev.filter((_, i) => i !== idx))}
+                      className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => fotoInputRef.current?.click()}
+                  className="w-20 h-20 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                >
+                  <Camera className="h-5 w-5" />
+                  <span className="text-[10px]">Tirar Foto</span>
+                </button>
+                <input
+                  ref={fotoInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setFotosEntrada(prev => [...prev, reader.result as string]);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                    e.target.value = '';
+                  }}
+                />
               </div>
-            )}
+              {fotosEntrada.length > 0 && (
+                <p className="text-xs text-muted-foreground">{fotosEntrada.length} foto(s) capturada(s)</p>
+              )}
+            </div>
             {origemAparelho === 'Thiago Imports' && (
               <div className="mt-4 space-y-2">
                 <Label>ID da Venda Antiga</Label>
