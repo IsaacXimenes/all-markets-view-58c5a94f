@@ -120,6 +120,15 @@ import GestaoAdmIndicadores from "./pages/GestaoAdmIndicadores";
 import GestaoAdmAtividades from "./pages/GestaoAdmAtividades";
 import CadastrosAtividades from "./pages/CadastrosAtividades";
 import CadastrosLogsAuditoria from "./pages/CadastrosLogsAuditoria";
+import DadosAntigoClientes from "./pages/DadosAntigoClientes";
+import DadosAntigoCompras from "./pages/DadosAntigoCompras";
+import DadosAntigoComprasPagamentos from "./pages/DadosAntigoComprasPagamentos";
+import DadosAntigoEntradas from "./pages/DadosAntigoEntradas";
+import DadosAntigoOrdemServico from "./pages/DadosAntigoOrdemServico";
+import DadosAntigoReparos from "./pages/DadosAntigoReparos";
+import DadosAntigoVendas from "./pages/DadosAntigoVendas";
+import DadosAntigoVendasPagamentos from "./pages/DadosAntigoVendasPagamentos";
+import DadosAntigoVendasProdutos from "./pages/DadosAntigoVendasProdutos";
 
 const queryClient = new QueryClient();
 
@@ -263,6 +272,17 @@ const App = () => (
               <Route path="/gestao-administrativa/atividades" element={<GestaoAdmAtividades />} />
               <Route path="/gestao-administrativa/stories/lote/:id/conferencia" element={<GestaoAdmStoriesConferencia />} />
               <Route path="/gestao-administrativa/stories/lote/:id/validacao" element={<GestaoAdmStoriesValidacao />} />
+
+              {/* Dados - Sistema Antigo */}
+              <Route path="/dados-sistema-antigo/clientes" element={<DadosAntigoClientes />} />
+              <Route path="/dados-sistema-antigo/compras" element={<DadosAntigoCompras />} />
+              <Route path="/dados-sistema-antigo/compras-pagamentos" element={<DadosAntigoComprasPagamentos />} />
+              <Route path="/dados-sistema-antigo/entradas" element={<DadosAntigoEntradas />} />
+              <Route path="/dados-sistema-antigo/ordem-servico" element={<DadosAntigoOrdemServico />} />
+              <Route path="/dados-sistema-antigo/reparos" element={<DadosAntigoReparos />} />
+              <Route path="/dados-sistema-antigo/vendas" element={<DadosAntigoVendas />} />
+              <Route path="/dados-sistema-antigo/vendas-pagamentos" element={<DadosAntigoVendasPagamentos />} />
+              <Route path="/dados-sistema-antigo/vendas-produtos" element={<DadosAntigoVendasProdutos />} />
             </Route>
             
             {/* Rota 404 */}
