@@ -1,43 +1,27 @@
 
 
-## Detalhes da Nota como Modal (mesma visao, sem navegacao)
+## Detalhes da Nota em Tela Cheia (sem modal)
 
 ### Objetivo
-Ao clicar no olho em **Financeiro > Notas Pendentes**, abrir um **Dialog (modal)** com exatamente a mesma visao da pagina de detalhes do Estoque, sem navegar para outra rota.
+Substituir o modal de detalhes por uma visualizacao full-screen inline. Ao clicar no olho, a listagem de notas e substituida pelo conteudo de detalhes da nota, com um botao "Voltar" para retornar a listagem.
 
 ### Abordagem
 
-1. **Extrair componente reutilizavel** `NotaDetalhesContent`
-   - Mover todo o conteudo visual de `EstoqueNotaDetalhes.tsx` (cards de status, alertas, informacoes, produtos, timeline, pagamentos) para um componente independente em `src/components/estoque/NotaDetalhesContent.tsx`
-   - O componente recebe a `nota: NotaEntrada` como prop (sem depender de `useParams`)
-   - O botao "Voltar" e os botoes de acao (Cadastrar Produtos, Conferir) ficam condicionais via prop `showActions?: boolean`
-
-2. **Atualizar `EstoqueNotaDetalhes.tsx`**
-   - Importar e renderizar `NotaDetalhesContent` passando a nota carregada via `useParams`
-   - Manter o layout com `EstoqueLayout` e o botao de voltar
-
-3. **Atualizar `FinanceiroNotasPendencias.tsx`**
-   - Reverter o `navigate()` para abrir um Dialog em tela cheia (`max-w-5xl`)
-   - Dentro do Dialog, renderizar `NotaDetalhesContent` com a nota selecionada
-   - Incluir botao de pagamento no rodape do modal quando aplicavel
-   - Prop `showActions={false}` para ocultar botoes de acao do estoque
-
-### Resultado
-O usuario ve exatamente a mesma interface de detalhes (cards, produtos, timeline, pagamentos) tanto no Estoque quanto no Financeiro, sem sair da pagina do Financeiro.
+Usar um estado `notaDetalhes` no componente `FinanceiroNotasPendencias.tsx`. Quando preenchido, ao inves de renderizar os cards de resumo, filtros e tabela, renderiza o componente `NotaDetalhesContent` em tela cheia dentro do `FinanceiroLayout`, com um botao "Voltar" no topo.
 
 ### Detalhes tecnicos
 
-**Novo arquivo:** `src/components/estoque/NotaDetalhesContent.tsx`
-- Props: `nota: NotaEntrada`, `showActions?: boolean`
-- Contem: cards de status/atuacao/pagamento/progresso, alertas, info detalhada, tabela de produtos (colapsavel), timeline (colapsavel), historico de pagamentos
-
-**Arquivo:** `src/pages/EstoqueNotaDetalhes.tsx`
-- Importa `NotaDetalhesContent` e passa `nota` + `showActions={true}`
-- Mantem logica de carregamento e botao voltar
-
 **Arquivo:** `src/pages/FinanceiroNotasPendencias.tsx`
-- Adiciona estado `dialogDetalhes` (boolean)
-- `handleVerDetalhes` seta a nota e abre o dialog
-- Renderiza `Dialog` com `NotaDetalhesContent` dentro, com `showActions={false}`
-- Botao de pagamento no rodape do modal
+
+1. Remover o `Dialog` de detalhes e o estado `dialogDetalhes`
+2. Remover imports de `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `ScrollArea`
+3. Manter o estado `notaSelecionada` para controlar a visualizacao
+4. Adicionar estado `modoDetalhes` (boolean) - quando true, exibe detalhes full-screen
+5. No `handleVerDetalhes`: setar a nota e ativar `modoDetalhes = true`
+6. No JSX: condicional - se `modoDetalhes && notaSelecionada`, renderizar:
+   - Botao "Voltar" com seta (ArrowLeft) que reseta `modoDetalhes = false`
+   - `NotaDetalhesContent` com `showActions={false}` ocupando toda a area
+7. Caso contrario, renderizar o conteudo normal (cards, filtros, tabela)
+
+Resultado: ao clicar no olho, a tela inteira muda para mostrar os detalhes da nota (mesma visao do Estoque), e o botao "Voltar" retorna a listagem.
 
