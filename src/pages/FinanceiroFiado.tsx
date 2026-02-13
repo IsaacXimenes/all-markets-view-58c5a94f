@@ -16,10 +16,13 @@ import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovant
 import { InputComMascara } from '@/components/ui/InputComMascara';
 import {
   Download, Filter, X, Eye, DollarSign, CheckCircle2, Clock,
-  FileText, CalendarDays, AlertTriangle, Plus, MessageSquare
+  FileText, CalendarDays, AlertTriangle, Plus, MessageSquare, Check
 } from 'lucide-react';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
+import { useFluxoVendas } from '@/hooks/useFluxoVendas';
+import { finalizarVendaFiado, getCorBadgeStatus, VendaComFluxo } from '@/utils/fluxoVendasApi';
+import { formatCurrency as formatCurrencyUtil } from '@/utils/formatUtils';
 import {
   getDividasFiado,
   getPagamentosDivida,
@@ -66,6 +69,11 @@ export default function FinanceiroFiado() {
   const [novaAnotacaoTexto, setNovaAnotacaoTexto] = useState('');
   const [novaAnotacaoImportante, setNovaAnotacaoImportante] = useState(false);
   const [anotacaoDividaId, setAnotacaoDividaId] = useState('');
+
+  // Vendas pendentes de conferência Fiado
+  const { vendas: vendasPendentes, recarregar: recarregarVendas } = useFluxoVendas({
+    status: 'Conferência Fiado'
+  });
 
   const recarregar = () => setDividas(getDividasFiado());
 
@@ -274,6 +282,68 @@ export default function FinanceiroFiado() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Vendas Pendentes de Conferência Fiado */}
+      {vendasPendentes.length > 0 && (
+        <Card className="mb-6 border-purple-200 dark:border-purple-800">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-400">
+              <Clock className="h-5 w-5" />
+              Vendas Pendentes de Conferência ({vendasPendentes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="w-full" type="always">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID Venda</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Loja</TableHead>
+                    <TableHead className="text-right">Valor Total</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {vendasPendentes.map((venda: VendaComFluxo) => (
+                    <TableRow key={venda.id} className="bg-purple-500/10 hover:bg-purple-500/20">
+                      <TableCell className="font-mono text-xs">{venda.id}</TableCell>
+                      <TableCell>{new Date(venda.dataHora).toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell className="font-medium">{venda.clienteNome}</TableCell>
+                      <TableCell>{venda.lojaVenda}</TableCell>
+                      <TableCell className="text-right font-semibold">{formatCurrencyUtil(venda.total || 0)}</TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                          onClick={() => {
+                            const resultado = finalizarVendaFiado(
+                              venda.id,
+                              user?.colaborador?.id || 'USR-001',
+                              user?.colaborador?.nome || 'Usuário'
+                            );
+                            if (resultado) {
+                              toast.success(`Venda ${venda.id} finalizada! Dívida criada automaticamente.`);
+                              recarregar();
+                              recarregarVendas();
+                            } else {
+                              toast.error('Erro ao finalizar venda Fiado.');
+                            }
+                          }}
+                        >
+                          <Check className="h-4 w-4 mr-1" /> Finalizar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <ScrollBar orientation="horizontal" className="h-4" />
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filtros rápidos */}
       <div className="flex flex-wrap gap-2 mb-4">

@@ -313,7 +313,7 @@ export default function VendasConferenciaGestor() {
         toast.error('Erro ao aprovar venda. Verifique o status.');
       }
     } else {
-      // Fluxo normal: enviar para Conferência Financeiro
+      // Fluxo normal: enviar para Conferência Financeiro (ou Fiado se aplicável)
       const resultado = aprovarGestor(
         vendaSelecionada.id,
         usuarioLogado.id,
@@ -321,7 +321,9 @@ export default function VendasConferenciaGestor() {
       );
 
       if (resultado) {
-        toast.success(`Venda ${vendaSelecionada.id} aprovada! Enviada para Conferência Financeira.`);
+        const isFiado = vendaSelecionada.pagamentos?.some((p: any) => p.isFiado) || false;
+        const destino = isFiado ? 'Conferência - Fiado' : 'Conferência Financeira';
+        toast.success(`Venda ${vendaSelecionada.id} aprovada! Enviada para ${destino}.`);
         handleFecharPainelLateral();
         recarregar();
       } else {

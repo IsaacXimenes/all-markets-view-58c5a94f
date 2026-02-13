@@ -4,6 +4,7 @@ import { Venda, getVendas, getVendaById, updateVenda as updateVendaBase } from '
 import { migrarTradeInsParaPendentes } from './osApi';
 import { enviarNotificacaoVenda, DadosVendaNotificacao } from './whatsappNotificacaoApi';
 import { addDespesa } from './financeApi';
+import { criarDividaFiado } from './fiadoApi';
 
 // Novo tipo para status de venda no fluxo de conferência
 export type StatusVenda = 
@@ -12,6 +13,7 @@ export type StatusVenda =
   | 'Conferência Gestor'        // Após lançador aprovar
   | 'Recusada - Gestor'         // Se gestor recusar
   | 'Conferência Financeiro'    // Após gestor aprovar
+  | 'Conferência Fiado'         // Após gestor aprovar venda Fiado
   | 'Devolvido pelo Financeiro' // Se financeiro devolver
   | 'Pagamento Downgrade'       // Venda com saldo a devolver (troca > produtos)
   | 'Finalizado'                // Após financeiro finalizar
@@ -299,7 +301,7 @@ export const recusarGestor = (
   return getVendaComFluxo(vendaId);
 };
 
-// Aprovar (Gestor -> Financeiro)
+// Aprovar (Gestor -> Financeiro ou Fiado)
 export const aprovarGestor = (
   vendaId: string,
   usuarioId: string,
@@ -312,18 +314,24 @@ export const aprovarGestor = (
     return null;
   }
 
+  // Detectar se a venda tem pagamento Fiado
+  const venda = getVendaById(vendaId);
+  const isFiado = venda?.pagamentos?.some((p: any) => p.isFiado) || false;
+  const proximoStatus: StatusVenda = isFiado ? 'Conferência Fiado' : 'Conferência Financeiro';
+  const descricaoDestino = isFiado ? 'conferência fiado' : 'conferência financeira';
+
   const novaTimeline: TimelineVenda = {
     id: `TL-${Date.now()}`,
     dataHora: new Date().toISOString(),
     tipo: 'aprovacao_gestor',
     usuarioId,
     usuarioNome,
-    descricao: `Aprovado pelo gestor ${usuarioNome}. Enviado para conferência financeira.`
+    descricao: `Aprovado pelo gestor ${usuarioNome}. Enviado para ${descricaoDestino}.`
   };
 
   fluxoData[vendaId] = {
     ...dadosFluxo,
-    statusFluxo: 'Conferência Financeiro',
+    statusFluxo: proximoStatus,
     aprovacaoGestor: {
       usuarioId,
       usuarioNome,
@@ -552,6 +560,8 @@ export const getCorBadgeStatus = (status: StatusVenda): { bg: string; text: stri
       return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200' };
     case 'Conferência Financeiro':
       return { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-yellow-200' };
+    case 'Conferência Fiado':
+      return { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' };
     case 'Devolvido pelo Financeiro':
       return { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' };
     case 'Pagamento Downgrade':
@@ -686,6 +696,76 @@ export const enviarParaPagamentoDowngrade = (
   };
 
   saveFluxoData(fluxoData);
+  return getVendaComFluxo(vendaId);
+};
+
+// Finalizar venda Fiado (Conferência Fiado -> Finalizado + cria dívida)
+export const finalizarVendaFiado = (
+  vendaId: string,
+  usuarioId: string,
+  usuarioNome: string
+): VendaComFluxo | null => {
+  const fluxoData = getFluxoData();
+  const dadosFluxo = fluxoData[vendaId];
+  
+  if (!dadosFluxo || dadosFluxo.statusFluxo !== 'Conferência Fiado') {
+    console.log(`[Fluxo Vendas] Venda ${vendaId} não está em Conferência Fiado`);
+    return null;
+  }
+
+  const venda = getVendaById(vendaId);
+  if (!venda) return null;
+
+  const novaTimeline: TimelineVenda = {
+    id: `TL-${Date.now()}`,
+    dataHora: new Date().toISOString(),
+    tipo: 'finalizacao',
+    usuarioId,
+    usuarioNome,
+    descricao: `Venda Fiado finalizada por ${usuarioNome}. Dívida criada automaticamente.`
+  };
+
+  fluxoData[vendaId] = {
+    ...dadosFluxo,
+    statusFluxo: 'Finalizado',
+    aprovacaoFinanceiro: {
+      usuarioId,
+      usuarioNome,
+      dataHora: new Date().toISOString()
+    },
+    timelineFluxo: [...(dadosFluxo.timelineFluxo || []), novaTimeline],
+    bloqueadoParaEdicao: true
+  };
+
+  updateVendaBase(vendaId, {
+    statusAtual: 'Finalizado',
+    bloqueadoParaEdicao: true
+  });
+
+  saveFluxoData(fluxoData);
+
+  // Criar dívida automaticamente
+  const pagFiado = venda.pagamentos?.find((p: any) => p.isFiado);
+  if (pagFiado) {
+    criarDividaFiado(
+      vendaId,
+      (venda as any).clienteId || '',
+      venda.clienteNome || '',
+      (venda as any).lojaId || venda.lojaVenda || '',
+      venda.lojaVenda || '',
+      pagFiado.valor || venda.total || 0,
+      (pagFiado as any).qtdVezes || 1,
+      (pagFiado as any).tipoRecorrencia || 'Mensal'
+    );
+    console.log(`[Fluxo Vendas - Fiado] Dívida criada para venda ${vendaId}`);
+  }
+
+  // Migrar trade-ins
+  if (venda.tradeIns && venda.tradeIns.length > 0) {
+    migrarTradeInsParaPendentes(venda.tradeIns, vendaId, venda.lojaVenda, usuarioNome);
+    console.log(`[Fluxo Vendas - Fiado] ${venda.tradeIns.length} trade-in(s) migrado(s)`);
+  }
+
   return getVendaComFluxo(vendaId);
 };
 
