@@ -317,6 +317,8 @@ export const adicionarPecaRetirada = (
     detalhes: `Peça adicionada: ${peca.nome} (${peca.quantidade}x ${peca.valorCustoPeca.toFixed(2)})`,
     tipoAlteracao: 'adicionar_peca'
   });
+
+  return { sucesso: true, mensagem: 'Peça adicionada com sucesso', retirada };
 };
 
 // Remover peça da lista
@@ -346,6 +348,8 @@ export const removerPecaRetirada = (
     detalhes: `Peça removida: ${pecaRemovida?.nome || pecaId}`,
     tipoAlteracao: 'remover_peca'
   });
+
+  return { sucesso: true, mensagem: 'Peça removida com sucesso', retirada };
 };
 
 // Calcular soma das peças
