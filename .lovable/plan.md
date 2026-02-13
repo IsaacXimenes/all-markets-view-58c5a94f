@@ -1,69 +1,42 @@
 
 
-## Plano: Nova Conta "Dinheiro - Geral" + Movimentacoes entre Contas
+## Plano: Destaque do Saldo no Card de Conta
 
-### 1. Cadastro da Nova Conta Financeira
-
-**Arquivo:** `src/utils/cadastrosApi.ts`
-
-- Adicionar a conta CTA-020 nos dados mockados, apos CTA-019:
-  - id: "CTA-020"
-  - nome: "Loja - JK Shopping - Dinheiro - Geral"
-  - tipo: "Dinheiro - Geral" (sem coluna extra de categoria)
-  - lojaVinculada: "db894e7d" (JK Shopping)
-  - cnpj: "62.968.637/0001-23"
-  - statusMaquina: "Propria", notaFiscal: true, status: "Ativo"
-
-Nenhuma alteracao na interface `ContaFinanceira` -- o campo `tipo` ja e string livre.
-
-**Arquivo:** `src/pages/CadastrosContasFinanceiras.tsx`
-
-- Adicionar "Dinheiro - Geral" como nova opcao no Select de Tipo no formulario
-
-### 2. Funcionalidade de Movimentacao entre Contas
-
-**Novo arquivo:** `src/utils/movimentacoesEntreContasApi.ts`
-
-- Interface `MovimentacaoEntreConta`:
-  - id, transacaoId (UUID compartilhado entre os 2 lancamentos)
-  - contaOrigemId, contaDestinoId
-  - valor (number)
-  - dataHora (string ISO)
-  - observacao (motivo: Sangria, Suprimento, Deposito, etc.)
-  - usuarioId, usuarioNome
-- Funcoes:
-  - `getMovimentacoesEntreConta()` -- lista todas (localStorage)
-  - `addMovimentacaoEntreConta(data)` -- cria movimentacao, persiste no localStorage, gera registro de auditoria
-
-### 3. Interface no Extrato por Conta
+### Alteracao
 
 **Arquivo:** `src/pages/FinanceiroExtratoContas.tsx`
 
-- Botao "Nova Movimentacao" (icone ArrowLeftRight) junto aos filtros
-- Modal de transferencia com:
-  - Select "Conta de Origem" (contas ativas do cadastro)
-  - Select "Conta de Destino" (contas ativas, excluindo a origem selecionada)
-  - Campo valor com mascara de moeda (InputComMascara)
-  - Campo data/hora (preenchido automaticamente, editavel)
-  - Campo observacao/motivo (Textarea)
-  - Validacoes: origem != destino, valor > 0, campos obrigatorios
-- Ao confirmar:
-  - Chamar `addMovimentacaoEntreConta`
-  - Integrar movimentacoes no calculo do `useMemo` de `movimentacoesPorConta` (saida na origem, entrada no destino)
-  - Atualizar estado para refletir imediatamente nos cards
-  - Toast de sucesso
+Reorganizar o layout do card de cada conta financeira para dar mais destaque ao saldo, movendo-o para logo abaixo da informacao da loja e acima das barras de Entradas/Saidas.
 
-### 4. Rastreabilidade e Auditoria
+**Layout atual:**
+```text
+Nome da Conta          [icone olho]
+Loja - Nome da Loja
+Entradas               R$ X.XXX,XX
+[barra verde]
+Saidas                 R$ X.XXX,XX
+[barra vermelha]
+---
+Saldo Atual            R$ X.XXX,XX
+```
 
-**Arquivo:** `src/pages/CadastrosLogsAuditoria.tsx`
+**Layout novo:**
+```text
+Nome da Conta          [icone olho]
+Loja - Nome da Loja
+SALDO DA CONTA: R$ X.XXX,XX
+Entradas               R$ X.XXX,XX
+[barra verde]
+Saidas                 R$ X.XXX,XX
+[barra vermelha]
+```
 
-- Adicionar "Movimentacao entre Contas" como opcao no filtro de modulos
-- Consumir os logs gerados pela API de movimentacoes e exibir na tabela unificada
+### Detalhes tecnicos
 
-### Arquivos modificados/criados
+- Mover o bloco de "Saldo" (linhas 342-350) para dentro do `CardHeader`, logo apos a linha da loja (apos linha 309)
+- Estilizar com fonte maior e em destaque (ex: `text-lg font-bold`)
+- Label "SALDO DA CONTA:" em texto uppercase/semibold
+- Remover o bloco antigo de saldo do final do `CardContent` (eliminar a divisoria `border-t`)
+- Manter a logica de calculo: `(conta.saldoInicial || 0) + entradas - saidas`
+- Manter cor condicional (verde positivo, vermelho negativo)
 
-- `src/utils/cadastrosApi.ts` -- nova conta mockada + opcao de tipo
-- `src/pages/CadastrosContasFinanceiras.tsx` -- nova opcao "Dinheiro - Geral" no Select de Tipo
-- `src/utils/movimentacoesEntreContasApi.ts` -- novo arquivo
-- `src/pages/FinanceiroExtratoContas.tsx` -- botao, modal e integracao no calculo
-- `src/pages/CadastrosLogsAuditoria.tsx` -- novo modulo de log
