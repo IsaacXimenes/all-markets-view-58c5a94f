@@ -1,27 +1,69 @@
 
 
-## Detalhes da Nota em Tela Cheia (sem modal)
+## Plano: Nova Conta "Dinheiro - Geral" + Movimentacoes entre Contas
 
-### Objetivo
-Substituir o modal de detalhes por uma visualizacao full-screen inline. Ao clicar no olho, a listagem de notas e substituida pelo conteudo de detalhes da nota, com um botao "Voltar" para retornar a listagem.
+### 1. Cadastro da Nova Conta Financeira
 
-### Abordagem
+**Arquivo:** `src/utils/cadastrosApi.ts`
 
-Usar um estado `notaDetalhes` no componente `FinanceiroNotasPendencias.tsx`. Quando preenchido, ao inves de renderizar os cards de resumo, filtros e tabela, renderiza o componente `NotaDetalhesContent` em tela cheia dentro do `FinanceiroLayout`, com um botao "Voltar" no topo.
+- Adicionar a conta CTA-020 nos dados mockados, apos CTA-019:
+  - id: "CTA-020"
+  - nome: "Loja - JK Shopping - Dinheiro - Geral"
+  - tipo: "Dinheiro - Geral" (sem coluna extra de categoria)
+  - lojaVinculada: "db894e7d" (JK Shopping)
+  - cnpj: "62.968.637/0001-23"
+  - statusMaquina: "Propria", notaFiscal: true, status: "Ativo"
 
-### Detalhes tecnicos
+Nenhuma alteracao na interface `ContaFinanceira` -- o campo `tipo` ja e string livre.
 
-**Arquivo:** `src/pages/FinanceiroNotasPendencias.tsx`
+**Arquivo:** `src/pages/CadastrosContasFinanceiras.tsx`
 
-1. Remover o `Dialog` de detalhes e o estado `dialogDetalhes`
-2. Remover imports de `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`, `ScrollArea`
-3. Manter o estado `notaSelecionada` para controlar a visualizacao
-4. Adicionar estado `modoDetalhes` (boolean) - quando true, exibe detalhes full-screen
-5. No `handleVerDetalhes`: setar a nota e ativar `modoDetalhes = true`
-6. No JSX: condicional - se `modoDetalhes && notaSelecionada`, renderizar:
-   - Botao "Voltar" com seta (ArrowLeft) que reseta `modoDetalhes = false`
-   - `NotaDetalhesContent` com `showActions={false}` ocupando toda a area
-7. Caso contrario, renderizar o conteudo normal (cards, filtros, tabela)
+- Adicionar "Dinheiro - Geral" como nova opcao no Select de Tipo no formulario
 
-Resultado: ao clicar no olho, a tela inteira muda para mostrar os detalhes da nota (mesma visao do Estoque), e o botao "Voltar" retorna a listagem.
+### 2. Funcionalidade de Movimentacao entre Contas
 
+**Novo arquivo:** `src/utils/movimentacoesEntreContasApi.ts`
+
+- Interface `MovimentacaoEntreConta`:
+  - id, transacaoId (UUID compartilhado entre os 2 lancamentos)
+  - contaOrigemId, contaDestinoId
+  - valor (number)
+  - dataHora (string ISO)
+  - observacao (motivo: Sangria, Suprimento, Deposito, etc.)
+  - usuarioId, usuarioNome
+- Funcoes:
+  - `getMovimentacoesEntreConta()` -- lista todas (localStorage)
+  - `addMovimentacaoEntreConta(data)` -- cria movimentacao, persiste no localStorage, gera registro de auditoria
+
+### 3. Interface no Extrato por Conta
+
+**Arquivo:** `src/pages/FinanceiroExtratoContas.tsx`
+
+- Botao "Nova Movimentacao" (icone ArrowLeftRight) junto aos filtros
+- Modal de transferencia com:
+  - Select "Conta de Origem" (contas ativas do cadastro)
+  - Select "Conta de Destino" (contas ativas, excluindo a origem selecionada)
+  - Campo valor com mascara de moeda (InputComMascara)
+  - Campo data/hora (preenchido automaticamente, editavel)
+  - Campo observacao/motivo (Textarea)
+  - Validacoes: origem != destino, valor > 0, campos obrigatorios
+- Ao confirmar:
+  - Chamar `addMovimentacaoEntreConta`
+  - Integrar movimentacoes no calculo do `useMemo` de `movimentacoesPorConta` (saida na origem, entrada no destino)
+  - Atualizar estado para refletir imediatamente nos cards
+  - Toast de sucesso
+
+### 4. Rastreabilidade e Auditoria
+
+**Arquivo:** `src/pages/CadastrosLogsAuditoria.tsx`
+
+- Adicionar "Movimentacao entre Contas" como opcao no filtro de modulos
+- Consumir os logs gerados pela API de movimentacoes e exibir na tabela unificada
+
+### Arquivos modificados/criados
+
+- `src/utils/cadastrosApi.ts` -- nova conta mockada + opcao de tipo
+- `src/pages/CadastrosContasFinanceiras.tsx` -- nova opcao "Dinheiro - Geral" no Select de Tipo
+- `src/utils/movimentacoesEntreContasApi.ts` -- novo arquivo
+- `src/pages/FinanceiroExtratoContas.tsx` -- botao, modal e integracao no calculo
+- `src/pages/CadastrosLogsAuditoria.tsx` -- novo modulo de log
