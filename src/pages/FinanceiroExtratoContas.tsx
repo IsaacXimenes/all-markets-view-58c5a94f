@@ -342,9 +342,9 @@ export default function FinanceiroExtratoContas() {
           {/* Saldo */}
           <div className="pt-2 border-t">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Saldo</span>
-              <span className={`font-bold ${entradas - saidas >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {formatCurrency(entradas - saidas)}
+              <span className="text-sm text-muted-foreground">Saldo Atual</span>
+              <span className={`font-bold ${(conta.saldoInicial || 0) + entradas - saidas >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {formatCurrency((conta.saldoInicial || 0) + entradas - saidas)}
               </span>
             </div>
           </div>
