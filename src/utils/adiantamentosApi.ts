@@ -21,6 +21,7 @@ export interface Adiantamento {
   valorFinal: number;
   quantidadeVezes: number;
   inicioCompetencia: string; // Formato: "Jan-2026"
+  contaSaidaId: string;
   historico: HistoricoAlteracao[];
 }
 
@@ -41,6 +42,7 @@ let adiantamentos: Adiantamento[] = [
     valorFinal: 1500,
     quantidadeVezes: 5,
     inicioCompetencia: 'Fev-2026',
+    contaSaidaId: 'CTA-015',
     historico: [
       {
         dataHora: '2026-01-12T11:00:00',
@@ -64,6 +66,7 @@ let adiantamentos: Adiantamento[] = [
     valorFinal: 1100,
     quantidadeVezes: 1,
     inicioCompetencia: 'Jan-2026',
+    contaSaidaId: 'CTA-019',
     historico: [
       {
         dataHora: '2026-01-05T16:30:00',
@@ -87,6 +90,7 @@ let adiantamentos: Adiantamento[] = [
     valorFinal: 3000,
     quantidadeVezes: 10,
     inicioCompetencia: 'Jan-2026',
+    contaSaidaId: 'CTA-016',
     historico: [
       {
         dataHora: '2025-12-20T08:20:00',

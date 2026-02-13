@@ -538,8 +538,8 @@ export default function RHFeedback() {
             </DialogTitle>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-6">
+          <ScrollArea className="flex-1 pr-4 overflow-x-hidden">
+            <div className="space-y-6 min-w-0 overflow-hidden">
               {/* Seleção do colaborador */}
               <div className="space-y-2">
                 <Label>Selecionar Colaborador *</Label>
@@ -624,7 +624,7 @@ export default function RHFeedback() {
                     {/* Upload de Arquivo */}
                     <div className="space-y-2">
                       <Label>Anexar Documento (PDF ou Imagem)</Label>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-2 gap-3 w-full min-w-0">
                         <label className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
                           <Upload className="h-6 w-6 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">Upload de Arquivo</span>

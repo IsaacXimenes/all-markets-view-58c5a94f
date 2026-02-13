@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, History, Download, X, Users, DollarSign, Wallet, Calendar } from 'lucide-react';
 import { formatCurrency, formatDateTime, exportToCSV } from '@/utils/formatUtils';
 import { useCadastroStore } from '@/store/cadastroStore';
+import { getContasFinanceiras, getContaFinanceiraById } from '@/utils/cadastrosApi';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { 
@@ -34,6 +35,7 @@ const RHAdiantamentos: React.FC = () => {
   const [adiantamentos, setAdiantamentos] = useState<Adiantamento[]>(getAdiantamentos());
   const lojas = obterLojasAtivas();
   const colaboradores = obterColaboradoresAtivos();
+  const contasFinanceiras = getContasFinanceiras();
   
   // Modais
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -52,7 +54,8 @@ const RHAdiantamentos: React.FC = () => {
     observacao: '',
     valorFinal: '',
     quantidadeVezes: '',
-    inicioCompetencia: ''
+    inicioCompetencia: '',
+    contaSaidaId: ''
   });
   
   // Filtros
@@ -135,7 +138,8 @@ const RHAdiantamentos: React.FC = () => {
       observacao: '',
       valorFinal: '',
       quantidadeVezes: '',
-      inicioCompetencia: ''
+      inicioCompetencia: '',
+      contaSaidaId: ''
     });
     setEditingAdiantamento(null);
   };
@@ -149,7 +153,8 @@ const RHAdiantamentos: React.FC = () => {
         observacao: adiantamento.observacao,
         valorFinal: adiantamento.valorFinal.toString(),
         quantidadeVezes: adiantamento.quantidadeVezes.toString(),
-        inicioCompetencia: adiantamento.inicioCompetencia
+        inicioCompetencia: adiantamento.inicioCompetencia,
+        contaSaidaId: adiantamento.contaSaidaId || ''
       });
     } else {
       resetForm();
@@ -159,7 +164,7 @@ const RHAdiantamentos: React.FC = () => {
   
   const handleSave = () => {
     // Validações
-    if (!formData.lojaId || !formData.colaboradorId || !formData.valorFinal || !formData.quantidadeVezes || !formData.inicioCompetencia) {
+    if (!formData.lojaId || !formData.colaboradorId || !formData.valorFinal || !formData.quantidadeVezes || !formData.inicioCompetencia || !formData.contaSaidaId) {
       toast({
         title: "Erro",
         description: "Preencha todos os campos obrigatórios",
@@ -203,7 +208,8 @@ const RHAdiantamentos: React.FC = () => {
         { campo: 'Observação', antigo: editingAdiantamento.observacao, novo: formData.observacao, valorAntigo: editingAdiantamento.observacao, valorNovo: formData.observacao },
         { campo: 'Valor Final', antigo: formatCurrency(editingAdiantamento.valorFinal), novo: formatCurrency(valorFinal), valorAntigo: editingAdiantamento.valorFinal.toString(), valorNovo: valorFinal.toString() },
         { campo: 'Quantidade de Vezes', antigo: editingAdiantamento.quantidadeVezes.toString(), novo: quantidadeVezes.toString(), valorAntigo: editingAdiantamento.quantidadeVezes.toString(), valorNovo: quantidadeVezes.toString() },
-        { campo: 'Início Competência', antigo: editingAdiantamento.inicioCompetencia, novo: formData.inicioCompetencia, valorAntigo: editingAdiantamento.inicioCompetencia, valorNovo: formData.inicioCompetencia }
+        { campo: 'Início Competência', antigo: editingAdiantamento.inicioCompetencia, novo: formData.inicioCompetencia, valorAntigo: editingAdiantamento.inicioCompetencia, valorNovo: formData.inicioCompetencia },
+        { campo: 'Conta de Saída', antigo: getContaFinanceiraById(editingAdiantamento.contaSaidaId)?.nome || '-', novo: getContaFinanceiraById(formData.contaSaidaId)?.nome || '-', valorAntigo: editingAdiantamento.contaSaidaId, valorNovo: formData.contaSaidaId }
       ];
       
       camposParaVerificar.forEach(({ campo, antigo, novo, valorAntigo, valorNovo }) => {
@@ -227,6 +233,7 @@ const RHAdiantamentos: React.FC = () => {
         valorFinal,
         quantidadeVezes,
         inicioCompetencia: formData.inicioCompetencia,
+        contaSaidaId: formData.contaSaidaId,
         historico: novoHistorico
       });
       
@@ -246,6 +253,7 @@ const RHAdiantamentos: React.FC = () => {
         valorFinal,
         quantidadeVezes,
         inicioCompetencia: formData.inicioCompetencia,
+        contaSaidaId: formData.contaSaidaId,
         historico: [{
           dataHora: agora,
           usuarioId: usuarioLogado.id,
@@ -297,6 +305,7 @@ const RHAdiantamentos: React.FC = () => {
         'Valor da Parcela': formatCurrency(calcularValorParcela(adiantamento.valorFinal, adiantamento.quantidadeVezes)),
         'Quantidade de Vezes': adiantamento.quantidadeVezes,
         'Início da Competência': adiantamento.inicioCompetencia,
+        'Conta de Saída': getContaFinanceiraById(adiantamento.contaSaidaId)?.nome || '-',
         'Situação': `${situacao.pagas}/${situacao.total} parcelas pagas`
       };
     });
@@ -508,6 +517,7 @@ const RHAdiantamentos: React.FC = () => {
                 <TableHead>Valor da Parcela</TableHead>
                 <TableHead>Qtd. Vezes</TableHead>
                 <TableHead>Início Competência</TableHead>
+                <TableHead>Conta de Saída</TableHead>
                 <TableHead>Situação</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
@@ -542,6 +552,7 @@ const RHAdiantamentos: React.FC = () => {
                     <TableCell>
                       <Badge variant="outline">{adiantamento.inicioCompetencia}</Badge>
                     </TableCell>
+                    <TableCell>{getContaFinanceiraById(adiantamento.contaSaidaId)?.nome || '-'}</TableCell>
                     <TableCell>{renderSituacao(adiantamento)}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -686,6 +697,20 @@ const RHAdiantamentos: React.FC = () => {
                 <SelectContent>
                   {mesesDisponiveis.map(mes => (
                     <SelectItem key={mes} value={mes}>{mes}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label>Conta de Saída *</Label>
+              <Select value={formData.contaSaidaId} onValueChange={v => setFormData(prev => ({ ...prev, contaSaidaId: v }))}>
+                <SelectTrigger className={!formData.contaSaidaId ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Selecione a conta..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {contasFinanceiras.filter(c => c.status === 'Ativo').map(conta => (
+                    <SelectItem key={conta.id} value={conta.id}>{conta.nome} ({conta.tipo})</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
