@@ -361,7 +361,7 @@ export default function RHFeedback() {
             </DialogTitle>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 pr-4">
+          <div className="flex-1 overflow-y-auto pr-4">
             <div className="space-y-6">
               {/* Info do feedback */}
               <Card className="bg-muted/50">
@@ -518,7 +518,7 @@ export default function RHFeedback() {
                 )}
               </div>
             </div>
-          </ScrollArea>
+          </div>
 
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setIsDetalhesDialogOpen(false)}>

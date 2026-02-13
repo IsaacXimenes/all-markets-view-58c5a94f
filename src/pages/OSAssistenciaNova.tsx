@@ -1140,14 +1140,9 @@ export default function OSAssistenciaNova() {
         </Card>
 
         {/* Peças/Serviços */}
-        <Card className={status !== 'Serviço concluído' ? 'opacity-50 pointer-events-none' : ''}>
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              Peças/Serviços
-              {status !== 'Serviço concluído' && (
-                <Badge variant="outline" className="text-xs font-normal">Bloqueado até conclusão do serviço</Badge>
-              )}
-            </CardTitle>
+            <CardTitle>Peças/Serviços</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

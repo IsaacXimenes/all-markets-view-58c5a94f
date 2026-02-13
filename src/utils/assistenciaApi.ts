@@ -107,200 +107,230 @@ export interface OrdemServico {
 
 // Mock data
 let ordensServico: OrdemServico[] = [
+  // 1. Aguardando Análise (entrada inicial - triagem)
   {
     id: 'OS-2025-0001',
-    dataHora: '2025-01-10T09:30:00',
+    dataHora: '2025-01-20T09:30:00',
     clienteId: 'CLI-001',
     setor: 'GARANTIA',
-    tecnicoId: 'df31dae3', // Gabriel Soares Lima
-    lojaId: '3ac7e00c', // Loja - Matriz
-    status: 'Serviço concluído',
-    pecas: [
-      { id: 'PC-001', peca: 'Troca de tela', imei: '123456789012345', valor: 450, percentual: 0, valorTotal: 450, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: true, pecaDeFornecedor: false }
-    ],
-    pagamentos: [
-      { id: 'PAG-001', meio: 'Pix', valor: 450 }
-    ],
-    descricao: 'Troca de tela iPhone 13 em garantia',
+    tecnicoId: 'df31dae3',
+    lojaId: '3ac7e00c',
+    status: 'Aguardando Análise',
+    proximaAtuacao: 'Técnico: Avaliar/Executar',
+    pecas: [],
+    pagamentos: [],
+    descricao: 'iPhone 14 Pro com tela trincada - aguardando triagem técnica',
     timeline: [
-      { data: '2025-01-10T09:30:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Gabriel Soares Lima' },
-      { data: '2025-01-10T14:00:00', tipo: 'status', descricao: 'Status alterado para Em serviço', responsavel: 'Gabriel Soares Lima' },
-      { data: '2025-01-10T17:30:00', tipo: 'status', descricao: 'Serviço concluído', responsavel: 'Gabriel Soares Lima' }
+      { data: '2025-01-20T09:30:00', tipo: 'registro', descricao: 'OS registrada via balcão', responsavel: 'Fernando Lima' }
     ],
-    valorTotal: 450,
-    custoTotal: 200
+    valorTotal: 0,
+    custoTotal: 0,
+    modeloAparelho: 'iPhone 14 Pro',
+    imeiAparelho: '123456789012345',
+    origemOS: 'Balcão'
   },
+  // 2. Em serviço (técnico trabalhando)
   {
     id: 'OS-2025-0002',
-    dataHora: '2025-01-11T10:00:00',
+    dataHora: '2025-01-18T10:00:00',
     clienteId: 'CLI-002',
-    setor: 'GARANTIA',
-    tecnicoId: 'be61a9df', // Jeferson Sousa Cabral
-    lojaId: 'db894e7d', // Loja - JK Shopping
-    status: 'Serviço concluído',
+    setor: 'ASSISTÊNCIA',
+    tecnicoId: 'be61a9df',
+    lojaId: 'db894e7d',
+    status: 'Em serviço',
+    proximaAtuacao: 'Técnico',
     pecas: [
-      { id: 'PC-002', peca: 'Troca de bateria', imei: '234567890123456', valor: 280, percentual: 10, valorTotal: 252, servicoTerceirizado: false, unidadeServico: 'db894e7d', pecaNoEstoque: true, pecaDeFornecedor: false }
+      { id: 'PC-002', peca: 'Troca de bateria', imei: '234567890123456', valor: 280, percentual: 0, valorTotal: 280, servicoTerceirizado: false, unidadeServico: 'db894e7d', pecaNoEstoque: true, pecaDeFornecedor: false }
     ],
-    pagamentos: [
-      { id: 'PAG-002', meio: 'Cartão Débito', valor: 252 }
-    ],
-    descricao: 'Substituição de bateria degradada',
+    pagamentos: [],
+    descricao: 'Substituição de bateria degradada - saúde 62%',
     timeline: [
-      { data: '2025-01-11T10:00:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Jeferson Sousa Cabral' },
-      { data: '2025-01-11T16:00:00', tipo: 'status', descricao: 'Serviço concluído', responsavel: 'Jeferson Sousa Cabral' }
+      { data: '2025-01-18T10:00:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Jeferson Sousa Cabral' },
+      { data: '2025-01-18T10:30:00', tipo: 'status', descricao: 'OS assumida pelo técnico', responsavel: 'Jeferson Sousa Cabral' }
     ],
-    valorTotal: 252,
-    custoTotal: 120
+    valorTotal: 280,
+    custoTotal: 120,
+    modeloAparelho: 'iPhone 13',
+    imeiAparelho: '234567890123456',
+    origemOS: 'Balcão'
   },
+  // 3. Solicitação Enviada (aguardando aprovação do gestor para peça)
   {
     id: 'OS-2025-0003',
-    dataHora: '2025-01-12T11:30:00',
+    dataHora: '2025-01-17T11:30:00',
     clienteId: 'CLI-003',
     setor: 'ASSISTÊNCIA',
-    tecnicoId: '53a1a9ad', // Julio Cesar da Silva
-    lojaId: '3ac7e00c', // Loja - Matriz
-    status: 'Serviço concluído',
+    tecnicoId: '53a1a9ad',
+    lojaId: '3ac7e00c',
+    status: 'Solicitação Enviada',
+    proximaAtuacao: 'Gestor (Suprimentos)',
     pecas: [
-      { id: 'PC-003', peca: 'Reparo placa lógica', imei: '345678901234567', valor: 800, percentual: 0, valorTotal: 800, servicoTerceirizado: true, descricaoTerceirizado: 'Micro solda especializada', fornecedorId: 'FORN-005', unidadeServico: '3ac7e00c', pecaNoEstoque: false, pecaDeFornecedor: true },
-      { id: 'PC-004', peca: 'Limpeza interna', valor: 80, percentual: 0, valorTotal: 80, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: true, pecaDeFornecedor: false }
+      { id: 'PC-003', peca: 'Display OLED iPhone 15', imei: '345678901234567', valor: 1200, percentual: 0, valorTotal: 1200, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: false, pecaDeFornecedor: true, statusAprovacao: 'Aguardando Aprovação' }
     ],
-    pagamentos: [
-      { id: 'PAG-003', meio: 'Cartão Crédito', valor: 880, parcelas: 3 }
-    ],
-    descricao: 'Reparo em placa lógica após queda com água',
+    pagamentos: [],
+    descricao: 'Troca de display OLED com burn-in - peça solicitada à matriz',
     timeline: [
-      { data: '2025-01-12T11:30:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Julio Cesar da Silva' },
-      { data: '2025-01-12T14:00:00', tipo: 'peca', descricao: 'Peça enviada para terceirizado', responsavel: 'Julio Cesar da Silva' },
-      { data: '2025-01-14T10:00:00', tipo: 'peca', descricao: 'Peça retornou do terceirizado', responsavel: 'Julio Cesar da Silva' },
-      { data: '2025-01-14T17:00:00', tipo: 'status', descricao: 'Serviço concluído', responsavel: 'Julio Cesar da Silva' }
+      { data: '2025-01-17T11:30:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Julio Cesar da Silva' },
+      { data: '2025-01-17T12:00:00', tipo: 'status', descricao: 'Em serviço', responsavel: 'Julio Cesar da Silva' },
+      { data: '2025-01-17T14:00:00', tipo: 'peca', descricao: 'Solicitação de peça enviada para aprovação do gestor', responsavel: 'Julio Cesar da Silva' }
     ],
-    valorTotal: 880,
-    custoTotal: 450
+    valorTotal: 1200,
+    custoTotal: 650,
+    modeloAparelho: 'iPhone 15',
+    imeiAparelho: '345678901234567',
+    origemOS: 'Garantia'
   },
+  // 4. Aguardando Peça (peça aprovada, aguardando chegada)
   {
     id: 'OS-2025-0004',
-    dataHora: '2025-01-13T14:00:00',
+    dataHora: '2025-01-15T14:00:00',
     clienteId: 'CLI-004',
-    setor: 'ASSISTÊNCIA',
-    tecnicoId: '3a4e96c7', // Marcos Serra de Sousa
-    lojaId: '5b9446d5', // Loja - Shopping Sul
-    status: 'Serviço concluído',
+    setor: 'GARANTIA',
+    tecnicoId: '3a4e96c7',
+    lojaId: '5b9446d5',
+    status: 'Aguardando Peça',
+    proximaAtuacao: 'Logística: Enviar Peça',
     pecas: [
-      { id: 'PC-005', peca: 'Troca conector de carga', imei: '456789012345678', valor: 180, percentual: 5, valorTotal: 171, servicoTerceirizado: false, unidadeServico: '5b9446d5', pecaNoEstoque: true, pecaDeFornecedor: false }
+      { id: 'PC-004', peca: 'Conector de carga USB-C', imei: '456789012345678', valor: 180, percentual: 0, valorTotal: 180, servicoTerceirizado: false, unidadeServico: '5b9446d5', pecaNoEstoque: false, pecaDeFornecedor: true, statusAprovacao: 'Aprovado' }
     ],
-    pagamentos: [
-      { id: 'PAG-004', meio: 'Pix', valor: 171 }
-    ],
-    descricao: 'Troca de conector de carga danificado',
+    pagamentos: [],
+    descricao: 'Troca de conector de carga - peça aprovada, aguardando entrega',
     timeline: [
-      { data: '2025-01-13T14:00:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Marcos Serra de Sousa' },
-      { data: '2025-01-13T18:00:00', tipo: 'status', descricao: 'Serviço concluído', responsavel: 'Marcos Serra de Sousa' }
+      { data: '2025-01-15T14:00:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Marcos Serra de Sousa' },
+      { data: '2025-01-15T15:00:00', tipo: 'status', descricao: 'Solicitação de peça enviada', responsavel: 'Marcos Serra de Sousa' },
+      { data: '2025-01-16T09:00:00', tipo: 'aprovacao', descricao: 'Peça aprovada pelo gestor', responsavel: 'João Gestor' },
+      { data: '2025-01-16T10:00:00', tipo: 'financeiro', descricao: 'Pagamento ao fornecedor realizado', responsavel: 'João Gestor' }
     ],
-    valorTotal: 171,
-    custoTotal: 60
+    valorTotal: 180,
+    custoTotal: 60,
+    modeloAparelho: 'Samsung S24',
+    imeiAparelho: '456789012345678',
+    origemOS: 'Garantia'
   },
+  // 5. Técnico (Recebimento) - peça chegou, técnico precisa confirmar
   {
     id: 'OS-2025-0005',
     dataHora: '2025-01-14T09:00:00',
     clienteId: 'CLI-001',
-    setor: 'TROCA',
-    tecnicoId: 'df31dae3', // Gabriel Soares Lima
-    lojaId: '0d06e7db', // Loja - Águas Lindas Shopping
-    status: 'Serviço concluído',
+    setor: 'ASSISTÊNCIA',
+    tecnicoId: 'df31dae3',
+    lojaId: '0d06e7db',
+    status: 'Peça Recebida',
+    proximaAtuacao: 'Técnico (Recebimento)',
     pecas: [
-      { id: 'PC-006', peca: 'Troca aparelho em garantia estendida', imei: '567890123456789', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: '0d06e7db', pecaNoEstoque: true, pecaDeFornecedor: false }
+      { id: 'PC-005', peca: 'Câmera traseira iPhone 14', imei: '567890123456789', valor: 350, percentual: 0, valorTotal: 350, servicoTerceirizado: false, unidadeServico: '0d06e7db', pecaNoEstoque: false, pecaDeFornecedor: true, statusAprovacao: 'Pagamento Finalizado' }
     ],
     pagamentos: [],
-    descricao: 'Troca de aparelho defeituoso por garantia estendida',
+    descricao: 'Câmera com defeito de foco - peça recebida, aguardando confirmação do técnico',
     timeline: [
       { data: '2025-01-14T09:00:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Gabriel Soares Lima' },
-      { data: '2025-01-14T10:00:00', tipo: 'status', descricao: 'Serviço concluído - aparelho trocado', responsavel: 'Gabriel Soares Lima' }
-    ],
-    valorTotal: 0,
-    custoTotal: 0
-  },
-  {
-    id: 'OS-2025-0006',
-    dataHora: '2025-01-15T15:30:00',
-    clienteId: 'CLI-002',
-    setor: 'ASSISTÊNCIA',
-    tecnicoId: 'be61a9df', // Jeferson Sousa Cabral
-    lojaId: '3ac7e00c', // Loja - Matriz
-    status: 'Em serviço',
-    pecas: [
-      { id: 'PC-007', peca: 'Troca de câmera traseira', imei: '678901234567890', valor: 350, percentual: 0, valorTotal: 350, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: true, pecaDeFornecedor: false }
-    ],
-    pagamentos: [],
-    descricao: 'Substituição de câmera com defeito de foco',
-    timeline: [
-      { data: '2025-01-15T15:30:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Jeferson Sousa Cabral' },
-      { data: '2025-01-15T16:00:00', tipo: 'status', descricao: 'Status alterado para Em serviço', responsavel: 'Jeferson Sousa Cabral' }
+      { data: '2025-01-14T10:00:00', tipo: 'peca', descricao: 'Solicitação de peça enviada', responsavel: 'Gabriel Soares Lima' },
+      { data: '2025-01-15T09:00:00', tipo: 'aprovacao', descricao: 'Peça aprovada', responsavel: 'João Gestor' },
+      { data: '2025-01-16T14:00:00', tipo: 'peca', descricao: 'Peça recebida na loja', responsavel: 'Logística' }
     ],
     valorTotal: 350,
-    custoTotal: 180
+    custoTotal: 180,
+    modeloAparelho: 'iPhone 14',
+    imeiAparelho: '567890123456789',
+    origemOS: 'Balcão'
   },
+  // 6. Finalizado (técnico concluiu, aguardando pagamento do vendedor)
+  {
+    id: 'OS-2025-0006',
+    dataHora: '2025-01-12T15:30:00',
+    clienteId: 'CLI-002',
+    setor: 'ASSISTÊNCIA',
+    tecnicoId: 'be61a9df',
+    lojaId: '3ac7e00c',
+    status: 'Finalizado',
+    proximaAtuacao: 'Gestor/Vendedor',
+    resumoConclusao: 'Reparo concluído com sucesso. Placa lógica restaurada via micro solda.',
+    valorCustoTecnico: 450,
+    valorVendaTecnico: 880,
+    pecas: [
+      { id: 'PC-006', peca: 'Reparo placa lógica', imei: '678901234567890', valor: 800, percentual: 0, valorTotal: 800, servicoTerceirizado: true, descricaoTerceirizado: 'Micro solda especializada', fornecedorId: 'FORN-005', unidadeServico: '3ac7e00c', pecaNoEstoque: false, pecaDeFornecedor: true },
+      { id: 'PC-007', peca: 'Limpeza interna', valor: 80, percentual: 0, valorTotal: 80, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: true, pecaDeFornecedor: false }
+    ],
+    pagamentos: [],
+    descricao: 'Reparo em placa lógica após queda com água',
+    timeline: [
+      { data: '2025-01-12T15:30:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Jeferson Sousa Cabral' },
+      { data: '2025-01-12T16:00:00', tipo: 'status', descricao: 'Em serviço', responsavel: 'Jeferson Sousa Cabral' },
+      { data: '2025-01-13T10:00:00', tipo: 'peca', descricao: 'Peça enviada para terceirizado', responsavel: 'Jeferson Sousa Cabral' },
+      { data: '2025-01-15T10:00:00', tipo: 'peca', descricao: 'Peça retornou do terceirizado', responsavel: 'Jeferson Sousa Cabral' },
+      { data: '2025-01-15T17:00:00', tipo: 'conclusao_servico', descricao: 'OS finalizada pelo técnico. Custo: R$ 450,00, Venda: R$ 880,00', responsavel: 'Jeferson Sousa Cabral' }
+    ],
+    valorTotal: 880,
+    custoTotal: 450,
+    modeloAparelho: 'iPhone 13 Pro Max',
+    imeiAparelho: '678901234567890',
+    origemOS: 'Balcão'
+  },
+  // 7. Serviço concluído (pagamento registrado, aguardando conferência)
   {
     id: 'OS-2025-0007',
     dataHora: '2025-01-10T08:00:00',
     clienteId: 'CLI-004',
     setor: 'GARANTIA',
-    tecnicoId: '53a1a9ad', // Julio Cesar da Silva
-    lojaId: 'db894e7d', // Loja - JK Shopping
-    status: 'Aguardando Peça',
+    tecnicoId: '53a1a9ad',
+    lojaId: 'db894e7d',
+    status: 'Serviço concluído',
+    proximaAtuacao: 'Gestor (Conferência)',
+    resumoConclusao: 'Alto-falante e microfone substituídos com sucesso.',
+    valorCustoTecnico: 80,
+    valorVendaTecnico: 200,
     pecas: [
-      { id: 'PC-008', peca: 'Troca de display OLED', imei: '789012345678901', valor: 1200, percentual: 0, valorTotal: 1200, servicoTerceirizado: false, unidadeServico: 'db894e7d', pecaNoEstoque: false, pecaDeFornecedor: true }
+      { id: 'PC-008', peca: 'Alto-falante', imei: '789012345678901', valor: 150, percentual: 0, valorTotal: 150, servicoTerceirizado: false, unidadeServico: 'db894e7d', pecaNoEstoque: true, pecaDeFornecedor: false },
+      { id: 'PC-009', peca: 'Microfone', valor: 50, percentual: 0, valorTotal: 50, servicoTerceirizado: false, unidadeServico: 'db894e7d', pecaNoEstoque: true, pecaDeFornecedor: false }
     ],
-    pagamentos: [],
-    descricao: 'Troca de display com burn-in - aguardando peça do fornecedor',
+    pagamentos: [
+      { id: 'PAG-007', meio: 'Pix', valor: 200 }
+    ],
+    descricao: 'Problemas de áudio - alto-falante e microfone substituídos',
     timeline: [
       { data: '2025-01-10T08:00:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Julio Cesar da Silva' },
-      { data: '2025-01-10T09:00:00', tipo: 'status', descricao: 'Aguardando Peça - pedido ao fornecedor', responsavel: 'Julio Cesar da Silva' }
-    ],
-    valorTotal: 1200,
-    custoTotal: 650
-  },
-  {
-    id: 'OS-2025-0008',
-    dataHora: '2025-01-14T11:00:00',
-    clienteId: 'CLI-003',
-    setor: 'ASSISTÊNCIA',
-    tecnicoId: '3a4e96c7', // Marcos Serra de Sousa
-    lojaId: '5b9446d5', // Loja - Shopping Sul
-    status: 'Em serviço',
-    pecas: [
-      { id: 'PC-009', peca: 'Troca de alto-falante', imei: '890123456789012', valor: 150, percentual: 0, valorTotal: 150, servicoTerceirizado: false, unidadeServico: '5b9446d5', pecaNoEstoque: true, pecaDeFornecedor: false },
-      { id: 'PC-010', peca: 'Limpeza de microfone', valor: 50, percentual: 0, valorTotal: 50, servicoTerceirizado: false, unidadeServico: '5b9446d5', pecaNoEstoque: true, pecaDeFornecedor: false }
-    ],
-    pagamentos: [],
-    descricao: 'Problemas de áudio - alto-falante e microfone',
-    timeline: [
-      { data: '2025-01-14T11:00:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Marcos Serra de Sousa' },
-      { data: '2025-01-14T11:30:00', tipo: 'status', descricao: 'Status alterado para Em serviço', responsavel: 'Marcos Serra de Sousa' }
+      { data: '2025-01-10T09:00:00', tipo: 'status', descricao: 'Em serviço', responsavel: 'Julio Cesar da Silva' },
+      { data: '2025-01-10T16:00:00', tipo: 'conclusao_servico', descricao: 'OS finalizada pelo técnico', responsavel: 'Julio Cesar da Silva' },
+      { data: '2025-01-11T10:00:00', tipo: 'pagamento', descricao: 'Pagamento de R$ 200,00 via Pix registrado', responsavel: 'Fernando Lima' }
     ],
     valorTotal: 200,
-    custoTotal: 80
+    custoTotal: 80,
+    modeloAparelho: 'Samsung S23',
+    imeiAparelho: '789012345678901',
+    origemOS: 'Garantia'
   },
-  // OS-2025-0020 - Exemplo de fluxo completo com solicitação de peça
+  // 8. Concluído (conferência aprovada - finalizado)
   {
-    id: 'OS-2025-0020',
-    dataHora: '2025-01-18T09:00:00',
-    clienteId: 'CLI-001',
+    id: 'OS-2025-0008',
+    dataHora: '2025-01-08T11:00:00',
+    clienteId: 'CLI-003',
     setor: 'ASSISTÊNCIA',
-    tecnicoId: 'df31dae3', // Gabriel Soares Lima
-    lojaId: '3ac7e00c', // Loja - Matriz
-    status: 'Solicitação Enviada',
+    tecnicoId: '3a4e96c7',
+    lojaId: '5b9446d5',
+    status: 'Concluído',
+    proximaAtuacao: '-',
+    resumoConclusao: 'Troca de tela realizada com sucesso. Aparelho testado e funcionando.',
+    valorCustoTecnico: 200,
+    valorVendaTecnico: 450,
     pecas: [
-      { id: 'PC-020', peca: 'Bateria iPhone 13 Pro', imei: '999888777666001', valor: 280, percentual: 0, valorTotal: 280, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: false, pecaDeFornecedor: true }
+      { id: 'PC-010', peca: 'Troca de tela', imei: '890123456789012', valor: 450, percentual: 0, valorTotal: 450, servicoTerceirizado: false, unidadeServico: '5b9446d5', pecaNoEstoque: true, pecaDeFornecedor: false }
     ],
-    pagamentos: [],
-    descricao: 'Troca de bateria - saúde em 65%, aguardando peça do fornecedor',
+    pagamentos: [
+      { id: 'PAG-008', meio: 'Cartão Crédito', valor: 450, parcelas: 2 }
+    ],
+    descricao: 'Troca de tela iPhone 13 - fluxo completo concluído',
     timeline: [
-      { data: '2025-01-18T09:00:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Gabriel Soares Lima' },
-      { data: '2025-01-18T09:30:00', tipo: 'status', descricao: 'Status alterado para Aguardando Peça', responsavel: 'Gabriel Soares Lima' },
-      { data: '2025-01-18T10:00:00', tipo: 'peca', descricao: 'Solicitação de peça SOL-020 enviada para análise da matriz', responsavel: 'Gabriel Soares Lima' }
+      { data: '2025-01-08T11:00:00', tipo: 'registro', descricao: 'OS registrada', responsavel: 'Marcos Serra de Sousa' },
+      { data: '2025-01-08T12:00:00', tipo: 'status', descricao: 'Em serviço', responsavel: 'Marcos Serra de Sousa' },
+      { data: '2025-01-08T17:00:00', tipo: 'conclusao_servico', descricao: 'OS finalizada pelo técnico', responsavel: 'Marcos Serra de Sousa' },
+      { data: '2025-01-09T09:00:00', tipo: 'pagamento', descricao: 'Pagamento registrado pelo vendedor', responsavel: 'Fernando Lima' },
+      { data: '2025-01-09T14:00:00', tipo: 'validacao_financeiro', descricao: 'Conferência aprovada pelo gestor', responsavel: 'João Gestor' }
     ],
-    valorTotal: 280,
-    custoTotal: 150
+    valorTotal: 450,
+    custoTotal: 200,
+    modeloAparelho: 'iPhone 13',
+    imeiAparelho: '890123456789012',
+    origemOS: 'Balcão'
   }
 ];
 
