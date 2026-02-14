@@ -63,6 +63,9 @@ export interface Pagamento {
   meio: string;
   valor: number;
   parcelas?: number;
+  comprovante?: string;
+  comprovanteNome?: string;
+  contaDestino?: string;
 }
 
 export interface TimelineOS {

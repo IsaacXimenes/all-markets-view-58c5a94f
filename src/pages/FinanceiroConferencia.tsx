@@ -11,9 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Check, Download, Filter, X, Clock, CheckCircle2, Undo2, AlertCircle, CreditCard, Banknote, Smartphone, Wallet, ChevronRight, Lock, MessageSquare, XCircle, Save, Building2, History, UserCheck, Calendar, User, CheckCircle, FileText, Timer } from 'lucide-react';
+import { Check, Download, Filter, X, Clock, CheckCircle2, Undo2, AlertCircle, CreditCard, Banknote, Smartphone, Wallet, ChevronRight, Lock, MessageSquare, XCircle, Save, Building2, History, UserCheck, Calendar, User, CheckCircle, FileText, Timer, Wrench } from 'lucide-react';
 import { ComprovantePreview, ComprovanteBadgeSemAnexo } from '@/components/vendas/ComprovantePreview';
-import { getContasFinanceiras } from '@/utils/cadastrosApi';
+import { getContasFinanceiras, getClientes } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useFluxoVendas } from '@/hooks/useFluxoVendas';
 import { 
@@ -24,6 +24,7 @@ import {
   VendaComFluxo,
   StatusVenda
 } from '@/utils/fluxoVendasApi';
+import { getOrdensServico, getOrdemServicoById, updateOrdemServico, formatCurrency as formatCurrencyOS } from '@/utils/assistenciaApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { toast } from 'sonner';
 
@@ -45,6 +46,8 @@ interface LinhaConferencia {
   slaHoras?: number;
   comprovante?: string;
   comprovanteNome?: string;
+  tipoOrigem?: 'Venda' | 'Assistência';
+  osData?: any; // Raw OS data for assistência lines
 }
 
 // Função para calcular SLA em formato legível
@@ -190,12 +193,12 @@ export default function FinanceiroConferencia() {
   const linhasConferencia = useMemo((): LinhaConferencia[] => {
     const linhas: LinhaConferencia[] = [];
     
+    // Linhas de vendas
     vendas.forEach(venda => {
       const storedValidacoes = localStorage.getItem(`validacao_pagamentos_financeiro_${venda.id}`);
       const validacoesFinanceiro: ValidacaoPagamento[] = storedValidacoes ? JSON.parse(storedValidacoes) : [];
       const contaOrigem = getContaOrigem(venda);
       
-      // Calcular SLA baseado na entrada em Conferência Financeiro
       const dataEntradaFinanceiro = venda.timeline?.find(t => 
         t.descricao?.includes('Conferência Financeiro') || t.tipo === 'aprovacao_gestor'
       )?.dataHora;
@@ -219,7 +222,82 @@ export default function FinanceiroConferencia() {
           tempoSLA: slaResult.texto,
           slaHoras: slaResult.horas,
           comprovante: pag.comprovante,
-          comprovanteNome: pag.comprovanteNome
+          comprovanteNome: pag.comprovanteNome,
+          tipoOrigem: 'Venda'
+        });
+      });
+    });
+
+    // Linhas de OS de assistência
+    const todasOS = getOrdensServico();
+    const osFinanceiro = todasOS.filter(os => 
+      (os.status === 'Aguardando Financeiro' && os.proximaAtuacao === 'Financeiro') ||
+      os.status === 'Liquidado'
+    );
+    const clientesAll = getClientes();
+    
+    osFinanceiro.forEach(os => {
+      const storedValidacoes = localStorage.getItem(`validacao_pagamentos_financeiro_${os.id}`);
+      const validacoesFinanceiro: ValidacaoPagamento[] = storedValidacoes ? JSON.parse(storedValidacoes) : [];
+      
+      const dataEntradaFinanceiro = os.timeline?.find(t => 
+        t.descricao?.includes('financeiro') || t.tipo === 'aprovacao'
+      )?.data;
+      const slaResult = calcularSLA(dataEntradaFinanceiro, os.status === 'Liquidado' ? 'Finalizado' : 'Conferência Financeiro');
+      
+      const cliente = clientesAll.find(c => c.id === os.clienteId);
+      
+      // Create a fake VendaComFluxo to reuse the same table structure
+      const fakeVenda: VendaComFluxo = {
+        id: os.id,
+        dataHora: os.dataHora,
+        clienteNome: cliente?.nome || '-',
+        lojaVenda: os.lojaId,
+        vendedor: os.tecnicoId,
+        total: os.valorVendaTecnico || 0,
+        subtotal: os.valorVendaTecnico || 0,
+        lucro: (os.valorVendaTecnico || 0) - (os.valorCustoTecnico || 0),
+        custoTotal: os.valorCustoTecnico || 0,
+        pagamentos: os.pagamentos.map(p => ({
+          meioPagamento: p.meio,
+          valor: p.valor,
+          parcelas: p.parcelas,
+          comprovante: p.comprovante,
+          comprovanteNome: p.comprovanteNome,
+          contaDestino: p.contaDestino
+        })),
+        itens: [],
+        statusFluxo: os.status === 'Liquidado' ? 'Finalizado' : 'Conferência Financeiro',
+        timeline: os.timeline.map(t => ({
+          dataHora: t.data,
+          tipo: t.tipo,
+          descricao: t.descricao,
+          usuarioId: '',
+          usuarioNome: t.responsavel
+        }))
+      } as any;
+      
+      os.pagamentos.forEach(pag => {
+        const validacao = validacoesFinanceiro.find(v => v.metodoPagamento === pag.meio);
+        const contaDestinoId = validacao?.contaDestinoId || pag.contaDestino || '';
+        const contaDestino = contasFinanceiras.find(c => c.id === contaDestinoId);
+        
+        linhas.push({
+          vendaId: os.id,
+          venda: fakeVenda,
+          metodoPagamento: pag.meio,
+          valor: pag.valor,
+          contaDestinoId,
+          contaDestinoNome: contaDestino?.nome || 'Não informada',
+          conferido: validacao?.validadoFinanceiro || os.status === 'Liquidado',
+          conferidoPor: validacao?.conferidoPor,
+          dataConferencia: validacao?.dataValidacaoFinanceiro,
+          tempoSLA: slaResult.texto,
+          slaHoras: slaResult.horas,
+          comprovante: pag.comprovante,
+          comprovanteNome: pag.comprovanteNome,
+          tipoOrigem: 'Assistência',
+          osData: os
         });
       });
     });
@@ -620,18 +698,41 @@ export default function FinanceiroConferencia() {
     const dataFinal = new Date().toISOString();
     localStorage.setItem(`data_finalizacao_${vendaSelecionada.id}`, dataFinal);
 
-    const resultado = finalizarVenda(
-      vendaSelecionada.id,
-      usuarioLogado.id,
-      usuarioLogado.nome
-    );
-
-    if (resultado) {
-      toast.success(`Venda ${vendaSelecionada.id} finalizada com sucesso!`);
+    // Detectar se é OS de assistência (ID começa com "OS-")
+    const isOS = vendaSelecionada.id.startsWith('OS-');
+    
+    if (isOS) {
+      // Finalizar OS de assistência
+      updateOrdemServico(vendaSelecionada.id, {
+        status: 'Liquidado',
+        proximaAtuacao: '-',
+        timeline: [
+          ...(getOrdemServicoById(vendaSelecionada.id)?.timeline || []),
+          {
+            data: new Date().toISOString(),
+            tipo: 'validacao_financeiro',
+            descricao: 'Conferência finalizada pelo financeiro. OS liquidada.',
+            responsavel: usuarioLogado.nome
+          }
+        ]
+      });
+      toast.success(`OS ${vendaSelecionada.id} liquidada com sucesso!`);
       handleFecharPainel();
       recarregar();
     } else {
-      toast.error('Erro ao finalizar venda.');
+      const resultado = finalizarVenda(
+        vendaSelecionada.id,
+        usuarioLogado.id,
+        usuarioLogado.nome
+      );
+
+      if (resultado) {
+        toast.success(`Venda ${vendaSelecionada.id} finalizada com sucesso!`);
+        handleFecharPainel();
+        recarregar();
+      } else {
+        toast.error('Erro ao finalizar venda.');
+      }
     }
   };
 
@@ -657,20 +758,43 @@ export default function FinanceiroConferencia() {
       JSON.stringify(rejeicaoFinanceiro)
     );
 
-    const resultado = devolverFinanceiro(
-      vendaSelecionada.id,
-      usuarioLogado.id,
-      usuarioLogado.nome,
-      motivoRejeicao.trim()
-    );
-
-    if (resultado) {
-      toast.success(`Conferência da venda ${vendaSelecionada.id} recusada.`);
+    const isOS = vendaSelecionada.id.startsWith('OS-');
+    
+    if (isOS) {
+      // Rejeitar OS de assistência - devolver para o gestor
+      updateOrdemServico(vendaSelecionada.id, {
+        status: 'Pendente de Pagamento',
+        proximaAtuacao: 'Gestor (Conferência)',
+        timeline: [
+          ...(getOrdemServicoById(vendaSelecionada.id)?.timeline || []),
+          {
+            data: new Date().toISOString(),
+            tipo: 'rejeicao',
+            descricao: `Conferência rejeitada pelo financeiro. Motivo: ${motivoRejeicao.trim()}`,
+            responsavel: usuarioLogado.nome
+          }
+        ]
+      });
+      toast.success(`OS ${vendaSelecionada.id} devolvida para o gestor.`);
       setModalRejeitar(false);
       handleFecharPainel();
       recarregar();
     } else {
-      toast.error('Erro ao rejeitar venda.');
+      const resultado = devolverFinanceiro(
+        vendaSelecionada.id,
+        usuarioLogado.id,
+        usuarioLogado.nome,
+        motivoRejeicao.trim()
+      );
+
+      if (resultado) {
+        toast.success(`Conferência da venda ${vendaSelecionada.id} recusada.`);
+        setModalRejeitar(false);
+        handleFecharPainel();
+        recarregar();
+      } else {
+        toast.error('Erro ao rejeitar venda.');
+      }
     }
   };
 
@@ -1037,7 +1161,17 @@ const getContaNome = (contaId: string) => contasFinanceiras.find(c => c.id === c
                       className={`${getRowClassName(linha)} ${vendaSelecionada?.id === linha.vendaId ? 'ring-2 ring-primary' : ''} cursor-pointer`}
                       onClick={() => handleSelecionarVenda(linha.venda)}
                     >
-                      <TableCell className="font-medium">{linha.vendaId}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-1.5">
+                          {linha.vendaId}
+                          {linha.tipoOrigem === 'Assistência' && (
+                            <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 text-[10px] px-1.5 py-0">
+                              <Wrench className="h-3 w-3 mr-0.5" />
+                              Assistência
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>{new Date(linha.venda.dataHora).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell>
                         <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
