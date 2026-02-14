@@ -23,6 +23,7 @@ export default function DadosAntigoComprasPagamentos() {
   const { data, headers, loading, error } = useXlsxData({
     url: '/data/compras-pagamentos.xlsx',
     headerMap: HEADER_MAP,
+    dateColumns: ['Data Pagamento'],
   });
 
   const [search, setSearch] = useState('');

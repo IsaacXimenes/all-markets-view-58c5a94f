@@ -26,6 +26,7 @@ export default function DadosAntigoVendas() {
   const { data, headers, loading, error } = useXlsxData({
     url: '/data/vendas.xlsx',
     headerMap: HEADER_MAP,
+    dateColumns: ['Data Venda'],
   });
 
   const [search, setSearch] = useState('');
