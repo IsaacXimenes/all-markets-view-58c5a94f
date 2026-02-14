@@ -828,6 +828,43 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
               </CardContent>
             </Card>
 
+            {/* Botão Confirmar Recebimento - visível quando status é Solicitação de Peça */}
+            {(os.status === 'Solicitação de Peça' || os.status === 'Aguardando Peça' || os.status === 'Solicitação Enviada') && (
+              <Card className="border-yellow-500/50 bg-yellow-50/30">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-5 w-5 text-yellow-600" />
+                      <span className="font-medium text-yellow-700">Peça solicitada — aguardando recebimento</span>
+                    </div>
+                    <Button
+                      variant="default"
+                      className="bg-green-600 hover:bg-green-700"
+                      onClick={() => {
+                        updateOrdemServico(os.id, {
+                          status: 'Em serviço' as any,
+                          proximaAtuacao: 'Técnico',
+                          timeline: [...os.timeline, {
+                            data: new Date().toISOString(),
+                            tipo: 'peca',
+                            descricao: 'Recebimento de peça confirmado. OS retornou para serviço.',
+                            responsavel: 'Técnico'
+                          }]
+                        });
+                        setEditStatus('Em serviço');
+                        const updatedOS = getOrdemServicoById(os.id);
+                        if (updatedOS) setOS(updatedOS);
+                        toast.success('Recebimento confirmado! OS retornou para Em serviço.');
+                      }}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Confirmar Recebimento
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Avaliação Técnica - Etapa 2 */}
             <Card>
               <CardHeader>
