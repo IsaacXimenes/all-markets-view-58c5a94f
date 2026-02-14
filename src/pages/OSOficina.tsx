@@ -55,7 +55,8 @@ export default function OSOficina() {
 
   // Filtrar OSs onde proximaAtuacao contém "Técnico" OU recém-finalizadas
   const osTecnico = useMemo(() => {
-    const statusHistorico = ['Serviço concluído', 'Pendente de Pagamento', 'Aguardando Financeiro', 'Liquidado'];
+    const statusHistorico = ['Serviço concluído', 'Pendente de Pagamento', 'Aguardando Financeiro', 'Liquidado', 'Conferência do Gestor'];
+    const statusPecas = ['Solicitação de Peça', 'Peça Recebida', 'Pagamento Concluído'];
     return ordensServico.filter(os => {
       const atuacao = os.proximaAtuacao || '';
       const isTecnico = atuacao === 'Técnico' || 
@@ -63,7 +64,8 @@ export default function OSOficina() {
              atuacao === 'Técnico: Avaliar/Executar';
       const isRecentFinalizada = osFinalizadas.has(os.id);
       const isHistorico = statusHistorico.includes(os.status);
-      return isTecnico || isRecentFinalizada || isHistorico;
+      const isPecaPendente = statusPecas.includes(os.status);
+      return isTecnico || isRecentFinalizada || isHistorico || isPecaPendente;
     }).sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
   }, [ordensServico, osFinalizadas]);
 
