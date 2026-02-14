@@ -112,7 +112,7 @@ function SidebarContent({
                   isActive 
                     ? "bg-primary text-primary-foreground font-semibold shadow-md" 
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  isCollapsed && "justify-center px-0"
+                  isCollapsed && "justify-center px-2 py-1.5 mx-1"
                 )}
                 title={isCollapsed ? item.title : undefined}
               >
