@@ -25,6 +25,7 @@ export default function DadosAntigoVendasPagamentos() {
   const { data, headers, loading, error } = useXlsxData({
     url: '/data/vendas-pagamentos.xlsx',
     headerMap: HEADER_MAP,
+    dateColumns: ['Data Pagamento'],
   });
 
   const [search, setSearch] = useState('');

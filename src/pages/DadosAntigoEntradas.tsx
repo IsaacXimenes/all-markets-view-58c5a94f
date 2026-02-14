@@ -33,6 +33,7 @@ export default function DadosAntigoEntradas() {
   const { data, headers, loading, error } = useXlsxData({
     url: '/data/entradas.xlsx',
     headerMap: HEADER_MAP,
+    dateColumns: ['Data Entrada'],
   });
 
   const [search, setSearch] = useState('');

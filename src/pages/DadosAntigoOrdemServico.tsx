@@ -24,6 +24,7 @@ export default function DadosAntigoOrdemServico() {
   const { data, headers, loading, error } = useXlsxData({
     url: '/data/ordem-servico.xlsx',
     headerMap: HEADER_MAP,
+    dateColumns: ['Data'],
   });
 
   const [search, setSearch] = useState('');

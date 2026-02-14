@@ -26,6 +26,7 @@ export default function DadosAntigoCompras() {
   const { data, headers, loading, error } = useXlsxData({
     url: '/data/compras.xlsx',
     headerMap: HEADER_MAP,
+    dateColumns: ['Data Compra'],
   });
 
   const [search, setSearch] = useState('');
