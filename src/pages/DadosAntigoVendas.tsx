@@ -105,11 +105,24 @@ export default function DadosAntigoVendas() {
                     ) : (
                       paged.map((row, idx) => (
                         <TableRow key={idx}>
-                          {headers.map(h => (
-                            <TableCell key={h} className="whitespace-nowrap">
-                              {String((row as Record<string, any>)[h] ?? '')}
-                            </TableCell>
-                          ))}
+                          {headers.map(h => {
+                            const val = String((row as Record<string, any>)[h] ?? '');
+                            const isLink = h === 'Comprovante' && val.startsWith('http');
+                            return (
+                              <TableCell key={h} className="whitespace-nowrap">
+                                {isLink ? (
+                                  <a
+                                    href={val}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-primary underline hover:text-primary/80"
+                                  >
+                                    Ver comprovante
+                                  </a>
+                                ) : val}
+                              </TableCell>
+                            );
+                          })}
                         </TableRow>
                       ))
                     )}
