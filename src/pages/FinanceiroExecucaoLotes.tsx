@@ -37,10 +37,10 @@ import {
   CreditCard, 
   CheckCircle, 
   Clock, 
-  Upload,
   FileText,
   DollarSign
 } from 'lucide-react';
+import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { 
   getLotesEnviados, 
   getPagamentosByLote,
@@ -62,8 +62,10 @@ export default function FinanceiroExecucaoLotes() {
   const [showModalPagamento, setShowModalPagamento] = useState(false);
   const [pagamentoSelecionado, setPagamentoSelecionado] = useState<PagamentoLote | null>(null);
   const [formaPagamento, setFormaPagamento] = useState<'Pix' | 'Dinheiro'>('Pix');
-  const [arquivoNF, setArquivoNF] = useState<File | null>(null);
-  const [arquivoComprovante, setArquivoComprovante] = useState<File | null>(null);
+  const [arquivoNF, setArquivoNF] = useState<string>('');
+  const [arquivoNFNome, setArquivoNFNome] = useState<string>('');
+  const [arquivoComprovante, setArquivoComprovante] = useState<string>('');
+  const [arquivoComprovanteNome, setArquivoComprovanteNome] = useState<string>('');
 
   useEffect(() => {
     const lotesEnviados = getLotesEnviados();
@@ -88,8 +90,10 @@ export default function FinanceiroExecucaoLotes() {
   const handleAbrirModalPagamento = (pagamento: PagamentoLote) => {
     setPagamentoSelecionado(pagamento);
     setFormaPagamento('Pix');
-    setArquivoNF(null);
-    setArquivoComprovante(null);
+    setArquivoNF('');
+    setArquivoNFNome('');
+    setArquivoComprovante('');
+    setArquivoComprovanteNome('');
     setShowModalPagamento(true);
   };
 
@@ -98,8 +102,8 @@ export default function FinanceiroExecucaoLotes() {
     
     const sucesso = registrarPagamento(pagamentoSelecionado.id, {
       formaPagamento,
-      comprovante: arquivoComprovante?.name,
-      notaFiscal: arquivoNF?.name
+      comprovante: arquivoComprovanteNome || undefined,
+      notaFiscal: arquivoNFNome || undefined
     });
     
     if (sucesso) {
@@ -346,42 +350,26 @@ export default function FinanceiroExecucaoLotes() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>Nota Fiscal (PDF/XML)</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="file"
-                    accept=".pdf,.xml"
-                    onChange={(e) => setArquivoNF(e.target.files?.[0] || null)}
-                    className="flex-1"
-                  />
-                  {arquivoNF && (
-                    <Badge variant="outline" className="text-xs">
-                      {arquivoNF.name.substring(0, 20)}...
-                    </Badge>
-                  )}
-                </div>
-              </div>
+              <FileUploadComprovante
+                label="Nota Fiscal (PDF/XML)"
+                value={arquivoNF}
+                fileName={arquivoNFNome}
+                onFileChange={({ comprovante: val, comprovanteNome: nome }) => {
+                  setArquivoNF(val);
+                  setArquivoNFNome(nome);
+                }}
+                acceptedTypes={['application/pdf', 'text/xml', 'application/xml']}
+              />
 
-              <div className="space-y-2">
-                <Label>Comprovante de Pagamento</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) => setArquivoComprovante(e.target.files?.[0] || null)}
-                    className="flex-1"
-                  />
-                  {arquivoComprovante && (
-                    <Badge variant="outline" className="text-xs">
-                      {arquivoComprovante.name.substring(0, 20)}...
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  💡 OCR para leitura automática será implementado em versão futura
-                </p>
-              </div>
+              <FileUploadComprovante
+                label="Comprovante de Pagamento"
+                value={arquivoComprovante}
+                fileName={arquivoComprovanteNome}
+                onFileChange={({ comprovante: val, comprovanteNome: nome }) => {
+                  setArquivoComprovante(val);
+                  setArquivoComprovanteNome(nome);
+                }}
+              />
             </div>
           )}
 

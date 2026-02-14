@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { RHLayout } from '@/components/layout/RHLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,7 +55,8 @@ export default function RHFeedback() {
     texto: ''
   });
   const [refreshKey, setRefreshKey] = useState(0);
-  const [arquivoFeedback, setArquivoFeedback] = useState<File | null>(null);
+  const [arquivoFeedback, setArquivoFeedback] = useState<string>('');
+  const [arquivoFeedbackNome, setArquivoFeedbackNome] = useState<string>('');
 
   const usuarioLogado = getUsuarioLogado();
   const { obterNomeLoja, obterColaboradoresAtivos } = useCadastroStore();
@@ -99,7 +101,8 @@ export default function RHFeedback() {
   const handleOpenRegistrar = () => {
     setSelectedColaborador(null);
     setFeedbackForm({ tipo: 'Advertência', texto: '' });
-    setArquivoFeedback(null);
+    setArquivoFeedback('');
+    setArquivoFeedbackNome('');
     setIsRegistrarDialogOpen(true);
   };
 
@@ -139,10 +142,10 @@ export default function RHFeedback() {
     const ultimoFeedback = feedbacksAnteriores[0];
 
     // Preparar arquivo se existir
-    const arquivoData = arquivoFeedback ? {
-      nome: arquivoFeedback.name,
-      tipo: arquivoFeedback.type,
-      url: URL.createObjectURL(arquivoFeedback)
+    const arquivoData = arquivoFeedbackNome ? {
+      nome: arquivoFeedbackNome,
+      tipo: 'file',
+      url: arquivoFeedback
     } : undefined;
 
     addFeedback({
@@ -159,7 +162,8 @@ export default function RHFeedback() {
     toast({ title: 'Sucesso', description: 'Feedback registrado com sucesso' });
     setIsRegistrarDialogOpen(false);
     setSelectedColaborador(null);
-    setArquivoFeedback(null);
+    setArquivoFeedback('');
+    setArquivoFeedbackNome('');
     setRefreshKey(prev => prev + 1);
   };
 
@@ -621,54 +625,17 @@ export default function RHFeedback() {
                       />
                     </div>
 
-                    {/* Upload de Arquivo */}
                     <div className="space-y-2">
                       <Label>Anexar Documento (PDF ou Imagem)</Label>
-                      <div className="grid grid-cols-2 gap-3 w-full min-w-0">
-                        <label className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                          <Upload className="h-6 w-6 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Upload de Arquivo</span>
-                          <input
-                            type="file"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            onChange={(e) => setArquivoFeedback(e.target.files?.[0] || null)}
-                            className="hidden"
-                          />
-                        </label>
-                        <label className="flex flex-col items-center justify-center gap-2 p-4 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
-                          <Camera className="h-6 w-6 text-muted-foreground" />
-                          <span className="text-sm text-muted-foreground">Tirar Foto</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={(e) => setArquivoFeedback(e.target.files?.[0] || null)}
-                            className="hidden"
-                          />
-                        </label>
-                      </div>
-                      {arquivoFeedback && (
-                        <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm flex-1 truncate">{arquivoFeedback.name}</span>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            type="button"
-                            onClick={() => window.open(URL.createObjectURL(arquivoFeedback), '_blank')}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            type="button"
-                            onClick={() => setArquivoFeedback(null)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      )}
+                      <FileUploadComprovante
+                        label="Documento do Feedback"
+                        value={arquivoFeedback}
+                        fileName={arquivoFeedbackNome}
+                        onFileChange={({ comprovante, comprovanteNome }) => {
+                          setArquivoFeedback(comprovante);
+                          setArquivoFeedbackNome(comprovanteNome);
+                        }}
+                      />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">

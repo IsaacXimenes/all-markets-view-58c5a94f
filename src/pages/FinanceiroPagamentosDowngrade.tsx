@@ -12,9 +12,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { 
-  ArrowDownCircle, Wallet, DollarSign, Eye, Check, Upload, 
+  ArrowDownCircle, Wallet, DollarSign, Eye, Check, 
   AlertTriangle, Clock, User, Store, Calendar, FileText, History, CheckCircle
 } from 'lucide-react';
+import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 
 import { useCadastroStore } from '@/store/cadastroStore';
 import { getContasFinanceiras, ContaFinanceira } from '@/utils/cadastrosApi';
@@ -55,7 +56,8 @@ export default function FinanceiroPagamentosDowngrade() {
   const [showExecutarModal, setShowExecutarModal] = useState(false);
   const [vendaSelecionada, setVendaSelecionada] = useState<VendaComFluxo | null>(null);
   const [contaOrigem, setContaOrigem] = useState('');
-  const [comprovante, setComprovante] = useState<File | null>(null);
+  const [comprovante, setComprovante] = useState<string>('');
+  const [comprovanteNome, setComprovanteNome] = useState<string>('');
   const [observacoes, setObservacoes] = useState('');
   
   // Modal de detalhes
@@ -116,7 +118,8 @@ export default function FinanceiroPagamentosDowngrade() {
   const handleAbrirExecutar = (venda: VendaComFluxo) => {
     setVendaSelecionada(venda);
     setContaOrigem('');
-    setComprovante(null);
+    setComprovante('');
+    setComprovanteNome('');
     setObservacoes('');
     setShowExecutarModal(true);
   };
@@ -166,17 +169,10 @@ export default function FinanceiroPagamentosDowngrade() {
   };
   
   // Handle file upload
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setComprovante(e.target.files[0]);
-    }
-  };
-  
   // Visualizar anexo
   const handleVisualizarAnexo = () => {
     if (comprovante) {
-      const url = URL.createObjectURL(comprovante);
-      window.open(url, '_blank');
+      window.open(comprovante, '_blank');
     }
   };
 
@@ -501,37 +497,15 @@ export default function FinanceiroPagamentosDowngrade() {
               )}
               
               {/* Comprovante */}
-              <div>
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <Upload className="h-4 w-4" />
-                  Anexar Comprovante
-                </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <Input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={handleFileChange}
-                    className="flex-1"
-                  />
-                </div>
-                {comprovante && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="outline" className="whitespace-nowrap">
-                      <Upload className="h-3 w-3 mr-1" />
-                      {comprovante.name}
-                    </Badge>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={handleVisualizarAnexo}
-                      className="h-8"
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Visualizar
-                    </Button>
-                  </div>
-                )}
-              </div>
+              <FileUploadComprovante
+                label="Comprovante de Pagamento"
+                value={comprovante}
+                fileName={comprovanteNome}
+                onFileChange={({ comprovante: val, comprovanteNome: nome }) => {
+                  setComprovante(val);
+                  setComprovanteNome(nome);
+                }}
+              />
               
               {/* Observações */}
               <div>
