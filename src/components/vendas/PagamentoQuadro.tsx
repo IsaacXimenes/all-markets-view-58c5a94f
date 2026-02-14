@@ -328,6 +328,12 @@ export function PagamentoQuadro({
       toast.error('Preencha os campos de data base e número de parcelas');
       return;
     }
+
+    // Validar comprovante obrigatório
+    if (!novoPagamento.comprovante) {
+      toast.error('Anexe o comprovante de pagamento');
+      return;
+    }
     
     const parcelas = novoPagamento.meioPagamento === 'Cartão Crédito' 
       ? novoPagamento.parcelas 
@@ -863,6 +869,7 @@ export function PagamentoQuadro({
             {/* Upload de Comprovante */}
             <FileUploadComprovante
               label="Comprovante de Pagamento"
+              required
               value={novoPagamento.comprovante || ''}
               fileName={novoPagamento.comprovanteNome}
               onFileChange={(data) => {
