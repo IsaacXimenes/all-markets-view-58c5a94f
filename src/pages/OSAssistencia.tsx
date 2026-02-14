@@ -482,6 +482,7 @@ export default function OSAssistencia() {
                   <SelectItem value="Solicitação Enviada">Solicitação Enviada</SelectItem>
                   <SelectItem value="Aguardando Conferência">Aguardando Conferência</SelectItem>
                   <SelectItem value="Finalizado">Finalizado</SelectItem>
+                  <SelectItem value="Aguardando Pagamento">Aguardando Pagamento</SelectItem>
                   <SelectItem value="Recusada pelo Técnico">Recusada pelo Técnico</SelectItem>
                 </SelectContent>
               </Select>
@@ -575,6 +576,17 @@ export default function OSAssistencia() {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
+                    {os.status === 'Aguardando Pagamento' && os.proximaAtuacao === 'Atendente' && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        title="Registrar Pagamento"
+                        className="text-amber-600 hover:text-amber-700"
+                        onClick={() => navigate(`/os/assistencia/${os.id}?pagamento=true`)}
+                      >
+                        <CreditCard className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button 
                       variant="ghost" 
                       size="sm"

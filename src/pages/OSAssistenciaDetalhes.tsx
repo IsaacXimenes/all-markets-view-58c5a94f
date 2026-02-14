@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import { InputComMascara } from '@/components/ui/InputComMascara';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -561,13 +562,13 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                                   <SelectValue placeholder="Selecione a peça do estoque" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {pecasEstoque
-                                    .filter(p => !editLojaId || p.lojaId === editLojaId)
+                                {pecasEstoque
+                                    .filter(p => p.status === 'Disponível' && p.quantidade > 0)
                                     .map(p => (
-                                      <SelectItem key={p.id} value={p.descricao}>
-                                        {p.descricao} (Qtd: {p.quantidade} | {p.origem})
-                                      </SelectItem>
-                                    ))}
+                                       <SelectItem key={p.id} value={p.descricao}>
+                                         {p.descricao} (Qtd: {p.quantidade} | {obterNomeLoja(p.lojaId)})
+                                       </SelectItem>
+                                     ))}
                                 </SelectContent>
                               </Select>
                             ) : (
@@ -783,12 +784,25 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                         modeloImei: os.pecas[0]?.imei || '',
                         lojaSolicitante: os.lojaId
                       });
-                      // Refresh solicitações
+                      // Atualizar status da OS para Solicitação de Peça
+                      updateOrdemServico(os.id, {
+                        status: 'Solicitação de Peça' as any,
+                        proximaAtuacao: 'Gestor (Suprimentos)',
+                        timeline: [...os.timeline, {
+                          data: new Date().toISOString(),
+                          tipo: 'peca',
+                          descricao: `Solicitação de peça: ${novaSolPeca} x${novaSolQtd} – ${novaSolJustificativa}`,
+                          responsavel: 'Atendente'
+                        }]
+                      });
+                      // Refresh OS e solicitações
+                      const updatedOS = getOrdemServicoById(os.id);
+                      if (updatedOS) setOS(updatedOS);
                       setSolicitacoesOS(getSolicitacoesByOS(os.id));
                       setNovaSolPeca('');
                       setNovaSolQtd(1);
                       setNovaSolJustificativa('');
-                      toast.success('Solicitação adicionada!');
+                      toast.success('Solicitação adicionada! Status atualizado.');
                     }}>
                       <Plus className="h-4 w-4 mr-1" />
                       Adicionar Solicitação
@@ -810,23 +824,23 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium">Valor de Custo (R$)</label>
-                    <Input
-                      type="number"
-                      value={valorCustoTecnico || ''}
-                      onChange={(e) => setValorCustoTecnico(parseFloat(e.target.value) || 0)}
+                    <InputComMascara
+                      mascara="moeda"
+                      value={valorCustoTecnico}
+                      onChange={(formatted, raw) => setValorCustoTecnico(typeof raw === 'number' ? raw : 0)}
                       placeholder="0,00"
-                      disabled={os.proximaAtuacao !== 'Técnico: Avaliar/Executar' && !!os.valorCustoTecnico}
+                      disabled={os.proximaAtuacao !== 'Técnico: Avaliar/Executar' && os.proximaAtuacao !== 'Técnico' && !!os.valorCustoTecnico}
                     />
                     <p className="text-xs text-muted-foreground mt-1">Custo de peças/insumos utilizados</p>
                   </div>
                   <div>
                     <label className="text-sm font-medium">Valor de Venda (R$)</label>
-                    <Input
-                      type="number"
-                      value={valorVendaTecnico || ''}
-                      onChange={(e) => setValorVendaTecnico(parseFloat(e.target.value) || 0)}
+                    <InputComMascara
+                      mascara="moeda"
+                      value={valorVendaTecnico}
+                      onChange={(formatted, raw) => setValorVendaTecnico(typeof raw === 'number' ? raw : 0)}
                       placeholder="0,00"
-                      disabled={os.proximaAtuacao !== 'Técnico: Avaliar/Executar' && !!os.valorVendaTecnico}
+                      disabled={os.proximaAtuacao !== 'Técnico: Avaliar/Executar' && os.proximaAtuacao !== 'Técnico' && !!os.valorVendaTecnico}
                     />
                     <p className="text-xs text-muted-foreground mt-1">Valor cobrado do cliente</p>
                   </div>
@@ -849,7 +863,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {(os.proximaAtuacao === 'Vendedor: Registrar Pagamento' || os.proximaAtuacao === 'Gestor/Vendedor') ? (
+                {(os.proximaAtuacao === 'Vendedor: Registrar Pagamento' || os.proximaAtuacao === 'Gestor/Vendedor' || (os.proximaAtuacao === 'Atendente' && os.status === 'Aguardando Pagamento') || searchParams.get('pagamento') === 'true') ? (
                   (!os.valorCustoTecnico || !os.valorVendaTecnico) ? (
                     <div className="bg-destructive/10 p-4 rounded-lg text-destructive text-sm flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4" />

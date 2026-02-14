@@ -18,6 +18,7 @@ import {
 import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
 import { getOrdemServicoById, updateOrdemServico } from '@/utils/assistenciaApi';
 import { Eye, Check, Download, Filter, X, FileText, Clock, CheckCircle, DollarSign } from 'lucide-react';
+import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { toast } from 'sonner';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { ResponsiveCardGrid, ResponsiveFilterGrid } from '@/components/ui/ResponsiveContainers';
@@ -41,6 +42,8 @@ export default function FinanceiroNotasAssistencia() {
   const [contaPagamento, setContaPagamento] = useState('');
   const [formaPagamento, setFormaPagamento] = useState('');
   const [responsavelFinanceiro, setResponsavelFinanceiro] = useState('');
+  const [comprovante, setComprovante] = useState('');
+  const [comprovanteNome, setComprovanteNome] = useState('');
 
   // Filtros
   const [filters, setFilters] = useState({
@@ -82,10 +85,12 @@ export default function FinanceiroNotasAssistencia() {
     setContaPagamento('');
     setFormaPagamento('');
     setResponsavelFinanceiro('');
+    setComprovante('');
+    setComprovanteNome('');
     setDialogOpen(true);
   };
 
-  const botaoDesabilitado = !contaPagamento || !formaPagamento || !responsavelFinanceiro;
+  const botaoDesabilitado = !contaPagamento || !formaPagamento || !responsavelFinanceiro || !comprovante;
 
   const handleFinalizarNota = () => {
     if (!notaSelecionada || botaoDesabilitado) return;
@@ -432,6 +437,20 @@ export default function FinanceiroNotasAssistencia() {
                               setResponsavelFinanceiro(col?.nome || id);
                             }}
                             placeholder="Buscar colaborador..."
+                          />
+                        </div>
+
+                        <div>
+                          <Label>Comprovante *</Label>
+                          <FileUploadComprovante
+                            label="Comprovante de Pagamento"
+                            required
+                            value={comprovante}
+                            fileName={comprovanteNome}
+                            onFileChange={(data) => {
+                              setComprovante(data.comprovante);
+                              setComprovanteNome(data.comprovanteNome);
+                            }}
                           />
                         </div>
 
