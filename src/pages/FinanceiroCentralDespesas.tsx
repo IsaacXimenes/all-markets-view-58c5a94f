@@ -493,26 +493,11 @@ export default function FinanceiroCentralDespesas() {
                   <Label>Observações</Label>
                   <Textarea value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} placeholder="Observações adicionais..." />
                 </div>
-                <div>
-                  <Label>Documento/Anexo</Label>
-                  <div className="flex items-center gap-2">
-                    <Input 
-                      type="file" 
-                      accept="image/*,.pdf,.doc,.docx"
-                      onChange={e => {
-                        const file = e.target.files?.[0];
-                        setFormDocumento(file ? file.name : '');
-                      }}
-                    />
-                    {formDocumento && (
-                      <Badge variant="outline" className="gap-1 whitespace-nowrap">
-                        <Paperclip className="h-3 w-3" />
-                        {formDocumento}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">Opcional. Anexe um documento de referência.</p>
-                </div>
+                <FileUploadComprovante
+                  label="Documento/Anexo"
+                  value={formDocumento}
+                  onFileChange={({ comprovanteNome }) => setFormDocumento(comprovanteNome)}
+                />
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={resetForm}>Limpar</Button>
                   <Button onClick={handleLancar} className="flex-1"><Plus className="h-4 w-4 mr-2" /> Lançar Despesa</Button>
