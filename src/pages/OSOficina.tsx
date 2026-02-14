@@ -11,12 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getOrdensServico, getOrdemServicoById, updateOrdemServico, calcularSLADias, formatCurrency, OrdemServico } from '@/utils/assistenciaApi';
 import { getClientes } from '@/utils/cadastrosApi';
+import { addSolicitacao, getSolicitacoesByOS } from '@/utils/solicitacaoPecasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
-import { Eye, Play, CheckCircle, Clock, Wrench, AlertTriangle, Package } from 'lucide-react';
+import { Eye, Play, CheckCircle, Clock, Wrench, AlertTriangle, Package, Plus, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { addNotification } from '@/utils/notificationsApi';
 
 export default function OSOficina() {
   const navigate = useNavigate();
@@ -31,6 +33,14 @@ export default function OSOficina() {
   const [resumoConclusao, setResumoConclusao] = useState('');
   const [valorCusto, setValorCusto] = useState<number>(0);
   const [valorVenda, setValorVenda] = useState<number>(0);
+
+  // Modal de Solicitar Peça
+  const [solicitarPecaModal, setSolicitarPecaModal] = useState(false);
+  const [osParaSolicitar, setOsParaSolicitar] = useState<OrdemServico | null>(null);
+  const [solPeca, setSolPeca] = useState('');
+  const [solQuantidade, setSolQuantidade] = useState(1);
+  const [solJustificativa, setSolJustificativa] = useState('');
+  const [solicitacoesOS, setSolicitacoesOS] = useState<any[]>([]);
 
   // Filtrar OSs onde proximaAtuacao contém "Técnico"
   const osTecnico = useMemo(() => {
@@ -123,6 +133,71 @@ export default function OSOficina() {
     recarregar();
   };
 
+  // Solicitar Peça
+  const handleAbrirSolicitarPeca = (os: OrdemServico) => {
+    setOsParaSolicitar(os);
+    setSolPeca('');
+    setSolQuantidade(1);
+    setSolJustificativa('');
+    setSolicitacoesOS(getSolicitacoesByOS(os.id));
+    setSolicitarPecaModal(true);
+  };
+
+  const handleEnviarSolicitacao = () => {
+    if (!osParaSolicitar) return;
+    if (!solPeca.trim()) {
+      toast.error('Informe o nome da peça.');
+      return;
+    }
+    if (!solJustificativa.trim()) {
+      toast.error('Informe a justificativa.');
+      return;
+    }
+
+    const novaSol = addSolicitacao({
+      osId: osParaSolicitar.id,
+      peca: solPeca,
+      quantidade: solQuantidade,
+      justificativa: solJustificativa,
+      modeloImei: osParaSolicitar.imeiAparelho || '',
+      lojaSolicitante: osParaSolicitar.lojaId
+    });
+
+    // Atualizar OS com status de solicitação
+    const osAtualizada = getOrdemServicoById(osParaSolicitar.id);
+    if (osAtualizada) {
+      updateOrdemServico(osParaSolicitar.id, {
+        status: 'Solicitação de Peça',
+        proximaAtuacao: 'Gestor (Suprimentos)',
+        timeline: [...osAtualizada.timeline, {
+          data: new Date().toISOString(),
+          tipo: 'peca',
+          descricao: `Técnico solicitou peça: ${solPeca} x${solQuantidade} – ${solJustificativa}`,
+          responsavel: user?.colaborador?.nome || 'Técnico'
+        }]
+      });
+    }
+
+    // Notificação
+    try {
+      addNotification({
+        type: 'assistencia',
+        title: `Solicitação de Peça – ${osParaSolicitar.id}`,
+        description: `${solPeca} x${solQuantidade} solicitada pelo técnico`,
+        targetUsers: []
+      });
+    } catch {}
+
+    toast.success(`Solicitação ${novaSol.id} enviada para aprovação do gestor!`);
+    
+    // Atualizar lista local
+    setSolicitacoesOS(getSolicitacoesByOS(osParaSolicitar.id));
+    setSolPeca('');
+    setSolQuantidade(1);
+    setSolJustificativa('');
+    recarregar();
+  };
+
   const getStatusBadge = (os: OrdemServico) => {
     const status = os.status;
     if (status === 'Aguardando Análise' || status === 'Em Aberto') {
@@ -161,17 +236,33 @@ export default function OSOficina() {
       );
     }
 
-    // Em serviço - pode finalizar
+    // Em serviço - pode solicitar peça ou finalizar
     if (status === 'Em serviço') {
       return (
-        <Button size="sm" onClick={() => handleAbrirFinalizar(os)} className="gap-1 bg-green-600 hover:bg-green-700">
-          <CheckCircle className="h-3.5 w-3.5" />
-          Finalizar
-        </Button>
+        <div className="flex gap-1">
+          <Button size="sm" variant="outline" onClick={() => handleAbrirSolicitarPeca(os)} className="gap-1" title="Solicitar Peça">
+            <ShoppingCart className="h-3.5 w-3.5" />
+            Solicitar Peça
+          </Button>
+          <Button size="sm" onClick={() => handleAbrirFinalizar(os)} className="gap-1 bg-green-600 hover:bg-green-700">
+            <CheckCircle className="h-3.5 w-3.5" />
+            Finalizar
+          </Button>
+        </div>
       );
     }
 
     return null;
+  };
+
+  const getStatusSolicitacao = (status: string) => {
+    switch (status) {
+      case 'Pendente': return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/20 dark:text-yellow-400">Pendente</Badge>;
+      case 'Aprovada': return <Badge className="bg-blue-500">Aprovada</Badge>;
+      case 'Rejeitada': return <Badge variant="destructive">Rejeitada</Badge>;
+      case 'Cancelada': return <Badge variant="secondary">Cancelada</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
+    }
   };
 
   return (
@@ -340,6 +431,102 @@ export default function OSOficina() {
             <Button onClick={handleFinalizar} className="bg-green-600 hover:bg-green-700">
               <CheckCircle className="h-4 w-4 mr-2" />
               Finalizar OS
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Solicitar Peça */}
+      <Dialog open={solicitarPecaModal} onOpenChange={setSolicitarPecaModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" />
+              Solicitar Peça – OS {osParaSolicitar?.id}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6 py-2">
+            {/* Info da OS */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-3 rounded-lg bg-muted/50 text-sm">
+              <div>
+                <span className="text-muted-foreground text-xs">Modelo</span>
+                <p className="font-medium">{osParaSolicitar?.modeloAparelho || '-'}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs">IMEI</span>
+                <p className="font-medium font-mono text-xs">{osParaSolicitar?.imeiAparelho || '-'}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs">Loja</span>
+                <p className="font-medium">{osParaSolicitar ? obterNomeLoja(osParaSolicitar.lojaId) : '-'}</p>
+              </div>
+            </div>
+
+            {/* Solicitações existentes */}
+            {solicitacoesOS.length > 0 && (
+              <div>
+                <p className="text-sm font-medium mb-2">Solicitações anteriores ({solicitacoesOS.length})</p>
+                <div className="space-y-2">
+                  {solicitacoesOS.map(sol => (
+                    <div key={sol.id} className="flex items-center justify-between p-2 rounded border text-sm">
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-xs text-muted-foreground">{sol.id}</span>
+                        <span className="font-medium">{sol.peca}</span>
+                        <span className="text-muted-foreground">x{sol.quantidade}</span>
+                      </div>
+                      {getStatusSolicitacao(sol.status)}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Formulário de nova solicitação */}
+            <div className="border-t pt-4 space-y-3">
+              <p className="text-sm font-medium flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Nova Solicitação
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Peça *</Label>
+                  <Input
+                    value={solPeca}
+                    onChange={(e) => setSolPeca(e.target.value)}
+                    placeholder="Nome da peça"
+                    className={cn(!solPeca && solPeca !== '' && 'border-destructive')}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Quantidade</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={solQuantidade}
+                    onChange={(e) => setSolQuantidade(parseInt(e.target.value) || 1)}
+                  />
+                </div>
+                <div className="space-y-1 md:col-span-1">
+                  <Label className="text-xs">Justificativa *</Label>
+                  <Input
+                    value={solJustificativa}
+                    onChange={(e) => setSolJustificativa(e.target.value)}
+                    placeholder="Motivo da solicitação"
+                    className={cn(!solJustificativa && solJustificativa !== '' && 'border-destructive')}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setSolicitarPecaModal(false)}>
+              Fechar
+            </Button>
+            <Button onClick={handleEnviarSolicitacao} className="gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Enviar Solicitação
             </Button>
           </DialogFooter>
         </DialogContent>
