@@ -202,6 +202,7 @@ export default function OSAnaliseGarantia() {
         garantiaId: registroAprovado.origem === 'Garantia' ? registroAprovado.origemId : undefined,
         modeloAparelho,
         imeiAparelho,
+        observacaoOrigem: registroAprovado.observacao,
       });
 
       toast.success('Solicitação aprovada e OS criada com sucesso!');
@@ -443,6 +444,14 @@ export default function OSAnaliseGarantia() {
                   <div>
                     <Label className="text-xs text-muted-foreground">Data Aprovação</Label>
                     <p>{format(new Date(detalheRegistro.dataAprovacao), 'dd/MM/yyyy HH:mm')}</p>
+                  </div>
+                )}
+                {detalheRegistro.observacao && (
+                  <div className="col-span-2">
+                    <Label className="text-xs text-muted-foreground">Observação do Estoque</Label>
+                    <div className="mt-1 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                      <p className="text-sm text-amber-800 dark:text-amber-300">{detalheRegistro.observacao}</p>
+                    </div>
                   </div>
                 )}
               </div>

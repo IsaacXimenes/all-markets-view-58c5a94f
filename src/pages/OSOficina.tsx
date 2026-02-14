@@ -14,7 +14,8 @@ import { getClientes } from '@/utils/cadastrosApi';
 import { addSolicitacao, getSolicitacoesByOS } from '@/utils/solicitacaoPecasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
-import { Eye, Play, CheckCircle, Clock, Wrench, AlertTriangle, Package, Plus, ShoppingCart } from 'lucide-react';
+import { InputComMascara } from '@/components/ui/InputComMascara';
+import { Eye, Play, CheckCircle, Clock, Wrench, AlertTriangle, Package, Plus, ShoppingCart, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -27,12 +28,17 @@ export default function OSOficina() {
   const { obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   const user = useAuthStore((s) => s.user);
 
+  // IDs de OS finalizadas nesta sessão (para manter visíveis)
+  const [osFinalizadas, setOsFinalizadas] = useState<Set<string>>(new Set());
+
   // Modal de Finalização
   const [finalizarModal, setFinalizarModal] = useState(false);
   const [osParaFinalizar, setOsParaFinalizar] = useState<OrdemServico | null>(null);
   const [resumoConclusao, setResumoConclusao] = useState('');
-  const [valorCusto, setValorCusto] = useState<number>(0);
-  const [valorVenda, setValorVenda] = useState<number>(0);
+  const [valorCustoFormatado, setValorCustoFormatado] = useState('');
+  const [valorCustoRaw, setValorCustoRaw] = useState<number>(0);
+  const [valorVendaFormatado, setValorVendaFormatado] = useState('');
+  const [valorVendaRaw, setValorVendaRaw] = useState<number>(0);
 
   // Modal de Solicitar Peça
   const [solicitarPecaModal, setSolicitarPecaModal] = useState(false);
@@ -42,15 +48,17 @@ export default function OSOficina() {
   const [solJustificativa, setSolJustificativa] = useState('');
   const [solicitacoesOS, setSolicitacoesOS] = useState<any[]>([]);
 
-  // Filtrar OSs onde proximaAtuacao contém "Técnico"
+  // Filtrar OSs onde proximaAtuacao contém "Técnico" OU recém-finalizadas
   const osTecnico = useMemo(() => {
     return ordensServico.filter(os => {
       const atuacao = os.proximaAtuacao || '';
-      return atuacao === 'Técnico' || 
+      const isTecnico = atuacao === 'Técnico' || 
              atuacao === 'Técnico (Recebimento)' || 
              atuacao === 'Técnico: Avaliar/Executar';
+      const isRecentFinalizada = osFinalizadas.has(os.id);
+      return isTecnico || isRecentFinalizada;
     }).sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
-  }, [ordensServico]);
+  }, [ordensServico, osFinalizadas]);
 
   // Stats
   const aguardandoCheckin = osTecnico.filter(os => os.status === 'Aguardando Análise' || os.status === 'Em Aberto').length;
@@ -94,8 +102,10 @@ export default function OSOficina() {
   const handleAbrirFinalizar = (os: OrdemServico) => {
     setOsParaFinalizar(os);
     setResumoConclusao(os.resumoConclusao || '');
-    setValorCusto(os.valorCustoTecnico || 0);
-    setValorVenda(os.valorVendaTecnico || 0);
+    setValorCustoRaw(os.valorCustoTecnico || 0);
+    setValorCustoFormatado(os.valorCustoTecnico ? String(os.valorCustoTecnico) : '');
+    setValorVendaRaw(os.valorVendaTecnico || 0);
+    setValorVendaFormatado(os.valorVendaTecnico ? String(os.valorVendaTecnico) : '');
     setFinalizarModal(true);
   };
 
@@ -105,35 +115,39 @@ export default function OSOficina() {
       toast.error('Preencha o Resumo da Conclusão para finalizar.');
       return;
     }
-    if (!valorCusto || valorCusto <= 0) {
+    if (!valorCustoRaw || valorCustoRaw <= 0) {
       toast.error('Informe o Valor de Custo (deve ser maior que 0).');
       return;
     }
-    if (!valorVenda || valorVenda <= 0) {
+    if (!valorVendaRaw || valorVendaRaw <= 0) {
       toast.error('Informe o Valor de Venda (deve ser maior que 0).');
       return;
     }
 
     updateOrdemServico(osParaFinalizar.id, {
-      status: 'Finalizado',
-      proximaAtuacao: 'Gestor/Vendedor',
+      status: 'Aguardando Pagamento',
+      proximaAtuacao: 'Atendente',
       resumoConclusao,
-      valorCustoTecnico: valorCusto,
-      valorVendaTecnico: valorVenda,
+      valorCustoTecnico: valorCustoRaw,
+      valorVendaTecnico: valorVendaRaw,
       timeline: [...osParaFinalizar.timeline, {
         data: new Date().toISOString(),
         tipo: 'conclusao_servico',
-        descricao: `OS finalizada pelo técnico. Custo: R$ ${valorCusto.toFixed(2)}, Venda: R$ ${valorVenda.toFixed(2)}. Resumo: ${resumoConclusao}`,
+        descricao: `OS finalizada pelo técnico. Custo: R$ ${valorCustoRaw.toFixed(2)}, Venda: R$ ${valorVendaRaw.toFixed(2)}. Resumo: ${resumoConclusao}`,
         responsavel: user?.colaborador?.nome || 'Técnico'
       }]
     });
-    toast.success(`OS ${osParaFinalizar.id} finalizada com sucesso!`);
+
+    // Manter a OS visível na tela
+    setOsFinalizadas(prev => new Set(prev).add(osParaFinalizar.id));
+
+    toast.success(`OS ${osParaFinalizar.id} finalizada! Encaminhada para pagamento na aba Nova Assistência.`);
     setFinalizarModal(false);
     setOsParaFinalizar(null);
     recarregar();
   };
 
-  // Solicitar Peça
+  // Solicitar Peça - acessível pelo botão dentro do modal de finalização ou detalhes
   const handleAbrirSolicitarPeca = (os: OrdemServico) => {
     setOsParaSolicitar(os);
     setSolPeca('');
@@ -209,12 +223,20 @@ export default function OSOficina() {
     if (os.proximaAtuacao === 'Técnico (Recebimento)' || status === 'Peça Recebida' || status === 'Pagamento Concluído') {
       return <Badge className="bg-emerald-500 hover:bg-emerald-600">Peça Recebida</Badge>;
     }
+    if (status === 'Aguardando Pagamento') {
+      return <Badge className="bg-amber-500 hover:bg-amber-600">Aguardando Pagamento</Badge>;
+    }
     return <Badge variant="secondary">{status}</Badge>;
   };
 
   const getAcoes = (os: OrdemServico) => {
     const status = os.status;
     const atuacao = os.proximaAtuacao || '';
+
+    // OS já finalizada pelo técnico - sem ações
+    if (status === 'Aguardando Pagamento') {
+      return null;
+    }
 
     // Aguardando check-in
     if (status === 'Aguardando Análise' || status === 'Em Aberto') {
@@ -236,19 +258,13 @@ export default function OSOficina() {
       );
     }
 
-    // Em serviço - pode solicitar peça ou finalizar
+    // Em serviço - apenas finalizar (solicitar peça está no modal de finalização)
     if (status === 'Em serviço') {
       return (
-        <div className="flex gap-1">
-          <Button size="sm" variant="outline" onClick={() => handleAbrirSolicitarPeca(os)} className="gap-1" title="Solicitar Peça">
-            <ShoppingCart className="h-3.5 w-3.5" />
-            Solicitar Peça
-          </Button>
-          <Button size="sm" onClick={() => handleAbrirFinalizar(os)} className="gap-1 bg-green-600 hover:bg-green-700">
-            <CheckCircle className="h-3.5 w-3.5" />
-            Finalizar
-          </Button>
-        </div>
+        <Button size="sm" onClick={() => handleAbrirFinalizar(os)} className="gap-1 bg-green-600 hover:bg-green-700">
+          <CheckCircle className="h-3.5 w-3.5" />
+          Finalizar
+        </Button>
       );
     }
 
@@ -332,13 +348,23 @@ export default function OSOficina() {
                   const cliente = clientes.find(c => c.id === os.clienteId);
                   const slaDias = calcularSLADias(os.dataHora);
                   return (
-                    <TableRow key={os.id}>
+                    <TableRow key={os.id} className={os.status === 'Aguardando Pagamento' ? 'bg-amber-500/10' : ''}>
                       <TableCell className="font-mono text-xs font-medium">{os.id}</TableCell>
                       <TableCell className="text-xs">
                         {format(new Date(os.dataHora), 'dd/MM/yyyy HH:mm')}
                       </TableCell>
                       <TableCell>{cliente?.nome || '-'}</TableCell>
-                      <TableCell className="text-sm">{os.modeloAparelho || '-'}</TableCell>
+                      <TableCell className="text-sm">
+                        <div className="flex flex-col gap-1">
+                          {os.modeloAparelho || '-'}
+                          {os.observacaoOrigem && (
+                            <span className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400" title={os.observacaoOrigem}>
+                              <MessageSquare className="h-3 w-3" />
+                              Obs. Estoque
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell className="text-xs">{obterNomeLoja(os.lojaId)}</TableCell>
                       <TableCell>{getStatusBadge(os)}</TableCell>
                       <TableCell>
@@ -387,6 +413,17 @@ export default function OSOficina() {
             <DialogTitle>Finalizar OS {osParaFinalizar?.id}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            {/* Observação de Origem (do Estoque) */}
+            {osParaFinalizar?.observacaoOrigem && (
+              <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-300 mb-1 flex items-center gap-1">
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Observação do Estoque
+                </p>
+                <p className="text-sm text-amber-800 dark:text-amber-200">{osParaFinalizar.observacaoOrigem}</p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Resumo da Conclusão *</Label>
               <Textarea
@@ -400,31 +437,51 @@ export default function OSOficina() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Valor de Custo (R$) *</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={valorCusto || ''}
-                  onChange={(e) => setValorCusto(parseFloat(e.target.value) || 0)}
+                <InputComMascara
+                  mascara="moeda"
+                  value={valorCustoRaw}
+                  onChange={(formatted, raw) => {
+                    setValorCustoFormatado(formatted);
+                    setValorCustoRaw(typeof raw === 'number' ? raw : 0);
+                  }}
                   placeholder="0,00"
-                  className={cn(!valorCusto && 'border-destructive')}
+                  className={cn(!valorCustoRaw && 'border-destructive')}
                 />
                 <p className="text-xs text-muted-foreground">Custo de peças/insumos</p>
               </div>
               <div className="space-y-2">
                 <Label>Valor de Venda (R$) *</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={valorVenda || ''}
-                  onChange={(e) => setValorVenda(parseFloat(e.target.value) || 0)}
+                <InputComMascara
+                  mascara="moeda"
+                  value={valorVendaRaw}
+                  onChange={(formatted, raw) => {
+                    setValorVendaFormatado(formatted);
+                    setValorVendaRaw(typeof raw === 'number' ? raw : 0);
+                  }}
                   placeholder="0,00"
-                  className={cn(!valorVenda && 'border-destructive')}
+                  className={cn(!valorVendaRaw && 'border-destructive')}
                 />
                 <p className="text-xs text-muted-foreground">Valor cobrado do cliente</p>
               </div>
             </div>
+
+            {/* Botão de Solicitar Peça dentro do modal */}
+            {osParaFinalizar?.status === 'Em serviço' && (
+              <div className="border-t pt-3">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    setFinalizarModal(false);
+                    handleAbrirSolicitarPeca(osParaFinalizar);
+                  }} 
+                  className="gap-2 w-full"
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  Solicitar Peça (abre modal separado)
+                </Button>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFinalizarModal(false)}>Cancelar</Button>

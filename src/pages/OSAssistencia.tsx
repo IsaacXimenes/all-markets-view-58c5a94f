@@ -70,7 +70,7 @@ export default function OSAssistencia() {
         if (filtroAtuacao === 'tecnico') {
           if (os.proximaAtuacao !== 'Técnico: Avaliar/Executar') return false;
         } else if (filtroAtuacao === 'aguardando_pagamento') {
-          if (os.proximaAtuacao !== 'Vendedor: Registrar Pagamento') return false;
+          if (os.proximaAtuacao !== 'Vendedor: Registrar Pagamento' && os.proximaAtuacao !== 'Atendente') return false;
         } else if (filtroAtuacao === 'pendentes_financeiro') {
           if (os.proximaAtuacao !== 'Financeiro: Conferir Lançamento') return false;
         } else if (filtroAtuacao === 'gestor') {
@@ -137,6 +137,8 @@ export default function OSAssistencia() {
         return <Badge variant="outline" className="border-blue-500 text-blue-600 text-xs">Técnico</Badge>;
       case 'Vendedor: Registrar Pagamento':
         return <Badge variant="outline" className="border-amber-500 text-amber-600 text-xs">Vendedor</Badge>;
+      case 'Atendente':
+        return <Badge variant="outline" className="border-amber-500 text-amber-600 text-xs">Atendente</Badge>;
       case 'Financeiro: Conferir Lançamento':
         return <Badge variant="outline" className="border-purple-500 text-purple-600 text-xs">Financeiro</Badge>;
       case 'Gestor: Aprovar Peça':

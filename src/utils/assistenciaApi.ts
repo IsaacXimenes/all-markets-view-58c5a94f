@@ -98,11 +98,12 @@ export interface OrdemServico {
   imeiAparelho?: string;
   idVendaAntiga?: string;
   // Campos do fluxo de 3 etapas
-  proximaAtuacao?: 'Técnico: Avaliar/Executar' | 'Vendedor: Registrar Pagamento' | 'Financeiro: Conferir Lançamento' | 'Gestor: Aprovar Peça' | 'Logística: Enviar Peça' | 'Concluído' | 'Técnico' | 'Gestor (Suprimentos)' | 'Técnico (Recebimento)' | 'Gestor/Vendedor' | 'Gestor (Conferência)' | 'Financeiro' | '-';
+  proximaAtuacao?: 'Técnico: Avaliar/Executar' | 'Vendedor: Registrar Pagamento' | 'Financeiro: Conferir Lançamento' | 'Gestor: Aprovar Peça' | 'Logística: Enviar Peça' | 'Concluído' | 'Técnico' | 'Gestor (Suprimentos)' | 'Técnico (Recebimento)' | 'Gestor/Vendedor' | 'Gestor (Conferência)' | 'Financeiro' | 'Atendente' | '-';
   valorCustoTecnico?: number;
   valorVendaTecnico?: number;
   fotosEntrada?: string[];
   resumoConclusao?: string;
+  observacaoOrigem?: string;
 }
 
 // Mock data

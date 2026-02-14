@@ -477,7 +477,8 @@ export const salvarParecerEstoque = (
       encaminharParaAnaliseGarantia(
         produto.id,
         'Estoque',
-        `${produto.marca} ${produto.modelo} - ${produto.cor} (IMEI: ${produto.imei})`
+        `${produto.marca} ${produto.modelo} - ${produto.cor} (IMEI: ${produto.imei})`,
+        observacoes
       );
     } catch (error) {
       console.warn('[salvarParecerEstoque] Erro ao encaminhar para análise:', error);

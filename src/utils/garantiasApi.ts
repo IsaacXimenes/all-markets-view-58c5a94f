@@ -108,6 +108,7 @@ export interface RegistroAnaliseGarantia {
   tecnicoNome?: string;
   dataAprovacao?: string;
   usuarioAprovacao?: string;
+  observacao?: string;
 }
 
 // Dados mockados para Contatos Ativos
@@ -883,7 +884,7 @@ export const aprovarAnaliseGarantia = (id: string, dados: { tecnicoId: string; t
   return null;
 };
 
-export const encaminharParaAnaliseGarantia = (origemId: string, origem: 'Garantia' | 'Estoque', descricao: string): void => {
+export const encaminharParaAnaliseGarantia = (origemId: string, origem: 'Garantia' | 'Estoque', descricao: string, observacao?: string): void => {
   registroAnaliseCounter++;
   registrosAnaliseGarantia.push({
     id: `RAG-${String(registroAnaliseCounter).padStart(4, '0')}`,
@@ -891,7 +892,8 @@ export const encaminharParaAnaliseGarantia = (origemId: string, origem: 'Garanti
     origemId,
     clienteDescricao: descricao,
     dataChegada: new Date().toISOString(),
-    status: 'Pendente'
+    status: 'Pendente',
+    observacao
   });
 };
 
