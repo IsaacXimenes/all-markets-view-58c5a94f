@@ -23,7 +23,8 @@ import {
   Landmark,
   CreditCard,
   Clock,
-  Zap
+  Zap,
+  XCircle
 } from 'lucide-react';
 
 interface TabelaNotasPendenciasProps {
@@ -33,6 +34,7 @@ interface TabelaNotasPendenciasProps {
   onCadastrarProdutos?: (nota: NotaEntrada) => void;
   onConferir?: (nota: NotaEntrada) => void;
   onPagar?: (nota: NotaEntrada) => void;
+  onRejeitar?: (nota: NotaEntrada) => void;
 }
 
 // Helper para obter nome do fornecedor a partir do ID
@@ -73,7 +75,8 @@ export function TabelaNotasPendencias({
   onVerDetalhes,
   onCadastrarProdutos,
   onConferir,
-  onPagar
+  onPagar,
+  onRejeitar
 }: TabelaNotasPendenciasProps) {
   const navigate = useNavigate();
 
@@ -387,6 +390,25 @@ export function TabelaNotasPendencias({
                                 : `Aguardando ação do ${nota.atuacaoAtual}`
                               }
                             </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      
+                      {/* Botão Recusar - apenas Financeiro e com atuação no Financeiro */}
+                      {modulo === 'Financeiro' && nota.atuacaoAtual === 'Financeiro' && onRejeitar && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => onRejeitar(nota)}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Recusar nota</TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       )}

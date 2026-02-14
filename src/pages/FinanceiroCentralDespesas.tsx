@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Download, Plus, Trash2, Calendar, ChevronDown, DollarSign, CalendarDays, AlertTriangle, CheckCircle, Clock, TrendingUp, Eye, XCircle } from 'lucide-react';
+import { Download, Plus, Trash2, Calendar, ChevronDown, DollarSign, CalendarDays, AlertTriangle, CheckCircle, Clock, TrendingUp, Eye, XCircle, Paperclip, Upload } from 'lucide-react';
 import { getDespesas, addDespesa, deleteDespesa, updateDespesa, pagarDespesa, provisionarProximoPeriodo, provisionarRecorrenciaContinua, encerrarRecorrencia, atualizarStatusVencidos, CATEGORIAS_DESPESA, type Despesa } from '@/utils/financeApi';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -83,6 +83,7 @@ export default function FinanceiroCentralDespesas() {
     periodicidade: '' as '' | 'Mensal' | 'Trimestral' | 'Anual',
     observacoes: ''
   });
+  const [formDocumento, setFormDocumento] = useState<string>('');
 
   // Modals
   const [pagarModal, setPagarModal] = useState<Despesa | null>(null);
@@ -100,6 +101,9 @@ export default function FinanceiroCentralDespesas() {
   // Encerrar recorrência
   const [encerrarModal, setEncerrarModal] = useState<Despesa | null>(null);
   const [dataEncerramento, setDataEncerramento] = useState('');
+  
+  // Comprovante de pagamento
+  const [comprovantePagamento, setComprovantePagamento] = useState<string>('');
 
   // Refresh key for agenda indicators
   const [agendaRefresh, setAgendaRefresh] = useState(0);
@@ -127,6 +131,7 @@ export default function FinanceiroCentralDespesas() {
 
   const resetForm = () => {
     setForm({ tipo: '', descricao: '', valor: '', lojaId: '', categoria: '', dataVencimento: new Date().toISOString().split('T')[0], diaVencimento: '', competencia: '', conta: '', recorrente: false, periodicidade: '', observacoes: '' });
+    setFormDocumento('');
   };
 
   // Helper: inferir data de vencimento a partir de dia + competência
@@ -184,6 +189,7 @@ export default function FinanceiroCentralDespesas() {
       periodicidade: isRecorrente ? (form.periodicidade as 'Mensal' | 'Trimestral' | 'Anual') : null,
       pagoPor: null,
       diaVencimento: diaVenc,
+      ...(formDocumento ? { documento: formDocumento } : {}),
     });
     // Auto-provisionamento contínuo para despesas recorrentes (12 meses)
     if (isRecorrente && form.periodicidade) {
@@ -204,13 +210,14 @@ export default function FinanceiroCentralDespesas() {
 
   const handlePagar = () => {
     if (!pagarModal) return;
-    pagarDespesa(pagarModal.id, user?.colaborador?.nome || 'Não identificado');
+    pagarDespesa(pagarModal.id, user?.colaborador?.nome || 'Não identificado', comprovantePagamento || undefined);
     refreshDespesas();
     toast.success(`Despesa ${pagarModal.id} marcada como Paga`);
     if (pagarModal.recorrente) {
       setProvisionarModal(pagarModal);
     }
     setPagarModal(null);
+    setComprovantePagamento('');
   };
 
   const handleProvisionar = (sim: boolean) => {
@@ -485,6 +492,26 @@ export default function FinanceiroCentralDespesas() {
                   <Label>Observações</Label>
                   <Textarea value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} placeholder="Observações adicionais..." />
                 </div>
+                <div>
+                  <Label>Documento/Anexo</Label>
+                  <div className="flex items-center gap-2">
+                    <Input 
+                      type="file" 
+                      accept="image/*,.pdf,.doc,.docx"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        setFormDocumento(file ? file.name : '');
+                      }}
+                    />
+                    {formDocumento && (
+                      <Badge variant="outline" className="gap-1 whitespace-nowrap">
+                        <Paperclip className="h-3 w-3" />
+                        {formDocumento}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Opcional. Anexe um documento de referência.</p>
+                </div>
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={resetForm}>Limpar</Button>
                   <Button onClick={handleLancar} className="flex-1"><Plus className="h-4 w-4 mr-2" /> Lançar Despesa</Button>
@@ -521,6 +548,7 @@ export default function FinanceiroCentralDespesas() {
                     <TableHead>Loja</TableHead>
                     <TableHead>Lançamento</TableHead>
                     <TableHead>Vencimento</TableHead>
+                    <TableHead>Dias p/ Venc.</TableHead>
                     <TableHead>Competência</TableHead>
                     <TableHead>Conta de Origem</TableHead>
                     <TableHead>Valor</TableHead>
@@ -543,18 +571,54 @@ export default function FinanceiroCentralDespesas() {
                       <TableCell className="text-xs">{obterLojaById(d.lojaId)?.nome || '-'}</TableCell>
                       <TableCell className="text-xs">{new Date(d.data + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell>{new Date(d.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</TableCell>
+                      <TableCell>
+                        {(() => {
+                          if (d.status === 'Pago' || d.status === 'Agendado') return <span className="text-muted-foreground">-</span>;
+                          const hoje = new Date();
+                          hoje.setHours(0, 0, 0, 0);
+                          const venc = new Date(d.dataVencimento + 'T00:00:00');
+                          const diffDias = Math.ceil((venc.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+                          
+                          let badgeClass = '';
+                          let label = '';
+                          
+                          if (diffDias < 0) {
+                            badgeClass = 'bg-red-500/10 text-red-700 dark:text-red-400';
+                            label = `Vencido há ${Math.abs(diffDias)}d`;
+                          } else if (diffDias === 0) {
+                            badgeClass = 'bg-orange-500/10 text-orange-700 dark:text-orange-400';
+                            label = 'Hoje';
+                          } else if (diffDias <= 3) {
+                            badgeClass = 'bg-red-500/10 text-red-700 dark:text-red-400';
+                            label = `${diffDias}d`;
+                          } else if (diffDias <= 9) {
+                            badgeClass = 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400';
+                            label = `${diffDias}d`;
+                          } else {
+                            badgeClass = 'bg-green-500/10 text-green-700 dark:text-green-400';
+                            label = `${diffDias}d`;
+                          }
+                          
+                          return <Badge variant="outline" className={badgeClass}>{label}</Badge>;
+                        })()}
+                      </TableCell>
                       <TableCell>{d.competencia}</TableCell>
                       <TableCell className="text-xs">{d.conta}</TableCell>
                       <TableCell className="font-semibold">{formatCurrency(d.valor)}</TableCell>
                       <TableCell>
-                         <Badge variant="outline" className={
-                          d.status === 'Pago' ? 'bg-green-500/10 text-green-700 dark:text-green-400' :
-                          d.status === 'Vencido' ? 'bg-red-500/10 text-red-700 dark:text-red-400' :
-                          d.status === 'Agendado' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400' :
-                          'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
-                        }>
-                          {d.status}
-                        </Badge>
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className={
+                            d.status === 'Pago' ? 'bg-green-500/10 text-green-700 dark:text-green-400' :
+                            d.status === 'Vencido' ? 'bg-red-500/10 text-red-700 dark:text-red-400' :
+                            d.status === 'Agendado' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400' :
+                            'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400'
+                          }>
+                            {d.status}
+                          </Badge>
+                          {(d.comprovante || d.documento) && (
+                            <span title="Contém Anexo"><Paperclip className="h-3 w-3 text-muted-foreground" /></span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-xs">{d.pagoPor || '-'}</TableCell>
                       <TableCell>
@@ -604,12 +668,30 @@ export default function FinanceiroCentralDespesas() {
           <DialogContent>
             <DialogHeader><DialogTitle>Confirmar Pagamento</DialogTitle></DialogHeader>
             {pagarModal && (
-              <div className="space-y-3 py-4">
+              <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <span className="text-muted-foreground">Despesa:</span><span className="font-medium">{pagarModal.descricao}</span>
                   <span className="text-muted-foreground">Valor:</span><span className="font-semibold">{formatCurrency(pagarModal.valor)}</span>
                   <span className="text-muted-foreground">Conta:</span><span>{pagarModal.conta}</span>
                   <span className="text-muted-foreground">Vencimento:</span><span>{new Date(pagarModal.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                </div>
+                <div>
+                  <Label>Comprovante</Label>
+                  <Input 
+                    type="file" 
+                    accept="image/*,.pdf"
+                    capture="environment"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      setComprovantePagamento(file ? file.name : '');
+                    }}
+                  />
+                  {comprovantePagamento && (
+                    <Badge variant="outline" className="mt-2 gap-1">
+                      <Paperclip className="h-3 w-3" />
+                      {comprovantePagamento}
+                    </Badge>
+                  )}
                 </div>
               </div>
             )}
@@ -797,6 +879,30 @@ export default function FinanceiroCentralDespesas() {
                     </div>
                   </div>
                 </div>
+
+                {/* Anexos */}
+                {(detalheModal.comprovante || detalheModal.documento) && (
+                  <>
+                    <hr className="border-border" />
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Anexos</h4>
+                      <div className="grid grid-cols-2 gap-3">
+                        {detalheModal.comprovante && (
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Comprovante</p>
+                            <p className="text-sm flex items-center gap-1"><Paperclip className="h-3 w-3" /> {detalheModal.comprovante}</p>
+                          </div>
+                        )}
+                        {detalheModal.documento && (
+                          <div className="space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Documento</p>
+                            <p className="text-sm flex items-center gap-1"><Paperclip className="h-3 w-3" /> {detalheModal.documento}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Observações */}
                 {detalheModal.observacoes && (

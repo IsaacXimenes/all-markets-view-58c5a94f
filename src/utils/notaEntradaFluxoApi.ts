@@ -499,6 +499,45 @@ export const alterarAtuacao = (
   return nota;
 };
 
+// ============= REJEIÇÃO DE NOTA PELO FINANCEIRO =============
+
+export const rejeitarNota = (
+  notaId: string,
+  motivo: string,
+  observacao: string,
+  usuario: string
+): NotaEntrada | null => {
+  const nota = notasEntrada.find(n => n.id === notaId);
+  if (!nota) return null;
+  
+  // Só pode rejeitar se atuação atual é do Financeiro
+  if (nota.atuacaoAtual !== 'Financeiro') return null;
+  
+  const atuacaoAnterior = nota.atuacaoAtual;
+  nota.atuacaoAtual = 'Estoque';
+  
+  // Registrar rejeição na timeline
+  registrarTimeline(
+    nota,
+    usuario,
+    'Financeiro',
+    `Nota rejeitada pelo Financeiro`,
+    nota.status,
+    undefined,
+    `Motivo: ${motivo}. Observação: ${observacao}`
+  );
+  
+  // Notificar estoque
+  addNotification({
+    type: 'nota_criada',
+    title: 'Nota rejeitada pelo Financeiro',
+    description: `Nota ${notaId} devolvida ao Estoque. Motivo: ${motivo}`,
+    targetUsers: ['estoque']
+  });
+  
+  return nota;
+};
+
 // Verificar se usuário pode editar nota baseado na atuação
 export const podeEditarNota = (nota: NotaEntrada, perfilUsuario: 'Estoque' | 'Financeiro'): boolean => {
   if (nota.atuacaoAtual === 'Encerrado') return false;

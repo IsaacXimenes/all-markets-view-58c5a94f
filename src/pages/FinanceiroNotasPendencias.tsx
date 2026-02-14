@@ -5,9 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { 
   getNotasParaFinanceiro, 
   registrarPagamento,
+  rejeitarNota,
   NotaEntrada,
   podeEditarNota
 } from '@/utils/notaEntradaFluxoApi';
@@ -36,6 +39,11 @@ export default function FinanceiroNotasPendencias() {
   
   const [dialogPagamento, setDialogPagamento] = useState(false);
   const [modoDetalhes, setModoDetalhes] = useState(false);
+  
+  // Rejeição
+  const [dialogRejeicao, setDialogRejeicao] = useState(false);
+  const [motivoRejeicao, setMotivoRejeicao] = useState('');
+  const [observacaoRejeicao, setObservacaoRejeicao] = useState('');
   
   const fornecedoresList = getFornecedores();
 
@@ -109,6 +117,34 @@ export default function FinanceiroNotasPendencias() {
   const handleAbrirPagamento = (nota: NotaEntrada) => {
     setNotaSelecionada(nota);
     setDialogPagamento(true);
+  };
+
+  const handleAbrirRejeicao = (nota: NotaEntrada) => {
+    setNotaSelecionada(nota);
+    setMotivoRejeicao('');
+    setObservacaoRejeicao('');
+    setDialogRejeicao(true);
+  };
+
+  const handleConfirmarRejeicao = () => {
+    if (!notaSelecionada) return;
+    if (!motivoRejeicao) {
+      toast.error('Selecione o motivo da recusa');
+      return;
+    }
+    if (!observacaoRejeicao.trim()) {
+      toast.error('Informe a observação da recusa');
+      return;
+    }
+    
+    const resultado = rejeitarNota(notaSelecionada.id, motivoRejeicao, observacaoRejeicao, 'Usuário Financeiro');
+    if (resultado) {
+      toast.success(`Nota ${notaSelecionada.numeroNota} rejeitada e devolvida ao Estoque`);
+      setNotas(getNotasParaFinanceiro());
+      setDialogRejeicao(false);
+    } else {
+      toast.error('Erro ao rejeitar nota. Verifique se a atuação está no Financeiro.');
+    }
   };
 
   const handleFinalizarPagamento = (dados: DadosPagamento) => {
@@ -398,6 +434,7 @@ export default function FinanceiroNotasPendencias() {
                 modulo="Financeiro"
                 onVerDetalhes={handleVerDetalhes}
                 onPagar={handleAbrirPagamento}
+                onRejeitar={handleAbrirRejeicao}
               />
             </CardContent>
           </Card>
@@ -409,6 +446,45 @@ export default function FinanceiroNotasPendencias() {
         onClose={() => setDialogPagamento(false)}
         onConfirm={handleFinalizarPagamento}
       />
+
+      {/* Modal de Rejeição */}
+      <Dialog open={dialogRejeicao} onOpenChange={setDialogRejeicao}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Recusar Nota {notaSelecionada?.numeroNota}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label>Motivo da Recusa *</Label>
+              <Select value={motivoRejeicao} onValueChange={setMotivoRejeicao}>
+                <SelectTrigger className={!motivoRejeicao ? 'border-destructive' : ''}>
+                  <SelectValue placeholder="Selecione o motivo..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Dados incorretos">Dados incorretos</SelectItem>
+                  <SelectItem value="Valor divergente">Valor divergente</SelectItem>
+                  <SelectItem value="Fornecedor inválido">Fornecedor inválido</SelectItem>
+                  <SelectItem value="Documentação insuficiente">Documentação insuficiente</SelectItem>
+                  <SelectItem value="Outro">Outro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Observação *</Label>
+              <Textarea
+                value={observacaoRejeicao}
+                onChange={e => setObservacaoRejeicao(e.target.value)}
+                placeholder="Descreva o motivo da recusa..."
+                className={!observacaoRejeicao.trim() ? 'border-destructive' : ''}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogRejeicao(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleConfirmarRejeicao}>Confirmar Recusa</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </FinanceiroLayout>
   );
 }

@@ -42,6 +42,8 @@ export interface Despesa {
   recorrenciaEncerrada?: boolean;
   dataEncerramentoRecorrencia?: string;
   diaVencimento?: number; // Dia do mês (1-31) para recorrentes
+  comprovante?: string; // Nome do comprovante de pagamento
+  documento?: string; // Nome do documento/anexo no lançamento
 }
 
 // IDs das lojas reais do useCadastroStore
@@ -621,7 +623,7 @@ export const updateDespesa = (id: string, data: Partial<Despesa>): boolean => {
 };
 
 // Marca despesa como Pago
-export const pagarDespesa = (id: string, usuarioNome: string): boolean => {
+export const pagarDespesa = (id: string, usuarioNome: string, comprovante?: string): boolean => {
   const index = despesas.findIndex(d => d.id === id);
   if (index === -1) return false;
   despesas[index] = {
@@ -629,6 +631,7 @@ export const pagarDespesa = (id: string, usuarioNome: string): boolean => {
     status: 'Pago',
     dataPagamento: new Date().toISOString().split('T')[0],
     pagoPor: usuarioNome,
+    ...(comprovante ? { comprovante } : {}),
   };
   return true;
 };

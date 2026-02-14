@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Wallet, TrendingUp, TrendingDown, Calendar, ArrowUpCircle, 
-  ArrowDownCircle, X, Building2, Landmark, Eye, ArrowLeftRight
+  ArrowDownCircle, X, Building2, Landmark, Eye, ArrowLeftRight, Download
 } from 'lucide-react';
 
 import { getContasFinanceiras, ContaFinanceira } from '@/utils/cadastrosApi';
@@ -401,10 +401,46 @@ export default function FinanceiroExtratoContas() {
                 </SelectContent>
               </Select>
 
-              <Button onClick={() => setShowMovimentacaoModal(true)} className="ml-auto">
-                <ArrowLeftRight className="h-4 w-4 mr-2" />
-                Nova Movimentação
-              </Button>
+              <div className="flex gap-2 ml-auto">
+                <Button variant="outline" onClick={() => {
+                  // Exportar CSV com movimentações individuais
+                  const todasMovimentacoes: any[] = [];
+                  contasFiltradas.forEach(conta => {
+                    const movs = movimentacoesPorConta[conta.id] || [];
+                    movs.forEach(mov => {
+                      todasMovimentacoes.push({
+                        Conta: conta.nome,
+                        Loja: obterNomeLoja(conta.lojaVinculada),
+                        Tipo: mov.tipo === 'entrada' ? 'Entrada' : 'Saída',
+                        Descrição: mov.descricao,
+                        Valor: mov.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+                        Data: new Date(mov.data).toLocaleDateString('pt-BR'),
+                      });
+                    });
+                  });
+                  
+                  if (todasMovimentacoes.length === 0) {
+                    toast.error('Nenhuma movimentação para exportar no período selecionado');
+                    return;
+                  }
+                  
+                  const csvContent = Object.keys(todasMovimentacoes[0]).join(';') + '\n' +
+                    todasMovimentacoes.map(row => Object.values(row).join(';')).join('\n');
+                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const link = document.createElement('a');
+                  link.href = URL.createObjectURL(blob);
+                  link.download = `extrato-contas-${mesNome.toLowerCase()}-${anoSelecionado}.csv`;
+                  link.click();
+                  toast.success('Extrato exportado com sucesso!');
+                }}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar CSV
+                </Button>
+                <Button onClick={() => setShowMovimentacaoModal(true)}>
+                  <ArrowLeftRight className="h-4 w-4 mr-2" />
+                  Nova Movimentação
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
