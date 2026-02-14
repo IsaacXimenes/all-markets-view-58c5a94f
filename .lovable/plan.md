@@ -1,88 +1,118 @@
 
 
-## Correcoes no Modulo de Assistencia e Financeiro
+## Refatoracao da Conferencia Gestor (Assistencia) e Integracao com Financeiro
 
-### Problemas Identificados
+### Contexto do Problema
 
-1. **Detalhes da OS (olho) - Checkbox "Estoque" nao lista pecas**: Na tela `OSAssistenciaDetalhes.tsx`, ao marcar a flag "Estoque" na secao Pecas/Servicos, o Select carrega pecas de `getPecas()` filtradas por `editLojaId`, mas a filtragem pode nao retornar resultados se o `lojaId` da OS nao bater com as pecas disponiveis. Precisa ajustar para mostrar todas as pecas disponiveis da assistencia.
+Atualmente, apos registrar o pagamento na aba "Nova Assistencia", a OS fica com status "Pendente de Pagamento" e atuacao "Gestor (Conferencia)". A aba "Conferencia Gestor" no modulo de Assistencia tem um layout simples (tabela + drawer basico), diferente do layout robusto da Conferencia do Gestor no modulo de Vendas. Alem disso, apos a aprovacao do gestor, a OS vai direto para "Liquidado" sem passar pela conferencia do financeiro.
 
-2. **Solicitacao de peca nao altera status da OS**: Na tela `OSAssistenciaDetalhes.tsx`, ao registrar uma solicitacao de peca (linhas 773-795), a funcao `addSolicitacao` e chamada mas o status da OS NAO e atualizado para "Solicitacao de Peca" (diferente do que ocorre em `OSOficina.tsx` que atualiza corretamente).
+### Fluxo Correto a Implementar
 
-3. **Avaliacao Tecnica sem mascara R$**: Na tela `OSAssistenciaDetalhes.tsx` (linhas 812-833), os campos "Valor de Custo" e "Valor de Venda" usam `Input type="number"` sem mascara monetaria. Devem usar `InputComMascara mascara="moeda"`.
-
-4. **Financeiro > Notas Assistencia sem comprovante**: A tela `FinanceiroNotasAssistencia.tsx` nao possui campo de anexo de comprovante/camera no modal de conferencia. Deve usar o componente `FileUploadComprovante`.
-
-5. **Registro sumindo ao finalizar na aba Servicos**: O `OSOficina.tsx` ja tem a logica de `osFinalizadas` para manter registros visiveis, mas o `recarregar()` na linha 152 reseta o estado. Verificar se o problema persiste - pode ser que o filtro `osTecnico` nao inclua os com `proximaAtuacao: 'Atendente'` mesmo com `osFinalizadas`.
-
-6. **Fluxo pos-finalizacao - botao de pagamento na Nova Assistencia**: Quando o tecnico finaliza (status "Aguardando Pagamento", atuacao "Atendente"), na aba Nova Assistencia deve ter uma acao para abrir tela full com o quadro de pagamento habilitado.
+```text
+Pagamento Registrado (Nova Assistencia)
+    |
+    v
+Pendente de Pagamento / Gestor (Conferencia)
+    |  [Gestor confere na aba Conferencia Gestor - Assistencia]
+    |
+    v
+Aguardando Financeiro / Financeiro
+    |  [Financeiro confere na aba Conferencia de Contas]
+    |
+    v
+Liquidado / - 
+    [Atualiza status em Nova Assistencia, Servicos, Conferencia Gestor]
+    [Fica como historico em Conferencia de Contas do Financeiro]
+```
 
 ---
 
 ### Plano de Implementacao
 
-#### 1. Corrigir dropdown de pecas do estoque (OSAssistenciaDetalhes.tsx)
+#### 1. Refatorar OSConferenciaGestor.tsx - Layout igual ao VendasConferenciaGestor
 
-- Remover o filtro `p.lojaId === editLojaId` do Select de pecas ou tornar opcional
-- Filtrar apenas pecas com `status === 'Disponivel'` e `quantidade > 0`
-- Mostrar a loja de origem na descricao do item para referencia
+**Arquivo:** `src/pages/OSConferenciaGestor.tsx`
 
-#### 2. Atualizar status da OS ao solicitar peca (OSAssistenciaDetalhes.tsx)
+Reescrever completamente esta pagina para espelhar o layout da `VendasConferenciaGestor.tsx`, adaptado para OS de assistencia:
 
-- No handler de "Adicionar Solicitacao" (linha 773), apos chamar `addSolicitacao`, adicionar chamada a `updateOrdemServico` para mudar status para `'Solicitacao de Peca'` e `proximaAtuacao` para `'Gestor (Suprimentos)'`
-- Adicionar entrada na timeline
-- Recarregar a OS com `getOrdemServicoById`
+**Cards de somatorio por metodo de pagamento:**
+- Linha de cards "Pendentes" (vermelho): Credito, Debito, Pix, Dinheiro, Boleto
+- Linha de cards "Conferidos" (verde): mesmos metodos
+- Cards de contadores: Pendente Conferencia, Aguardando Financeiro, Liquidado
 
-#### 3. Mascara R$ nos campos de Avaliacao Tecnica (OSAssistenciaDetalhes.tsx)
+**Filtros:**
+- Data Inicio, Data Fim, Loja, Tecnico, Status, Metodo de Pagamento
+- Botoes Limpar e Exportar CSV
 
-- Importar `InputComMascara` de `@/components/ui/InputComMascara`
-- Substituir os dois `<Input type="number">` (linhas 813-830) por `<InputComMascara mascara="moeda">`
-- Ajustar handlers para usar `onChange(formatted, raw)`
+**Tabela:**
+- Colunas: No OS, Data, Cliente, Loja, Tecnico, V. Custo, V. Venda, Total Pago, Status, Acoes
+- Linhas coloridas por status (laranja=pendente, verde=liquidado)
+- Clique na linha abre drawer lateral
 
-#### 4. Adicionar FileUploadComprovante no Financeiro (FinanceiroNotasAssistencia.tsx)
+**Drawer lateral (full-height, mesmo modelo Vendas):**
+- Info basica da OS (ID, Data, Cliente, Loja, Tecnico, Modelo)
+- Resumo da Conclusao do tecnico
+- Cards de Valor Custo e Valor Venda
+- Pagamentos com comprovantes (usando ComprovantePreview)
+- Validacao de Metodos de Pagamento (checkboxes por metodo, mesmo padrao de Vendas)
+- Campo de Observacao do Gestor
+- Botoes: Conferir (verde), Recusar (vermelho)
+- Se ja conferido/liquidado: exibe estado bloqueado
 
-- Importar `FileUploadComprovante` de `@/components/estoque/FileUploadComprovante`
-- Adicionar estado `comprovante` e `comprovanteNome`
-- Inserir o componente na secao de pagamento do modal de conferencia (entre Responsavel Financeiro e Valor Total)
-- Tornar o comprovante obrigatorio na validacao de `botaoDesabilitado`
+**Logica de aprovacao:**
+- Todos os checkboxes de metodo devem estar marcados para habilitar "Conferir"
+- Ao conferir: salvar validacoes no localStorage (`validacao_pagamentos_os_${osId}`), salvar observacao do gestor (`observacao_gestor_os_${osId}`), atualizar status da OS para "Aguardando Financeiro" com atuacao "Financeiro"
+- Ao recusar: modal com motivo obrigatorio, devolver para "Pendente de Pagamento" com atuacao "Atendente"
 
-#### 5. Manter registro visivel ao finalizar (OSOficina.tsx)
+#### 2. Adicionar OS de Assistencia na Conferencia de Contas do Financeiro
 
-- Verificar que apos `recarregar()`, as OS com IDs em `osFinalizadas` permanecem visiveis. O filtro atual (linha 57-65) ja inclui `osFinalizadas` - confirmar que funciona corretamente apos a chamada `recarregar()`
-- Se o problema for de timing (estado desatualizado), mover o `recarregar()` para ocorrer apos a atualizacao de `osFinalizadas` usando um callback ou ajustando a ordem
+**Arquivo:** `src/pages/FinanceiroConferencia.tsx`
 
-#### 6. Botao "Registrar Pagamento" na aba Nova Assistencia (OSAssistencia.tsx)
+- No hook `useFluxoVendas`, as OS de assistencia nao estao incluidas (ele busca vendas, nao OS)
+- Criar uma secao ou aba dentro da Conferencia de Contas para OS de assistencia, OU integrar diretamente lendo as OS com status "Aguardando Financeiro" e atuacao "Financeiro"
 
-- Na tabela de acoes (linhas 560-588), quando `os.status === 'Aguardando Pagamento'` e `os.proximaAtuacao === 'Atendente'`, adicionar botao "Registrar Pagamento" (icone CreditCard)
-- Ao clicar, navegar para a tela de detalhes da OS com um parametro especial: `navigate(/os/assistencia/${os.id}?pagamento=true)`
+**Abordagem:** Adicionar no `FinanceiroConferencia.tsx` a leitura de OS de assistencia junto com as vendas:
+- Importar `getOrdensServico, updateOrdemServico, formatCurrency` de `assistenciaApi`
+- Criar `linhasConferenciaOS` (mesmo formato de `LinhaConferencia`) a partir das OS com status "Aguardando Financeiro"
+- Mesclar `linhasConferenciaOS` com `linhasConferencia` de vendas, adicionando um badge "Assistencia" para diferenciar
+- Na acao de finalizar uma linha de OS: atualizar o status para "Liquidado" e atuacao "-", registrar na timeline
+- OS finalizadas ficam como historico na tabela com status "Finalizado/Liquidado" e linha verde
 
-#### 7. Tela full de pagamento (OSAssistenciaDetalhes.tsx)
+#### 3. Atualizar interface OrdemServico
 
-- Detectar parametro `pagamento=true` via `useSearchParams`
-- Quando ativo, renderizar a tela com o quadro de pagamento habilitado (PagamentoQuadro) e os demais quadros em modo somente leitura
-- A condicao de exibicao do PagamentoQuadro (linha 852) deve incluir `proximaAtuacao === 'Atendente'` alem dos valores existentes
+**Arquivo:** `src/utils/assistenciaApi.ts`
+
+- Garantir que o tipo `Pagamento` inclui campos para comprovante (`comprovante?: string`, `comprovanteNome?: string`, `contaDestino?: string`)
+- Confirmar que os pagamentos registrados no PagamentoQuadro salvam esses campos
+
+#### 4. Atualizar status em todas as abas apos finalizacao
+
+Quando o financeiro finaliza (marca como Liquidado) a OS na Conferencia de Contas:
+- O status "Liquidado" ja e lido por `getOrdensServico()`, portanto a atualizacao e automatica em:
+  - **Nova Assistencia** (OSAssistencia.tsx): mostra com badge "Liquidado"
+  - **Servicos** (OSOficina.tsx): se o tecnico tiver a OS nas finalizadas locais, mostra atualizado
+  - **Conferencia Gestor** (OSConferenciaGestor.tsx): mostra na tabela com badge verde "Liquidado"
 
 ---
 
 ### Detalhes Tecnicos
 
-**OSAssistenciaDetalhes.tsx:**
-- Importar `InputComMascara`
-- Adicionar estados: `valorCustoFormatado`, `valorVendaFormatado` (strings para mascara)
-- Alterar filtro de pecas do estoque: remover `!editLojaId || p.lojaId === editLojaId`, mostrar todas disponiveis
-- No handler de solicitacao: adicionar `updateOrdemServico` com status `'Solicitacao de Peca'`
-- Na condicao do PagamentoQuadro (linha 852): adicionar `os.proximaAtuacao === 'Atendente'`
-- Detectar `searchParams.get('pagamento') === 'true'` para abrir em modo pagamento
+**OSConferenciaGestor.tsx - Nova estrutura:**
+- Importar: `Checkbox, ComprovantePreview, AutocompleteLoja, AutocompleteColaborador`
+- Estados: `validacoesPagamento[]`, `observacaoGestor`, `osSelecionada`
+- Somatorio dinamico: calcular totais por metodo de pagamento das OS filtradas
+- Persistencia: `validacao_pagamentos_os_${osId}`, `observacao_gestor_os_${osId}` no localStorage
+- Ao aprovar: `updateOrdemServico(id, { status: 'Aguardando Financeiro', proximaAtuacao: 'Financeiro', timeline: [...] })`
+- Ao recusar: `updateOrdemServico(id, { status: 'Pendente de Pagamento', proximaAtuacao: 'Atendente', timeline: [...] })`
 
-**FinanceiroNotasAssistencia.tsx:**
-- Importar `FileUploadComprovante`
-- Adicionar estados: `comprovante: string`, `comprovanteNome: string`
-- Inserir componente entre o campo de Responsavel e Valor Total
-- Atualizar `botaoDesabilitado` para incluir `!comprovante`
+**FinanceiroConferencia.tsx - Integracao:**
+- Adicionar import de `getOrdensServico, getOrdemServicoById, updateOrdemServico` de `assistenciaApi`
+- Adicionar import de `getClientes` de `cadastrosApi`
+- Criar `linhasConferenciaOS` com mesma interface `LinhaConferencia` adaptada
+- Concatenar `[...linhasConferencia, ...linhasConferenciaOS]` para a tabela unificada
+- No `handleFinalizar` e `handleConfirmarConferencia`: detectar se e OS (ID comeca com "OS-") e usar `updateOrdemServico` em vez de `finalizarVenda`
+- Badge "Assistencia" (azul) ao lado do ID para diferenciar de vendas
 
-**OSAssistencia.tsx:**
-- Na celula de Acoes, adicionar condicao: se `os.status === 'Aguardando Pagamento' && os.proximaAtuacao === 'Atendente'`, mostrar botao "Pagamento" que navega para detalhes com `?pagamento=true`
-- Adicionar "Aguardando Pagamento" ao filtro de Status
-
-**OSOficina.tsx:**
-- Verificar e corrigir a ordem de atualizacao de `osFinalizadas` vs `recarregar()` para garantir que o registro permanece visivel
+**Pagamento interface (assistenciaApi.ts):**
+- Adicionar `comprovante?: string`, `comprovanteNome?: string`, `contaDestino?: string` na interface `Pagamento`
 
