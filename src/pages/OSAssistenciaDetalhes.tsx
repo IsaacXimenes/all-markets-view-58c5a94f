@@ -119,11 +119,20 @@ export default function OSAssistenciaDetalhes() {
     // Preservar peças originais se editPecas estiver vazio mas OS já tinha peças
     const pecasParaSalvar = editPecas.length > 0 ? editPecas : (os.pecas.length > 0 ? os.pecas : editPecas);
     
+    // Determinar proximaAtuacao com base no status editado
+    let proximaAtuacao = os.proximaAtuacao;
+    if (editStatus === 'Solicitação de Peça') {
+      proximaAtuacao = 'Gestor (Suprimentos)';
+    } else if (editStatus === 'Em serviço') {
+      proximaAtuacao = 'Técnico';
+    }
+    
     updateOrdemServico(os.id, {
       clienteId: editClienteId,
       lojaId: editLojaId,
       tecnicoId: editTecnicoId,
       status: editStatus as any,
+      proximaAtuacao,
       setor: editSetor as 'GARANTIA' | 'ASSISTÊNCIA' | 'TROCA',
       descricao: editDescricao,
       pecas: pecasParaSalvar,
@@ -800,6 +809,8 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                           responsavel: 'Atendente'
                         }]
                       });
+                      // Atualizar estado local do status para evitar sobrescrita ao salvar
+                      setEditStatus('Solicitação de Peça');
                       // Refresh OS e solicitações
                       const updatedOS = getOrdemServicoById(os.id);
                       if (updatedOS) setOS(updatedOS);
@@ -807,7 +818,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                       setNovaSolPeca('');
                       setNovaSolQtd(1);
                       setNovaSolJustificativa('');
-                      toast.success('Solicitação adicionada! Status atualizado.');
+                      toast.success('Solicitação adicionada! Status atualizado para Aguardando Peça.');
                     }}>
                       <Plus className="h-4 w-4 mr-1" />
                       Adicionar Solicitação
