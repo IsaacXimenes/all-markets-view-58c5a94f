@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Download, Plus, Trash2, Calendar, ChevronDown, DollarSign, CalendarDays, AlertTriangle, CheckCircle, Clock, TrendingUp, Eye, XCircle, Paperclip, Upload } from 'lucide-react';
+import { Download, Plus, Trash2, Calendar, ChevronDown, DollarSign, CalendarDays, AlertTriangle, CheckCircle, Clock, TrendingUp, Eye, XCircle, Paperclip } from 'lucide-react';
+import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { getDespesas, addDespesa, deleteDespesa, updateDespesa, pagarDespesa, provisionarProximoPeriodo, provisionarRecorrenciaContinua, encerrarRecorrencia, atualizarStatusVencidos, CATEGORIAS_DESPESA, type Despesa } from '@/utils/financeApi';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -675,24 +676,11 @@ export default function FinanceiroCentralDespesas() {
                   <span className="text-muted-foreground">Conta:</span><span>{pagarModal.conta}</span>
                   <span className="text-muted-foreground">Vencimento:</span><span>{new Date(pagarModal.dataVencimento + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
                 </div>
-                <div>
-                  <Label>Comprovante</Label>
-                  <Input 
-                    type="file" 
-                    accept="image/*,.pdf"
-                    capture="environment"
-                    onChange={e => {
-                      const file = e.target.files?.[0];
-                      setComprovantePagamento(file ? file.name : '');
-                    }}
-                  />
-                  {comprovantePagamento && (
-                    <Badge variant="outline" className="mt-2 gap-1">
-                      <Paperclip className="h-3 w-3" />
-                      {comprovantePagamento}
-                    </Badge>
-                  )}
-                </div>
+                <FileUploadComprovante
+                  label="Comprovante de Pagamento"
+                  value={comprovantePagamento}
+                  onFileChange={({ comprovanteNome }) => setComprovantePagamento(comprovanteNome)}
+                />
               </div>
             )}
             <DialogFooter>
