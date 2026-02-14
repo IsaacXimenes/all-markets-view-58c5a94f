@@ -195,3 +195,27 @@ export const registrarEncerramentoRodizio = (
     usuarioNome
   });
 };
+
+// ===== TIMELINE DE EMPRÉSTIMO DE GARANTIA =====
+
+export const registrarEmprestimoGarantia = (
+  clienteId: string,
+  clienteNome: string,
+  modelo: string,
+  imei: string,
+  garantiaId: string,
+  usuarioId: string,
+  usuarioNome: string
+): TimelineEntry => {
+  return addTimelineEntry({
+    entidadeId: clienteId,
+    entidadeTipo: 'Colaborador',
+    dataHora: new Date().toISOString(),
+    tipo: 'emprestimo_garantia',
+    titulo: 'Aparelho Emprestado via Garantia',
+    descricao: `Aparelho ${modelo} (IMEI: ${imei}) retirado para empréstimo via Garantia #${garantiaId}`,
+    usuarioId,
+    usuarioNome,
+    metadata: { modelo, imei, garantiaId, clienteNome }
+  });
+};

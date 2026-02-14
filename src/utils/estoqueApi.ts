@@ -58,6 +58,8 @@ export interface Produto {
   emprestimoClienteNome?: string; // Nome do cliente
   emprestimoOsId?: string; // ID da OS vinculada (se houver)
   emprestimoDataHora?: string; // Data/hora do empréstimo
+  // Campo para controle de reserva para troca via Garantia
+  bloqueadoEmTrocaGarantiaId?: string; // ID da garantia quando reservado para troca
 }
 
 // ============= INTERFACES MOVIMENTAÇÃO MATRIZ =============
@@ -488,6 +490,7 @@ export const getStatusAparelho = (produto: Produto): string => {
   if (produto.statusMovimentacao === 'Em movimentação') return 'Em movimentação';
   if (produto.statusEmprestimo === 'Empréstimo - Assistência') return 'Empréstimo';
   if (produto.statusRetiradaPecas && produto.statusRetiradaPecas !== 'Cancelada') return 'Retirada de Peças';
+  if (produto.bloqueadoEmTrocaGarantiaId) return 'Reservado para Troca';
   if (produto.bloqueadoEmVendaId) return 'Bloqueado';
   return 'Disponível';
 };
