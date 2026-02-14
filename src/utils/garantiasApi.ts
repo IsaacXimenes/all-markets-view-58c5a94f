@@ -1,5 +1,8 @@
 // Garantias API - Módulo completo de gerenciamento de garantias
 import { format, addMonths, differenceInDays } from 'date-fns';
+import { addOrdemServico } from './assistenciaApi';
+import { updateProduto, addMovimentacao, Produto } from './estoqueApi';
+import { registrarEmprestimoGarantia } from './timelineApi';
 
 export interface GarantiaItem {
   id: string;
@@ -890,4 +893,188 @@ export const encaminharParaAnaliseGarantia = (origemId: string, origem: 'Garanti
     dataChegada: new Date().toISOString(),
     status: 'Pendente'
   });
+};
+
+// ==================== ORQUESTRADOR ATÔMICO DE TRATATIVA ====================
+
+export interface ProcessarTratativaRequest {
+  garantiaId: string;
+  tipo: TratativaGarantia['tipo'];
+  descricao: string;
+  usuarioId: string;
+  usuarioNome: string;
+  aparelhoSelecionado?: Produto | null;
+}
+
+export const processarTratativaGarantia = (dados: ProcessarTratativaRequest): { sucesso: boolean; osId?: string; erro?: string } => {
+  const garantia = getGarantiaById(dados.garantiaId);
+  if (!garantia) return { sucesso: false, erro: 'Garantia não encontrada' };
+
+  try {
+    let osId: string | undefined;
+    const agora = new Date().toISOString();
+
+    // 1. Criar OS automática (Assistência ou Assistência + Empréstimo)
+    if (dados.tipo === 'Encaminhado Assistência' || dados.tipo === 'Assistência + Empréstimo') {
+      const observacaoEmprestimo = dados.tipo === 'Assistência + Empréstimo' && dados.aparelhoSelecionado
+        ? `\n[EMPRÉSTIMO] Cliente com aparelho emprestado: ${dados.aparelhoSelecionado.modelo} (IMEI: ${dados.aparelhoSelecionado.imei})`
+        : '';
+
+      const novaOS = addOrdemServico({
+        dataHora: agora,
+        clienteId: garantia.clienteId,
+        setor: 'GARANTIA',
+        tecnicoId: '',
+        lojaId: garantia.lojaVenda,
+        status: 'Aguardando Análise',
+        proximaAtuacao: 'Técnico: Avaliar/Executar',
+        pecas: [],
+        pagamentos: [],
+        descricao: `${dados.descricao}${observacaoEmprestimo}`,
+        timeline: [
+          { data: agora, tipo: 'registro', descricao: `OS criada automaticamente via Garantia ${garantia.id}`, responsavel: dados.usuarioNome }
+        ],
+        valorTotal: 0,
+        custoTotal: 0,
+        origemOS: 'Garantia',
+        garantiaId: garantia.id,
+        modeloAparelho: garantia.modelo,
+        imeiAparelho: garantia.imei,
+      });
+      osId = novaOS.id;
+
+      // Timeline: OS criada
+      addTimelineEntry({
+        garantiaId: garantia.id,
+        dataHora: agora,
+        tipo: 'os_criada',
+        titulo: `OS criada: ${osId}`,
+        descricao: `Ordem de serviço ${osId} criada automaticamente para reparo`,
+        usuarioId: dados.usuarioId,
+        usuarioNome: dados.usuarioNome
+      });
+    }
+
+    // 2. Empréstimo de aparelho
+    if (dados.tipo === 'Assistência + Empréstimo' && dados.aparelhoSelecionado) {
+      const ap = dados.aparelhoSelecionado;
+      updateProduto(ap.id, {
+        statusEmprestimo: 'Empréstimo - Assistência',
+        emprestimoGarantiaId: garantia.id,
+        emprestimoClienteId: garantia.clienteId,
+        emprestimoClienteNome: garantia.clienteNome,
+        emprestimoOsId: osId,
+        emprestimoDataHora: agora,
+      });
+      addMovimentacao({
+        data: agora,
+        produto: ap.modelo,
+        imei: ap.imei || '',
+        quantidade: 1,
+        origem: ap.loja,
+        destino: 'Empréstimo - Garantia',
+        responsavel: dados.usuarioNome,
+        motivo: `Empréstimo garantia ${garantia.id}`
+      });
+
+      // Timeline: Empréstimo
+      addTimelineEntry({
+        garantiaId: garantia.id,
+        dataHora: agora,
+        tipo: 'emprestimo',
+        titulo: 'Aparelho Emprestado ao Cliente',
+        descricao: `${ap.modelo} (IMEI: ${ap.imei}) emprestado ao cliente ${garantia.clienteNome}`,
+        usuarioId: dados.usuarioId,
+        usuarioNome: dados.usuarioNome
+      });
+
+      // Timeline unificada do cliente
+      registrarEmprestimoGarantia(
+        garantia.clienteId,
+        garantia.clienteNome,
+        ap.modelo,
+        ap.imei || '',
+        garantia.id,
+        dados.usuarioId,
+        dados.usuarioNome
+      );
+    }
+
+    // 3. Troca Direta
+    if (dados.tipo === 'Troca Direta' && dados.aparelhoSelecionado) {
+      const ap = dados.aparelhoSelecionado;
+
+      // Aparelho novo: reservar (NÃO zerar quantidade)
+      updateProduto(ap.id, {
+        bloqueadoEmTrocaGarantiaId: garantia.id,
+      });
+      addMovimentacao({
+        data: agora,
+        produto: ap.modelo,
+        imei: ap.imei || '',
+        quantidade: 1,
+        origem: ap.loja,
+        destino: 'Reserva - Troca Garantia',
+        responsavel: dados.usuarioNome,
+        motivo: `Troca direta garantia ${garantia.id}`
+      });
+
+      // Aparelho com defeito: encaminhar para Análise de Tratativas
+      encaminharParaAnaliseGarantia(
+        garantia.id,
+        'Garantia',
+        `${garantia.clienteNome} - ${garantia.modelo} (IMEI: ${garantia.imei}) - Troca Direta`
+      );
+
+      // Timeline: Troca
+      addTimelineEntry({
+        garantiaId: garantia.id,
+        dataHora: agora,
+        tipo: 'troca',
+        titulo: 'Troca Direta Realizada',
+        descricao: `Aparelho novo reservado: ${ap.modelo} (IMEI: ${ap.imei}). Aparelho defeituoso encaminhado para pendências.`,
+        usuarioId: dados.usuarioId,
+        usuarioNome: dados.usuarioNome
+      });
+    }
+
+    // 4. Registrar tratativa
+    const novaTratativa = addTratativa({
+      garantiaId: garantia.id,
+      tipo: dados.tipo,
+      dataHora: agora,
+      usuarioId: dados.usuarioId,
+      usuarioNome: dados.usuarioNome,
+      descricao: dados.descricao,
+      aparelhoEmprestadoId: dados.tipo === 'Assistência + Empréstimo' ? dados.aparelhoSelecionado?.id : undefined,
+      aparelhoEmprestadoModelo: dados.tipo === 'Assistência + Empréstimo' ? dados.aparelhoSelecionado?.modelo : undefined,
+      aparelhoEmprestadoImei: dados.tipo === 'Assistência + Empréstimo' ? dados.aparelhoSelecionado?.imei : undefined,
+      aparelhoTrocaId: dados.tipo === 'Troca Direta' ? dados.aparelhoSelecionado?.id : undefined,
+      aparelhoTrocaModelo: dados.tipo === 'Troca Direta' ? dados.aparelhoSelecionado?.modelo : undefined,
+      aparelhoTrocaImei: dados.tipo === 'Troca Direta' ? dados.aparelhoSelecionado?.imei : undefined,
+      osId: osId,
+      status: 'Em Andamento'
+    });
+
+    // 5. Timeline genérica da tratativa (Direcionado Apple)
+    if (dados.tipo === 'Direcionado Apple') {
+      addTimelineEntry({
+        garantiaId: garantia.id,
+        dataHora: agora,
+        tipo: 'tratativa',
+        titulo: 'Cliente Direcionado para Apple',
+        descricao: dados.descricao,
+        usuarioId: dados.usuarioId,
+        usuarioNome: dados.usuarioNome
+      });
+    }
+
+    // 6. Atualizar status da garantia
+    updateGarantia(garantia.id, { status: 'Em Tratativa' });
+
+    return { sucesso: true, osId };
+  } catch (error) {
+    console.error('[GARANTIA] Erro ao processar tratativa:', error);
+    return { sucesso: false, erro: 'Erro ao processar tratativa. Nenhuma alteração foi salva.' };
+  }
 };
