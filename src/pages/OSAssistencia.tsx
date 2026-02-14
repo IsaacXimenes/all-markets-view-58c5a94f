@@ -13,7 +13,8 @@ import { getClientes } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
-import { Plus, Eye, FileText, Download, AlertTriangle, Clock, Edit, RefreshCcw, Wrench, DollarSign, UserCheck, CreditCard, CheckCircle, Package } from 'lucide-react';
+import { Plus, Eye, FileText, Download, AlertTriangle, Clock, Edit, RefreshCcw, Wrench, DollarSign, UserCheck, CreditCard, CheckCircle, Package, XCircle } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 
@@ -126,6 +127,8 @@ export default function OSAssistencia() {
         return <Badge className="bg-emerald-600 hover:bg-emerald-700">Concluído</Badge>;
       case 'Finalizado':
         return <Badge className="bg-emerald-700 hover:bg-emerald-800">Finalizado</Badge>;
+      case 'Recusada pelo Técnico':
+        return <Badge variant="destructive">Recusada pelo Técnico</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -479,6 +482,7 @@ export default function OSAssistencia() {
                   <SelectItem value="Solicitação Enviada">Solicitação Enviada</SelectItem>
                   <SelectItem value="Aguardando Conferência">Aguardando Conferência</SelectItem>
                   <SelectItem value="Finalizado">Finalizado</SelectItem>
+                  <SelectItem value="Recusada pelo Técnico">Recusada pelo Técnico</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -519,7 +523,7 @@ export default function OSAssistencia() {
           </TableHeader>
           <TableBody>
             {ordensFiltradas.map(os => (
-              <TableRow key={os.id}>
+              <TableRow key={os.id} className={os.recusadaTecnico ? 'bg-red-500/15' : ''}>
                 <TableCell className="font-mono text-xs font-medium">{os.id}</TableCell>
                 <TableCell className="text-xs">
                   {new Date(os.dataHora).toLocaleString('pt-BR')}
@@ -529,7 +533,27 @@ export default function OSAssistencia() {
                 <TableCell>{getOrigemBadge(os)}</TableCell>
                 <TableCell>{getTecnicoNome(os.tecnicoId)}</TableCell>
                 <TableCell className="text-xs">{getLojaNome(os.lojaId)}</TableCell>
-                <TableCell>{getStatusBadge(os.status)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    {getStatusBadge(os.status)}
+                    {os.recusadaTecnico && os.motivoRecusaTecnico && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Badge variant="destructive" className="gap-1 text-xs">
+                              <XCircle className="h-3 w-3" />
+                              Recusada
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="font-medium text-xs">Motivo da Recusa:</p>
+                            <p className="text-xs">{os.motivoRecusaTecnico}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>{getProximaAtuacaoBadge(os.proximaAtuacao)}</TableCell>
                 <TableCell>{getSLADisplay(os.dataHora)}</TableCell>
                 <TableCell className="font-medium">{formatCurrency(os.valorTotal)}</TableCell>

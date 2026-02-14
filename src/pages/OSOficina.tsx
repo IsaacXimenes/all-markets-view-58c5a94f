@@ -15,7 +15,7 @@ import { addSolicitacao, getSolicitacoesByOS } from '@/utils/solicitacaoPecasApi
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
 import { InputComMascara } from '@/components/ui/InputComMascara';
-import { Eye, Play, CheckCircle, Clock, Wrench, AlertTriangle, Package, Plus, ShoppingCart, MessageSquare } from 'lucide-react';
+import { Eye, Play, CheckCircle, Clock, Wrench, AlertTriangle, Package, Plus, ShoppingCart, MessageSquare, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -47,6 +47,11 @@ export default function OSOficina() {
   const [solQuantidade, setSolQuantidade] = useState(1);
   const [solJustificativa, setSolJustificativa] = useState('');
   const [solicitacoesOS, setSolicitacoesOS] = useState<any[]>([]);
+
+  // Modal de Recusa
+  const [recusarModal, setRecusarModal] = useState(false);
+  const [osParaRecusar, setOsParaRecusar] = useState<OrdemServico | null>(null);
+  const [motivoRecusa, setMotivoRecusa] = useState('');
 
   // Filtrar OSs onde proximaAtuacao contém "Técnico" OU recém-finalizadas
   const osTecnico = useMemo(() => {
@@ -241,10 +246,22 @@ export default function OSOficina() {
     // Aguardando check-in
     if (status === 'Aguardando Análise' || status === 'Em Aberto') {
       return (
-        <Button size="sm" onClick={() => handleAssumir(os)} className="gap-1">
-          <Play className="h-3.5 w-3.5" />
-          Assumir
-        </Button>
+        <div className="flex gap-1">
+          {(os.origemOS === 'Estoque' || os.origemOS === 'Garantia') && (
+            <Button size="sm" variant="destructive" onClick={() => {
+              setOsParaRecusar(os);
+              setMotivoRecusa('');
+              setRecusarModal(true);
+            }} className="gap-1">
+              <XCircle className="h-3.5 w-3.5" />
+              Recusar
+            </Button>
+          )}
+          <Button size="sm" onClick={() => handleAssumir(os)} className="gap-1">
+            <Play className="h-3.5 w-3.5" />
+            Assumir
+          </Button>
+        </div>
       );
     }
 
@@ -258,13 +275,25 @@ export default function OSOficina() {
       );
     }
 
-    // Em serviço - apenas finalizar (solicitar peça está no modal de finalização)
+    // Em serviço - finalizar + recusar (se vem do Estoque ou Garantia)
     if (status === 'Em serviço') {
       return (
-        <Button size="sm" onClick={() => handleAbrirFinalizar(os)} className="gap-1 bg-green-600 hover:bg-green-700">
-          <CheckCircle className="h-3.5 w-3.5" />
-          Finalizar
-        </Button>
+        <div className="flex gap-1">
+          {(os.origemOS === 'Estoque' || os.origemOS === 'Garantia') && (
+            <Button size="sm" variant="destructive" onClick={() => {
+              setOsParaRecusar(os);
+              setMotivoRecusa('');
+              setRecusarModal(true);
+            }} className="gap-1">
+              <XCircle className="h-3.5 w-3.5" />
+              Recusar
+            </Button>
+          )}
+          <Button size="sm" onClick={() => handleAbrirFinalizar(os)} className="gap-1 bg-green-600 hover:bg-green-700">
+            <CheckCircle className="h-3.5 w-3.5" />
+            Finalizar
+          </Button>
+        </div>
       );
     }
 
@@ -584,6 +613,70 @@ export default function OSOficina() {
             <Button onClick={handleEnviarSolicitacao} className="gap-2">
               <ShoppingCart className="h-4 w-4" />
               Enviar Solicitação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Recusar OS */}
+      <Dialog open={recusarModal} onOpenChange={setRecusarModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <XCircle className="h-5 w-5" />
+              Recusar OS {osParaRecusar?.id}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {osParaRecusar?.observacaoOrigem && (
+              <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-300 mb-1">Observação do Estoque</p>
+                <p className="text-sm text-amber-800 dark:text-amber-200">{osParaRecusar.observacaoOrigem}</p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Motivo da Recusa *</Label>
+              <Textarea
+                value={motivoRecusa}
+                onChange={(e) => setMotivoRecusa(e.target.value)}
+                placeholder="Descreva o motivo da recusa..."
+                rows={4}
+                className={cn(!motivoRecusa.trim() && motivoRecusa !== '' && 'border-destructive')}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRecusarModal(false)}>Cancelar</Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                if (!osParaRecusar) return;
+                if (!motivoRecusa.trim()) {
+                  toast.error('Informe o motivo da recusa.');
+                  return;
+                }
+                updateOrdemServico(osParaRecusar.id, {
+                  status: 'Recusada pelo Técnico' as any,
+                  proximaAtuacao: 'Atendente',
+                  recusadaTecnico: true,
+                  motivoRecusaTecnico: motivoRecusa,
+                  timeline: [...osParaRecusar.timeline, {
+                    data: new Date().toISOString(),
+                    tipo: 'rejeicao',
+                    descricao: `OS recusada pelo técnico. Motivo: ${motivoRecusa}`,
+                    responsavel: user?.colaborador?.nome || 'Técnico',
+                    motivo: motivoRecusa
+                  }]
+                });
+                setOsFinalizadas(prev => new Set(prev).add(osParaRecusar.id));
+                toast.success(`OS ${osParaRecusar.id} recusada. Encaminhada para Nova Assistência.`);
+                setRecusarModal(false);
+                setOsParaRecusar(null);
+                recarregar();
+              }}
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              Confirmar Recusa
             </Button>
           </DialogFooter>
         </DialogContent>

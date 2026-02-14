@@ -124,6 +124,16 @@ export default function EstoqueProdutoPendenteDetalhes() {
       });
       return;
     }
+
+    // Observação obrigatória ao encaminhar para assistência
+    if (parecerStatus === 'Encaminhado para conferência da Assistência' && !parecerObservacoes.trim()) {
+      toast({
+        title: "Observação obrigatória",
+        description: "Preencha a Observação com as tratativas que o técnico deve realizar.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setConfirmResponsavel('');
     setConfirmData(getDataLocal());
@@ -376,13 +386,21 @@ export default function EstoqueProdutoPendenteDetalhes() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Observações</Label>
+                    <Label>
+                      Observações {parecerStatus === 'Encaminhado para conferência da Assistência' && <span className="text-destructive">*</span>}
+                    </Label>
                     <Textarea
-                      placeholder="Descreva as observações sobre o produto..."
+                      placeholder={parecerStatus === 'Encaminhado para conferência da Assistência' 
+                        ? "Descreva as tratativas que o técnico deve realizar..." 
+                        : "Descreva as observações sobre o produto..."}
                       value={parecerObservacoes}
                       onChange={(e) => setParecerObservacoes(e.target.value)}
                       rows={3}
+                      className={parecerStatus === 'Encaminhado para conferência da Assistência' && !parecerObservacoes.trim() ? 'border-destructive' : ''}
                     />
+                    {parecerStatus === 'Encaminhado para conferência da Assistência' && (
+                      <p className="text-xs text-destructive">Campo obrigatório ao encaminhar para assistência</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">

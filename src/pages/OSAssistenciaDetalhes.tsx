@@ -219,6 +219,8 @@ export default function OSAssistenciaDetalhes() {
         return <Badge className="bg-purple-600 hover:bg-purple-700">Aguardando Financeiro</Badge>;
       case 'Liquidado':
         return <Badge className="bg-green-700 hover:bg-green-800">Liquidado</Badge>;
+      case 'Recusada pelo Técnico':
+        return <Badge variant="destructive">Recusada pelo Técnico</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -935,6 +937,17 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                 )}
               </CardContent>
             </Card>
+
+            {/* Observação do Estoque */}
+            {os.observacaoOrigem && (
+              <div className="p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-300 mb-2 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Observação do Estoque – Tratativas para o Técnico
+                </p>
+                <p className="text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">{os.observacaoOrigem}</p>
+              </div>
+            )}
 
             {/* Descrição */}
             <Card>
