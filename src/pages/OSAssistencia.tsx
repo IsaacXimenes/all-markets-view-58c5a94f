@@ -483,6 +483,9 @@ export default function OSAssistencia() {
                   <SelectItem value="Aguardando Conferência">Aguardando Conferência</SelectItem>
                   <SelectItem value="Finalizado">Finalizado</SelectItem>
                   <SelectItem value="Aguardando Pagamento">Aguardando Pagamento</SelectItem>
+                  <SelectItem value="Pendente de Pagamento">Pendente de Pagamento</SelectItem>
+                  <SelectItem value="Aguardando Financeiro">Aguardando Financeiro</SelectItem>
+                  <SelectItem value="Liquidado">Liquidado</SelectItem>
                   <SelectItem value="Recusada pelo Técnico">Recusada pelo Técnico</SelectItem>
                 </SelectContent>
               </Select>
@@ -576,7 +579,7 @@ export default function OSAssistencia() {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    {os.status === 'Aguardando Pagamento' && os.proximaAtuacao === 'Atendente' && (
+                    {(os.status === 'Serviço concluído' || os.status === 'Aguardando Pagamento') && os.proximaAtuacao === 'Atendente' && (
                       <Button 
                         variant="ghost" 
                         size="sm"

@@ -55,13 +55,15 @@ export default function OSOficina() {
 
   // Filtrar OSs onde proximaAtuacao contém "Técnico" OU recém-finalizadas
   const osTecnico = useMemo(() => {
+    const statusHistorico = ['Serviço concluído', 'Pendente de Pagamento', 'Aguardando Financeiro', 'Liquidado'];
     return ordensServico.filter(os => {
       const atuacao = os.proximaAtuacao || '';
       const isTecnico = atuacao === 'Técnico' || 
              atuacao === 'Técnico (Recebimento)' || 
              atuacao === 'Técnico: Avaliar/Executar';
       const isRecentFinalizada = osFinalizadas.has(os.id);
-      return isTecnico || isRecentFinalizada;
+      const isHistorico = statusHistorico.includes(os.status);
+      return isTecnico || isRecentFinalizada || isHistorico;
     }).sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
   }, [ordensServico, osFinalizadas]);
 
@@ -130,7 +132,7 @@ export default function OSOficina() {
     }
 
     updateOrdemServico(osParaFinalizar.id, {
-      status: 'Aguardando Pagamento',
+      status: 'Serviço concluído',
       proximaAtuacao: 'Atendente',
       resumoConclusao,
       valorCustoTecnico: valorCustoRaw,
@@ -138,7 +140,7 @@ export default function OSOficina() {
       timeline: [...osParaFinalizar.timeline, {
         data: new Date().toISOString(),
         tipo: 'conclusao_servico',
-        descricao: `OS finalizada pelo técnico. Custo: R$ ${valorCustoRaw.toFixed(2)}, Venda: R$ ${valorVendaRaw.toFixed(2)}. Resumo: ${resumoConclusao}`,
+        descricao: `Serviço finalizado pelo técnico. Custo: R$ ${valorCustoRaw.toFixed(2)}, Venda: R$ ${valorVendaRaw.toFixed(2)}. Resumo: ${resumoConclusao}`,
         responsavel: user?.colaborador?.nome || 'Técnico'
       }]
     });
@@ -146,7 +148,7 @@ export default function OSOficina() {
     // Manter a OS visível na tela
     setOsFinalizadas(prev => new Set(prev).add(osParaFinalizar.id));
 
-    toast.success(`OS ${osParaFinalizar.id} finalizada! Encaminhada para pagamento na aba Nova Assistência.`);
+    toast.success(`Serviço da OS ${osParaFinalizar.id} finalizado! Encaminhada para pagamento na aba Nova Assistência.`);
     setFinalizarModal(false);
     setOsParaFinalizar(null);
     recarregar();
@@ -228,8 +230,20 @@ export default function OSOficina() {
     if (os.proximaAtuacao === 'Técnico (Recebimento)' || status === 'Peça Recebida' || status === 'Pagamento Concluído') {
       return <Badge className="bg-emerald-500 hover:bg-emerald-600">Peça Recebida</Badge>;
     }
+    if (status === 'Serviço concluído') {
+      return <Badge className="bg-green-500 hover:bg-green-600">Serviço Concluído</Badge>;
+    }
     if (status === 'Aguardando Pagamento') {
       return <Badge className="bg-amber-500 hover:bg-amber-600">Aguardando Pagamento</Badge>;
+    }
+    if (status === 'Pendente de Pagamento') {
+      return <Badge className="bg-violet-500 hover:bg-violet-600">Pendente de Pagamento</Badge>;
+    }
+    if (status === 'Aguardando Financeiro') {
+      return <Badge className="bg-purple-600 hover:bg-purple-700">Aguardando Financeiro</Badge>;
+    }
+    if (status === 'Liquidado') {
+      return <Badge className="bg-green-700 hover:bg-green-800">Liquidado</Badge>;
     }
     return <Badge variant="secondary">{status}</Badge>;
   };
@@ -239,7 +253,7 @@ export default function OSOficina() {
     const atuacao = os.proximaAtuacao || '';
 
     // OS já finalizada pelo técnico - sem ações
-    if (status === 'Aguardando Pagamento') {
+    if (status === 'Serviço concluído' || status === 'Pendente de Pagamento' || status === 'Aguardando Financeiro' || status === 'Liquidado' || status === 'Aguardando Pagamento') {
       return null;
     }
 
@@ -291,7 +305,7 @@ export default function OSOficina() {
           )}
           <Button size="sm" onClick={() => handleAbrirFinalizar(os)} className="gap-1 bg-green-600 hover:bg-green-700">
             <CheckCircle className="h-3.5 w-3.5" />
-            Finalizar
+            Finalizar Serviço
           </Button>
         </div>
       );
@@ -377,7 +391,13 @@ export default function OSOficina() {
                   const cliente = clientes.find(c => c.id === os.clienteId);
                   const slaDias = calcularSLADias(os.dataHora);
                   return (
-                    <TableRow key={os.id} className={os.status === 'Aguardando Pagamento' ? 'bg-amber-500/10' : ''}>
+                    <TableRow key={os.id} className={cn(
+                      os.status === 'Serviço concluído' && 'bg-green-500/10',
+                      os.status === 'Pendente de Pagamento' && 'bg-violet-500/10',
+                      os.status === 'Aguardando Financeiro' && 'bg-purple-500/10',
+                      os.status === 'Liquidado' && 'bg-green-500/10',
+                      os.status === 'Aguardando Pagamento' && 'bg-amber-500/10',
+                    )}>
                       <TableCell className="font-mono text-xs font-medium">{os.id}</TableCell>
                       <TableCell className="text-xs">
                         {format(new Date(os.dataHora), 'dd/MM/yyyy HH:mm')}
@@ -439,7 +459,7 @@ export default function OSOficina() {
       <Dialog open={finalizarModal} onOpenChange={setFinalizarModal}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Finalizar OS {osParaFinalizar?.id}</DialogTitle>
+            <DialogTitle>Finalizar Serviço - {osParaFinalizar?.id}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {/* Observação de Origem (do Estoque) */}
@@ -516,7 +536,7 @@ export default function OSOficina() {
             <Button variant="outline" onClick={() => setFinalizarModal(false)}>Cancelar</Button>
             <Button onClick={handleFinalizar} className="bg-green-600 hover:bg-green-700">
               <CheckCircle className="h-4 w-4 mr-2" />
-              Finalizar OS
+              Finalizar Serviço
             </Button>
           </DialogFooter>
         </DialogContent>

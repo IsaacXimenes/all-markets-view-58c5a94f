@@ -95,6 +95,7 @@ const statusColorMap: Record<string, StatusColor> = {
   
   // Status de atenção (amarelo)
   'Pendente': 'yellow',
+  'Pendente de Pagamento': 'yellow',
   'Pendente Estoque': 'yellow',
   'Em Análise': 'yellow',
   'Aguardando': 'yellow',

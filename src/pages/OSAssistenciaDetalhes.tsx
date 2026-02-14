@@ -234,8 +234,8 @@ export default function OSAssistenciaDetalhes() {
       return;
     }
     updateOrdemServico(os.id, {
-      status: 'Finalizado',
-      proximaAtuacao: 'Gestor/Vendedor',
+      status: 'Serviço concluído',
+      proximaAtuacao: 'Atendente',
       valorCustoTecnico,
       valorVendaTecnico,
       timeline: [...os.timeline, {
@@ -247,7 +247,7 @@ export default function OSAssistenciaDetalhes() {
     });
     const updatedOS = getOrdemServicoById(os.id);
     setOS(updatedOS || null);
-    toast.success('OS finalizada! Aguardando pagamento do vendedor.');
+    toast.success('Serviço finalizado! Aguardando pagamento do atendente.');
   };
 
   const handleSalvarPagamentoVendedor = () => {
@@ -845,10 +845,10 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                     <p className="text-xs text-muted-foreground mt-1">Valor cobrado do cliente</p>
                   </div>
                 </div>
-                {(os.proximaAtuacao === 'Técnico: Avaliar/Executar' || os.proximaAtuacao === 'Técnico') && os.status !== 'Finalizado' && os.status !== 'Liquidado' && (
+                {(os.proximaAtuacao === 'Técnico: Avaliar/Executar' || os.proximaAtuacao === 'Técnico') && os.status !== 'Finalizado' && os.status !== 'Liquidado' && os.status !== 'Serviço concluído' && (
                   <Button onClick={handleConcluirServico} className="w-full">
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Finalizar OS
+                    Finalizar Serviço
                   </Button>
                 )}
               </CardContent>
@@ -863,7 +863,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {(os.proximaAtuacao === 'Vendedor: Registrar Pagamento' || os.proximaAtuacao === 'Gestor/Vendedor' || (os.proximaAtuacao === 'Atendente' && os.status === 'Aguardando Pagamento') || searchParams.get('pagamento') === 'true') ? (
+                {(os.proximaAtuacao === 'Vendedor: Registrar Pagamento' || os.proximaAtuacao === 'Gestor/Vendedor' || (os.proximaAtuacao === 'Atendente' && (os.status === 'Aguardando Pagamento' || os.status === 'Serviço concluído')) || searchParams.get('pagamento') === 'true') ? (
                   (!os.valorCustoTecnico || !os.valorVendaTecnico) ? (
                     <div className="bg-destructive/10 p-4 rounded-lg text-destructive text-sm flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4" />
