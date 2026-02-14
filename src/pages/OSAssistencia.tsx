@@ -75,7 +75,7 @@ export default function OSAssistencia() {
         } else if (filtroAtuacao === 'pendentes_financeiro') {
           if (os.proximaAtuacao !== 'Financeiro: Conferir Lançamento') return false;
         } else if (filtroAtuacao === 'gestor') {
-          if (os.proximaAtuacao !== 'Gestor: Aprovar Peça') return false;
+          if (os.proximaAtuacao !== 'Gestor: Aprovar Peça' && os.proximaAtuacao !== 'Gestor (Suprimentos)' && os.proximaAtuacao !== 'Gestor') return false;
         } else if (filtroAtuacao === 'logistica') {
           if (os.proximaAtuacao !== 'Logística: Enviar Peça') return false;
         }
@@ -106,6 +106,7 @@ export default function OSAssistencia() {
       case 'Em serviço':
         return <Badge className="bg-blue-500 hover:bg-blue-600">Em serviço</Badge>;
       case 'Aguardando Peça':
+      case 'Solicitação de Peça':
         return <Badge className="bg-yellow-500 hover:bg-yellow-600">Aguardando Peça</Badge>;
       case 'Solicitação Enviada':
         return <Badge className="bg-orange-500 hover:bg-orange-600">Solicitação Enviada</Badge>;
@@ -125,6 +126,10 @@ export default function OSAssistencia() {
         return <Badge className="bg-violet-500 hover:bg-violet-600">Aguardando Conferência</Badge>;
       case 'Conferência do Gestor':
         return <Badge className="bg-orange-500 hover:bg-orange-600">Conferência do Gestor</Badge>;
+      case 'Aguardando Financeiro':
+        return <Badge className="bg-purple-600 hover:bg-purple-700">Aguardando Financeiro</Badge>;
+      case 'Liquidado':
+        return <Badge className="bg-green-700 hover:bg-green-800">Liquidado</Badge>;
       case 'Concluído':
         return <Badge className="bg-emerald-600 hover:bg-emerald-700">Concluído</Badge>;
       case 'Finalizado':
@@ -139,23 +144,27 @@ export default function OSAssistencia() {
   const getProximaAtuacaoBadge = (atuacao?: string) => {
     switch (atuacao) {
       case 'Técnico: Avaliar/Executar':
+      case 'Técnico':
+      case 'Técnico (Recebimento)':
         return <Badge variant="outline" className="border-blue-500 text-blue-600 text-xs">Técnico</Badge>;
       case 'Vendedor: Registrar Pagamento':
         return <Badge variant="outline" className="border-amber-500 text-amber-600 text-xs">Vendedor</Badge>;
       case 'Atendente':
         return <Badge variant="outline" className="border-amber-500 text-amber-600 text-xs">Atendente</Badge>;
       case 'Gestor':
+      case 'Gestor: Aprovar Peça':
+      case 'Gestor (Suprimentos)':
         return <Badge variant="outline" className="border-orange-500 text-orange-600 text-xs">Gestor</Badge>;
       case 'Financeiro: Conferir Lançamento':
+      case 'Financeiro':
         return <Badge variant="outline" className="border-purple-500 text-purple-600 text-xs">Financeiro</Badge>;
-      case 'Gestor: Aprovar Peça':
-        return <Badge variant="outline" className="border-orange-500 text-orange-600 text-xs">Gestor</Badge>;
       case 'Logística: Enviar Peça':
         return <Badge variant="outline" className="border-cyan-500 text-cyan-600 text-xs">Logística</Badge>;
       case 'Concluído':
+      case '-':
         return <Badge variant="outline" className="border-green-500 text-green-600 text-xs">Concluído</Badge>;
       default:
-        return <span className="text-muted-foreground text-xs">-</span>;
+        return <span className="text-muted-foreground text-xs">{atuacao || '-'}</span>;
     }
   };
 
@@ -258,6 +267,7 @@ export default function OSAssistencia() {
   const osEmAndamento = ordensFiltradas.filter(os => os.status === 'Em serviço').length;
   const osAguardando = ordensFiltradas.filter(os => 
     os.status === 'Aguardando Peça' || 
+    os.status === 'Solicitação de Peça' ||
     os.status === 'Solicitação Enviada' || 
     os.status === 'Em Análise' || 
     os.status === 'Peça Recebida'
@@ -481,6 +491,7 @@ export default function OSAssistencia() {
                   <SelectItem value="Em serviço">Em serviço</SelectItem>
                   <SelectItem value="Em Execução">Em Execução</SelectItem>
                   <SelectItem value="Aguardando Peça">Aguardando Peça</SelectItem>
+                  <SelectItem value="Solicitação de Peça">Solicitação de Peça</SelectItem>
                   <SelectItem value="Peça Recebida">Peça Recebida</SelectItem>
                   <SelectItem value="Pagamento Concluído">Pagamento Concluído</SelectItem>
                   <SelectItem value="Solicitação Enviada">Solicitação Enviada</SelectItem>
