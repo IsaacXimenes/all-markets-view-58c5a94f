@@ -249,8 +249,8 @@ export default function OSAssistenciaEditar() {
       proximaAtuacao = 'Vendedor: Registrar Pagamento';
     } else if (status === 'Em Aberto' || status === 'Em serviço' || status === 'Peça Recebida') {
       proximaAtuacao = 'Técnico: Avaliar/Executar';
-    } else if (status === 'Aguardando Peça' || status === 'Solicitação Enviada') {
-      proximaAtuacao = 'Gestor: Aprovar Peça';
+    } else if (status === 'Aguardando Peça' || status === 'Solicitação Enviada' || status === 'Solicitação de Peça') {
+      proximaAtuacao = 'Gestor (Suprimentos)';
     } else if (status === 'Pagamento Concluído') {
       proximaAtuacao = 'Logística: Enviar Peça';
     } else if (status === 'Aguardando Conferência') {
@@ -710,11 +710,27 @@ export default function OSAssistenciaEditar() {
                     modeloImei: osOriginal?.imeiAparelho || osOriginal?.modeloAparelho || '',
                     lojaSolicitante: lojaId
                   });
+                  // Atualizar status da OS para Solicitação de Peça
+                  const osAtual = getOrdemServicoById(id!);
+                  if (osAtual) {
+                    updateOrdemServico(id!, {
+                      status: 'Solicitação de Peça',
+                      proximaAtuacao: 'Gestor (Suprimentos)',
+                      timeline: [...osAtual.timeline, {
+                        data: new Date().toISOString(),
+                        tipo: 'peca',
+                        descricao: `Solicitação de peça: ${novaSolPeca} x${novaSolQtd} – ${novaSolJustificativa}`,
+                        responsavel: obterNomeColaborador(tecnicoId) || 'Técnico'
+                      }]
+                    });
+                    setStatus('Solicitação de Peça' as OSStatus);
+                    setOsOriginal(getOrdemServicoById(id!) || osOriginal);
+                  }
                   setSolicitacoesOS([...solicitacoesOS, nova]);
                   setNovaSolPeca('');
                   setNovaSolQtd(1);
                   setNovaSolJustificativa('');
-                  toast({ title: 'Solicitação adicionada' });
+                  toast({ title: 'Solicitação adicionada! Status alterado para Aguardando Peça.' });
                 }}>
                   <Plus className="h-4 w-4 mr-1" />
                   Adicionar
