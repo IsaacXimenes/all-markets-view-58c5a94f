@@ -75,10 +75,12 @@ export default function OSOficina() {
   const recarregar = () => setOrdensServico(getOrdensServico());
 
   const handleAssumir = (os: OrdemServico) => {
+    const osFresh = getOrdemServicoById(os.id);
+    if (!osFresh) return;
     updateOrdemServico(os.id, {
       status: 'Em serviço',
       proximaAtuacao: 'Técnico',
-      timeline: [...os.timeline, {
+      timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
         tipo: 'status',
         descricao: 'OS assumida pelo técnico',
@@ -90,10 +92,12 @@ export default function OSOficina() {
   };
 
   const handleConfirmarRecebimento = (os: OrdemServico) => {
+    const osFresh = getOrdemServicoById(os.id);
+    if (!osFresh) return;
     updateOrdemServico(os.id, {
       status: 'Em serviço',
       proximaAtuacao: 'Técnico',
-      timeline: [...os.timeline, {
+      timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
         tipo: 'peca',
         descricao: 'Recebimento de peça confirmado pelo técnico',
@@ -129,13 +133,17 @@ export default function OSOficina() {
       return;
     }
 
+    // Fresh fetch para evitar dados obsoletos
+    const osFresh = getOrdemServicoById(osParaFinalizar.id);
+    if (!osFresh) return;
+
     updateOrdemServico(osParaFinalizar.id, {
       status: 'Serviço concluído',
       proximaAtuacao: 'Atendente',
       resumoConclusao,
       valorCustoTecnico: valorCustoRaw,
       valorVendaTecnico: valorVendaRaw,
-      timeline: [...osParaFinalizar.timeline, {
+      timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
         tipo: 'conclusao_servico',
         descricao: `Serviço finalizado pelo técnico. Custo: R$ ${valorCustoRaw.toFixed(2)}, Venda: R$ ${valorVendaRaw.toFixed(2)}. Resumo: ${resumoConclusao}`,

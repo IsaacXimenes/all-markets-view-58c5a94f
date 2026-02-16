@@ -155,9 +155,29 @@ export default function OSAssistenciaDetalhes() {
       fotosEntrada: osFresh.fotosEntrada,
     });
     
-    // Refresh OS data
+    // Refresh OS data and re-sync edit states
     const updatedOS = getOrdemServicoById(os.id);
     setOS(updatedOS || null);
+    if (updatedOS) {
+      setEditPecas([...updatedOS.pecas]);
+      setEditClienteId(updatedOS.clienteId);
+      setEditLojaId(updatedOS.lojaId);
+      setEditTecnicoId(updatedOS.tecnicoId);
+      setEditStatus(updatedOS.status);
+      setEditSetor(updatedOS.setor);
+      setEditDescricao(updatedOS.descricao || '');
+      setValorCustoTecnico(updatedOS.valorCustoTecnico || 0);
+      setValorVendaTecnico(updatedOS.valorVendaTecnico || 0);
+      setEditPagamentosQuadro(updatedOS.pagamentos.map(p => ({
+        id: p.id,
+        meioPagamento: p.meio,
+        valor: p.valor,
+        contaDestino: (p as any).contaDestino || '',
+        parcelas: p.parcelas || 1,
+        comprovante: (p as any).comprovante || '',
+        comprovanteNome: (p as any).comprovanteNome || '',
+      })));
+    }
     // Recarregar solicitações
     if (os.id) {
       setSolicitacoesOS(getSolicitacoesByOS(os.id));
@@ -323,10 +343,12 @@ export default function OSAssistenciaDetalhes() {
 
   const handleValidarFinanceiro = () => {
     if (!os) return;
+    const osFresh = getOrdemServicoById(os.id);
+    if (!osFresh) return;
     updateOrdemServico(os.id, {
       status: 'Liquidado' as any,
       proximaAtuacao: '-',
-      timeline: [...os.timeline, {
+      timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
         tipo: 'validacao_financeiro',
         descricao: 'Lançamento validado pelo financeiro. OS liquidada.',
@@ -868,10 +890,12 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                       variant="default"
                       className="bg-green-600 hover:bg-green-700"
                       onClick={() => {
+                        const osFresh = getOrdemServicoById(os.id);
+                        if (!osFresh) return;
                         updateOrdemServico(os.id, {
                           status: 'Em serviço' as any,
                           proximaAtuacao: 'Técnico',
-                          timeline: [...os.timeline, {
+                          timeline: [...osFresh.timeline, {
                             data: new Date().toISOString(),
                             tipo: 'peca',
                             descricao: 'Recebimento de peça confirmado. OS retornou para serviço.',
