@@ -278,16 +278,64 @@ export default function FinanceiroExtratoContas() {
     return contasFinanceiras.filter(c => c.lojaVinculada === filtroLoja);
   }, [contasFinanceiras, filtroLoja]);
 
-  // Separar contas
-  const { contasProprias, contasTerceirizadas, totais } = useMemo(() => {
-    const proprias = contasFiltradas.filter(c => c.statusMaquina === 'Própria' && c.status === 'Ativo');
-    const terceirizadas = contasFiltradas.filter(c => c.statusMaquina === 'Terceirizada' && c.status === 'Ativo');
+  // IDs das contas de assistência segregadas
+  const CONTAS_ASSISTENCIA_SEGREGADAS = ['CTA-011', 'CTA-012', 'CTA-013', 'CTA-014'];
+  // IDs das contas de dinheiro por loja (não inclui Dinheiro-Geral CTA-020 nem Águas Lindas CTA-017)
+  const CONTAS_DINHEIRO_SEGREGADAS = ['CTA-015', 'CTA-016', 'CTA-018', 'CTA-019'];
+
+  // Separar contas em 3 seções
+  const { contasPrincipais, contasSegregadas, contasTerceirizadas, totais } = useMemo(() => {
+    const ativas = contasFiltradas.filter(c => c.status === 'Ativo');
+    
+    const terceirizadas = ativas.filter(c => c.statusMaquina === 'Terceirizada');
+    
+    const segregadas = ativas.filter(c => 
+      CONTAS_ASSISTENCIA_SEGREGADAS.includes(c.id) || CONTAS_DINHEIRO_SEGREGADAS.includes(c.id)
+    );
+    const segregadasIds = new Set(segregadas.map(c => c.id));
+    const terceirizadasIds = new Set(terceirizadas.map(c => c.id));
+    
+    const principais = ativas.filter(c => !segregadasIds.has(c.id) && !terceirizadasIds.has(c.id));
+    
+    // Ordenar principais na ordem desejada por loja
+    const ordemLojas = ['0d06e7db', 'db894e7d', '3ac7e00c', 'fcc78c1a', '5b9446d5'];
+    const ordemContasPrincipais = [
+      // Águas Lindas
+      'CTA-007', 'CTA-008', 'CTA-017',
+      // JK Shopping
+      'CTA-005', 'CTA-006',
+      // Matriz
+      'CTA-001', 'CTA-002',
+      // Online
+      'CTA-003', 'CTA-004',
+      // Shopping Sul
+      'CTA-009', 'CTA-010',
+      // Gerais
+      'CTA-020', 'CTA-021',
+    ];
+    principais.sort((a, b) => {
+      const idxA = ordemContasPrincipais.indexOf(a.id);
+      const idxB = ordemContasPrincipais.indexOf(b.id);
+      return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+    });
+
+    // Ordenar segregadas: assistência primeiro, depois dinheiro
+    const ordemSegregadas = [
+      'CTA-014', 'CTA-012', 'CTA-013', 'CTA-011',
+      'CTA-015', 'CTA-019', 'CTA-018', 'CTA-016',
+    ];
+    segregadas.sort((a, b) => {
+      const idxA = ordemSegregadas.indexOf(a.id);
+      const idxB = ordemSegregadas.indexOf(b.id);
+      return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+    });
     
     const totalEntradas = Object.values(entradasPorConta).reduce((acc, v) => acc + v, 0);
     const totalSaidas = Object.values(saidasPorConta).reduce((acc, v) => acc + v, 0);
     
     return {
-      contasProprias: proprias,
+      contasPrincipais: principais,
+      contasSegregadas: segregadas,
       contasTerceirizadas: terceirizadas,
       totais: { totalEntradas, totalSaidas, saldo: totalEntradas - totalSaidas }
     };
@@ -541,23 +589,44 @@ export default function FinanceiroExtratoContas() {
           </Card>
         </div>
 
-        {/* Seção: Contas Próprias */}
+        {/* Seção: Contas Principais */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Wallet className="h-5 w-5 text-blue-600" />
-            <h2 className="text-lg font-bold">Contas Próprias</h2>
-            <Badge variant="secondary">{contasProprias.length}</Badge>
+            <h2 className="text-lg font-bold">Contas Principais</h2>
+            <Badge variant="secondary">{contasPrincipais.length}</Badge>
           </div>
           
-          {contasProprias.length === 0 ? (
+          {contasPrincipais.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
-                Nenhuma conta própria encontrada
+                Nenhuma conta principal encontrada
               </CardContent>
             </Card>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-              {contasProprias.map(renderContaCard)}
+              {contasPrincipais.map(renderContaCard)}
+            </div>
+          )}
+        </div>
+
+        {/* Seção: Contas Segregadas (Assistência + Dinheiro) */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-amber-600" />
+            <h2 className="text-lg font-bold">Contas Segregadas</h2>
+            <Badge variant="secondary">{contasSegregadas.length}</Badge>
+          </div>
+          
+          {contasSegregadas.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Nenhuma conta segregada encontrada
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+              {contasSegregadas.map(renderContaCard)}
             </div>
           )}
         </div>

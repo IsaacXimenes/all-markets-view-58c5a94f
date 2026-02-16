@@ -339,6 +339,8 @@ let contasFinanceiras: ContaFinanceira[] = [
   { id: 'CTA-018', nome: 'Dinheiro - Online', tipo: 'Dinheiro', lojaVinculada: 'fcc78c1a', banco: '', agencia: '', conta: '', cnpj: '46.197.533/0001-06', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
   { id: 'CTA-019', nome: 'Dinheiro - Loja Matriz', tipo: 'Dinheiro', lojaVinculada: '3ac7e00c', banco: '', agencia: '', conta: '', cnpj: '53.295.194/0001-66', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
   { id: 'CTA-020', nome: 'Dinheiro - Geral', tipo: 'Dinheiro - Geral', lojaVinculada: 'db894e7d', banco: '', agencia: '', conta: '', cnpj: '62.968.637/0001-23', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
+  // Assistência - Geral
+  { id: 'CTA-021', nome: 'Bradesco Assistência', tipo: 'Conta Bancária', lojaVinculada: '3cfbf69f', banco: 'Bradesco', agencia: '', conta: '', cnpj: '54.872.234/0001-58', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
 ];
 
 let maquinasCartao: MaquinaCartao[] = [
