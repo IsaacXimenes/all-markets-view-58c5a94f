@@ -11,6 +11,9 @@ import { InputComMascara } from '@/components/ui/InputComMascara';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
+import { useAuthStore } from '@/store/authStore';
+import { ComprovantePreview } from '@/components/vendas/ComprovantePreview';
 import { 
   getOrdemServicoById, 
   formatCurrency, 
@@ -61,6 +64,16 @@ export default function OSAssistenciaDetalhes() {
   const [novaSolQtd, setNovaSolQtd] = useState(1);
   const [novaSolJustificativa, setNovaSolJustificativa] = useState('');
 
+  // Dupla confirmação
+  const [modalConfirmarPagamento, setModalConfirmarPagamento] = useState(false);
+  const [pagamentoConfirmado, setPagamentoConfirmado] = useState(false);
+  const [checkPagamento, setCheckPagamento] = useState(false);
+  const [modalConfirmarRecebimento, setModalConfirmarRecebimento] = useState(false);
+  const [recebimentoConfirmado, setRecebimentoConfirmado] = useState(false);
+  const [checkRecebimento, setCheckRecebimento] = useState(false);
+
+  const { user } = useAuthStore();
+
   const pecasEstoque = getPecas();
 
   const clientes = getClientes();
@@ -85,10 +98,10 @@ export default function OSAssistenciaDetalhes() {
           id: p.id,
           meioPagamento: p.meio,
           valor: p.valor,
-          contaDestino: '',
+          contaDestino: (p as any).contaDestino || '',
           parcelas: p.parcelas || 1,
-          comprovante: '',
-          comprovanteNome: '',
+          comprovante: (p as any).comprovante || '',
+          comprovanteNome: (p as any).comprovanteNome || '',
         })));
         setValorCustoTecnico(ordem.valorCustoTecnico || 0);
         setValorVendaTecnico(ordem.valorVendaTecnico || 0);
@@ -342,8 +355,8 @@ export default function OSAssistenciaDetalhes() {
       timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
         tipo: 'pagamento',
-        descricao: `Pagamento registrado pelo vendedor: R$ ${valorTotal.toFixed(2)}`,
-        responsavel: 'Vendedor'
+        descricao: `Pagamento registrado por ${user?.colaborador?.nome || user?.username || 'Vendedor'}: R$ ${valorTotal.toFixed(2)}`,
+        responsavel: user?.colaborador?.nome || user?.username || 'Vendedor'
       }]
     });
     const updatedOS = getOrdemServicoById(os.id);
@@ -921,27 +934,14 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                     <Button
                       variant="default"
                       className="bg-green-600 hover:bg-green-700"
+                      disabled={recebimentoConfirmado}
                       onClick={() => {
-                        const osFresh = getOrdemServicoById(os.id);
-                        if (!osFresh) return;
-                        updateOrdemServico(os.id, {
-                          status: 'Em serviço' as any,
-                          proximaAtuacao: 'Técnico',
-                          timeline: [...osFresh.timeline, {
-                            data: new Date().toISOString(),
-                            tipo: 'peca',
-                            descricao: 'Recebimento de peça confirmado. OS retornou para serviço.',
-                            responsavel: 'Técnico'
-                          }]
-                        });
-                        setEditStatus('Em serviço');
-                        const updatedOS = getOrdemServicoById(os.id);
-                        if (updatedOS) setOS(updatedOS);
-                        toast.success('Recebimento confirmado! OS retornou para Em serviço.');
+                        setCheckRecebimento(false);
+                        setModalConfirmarRecebimento(true);
                       }}
                     >
                       <CheckCircle className="h-4 w-4 mr-1" />
-                      Confirmar Recebimento
+                      {recebimentoConfirmado ? 'Recebimento Confirmado' : 'Confirmar Recebimento'}
                     </Button>
                   </div>
                 </CardContent>
@@ -1027,9 +1027,13 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                         pagamentosIniciais={editPagamentosQuadro}
                         ocultarCards={true}
                       />
-                      <Button onClick={handleSalvarPagamentoVendedor} className="w-full">
+                      <Button 
+                        onClick={() => { setCheckPagamento(false); setModalConfirmarPagamento(true); }} 
+                        className="w-full"
+                        disabled={pagamentoConfirmado}
+                      >
                         <Save className="h-4 w-4 mr-2" />
-                        Registrar Pagamento
+                        {pagamentoConfirmado ? 'Pagamento Registrado' : 'Registrar Pagamento'}
                       </Button>
                     </div>
                   )
@@ -1041,6 +1045,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                           <TableHead>Meio de Pagamento</TableHead>
                           <TableHead>Parcelas</TableHead>
                           <TableHead>Valor</TableHead>
+                          <TableHead>Comprovante</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1049,10 +1054,13 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                             <TableCell className="font-medium">{pag.meio}</TableCell>
                             <TableCell>{pag.parcelas || '-'}</TableCell>
                             <TableCell className="font-medium">{formatCurrency(pag.valor)}</TableCell>
+                            <TableCell>
+                              <ComprovantePreview comprovante={(pag as any).comprovante} comprovanteNome={(pag as any).comprovanteNome} />
+                            </TableCell>
                           </TableRow>
                         ))}
                         <TableRow className="bg-muted/50">
-                          <TableCell colSpan={2} className="font-bold">Total</TableCell>
+                          <TableCell colSpan={3} className="font-bold">Total</TableCell>
                           <TableCell className="font-bold text-lg">{formatCurrency(os.valorTotal)}</TableCell>
                         </TableRow>
                       </TableBody>
@@ -1080,6 +1088,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                         <TableHead>Meio de Pagamento</TableHead>
                         <TableHead>Parcelas</TableHead>
                         <TableHead>Valor</TableHead>
+                        <TableHead>Comprovante</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1088,10 +1097,13 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                           <TableCell className="font-medium">{pag.meio}</TableCell>
                           <TableCell>{pag.parcelas || '-'}</TableCell>
                           <TableCell className="font-medium">{formatCurrency(pag.valor)}</TableCell>
+                          <TableCell>
+                            <ComprovantePreview comprovante={(pag as any).comprovante} comprovanteNome={(pag as any).comprovanteNome} />
+                          </TableCell>
                         </TableRow>
                       ))}
                       <TableRow className="bg-muted/50">
-                        <TableCell colSpan={2} className="font-bold">Total</TableCell>
+                        <TableCell colSpan={3} className="font-bold">Total</TableCell>
                         <TableCell className="font-bold text-lg">{formatCurrency(os.valorTotal)}</TableCell>
                       </TableRow>
                     </TableBody>
@@ -1354,6 +1366,105 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
           </div>
         </div>
       </div>
+      {/* Modal Dupla Confirmação - Registrar Pagamento */}
+      <AlertDialog open={modalConfirmarPagamento} onOpenChange={setModalConfirmarPagamento}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Registro de Pagamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Confirme o registro de pagamento para a OS <strong>#{os.id}</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Responsável</label>
+                <Input value={user?.colaborador?.nome || user?.username || '-'} disabled className="bg-muted" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Data/Hora</label>
+                <Input value={new Date().toLocaleString('pt-BR')} disabled className="bg-muted" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <Checkbox checked={checkPagamento} onCheckedChange={(v) => setCheckPagamento(!!v)} />
+              <label className="text-sm">Confirmo que os dados de pagamento estão corretos</label>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCheckPagamento(false)}>Cancelar</AlertDialogCancel>
+            <Button
+              disabled={!checkPagamento}
+              onClick={() => {
+                handleSalvarPagamentoVendedor();
+                setPagamentoConfirmado(true);
+                setModalConfirmarPagamento(false);
+                setCheckPagamento(false);
+              }}
+            >
+              Confirmar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal Dupla Confirmação - Confirmar Recebimento */}
+      <AlertDialog open={modalConfirmarRecebimento} onOpenChange={setModalConfirmarRecebimento}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Recebimento de Peça</AlertDialogTitle>
+            <AlertDialogDescription>
+              Confirme o recebimento da peça para a OS <strong>#{os.id}</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Responsável</label>
+                <Input value={user?.colaborador?.nome || user?.username || '-'} disabled className="bg-muted" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Data/Hora</label>
+                <Input value={new Date().toLocaleString('pt-BR')} disabled className="bg-muted" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <Checkbox checked={checkRecebimento} onCheckedChange={(v) => setCheckRecebimento(!!v)} />
+              <label className="text-sm">Confirmo o recebimento físico da peça</label>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setCheckRecebimento(false)}>Cancelar</AlertDialogCancel>
+            <Button
+              disabled={!checkRecebimento}
+              onClick={() => {
+                const osFresh = getOrdemServicoById(os.id);
+                if (!osFresh) return;
+                const nomeResponsavel = user?.colaborador?.nome || user?.username || 'Técnico';
+                updateOrdemServico(os.id, {
+                  status: 'Em serviço' as any,
+                  proximaAtuacao: 'Técnico',
+                  timeline: [...osFresh.timeline, {
+                    data: new Date().toISOString(),
+                    tipo: 'peca',
+                    descricao: `Recebimento de peça confirmado por ${nomeResponsavel}. OS retornou para serviço.`,
+                    responsavel: nomeResponsavel
+                  }]
+                });
+                setEditStatus('Em serviço');
+                const updatedOS = getOrdemServicoById(os.id);
+                if (updatedOS) setOS(updatedOS);
+                setRecebimentoConfirmado(true);
+                setModalConfirmarRecebimento(false);
+                setCheckRecebimento(false);
+                toast.success('Recebimento confirmado! OS retornou para Em serviço.');
+              }}
+            >
+              Confirmar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageLayout>
   );
 }
