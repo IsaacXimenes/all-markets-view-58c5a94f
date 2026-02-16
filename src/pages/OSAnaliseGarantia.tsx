@@ -248,17 +248,7 @@ export default function OSAnaliseGarantia() {
         updateProdutoPendente(registroRecusado.origemId, {
           statusGeral: 'Pendente Estoque',
           parecerAssistencia,
-          timeline: [
-            ...(produtoPendente?.timeline || []),
-            {
-              id: `TL-REC-${Date.now()}`,
-              data: new Date().toISOString(),
-              tipo: 'parecer_assistencia' as const,
-              titulo: `Recusado pela Assistência – ${registroRecusado.origemId}`,
-              descricao: `Tratativa recusada na Análise de Tratativas. Motivo: ${motivoRecusa}. Produto devolvido para Estoque.`,
-              responsavel: 'Sistema'
-            }
-          ]
+          parecerEstoque: produtoPendente?.parecerEstoque,
         });
       }
       // Para Garantia, poderia atualizar a garantia correspondente se necessário
