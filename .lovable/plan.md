@@ -1,38 +1,93 @@
 
 
-## Correcao: Preservar Quadro de Parecer Estoque apos Recusa da Assistencia
+## Correcao: Dados Sumindo ao Editar e Finalizar OS na Aba de Servicos
 
 ### Diagnostico
 
-O fluxo de recusa na Analise de Tratativas (`OSAnaliseGarantia.tsx`) chama `updateProdutoPendente` passando `statusGeral`, `parecerAssistencia` e `timeline`. O problema tem duas causas:
+O problema tem duas causas raiz:
 
-1. **Timeline duplicada e potencial conflito:** O codigo passa `timeline` explicitamente no `dados` (substituindo o array existente via spread) E ao mesmo tempo `updateProdutoPendente` adiciona automaticamente outra entrada de timeline quando detecta `parecerAssistencia` (linhas 589-600 de `osApi.ts`). Isso causa conflito no merge.
+1. **OSOficina (`handleFinalizar`)**: Usa `osParaFinalizar.timeline` que e uma referencia potencialmente obsoleta do estado do componente. Quando o usuario edita a OS em outra pagina e depois finaliza pelo modal do OSOficina, a timeline passada pode sobrescrever dados mais recentes. Precisa fazer "fresh fetch" antes de atualizar.
 
-2. **`parecerEstoque` nao preservado explicitamente:** Embora o spread devesse preservar, a combinacao de substituicao de timeline + merge pode causar inconsistencia no objeto resultante. O campo `parecerEstoque` precisa ser explicitamente mantido.
+2. **OSAssistenciaDetalhes (`handleSaveChanges`)**: Apos salvar, `setOS(updatedOS)` atualiza o estado `os`, mas os estados de edicao (`editPecas`, `editPagamentosQuadro`, `valorCustoTecnico`, `valorVendaTecnico`) NAO sao re-sincronizados com o novo `os`. Isso causa:
+   - Se o usuario clicar "Editar OS" novamente, `editPecas` tera dados stale do useEffect original (que so roda em `[id]`)
+   - Se o usuario editar e salvar DUAS vezes na mesma sessao, a segunda edicao pode sobrescrever com dados parciais
 
-### Correcao
+3. **Uso de `os.timeline` stale em varios handlers**: `handleValidarFinanceiro` (linha 329) e o handler de confirmar recebimento (linha 874) usam `os.timeline` do estado local em vez de buscar os dados frescos do store.
 
-**Arquivo:** `src/pages/OSAnaliseGarantia.tsx` (linhas 248-262)
+### Correcoes
 
-Simplificar a chamada de `updateProdutoPendente` para:
-- **NAO** passar `timeline` explicitamente (deixar `updateProdutoPendente` gerenciar a entrada de timeline via `parecerAssistencia`)
-- Adicionar a entrada de timeline da recusa diretamente na timeline do produto ANTES da chamada, ou deixar o `updateProdutoPendente` gerar automaticamente
-- Preservar explicitamente `parecerEstoque: produtoPendente.parecerEstoque`
+**Arquivo 1: `src/pages/OSOficina.tsx`**
+
+Na funcao `handleFinalizar` (linhas 117-153):
+- Adicionar fresh fetch via `getOrdemServicoById(osParaFinalizar.id)` antes de chamar `updateOrdemServico`
+- Usar a timeline fresca em vez de `osParaFinalizar.timeline`
 
 Codigo corrigido:
 ```typescript
-updateProdutoPendente(registroRecusado.origemId, {
-  statusGeral: 'Pendente Estoque',
-  parecerAssistencia,
-  parecerEstoque: produtoPendente?.parecerEstoque, // Preservar explicitamente
-});
+const handleFinalizar = () => {
+    if (!osParaFinalizar) return;
+    // validacoes existentes...
+
+    // Fresh fetch para evitar dados obsoletos
+    const osFresh = getOrdemServicoById(osParaFinalizar.id);
+    if (!osFresh) return;
+
+    updateOrdemServico(osParaFinalizar.id, {
+      status: 'Servico concluido',
+      proximaAtuacao: 'Atendente',
+      resumoConclusao,
+      valorCustoTecnico: valorCustoRaw,
+      valorVendaTecnico: valorVendaRaw,
+      timeline: [...osFresh.timeline, { /* entrada de conclusao */ }]
+    });
+    // resto igual...
+};
 ```
 
-A entrada de timeline sera gerada automaticamente pelo `updateProdutoPendente` (linhas 589-600 de `osApi.ts`) com base no `parecerAssistencia`, eliminando duplicatas e garantindo que o quadro de Parecer Estoque permaneca intacto.
+**Arquivo 2: `src/pages/OSAssistenciaDetalhes.tsx`**
 
-### Arquivos Alterados
+1. Na funcao `handleSaveChanges` (linhas 109-167): Apos salvar e atualizar `os`, re-sincronizar os estados de edicao:
+```typescript
+    // Apos setOS(updatedOS):
+    if (updatedOS) {
+      setEditPecas([...updatedOS.pecas]);
+      setEditClienteId(updatedOS.clienteId);
+      setEditLojaId(updatedOS.lojaId);
+      setEditTecnicoId(updatedOS.tecnicoId);
+      setEditStatus(updatedOS.status);
+      setEditSetor(updatedOS.setor);
+      setEditDescricao(updatedOS.descricao || '');
+      setValorCustoTecnico(updatedOS.valorCustoTecnico || 0);
+      setValorVendaTecnico(updatedOS.valorVendaTecnico || 0);
+    }
+```
+
+2. Na funcao `handleValidarFinanceiro` (linhas 324-339): Fresh fetch antes de atualizar:
+```typescript
+    const osFresh = getOrdemServicoById(os.id);
+    if (!osFresh) return;
+    updateOrdemServico(os.id, {
+      status: 'Liquidado',
+      proximaAtuacao: '-',
+      timeline: [...osFresh.timeline, { /* entrada */ }]
+    });
+```
+
+3. No handler de confirmar recebimento (linhas 871-884): Usar fresh fetch para timeline:
+```typescript
+    const osFresh = getOrdemServicoById(os.id);
+    if (!osFresh) return;
+    updateOrdemServico(os.id, {
+      status: 'Em servico',
+      proximaAtuacao: 'Tecnico',
+      timeline: [...osFresh.timeline, { /* entrada */ }]
+    });
+```
+
+### Resumo de Arquivos
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/pages/OSAnaliseGarantia.tsx` | Remover `timeline` explicito da chamada de recusa; preservar `parecerEstoque` |
+| `src/pages/OSOficina.tsx` | Fresh fetch em handleFinalizar para evitar timeline stale |
+| `src/pages/OSAssistenciaDetalhes.tsx` | Re-sincronizar estados de edicao apos save; fresh fetch em handleValidarFinanceiro e confirmar recebimento |
 
