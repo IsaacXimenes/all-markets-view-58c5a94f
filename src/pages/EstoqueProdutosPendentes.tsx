@@ -689,8 +689,22 @@ export default function EstoqueProdutosPendentes() {
                       <TableCell>{getStatusBadge(produto)}</TableCell>
                       <TableCell>
                         {produto.parecerAssistencia ? (
-                          <Badge variant="outline" className="bg-destructive/10 text-destructive">
-                            {produto.parecerAssistencia.status === 'Aguardando peça' ? 'Aguardando Peça' : 'Em Análise'}
+                          <Badge variant="outline" className={
+                            produto.parecerAssistencia.status === 'Recusado - Assistência'
+                              ? 'bg-red-500/10 text-red-600 border-red-500/30'
+                              : produto.parecerAssistencia.status === 'Validado pela assistência'
+                              ? 'bg-green-500/10 text-green-600 border-green-500/30'
+                              : produto.parecerAssistencia.status === 'Aguardando peça'
+                              ? 'bg-orange-500/10 text-orange-600 border-orange-500/30'
+                              : produto.parecerAssistencia.status === 'Ajustes realizados'
+                              ? 'bg-blue-500/10 text-blue-600 border-blue-500/30'
+                              : 'bg-destructive/10 text-destructive'
+                          }>
+                            {produto.parecerAssistencia.status === 'Recusado - Assistência' ? 'Recusado' 
+                              : produto.parecerAssistencia.status === 'Aguardando peça' ? 'Aguardando Peça'
+                              : produto.parecerAssistencia.status === 'Validado pela assistência' ? 'Validado'
+                              : produto.parecerAssistencia.status === 'Ajustes realizados' ? 'Ajustes Realizados'
+                              : 'Em Análise'}
                           </Badge>
                         ) : produto.parecerEstoque?.status === 'Encaminhado para conferência da Assistência' ? (
                           <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600">Para Análise</Badge>
