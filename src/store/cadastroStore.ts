@@ -315,6 +315,8 @@ export const useCadastroStore = create<CadastroStore>((set, get) => ({
   
   // Lookup helpers
   obterNomeLoja: (lojaId: string) => {
+    if (lojaId === 'geral-dinheiro') return 'Geral - Dinheiro';
+    if (lojaId === 'geral-assistencia') return 'Geral - Assistência';
     const loja = get().lojas.find(l => l.id === lojaId);
     return loja?.nome || lojaId;
   },
