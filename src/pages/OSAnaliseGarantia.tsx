@@ -445,15 +445,12 @@ export default function OSAnaliseGarantia() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Loja *</Label>
-              <Select value={lojaSelecionada} onValueChange={setLojaSelecionada}>
-                <SelectTrigger><SelectValue placeholder="Selecione uma loja..." /></SelectTrigger>
-                <SelectContent>
-                  {lojas.map(l => (
-                    <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Loja</Label>
+              <Input 
+                value={lojaSelecionada ? obterNomeLoja(lojaSelecionada) : 'Selecione um técnico...'}
+                disabled
+                className="bg-muted"
+              />
             </div>
             <div className="space-y-2">
               <Label>Data/Hora</Label>

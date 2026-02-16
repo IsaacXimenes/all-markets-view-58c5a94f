@@ -46,6 +46,7 @@ import {
   calcularSLA
 } from '@/utils/osApi';
 import { getColaboradores, getCargos } from '@/utils/cadastrosApi';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
 import { formatCurrency } from '@/utils/formatUtils';
 
@@ -64,6 +65,7 @@ export default function EstoqueProdutoPendenteDetalhes() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { obterNomeLoja } = useCadastroStore();
   
   const [produto, setProduto] = useState<ProdutoPendente | null>(null);
   const [colaboradoresEstoque, setColaboradoresEstoque] = useState<{ id: string; nome: string }[]>([]);
@@ -300,7 +302,7 @@ export default function EstoqueProdutoPendenteDetalhes() {
                   <MapPin className="h-4 w-4 text-muted-foreground" />
                   <div>
                     <Label className="text-muted-foreground">Loja</Label>
-                    <p>{produto.loja}</p>
+                    <p>{obterNomeLoja(produto.loja)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
