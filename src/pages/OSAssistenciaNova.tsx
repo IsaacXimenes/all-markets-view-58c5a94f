@@ -1004,6 +1004,28 @@ export default function OSAssistenciaNova() {
           </CardContent>
         </Card>
 
+        {/* Informações do Aparelho */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Smartphone className="h-5 w-5" />
+              Informações do Aparelho
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Modelo do Aparelho</Label>
+                <Input value={modeloAparelho} disabled className="bg-muted" />
+              </div>
+              <div className="space-y-2">
+                <Label>IMEI</Label>
+                <Input value={imeiAparelho} disabled className="bg-muted font-mono" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Informações da OS */}
         <Card>
           <CardHeader>
