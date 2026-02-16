@@ -555,8 +555,7 @@ export const salvarParecerAssistencia = (
 
     // Muda status para Retornado da Assistência (vai aparecer em Produtos Pendentes)
     produto.statusGeral = 'Retornado da Assistência';
-    // Limpa parecer estoque para permitir novo parecer de deferimento
-    produto.parecerEstoque = undefined;
+    // parecerEstoque preservado - não limpar para manter histórico do ciclo
 
     return { produto, migrado: false, retornadoPendentes: true };
   } else if (status === 'Aguardando peça') {
