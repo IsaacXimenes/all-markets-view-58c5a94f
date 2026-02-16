@@ -339,36 +339,6 @@ export default function EstoqueProdutoPendenteDetalhes() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-            {/* Exibir parecer existente como histórico */}
-              {produto.parecerEstoque && (
-                <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
-                  <div>
-                    <Label className="text-muted-foreground">Status</Label>
-                    <Badge variant="outline" className={
-                      produto.parecerEstoque.status.includes('ótimo estado')
-                        ? 'bg-green-500/10 text-green-600 border-green-500/30'
-                        : 'bg-blue-500/10 text-blue-600 border-blue-500/30'
-                    }>
-                      {produto.parecerEstoque.status}
-                    </Badge>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Observações</Label>
-                    <p className="text-sm">{produto.parecerEstoque.observacoes}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{produto.parecerEstoque.responsavel}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Formulário para novo parecer: mostra quando não há parecer OU quando retornou da assistência */}
-              {(!produto.parecerEstoque || produto.statusGeral === 'Retornado da Assistência') && (
-                <>
-                  {produto.parecerEstoque && produto.statusGeral === 'Retornado da Assistência' && (
-                    <Separator />
-                  )}
                   <div className="space-y-2">
                     <Label>Status do Parecer *</Label>
                     <Select value={parecerStatus} onValueChange={setParecerStatus}>
@@ -430,8 +400,6 @@ export default function EstoqueProdutoPendenteDetalhes() {
                     <ShieldCheck className="h-4 w-4 mr-2" />
                     {produto.statusGeral === 'Retornado da Assistência' ? 'Deferir Produto' : 'Salvar Parecer Estoque'}
                   </Button>
-                </>
-              )}
             </CardContent>
           </Card>
         </div>
