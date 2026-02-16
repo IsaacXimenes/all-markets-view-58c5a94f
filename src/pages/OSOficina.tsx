@@ -54,7 +54,7 @@ export default function OSOficina() {
   // Filtrar OSs onde proximaAtuacao contém "Técnico" OU recém-finalizadas
   const osTecnico = useMemo(() => {
     const statusHistorico = ['Serviço concluído', 'Pendente de Pagamento', 'Aguardando Financeiro', 'Liquidado', 'Conferência do Gestor'];
-    const statusPecas = ['Solicitação de Peça', 'Peça Recebida', 'Pagamento Concluído'];
+    const statusPecas = ['Solicitação de Peça', 'Aguardando Peça', 'Peça Recebida', 'Pagamento Concluído'];
     return ordensServico.filter(os => {
       const atuacao = os.proximaAtuacao || '';
       const isTecnico = atuacao === 'Técnico' || 
