@@ -53,6 +53,7 @@ export default function OSAssistenciaDetalhes() {
   // Campos Etapa 2 - Avaliação Técnica
   const [valorCustoTecnico, setValorCustoTecnico] = useState<number>(0);
   const [valorVendaTecnico, setValorVendaTecnico] = useState<number>(0);
+  const [valorServico, setValorServico] = useState<number>(0);
 
   // Solicitação de peças form
   const [novaSolPeca, setNovaSolPeca] = useState('');
@@ -90,6 +91,7 @@ export default function OSAssistenciaDetalhes() {
         })));
         setValorCustoTecnico(ordem.valorCustoTecnico || 0);
         setValorVendaTecnico(ordem.valorVendaTecnico || 0);
+        setValorServico(ordem.valorServico || 0);
       }
       const solicitacoes = getSolicitacoesByOS(id);
       setSolicitacoesOS(solicitacoes);
@@ -168,6 +170,7 @@ export default function OSAssistenciaDetalhes() {
       setEditDescricao(updatedOS.descricao || '');
       setValorCustoTecnico(updatedOS.valorCustoTecnico || 0);
       setValorVendaTecnico(updatedOS.valorVendaTecnico || 0);
+      setValorServico(updatedOS.valorServico || 0);
       setEditPagamentosQuadro(updatedOS.pagamentos.map(p => ({
         id: p.id,
         meioPagamento: p.meio,
@@ -279,7 +282,7 @@ export default function OSAssistenciaDetalhes() {
   const handleConcluirServico = () => {
     if (!os) return;
     if (!valorCustoTecnico || !valorVendaTecnico) {
-      toast.error('Preencha os valores de Custo e Venda antes de concluir o serviço.');
+      toast.error('Preencha os valores de Custo e Valor a ser cobrado antes de concluir o serviço.');
       return;
     }
     // Ler OS mais recente do store para evitar dados obsoletos
@@ -291,6 +294,7 @@ export default function OSAssistenciaDetalhes() {
       proximaAtuacao: 'Atendente',
       valorCustoTecnico,
       valorVendaTecnico,
+      valorServico,
       pecas: osFresh.pecas, // Preservar peças atualizadas
       timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
@@ -310,7 +314,7 @@ export default function OSAssistenciaDetalhes() {
     const osFresh = getOrdemServicoById(os.id);
     if (!osFresh) return;
     if (!osFresh.valorCustoTecnico || !osFresh.valorVendaTecnico) {
-      toast.error('O técnico precisa preencher os campos de Valor de Custo e Valor de Venda antes do registro de pagamento.');
+      toast.error('O técnico precisa preencher os campos de Valor de Custo e Valor a ser cobrado antes do registro de pagamento.');
       return;
     }
     const pagamentosConvertidos = editPagamentosQuadro.map(p => ({
@@ -925,7 +929,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="text-sm font-medium">Valor de Custo (R$)</label>
                     <InputComMascara
@@ -938,7 +942,18 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                     <p className="text-xs text-muted-foreground mt-1">Custo de peças/insumos utilizados</p>
                   </div>
                   <div>
-                    <label className="text-sm font-medium">Valor de Venda (R$)</label>
+                    <label className="text-sm font-medium">Valor do serviço (R$)</label>
+                    <InputComMascara
+                      mascara="moeda"
+                      value={valorServico}
+                      onChange={(formatted, raw) => setValorServico(typeof raw === 'number' ? raw : 0)}
+                      placeholder="0,00"
+                      disabled={os.proximaAtuacao !== 'Técnico: Avaliar/Executar' && os.proximaAtuacao !== 'Técnico' && !!os.valorServico}
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">Valor da mão de obra</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Valor a ser cobrado (R$)</label>
                     <InputComMascara
                       mascara="moeda"
                       value={valorVendaTecnico}
@@ -971,7 +986,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                   (!os.valorCustoTecnico || !os.valorVendaTecnico) ? (
                     <div className="bg-destructive/10 p-4 rounded-lg text-destructive text-sm flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4" />
-                      O técnico precisa preencher os campos de Valor de Custo e Valor de Venda antes do registro de pagamento.
+                      O técnico precisa preencher os campos de Valor de Custo e Valor a ser cobrado antes do registro de pagamento.
                     </div>
                   ) : (
                     <div className="space-y-4">

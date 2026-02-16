@@ -104,6 +104,7 @@ export interface OrdemServico {
   proximaAtuacao?: 'Técnico: Avaliar/Executar' | 'Vendedor: Registrar Pagamento' | 'Financeiro: Conferir Lançamento' | 'Gestor: Aprovar Peça' | 'Logística: Enviar Peça' | 'Concluído' | 'Técnico' | 'Gestor (Suprimentos)' | 'Técnico (Recebimento)' | 'Gestor/Vendedor' | 'Gestor (Conferência)' | 'Financeiro' | 'Atendente' | 'Gestor' | '-';
   valorCustoTecnico?: number;
   valorVendaTecnico?: number;
+  valorServico?: number;
   fotosEntrada?: string[];
   resumoConclusao?: string;
   observacaoOrigem?: string;

@@ -39,6 +39,8 @@ export default function OSOficina() {
   const [valorCustoRaw, setValorCustoRaw] = useState<number>(0);
   const [valorVendaFormatado, setValorVendaFormatado] = useState('');
   const [valorVendaRaw, setValorVendaRaw] = useState<number>(0);
+  const [valorServicoFormatado, setValorServicoFormatado] = useState('');
+  const [valorServicoRaw, setValorServicoRaw] = useState<number>(0);
 
   // Modal de Solicitar Peça
   const [solicitarPecaModal, setSolicitarPecaModal] = useState(false);
@@ -115,6 +117,8 @@ export default function OSOficina() {
     setValorCustoFormatado(os.valorCustoTecnico ? String(os.valorCustoTecnico) : '');
     setValorVendaRaw(os.valorVendaTecnico || 0);
     setValorVendaFormatado(os.valorVendaTecnico ? String(os.valorVendaTecnico) : '');
+    setValorServicoRaw(os.valorServico || 0);
+    setValorServicoFormatado(os.valorServico ? String(os.valorServico) : '');
     setFinalizarModal(true);
   };
 
@@ -129,7 +133,7 @@ export default function OSOficina() {
       return;
     }
     if (!valorVendaRaw || valorVendaRaw <= 0) {
-      toast.error('Informe o Valor de Venda (deve ser maior que 0).');
+      toast.error('Informe o Valor a ser cobrado (deve ser maior que 0).');
       return;
     }
 
@@ -143,6 +147,7 @@ export default function OSOficina() {
       resumoConclusao,
       valorCustoTecnico: valorCustoRaw,
       valorVendaTecnico: valorVendaRaw,
+      valorServico: valorServicoRaw,
       timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
         tipo: 'conclusao_servico',
@@ -484,7 +489,20 @@ export default function OSOficina() {
                 <p className="text-xs text-muted-foreground">Custo de peças/insumos</p>
               </div>
               <div className="space-y-2">
-                <Label>Valor de Venda (R$) *</Label>
+                <Label>Valor do serviço (R$)</Label>
+                <InputComMascara
+                  mascara="moeda"
+                  value={valorServicoRaw}
+                  onChange={(formatted, raw) => {
+                    setValorServicoFormatado(formatted);
+                    setValorServicoRaw(typeof raw === 'number' ? raw : 0);
+                  }}
+                  placeholder="0,00"
+                />
+                <p className="text-xs text-muted-foreground">Valor da mão de obra</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Valor a ser cobrado (R$) *</Label>
                 <InputComMascara
                   mascara="moeda"
                   value={valorVendaRaw}

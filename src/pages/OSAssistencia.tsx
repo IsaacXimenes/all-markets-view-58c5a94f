@@ -272,7 +272,7 @@ export default function OSAssistencia() {
     os.status === 'Em Análise' || 
     os.status === 'Peça Recebida'
   ).length;
-  const valorTotal = ordensFiltradas.reduce((acc, os) => acc + os.valorTotal, 0);
+  const valorTotal = ordensFiltradas.reduce((acc, os) => acc + (os.valorVendaTecnico || 0), 0);
 
   // Produtos de Troca (Trade-In) Stats
   const produtosPendentes = getProdutosPendentes();
@@ -576,7 +576,7 @@ export default function OSAssistencia() {
                 </TableCell>
                 <TableCell>{getProximaAtuacaoBadge(os.proximaAtuacao)}</TableCell>
                 <TableCell>{getSLADisplay(os.dataHora)}</TableCell>
-                <TableCell className="font-medium">{formatCurrency(os.valorTotal)}</TableCell>
+                <TableCell className="font-medium">{formatCurrency(os.valorVendaTecnico || 0)}</TableCell>
                 <TableCell>
                   <div className="flex gap-1 justify-center">
                     <Button 
