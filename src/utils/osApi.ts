@@ -19,7 +19,7 @@ export interface ParecerEstoque {
 export interface ParecerAssistencia {
   id: string;
   data: string;
-  status: 'Validado pela assistência' | 'Aguardando peça' | 'Ajustes realizados';
+  status: 'Validado pela assistência' | 'Aguardando peça' | 'Ajustes realizados' | 'Recusado - Assistência';
   observacoes: string;
   responsavel: string;
   pecas?: {

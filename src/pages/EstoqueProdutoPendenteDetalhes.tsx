@@ -139,7 +139,7 @@ export default function EstoqueProdutoPendenteDetalhes() {
       return;
     }
     
-    setConfirmResponsavel('');
+    setConfirmResponsavel(usuarioLogado.nome);
     setConfirmData(getDataLocal());
     setConfirmDialogOpen(true);
   };
@@ -492,19 +492,13 @@ export default function EstoqueProdutoPendenteDetalhes() {
             
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Responsável (Confirmar) *</Label>
-                <Select value={confirmResponsavel} onValueChange={setConfirmResponsavel}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o responsável" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {colaboradoresEstoque.map((colab) => (
-                      <SelectItem key={colab.id} value={colab.nome}>
-                        {colab.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Responsável (Confirmar)</Label>
+                <Input
+                  value={confirmResponsavel}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">Preenchido automaticamente (usuário logado)</p>
               </div>
               
               <div className="space-y-2">
@@ -512,8 +506,10 @@ export default function EstoqueProdutoPendenteDetalhes() {
                 <Input 
                   type="date"
                   value={confirmData}
-                  onChange={(e) => setConfirmData(e.target.value)}
+                  disabled
+                  className="bg-muted"
                 />
+                <p className="text-xs text-muted-foreground">Preenchida automaticamente (data atual)</p>
               </div>
             </div>
 

@@ -240,17 +240,14 @@ export default function OSAnaliseGarantia() {
         const parecerAssistencia: ParecerAssistencia = {
           id: `PA-REC-${Date.now()}`,
           data: new Date().toISOString(),
-          status: 'Aguardando peça' as any, // Placeholder - campo real é o status customizado abaixo
+          status: 'Recusado - Assistência',
           observacoes: `Recusado na Análise de Tratativas. Motivo: ${motivoRecusa}`,
           responsavel: 'Sistema'
         };
 
         updateProdutoPendente(registroRecusado.origemId, {
           statusGeral: 'Pendente Estoque',
-          parecerAssistencia: {
-            ...parecerAssistencia,
-            status: 'Aguardando peça' as any, // Keep valid type but add recusa info in observacoes
-          },
+          parecerAssistencia,
           timeline: [
             ...(produtoPendente?.timeline || []),
             {

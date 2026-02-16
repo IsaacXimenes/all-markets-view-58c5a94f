@@ -835,10 +835,12 @@ export default function FinanceiroConferencia() {
   };
 
   const getRowClassName = (linha: LinhaConferencia) => {
-    if (linha.conferido) {
+    const statusVenda = linha.venda?.statusFluxo;
+    const statusOS = linha.osData?.status;
+    if (statusVenda === 'Finalizado' || statusOS === 'Liquidado') {
       return 'bg-green-50 dark:bg-green-950/30 hover:bg-green-100';
     }
-    return 'bg-red-50 dark:bg-red-950/30 hover:bg-red-100';
+    return '';
   };
 
   const getLojaNome = (lojaId: string) => lojas.find(l => l.id === lojaId)?.nome || lojaId;

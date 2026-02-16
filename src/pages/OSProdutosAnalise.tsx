@@ -54,7 +54,7 @@ export default function OSProdutosAnalise() {
   const [parecerForm, setParecerForm] = useState({
     responsavel: '',
     dataHora: '',
-    status: '' as '' | 'Validado pela assistência' | 'Aguardando peça' | 'Ajustes realizados',
+    status: '' as '' | 'Validado pela assistência' | 'Aguardando peça' | 'Ajustes realizados' | 'Recusado - Assistência',
     observacoes: '',
     custoAssistencia: ''
   });
