@@ -109,6 +109,10 @@ export default function OSAssistenciaDetalhes() {
   const handleSaveChanges = () => {
     if (!os) return;
     
+    // Ler OS mais recente do store para preservar dados atualizados por outras operações
+    const osFresh = getOrdemServicoById(os.id);
+    if (!osFresh) return;
+    
     const valorTotal = editPecas.reduce((acc, p) => acc + p.valorTotal, 0);
     const pagamentosConvertidos = editPagamentosQuadro.map(p => ({
       id: p.id,
@@ -117,10 +121,10 @@ export default function OSAssistenciaDetalhes() {
       parcelas: p.parcelas
     }));
     // Preservar peças originais se editPecas estiver vazio mas OS já tinha peças
-    const pecasParaSalvar = editPecas.length > 0 ? editPecas : (os.pecas.length > 0 ? os.pecas : editPecas);
+    const pecasParaSalvar = editPecas.length > 0 ? editPecas : (osFresh.pecas.length > 0 ? osFresh.pecas : editPecas);
     
     // Determinar proximaAtuacao com base no status editado
-    let proximaAtuacao = os.proximaAtuacao;
+    let proximaAtuacao = osFresh.proximaAtuacao;
     if (editStatus === 'Solicitação de Peça') {
       proximaAtuacao = 'Gestor (Suprimentos)';
     } else if (editStatus === 'Em serviço') {
@@ -138,17 +142,17 @@ export default function OSAssistenciaDetalhes() {
       pecas: pecasParaSalvar,
       pagamentos: pagamentosConvertidos,
       valorTotal,
-      // Preservar campos existentes que não estão sendo editados
-      timeline: os.timeline,
-      valorCustoTecnico: os.valorCustoTecnico,
-      valorVendaTecnico: os.valorVendaTecnico,
-      observacaoOrigem: os.observacaoOrigem,
-      origemOS: os.origemOS,
-      garantiaId: os.garantiaId,
-      modeloAparelho: os.modeloAparelho,
-      imeiAparelho: os.imeiAparelho,
-      resumoConclusao: os.resumoConclusao,
-      fotosEntrada: os.fotosEntrada,
+      // Preservar campos existentes da versão mais recente do store
+      timeline: osFresh.timeline,
+      valorCustoTecnico: osFresh.valorCustoTecnico,
+      valorVendaTecnico: osFresh.valorVendaTecnico,
+      observacaoOrigem: osFresh.observacaoOrigem,
+      origemOS: osFresh.origemOS,
+      garantiaId: osFresh.garantiaId,
+      modeloAparelho: osFresh.modeloAparelho,
+      imeiAparelho: osFresh.imeiAparelho,
+      resumoConclusao: osFresh.resumoConclusao,
+      fotosEntrada: osFresh.fotosEntrada,
     });
     
     // Refresh OS data
@@ -258,12 +262,17 @@ export default function OSAssistenciaDetalhes() {
       toast.error('Preencha os valores de Custo e Venda antes de concluir o serviço.');
       return;
     }
+    // Ler OS mais recente do store para evitar dados obsoletos
+    const osFresh = getOrdemServicoById(os.id);
+    if (!osFresh) return;
+    
     updateOrdemServico(os.id, {
       status: 'Serviço concluído',
       proximaAtuacao: 'Atendente',
       valorCustoTecnico,
       valorVendaTecnico,
-      timeline: [...os.timeline, {
+      pecas: osFresh.pecas, // Preservar peças atualizadas
+      timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
         tipo: 'conclusao_servico',
         descricao: `Serviço finalizado pelo técnico. Custo: R$ ${valorCustoTecnico.toFixed(2)}, Venda: R$ ${valorVendaTecnico.toFixed(2)}`,
@@ -277,7 +286,10 @@ export default function OSAssistenciaDetalhes() {
 
   const handleSalvarPagamentoVendedor = () => {
     if (!os) return;
-    if (!os.valorCustoTecnico || !os.valorVendaTecnico) {
+    // Ler OS mais recente do store
+    const osFresh = getOrdemServicoById(os.id);
+    if (!osFresh) return;
+    if (!osFresh.valorCustoTecnico || !osFresh.valorVendaTecnico) {
       toast.error('O técnico precisa preencher os campos de Valor de Custo e Valor de Venda antes do registro de pagamento.');
       return;
     }
@@ -296,7 +308,8 @@ export default function OSAssistenciaDetalhes() {
       valorTotal,
       status: 'Conferência do Gestor' as any,
       proximaAtuacao: 'Gestor',
-      timeline: [...os.timeline, {
+      pecas: osFresh.pecas, // Preservar peças
+      timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
         tipo: 'pagamento',
         descricao: `Pagamento registrado pelo vendedor: R$ ${valorTotal.toFixed(2)}`,
