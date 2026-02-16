@@ -704,6 +704,12 @@ export default function FinanceiroConferencia() {
     const isOS = vendaSelecionada.id.startsWith('OS-');
     
     if (isOS) {
+      // Persistir validações financeiras para OS (mesmo fluxo das vendas)
+      localStorage.setItem(
+        `validacao_pagamentos_financeiro_${vendaSelecionada.id}`,
+        JSON.stringify(validacoesNormalizadas)
+      );
+
       // Finalizar OS de assistência
       updateOrdemServico(vendaSelecionada.id, {
         status: 'Liquidado',

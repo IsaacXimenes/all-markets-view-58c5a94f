@@ -16,7 +16,7 @@ import { ComprovantePreview } from '@/components/vendas/ComprovantePreview';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { getOrdensServico, getOrdemServicoById, updateOrdemServico, formatCurrency, OrdemServico } from '@/utils/assistenciaApi';
-import { getClientes } from '@/utils/cadastrosApi';
+import { getClientes, getContasFinanceiras } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
 import { Eye, Download, Filter, X, Check, XCircle, Clock, DollarSign, CreditCard, Banknote, Smartphone, Wallet, Lock, MessageSquare } from 'lucide-react';
@@ -44,6 +44,7 @@ export default function OSConferenciaGestor() {
   const navigate = useNavigate();
   const [ordensServico, setOrdensServico] = useState(getOrdensServico());
   const clientes = getClientes();
+  const contasFinanceiras = getContasFinanceiras();
   const { obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   const user = useAuthStore((s) => s.user);
 
@@ -694,20 +695,30 @@ export default function OSConferenciaGestor() {
                   <h4 className="font-semibold text-sm mb-2">Pagamentos Registrados</h4>
                   {osSelecionada.pagamentos.length > 0 ? (
                     <div className="space-y-2">
-                      {osSelecionada.pagamentos.map((pag, i) => (
-                        <div key={i} className="text-xs p-2 bg-muted/50 rounded space-y-1">
-                          <div className="flex justify-between">
-                            <span>{pag.meio}</span>
-                            <span className="font-medium">{formatCurrency(pag.valor)}</span>
+                      {osSelecionada.pagamentos.map((pag, i) => {
+                        const contaDestino = pag.contaDestino 
+                          ? contasFinanceiras.find(c => c.id === pag.contaDestino)
+                          : null;
+                        return (
+                          <div key={i} className="text-xs p-2 bg-muted/50 rounded space-y-1">
+                            <div className="flex justify-between">
+                              <span>{pag.meio}</span>
+                              <span className="font-medium">{formatCurrency(pag.valor)}</span>
+                            </div>
+                            {contaDestino && (
+                              <div className="text-muted-foreground">
+                                Conta: <span className="font-medium text-foreground">{contaDestino.nome}</span>
+                              </div>
+                            )}
+                            {pag.comprovante && (
+                              <ComprovantePreview
+                                comprovante={pag.comprovante}
+                                comprovanteNome={pag.comprovanteNome || 'Comprovante'}
+                              />
+                            )}
                           </div>
-                          {pag.comprovante && (
-                            <ComprovantePreview
-                              comprovante={pag.comprovante}
-                              comprovanteNome={pag.comprovanteNome || 'Comprovante'}
-                            />
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                       <div className="flex justify-between p-2 bg-muted rounded font-bold text-sm">
                         <span>Total</span>
                         <span>{formatCurrency(osSelecionada.pagamentos.reduce((a, p) => a + p.valor, 0))}</span>

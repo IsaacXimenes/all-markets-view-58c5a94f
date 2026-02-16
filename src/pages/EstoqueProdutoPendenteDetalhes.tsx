@@ -46,7 +46,7 @@ import {
   calcularSLA
 } from '@/utils/osApi';
 import { getColaboradores, getCargos } from '@/utils/cadastrosApi';
-
+import { useAuthStore } from '@/store/authStore';
 import { formatCurrency } from '@/utils/formatUtils';
 
 const formatDateTime = (dateString: string) => {
@@ -68,8 +68,12 @@ export default function EstoqueProdutoPendenteDetalhes() {
   const [produto, setProduto] = useState<ProdutoPendente | null>(null);
   const [colaboradoresEstoque, setColaboradoresEstoque] = useState<{ id: string; nome: string }[]>([]);
   
-  // Mock de usuário logado
-  const usuarioLogado = { id: 'COL-003', nome: 'Carlos Estoque' };
+  // Usuário logado via authStore
+  const user = useAuthStore((s) => s.user);
+  const usuarioLogado = { 
+    id: user?.colaborador?.id || 'COL-003', 
+    nome: user?.colaborador?.nome || 'Carlos Estoque' 
+  };
 
   // Form state
   const [parecerStatus, setParecerStatus] = useState<string>('');

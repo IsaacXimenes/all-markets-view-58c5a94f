@@ -137,7 +137,18 @@ export default function OSAssistenciaDetalhes() {
       descricao: editDescricao,
       pecas: pecasParaSalvar,
       pagamentos: pagamentosConvertidos,
-      valorTotal
+      valorTotal,
+      // Preservar campos existentes que não estão sendo editados
+      timeline: os.timeline,
+      valorCustoTecnico: os.valorCustoTecnico,
+      valorVendaTecnico: os.valorVendaTecnico,
+      observacaoOrigem: os.observacaoOrigem,
+      origemOS: os.origemOS,
+      garantiaId: os.garantiaId,
+      modeloAparelho: os.modeloAparelho,
+      imeiAparelho: os.imeiAparelho,
+      resumoConclusao: os.resumoConclusao,
+      fotosEntrada: os.fotosEntrada,
     });
     
     // Refresh OS data
@@ -274,7 +285,10 @@ export default function OSAssistenciaDetalhes() {
       id: p.id,
       meio: p.meioPagamento,
       valor: p.valor,
-      parcelas: p.parcelas
+      parcelas: p.parcelas,
+      comprovante: p.comprovante,
+      comprovanteNome: p.comprovanteNome,
+      contaDestino: p.contaDestino,
     }));
     const valorTotal = editPagamentosQuadro.reduce((acc, p) => acc + p.valor, 0);
     updateOrdemServico(os.id, {

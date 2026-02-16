@@ -12,6 +12,8 @@ export interface ParecerEstoque {
   observacoes: string;
   responsavel: string;
   contadorEncaminhamento?: number;
+  dataConfirmacao?: string;
+  hora?: string;
 }
 
 export interface ParecerAssistencia {
@@ -392,7 +394,9 @@ export const salvarParecerEstoque = (
     status,
     observacoes,
     responsavel,
-    contadorEncaminhamento: status === 'Encaminhado para conferência da Assistência' ? contadorEncaminhamento : undefined
+    contadorEncaminhamento: status === 'Encaminhado para conferência da Assistência' ? contadorEncaminhamento : undefined,
+    dataConfirmacao: new Date().toISOString().split('T')[0],
+    hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   };
 
   produto.parecerEstoque = parecer;

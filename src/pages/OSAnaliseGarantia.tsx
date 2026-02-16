@@ -21,7 +21,7 @@ import {
   getRegistrosAnaliseGarantia, aprovarAnaliseGarantia, recusarAnaliseGarantia,
   RegistroAnaliseGarantia, getGarantiaById
 } from '@/utils/garantiasApi';
-import { updateProdutoPendente, getProdutoPendenteById } from '@/utils/osApi';
+import { updateProdutoPendente, getProdutoPendenteById, ParecerAssistencia } from '@/utils/osApi';
 import { addOrdemServico } from '@/utils/assistenciaApi';
 import { getClientes } from '@/utils/cadastrosApi';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
@@ -29,7 +29,7 @@ import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 export default function OSAnaliseGarantia() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState<RegistroAnaliseGarantia[]>(getRegistrosAnaliseGarantia());
-  const { obterTecnicos, obterLojasTipoLoja, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
+  const { obterTecnicos, obterLojasTipoLoja, obterNomeLoja, obterNomeColaborador, obterColaboradorById } = useCadastroStore();
   const tecnicos = obterTecnicos();
   const lojas = obterLojasTipoLoja();
   
@@ -232,10 +232,36 @@ export default function OSAnaliseGarantia() {
 
     const registroRecusado = recusarAnaliseGarantia(registroParaRecusar.id, motivoRecusa);
     if (registroRecusado) {
-      // Reverter origem
+      // Reverter origem com pareceres atualizados
       if (registroRecusado.origem === 'Estoque' && registroRecusado.origemId) {
+        const produtoPendente = getProdutoPendenteById(registroRecusado.origemId);
+        
+        // Criar parecer assistência com status "Recusado"
+        const parecerAssistencia: ParecerAssistencia = {
+          id: `PA-REC-${Date.now()}`,
+          data: new Date().toISOString(),
+          status: 'Aguardando peça' as any, // Placeholder - campo real é o status customizado abaixo
+          observacoes: `Recusado na Análise de Tratativas. Motivo: ${motivoRecusa}`,
+          responsavel: 'Sistema'
+        };
+
         updateProdutoPendente(registroRecusado.origemId, {
-          statusGeral: 'Pendente Estoque'
+          statusGeral: 'Pendente Estoque',
+          parecerAssistencia: {
+            ...parecerAssistencia,
+            status: 'Aguardando peça' as any, // Keep valid type but add recusa info in observacoes
+          },
+          timeline: [
+            ...(produtoPendente?.timeline || []),
+            {
+              id: `TL-REC-${Date.now()}`,
+              data: new Date().toISOString(),
+              tipo: 'parecer_assistencia' as const,
+              titulo: `Recusado pela Assistência – ${registroRecusado.origemId}`,
+              descricao: `Tratativa recusada na Análise de Tratativas. Motivo: ${motivoRecusa}. Produto devolvido para Estoque.`,
+              responsavel: 'Sistema'
+            }
+          ]
         });
       }
       // Para Garantia, poderia atualizar a garantia correspondente se necessário
@@ -413,7 +439,16 @@ export default function OSAnaliseGarantia() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Técnico Responsável *</Label>
-              <Select value={tecnicoSelecionado} onValueChange={setTecnicoSelecionado}>
+              <Select value={tecnicoSelecionado} onValueChange={(val) => {
+                setTecnicoSelecionado(val);
+                // Auto-fill loja based on technician's assigned store
+                if (val) {
+                  const colaborador = obterColaboradorById(val);
+                  if (colaborador?.loja_id) {
+                    setLojaSelecionada(colaborador.loja_id);
+                  }
+                }
+              }}>
                 <SelectTrigger><SelectValue placeholder="Selecione um técnico..." /></SelectTrigger>
                 <SelectContent>
                   {tecnicos.map(t => (
