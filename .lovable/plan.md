@@ -1,37 +1,49 @@
 
 
-## Correção: Preservar Parecer Estoque no Ciclo Estoque-Assistência
+## Confirmacao em Duas Etapas com Registro de Usuario e Hora
 
-### Problema
+### Contexto
+Os botoes "Registrar Pagamento" e "Confirmar Recebimento" na tela de detalhes da OS precisam de confirmacao em duas etapas, registrando o usuario logado e a data/hora da confirmacao. Apos confirmar, o botao fica desabilitado. Tambem sera removido o botao "Editar" da listagem na aba Nova Assistencia, e os comprovantes do financeiro serao visiveis na consulta da OS.
 
-Atualmente, quando um produto retorna da Assistência para os Produtos Pendentes (seja por validação ou recusa), o campo `parecerEstoque` é limpo (`undefined`) na linha 559 do arquivo `osApi.ts`. Isso causa perda das informações do quadro de Parecer Estoque e impede o rastreamento do histórico quando há ciclos de ida e volta entre Estoque e Assistência.
+### Alteracoes
 
-### Correção
+#### 1. Remover botao Editar na listagem (OSAssistencia.tsx)
+Remover o botao com icone de lapis (linhas 582-589) da coluna de acoes na tabela.
 
-**Arquivo: `src/utils/osApi.ts` (linha 558-559)**
+#### 2. Persistencia de comprovantes (OSAssistenciaDetalhes.tsx)
+Corrigir o mapeamento de pagamentos (linhas 84-92) para ler `p.comprovante` e `p.comprovanteNome` dos dados da OS, em vez de strings vazias. Adicionar coluna "Comprovante" na tabela read-only de pagamentos.
 
-Remover a linha que limpa o `parecerEstoque`:
+#### 3. Dupla confirmacao para "Registrar Pagamento" (OSAssistenciaDetalhes.tsx)
 
-```
-// ANTES:
-produto.parecerEstoque = undefined;
+- Importar `useAuthStore` e `AlertDialog` components
+- Criar estados: `modalConfirmarPagamento`, `pagamentoConfirmado`, `checkPagamento`
+- Ao clicar em "Registrar Pagamento", abrir AlertDialog com:
+  - Texto: "Confirme o registro de pagamento para a OS #ID"
+  - Exibicao automatica do usuario logado (nome do colaborador) e data/hora atual
+  - Checkbox: "Confirmo que os dados de pagamento estao corretos"
+  - Botao "Confirmar" habilitado somente com checkbox marcado
+- Ao confirmar: executar `handleSalvarPagamentoVendedor()`, registrar na timeline o usuario e hora, setar `pagamentoConfirmado = true`
+- Com `pagamentoConfirmado = true`, o botao fica `disabled`
 
-// DEPOIS:
-// parecerEstoque preservado - não limpar para manter histórico do ciclo
-```
+#### 4. Dupla confirmacao para "Confirmar Recebimento" (OSAssistenciaDetalhes.tsx)
 
-O parecer original do Estoque permanece visível no quadro, e todas as devoluções/reenvios ficam registradas apenas na timeline, como o usuário solicitou.
+- Criar estados: `modalConfirmarRecebimento`, `recebimentoConfirmado`, `checkRecebimento`
+- Ao clicar em "Confirmar Recebimento", abrir AlertDialog com:
+  - Texto: "Confirme o recebimento da peca para a OS #ID"
+  - Exibicao automatica do usuario logado e data/hora atual
+  - Checkbox: "Confirmo o recebimento fisico da peca"
+  - Botao "Confirmar" habilitado somente com checkbox marcado
+- Ao confirmar: executar a logica existente de atualizar status para "Em servico", registrar na timeline com nome do usuario logado (em vez de "Tecnico" generico), setar `recebimentoConfirmado = true`
+- Com `recebimentoConfirmado = true`, o botao fica `disabled`
 
-**Arquivo: `src/pages/EstoqueProdutoPendenteDetalhes.tsx` (linhas 364-388)**
+### Detalhes Tecnicos
 
-Ajustar a lógica do formulário de parecer para que, quando o produto retornar da Assistência (`statusGeral === 'Retornado da Assistência'`), o quadro exiba o parecer existente em modo somente leitura (como já faz) e adicione abaixo um botão ou formulário separado para o novo parecer de deferimento. Atualmente, a condição `!produto.parecerEstoque` controla se mostra o formulário ou o parecer preenchido - como o parecer não será mais limpo, precisamos permitir novo parecer quando o status for "Retornado da Assistência" mesmo com parecer existente.
-
-A solução é: quando `statusGeral === 'Retornado da Assistência'`, exibir o parecer original como histórico e mostrar o formulário de deferimento abaixo dele, permitindo que o estoquista registre o novo parecer de deferimento sem perder o original.
-
-### Resumo de Arquivos
-
-| Arquivo | Alteração |
+| Arquivo | Alteracao |
 |---|---|
-| `src/utils/osApi.ts` | Remover `produto.parecerEstoque = undefined` (linha 559) |
-| `src/pages/EstoqueProdutoPendenteDetalhes.tsx` | Quando "Retornado da Assistência", mostrar parecer existente + formulário de deferimento |
+| `src/pages/OSAssistencia.tsx` | Remover botao Editar (linhas 582-589) |
+| `src/pages/OSAssistenciaDetalhes.tsx` | Importar useAuthStore e AlertDialog; corrigir leitura de comprovantes; criar modais de dupla confirmacao com registro de usuario/hora para pagamento e recebimento |
+
+**Registro de auditoria nos modais:** Os campos "Responsavel" e "Data/Hora" sao preenchidos automaticamente a partir do `useAuthStore` (colaborador logado) e `new Date()`, exibidos como campos somente leitura (disabled) no modal, garantindo rastreabilidade sem possibilidade de alteracao manual.
+
+**Timeline:** Ao confirmar, o evento na timeline registra o nome do colaborador autenticado (ex: "Joao Gestor") e o timestamp exato da confirmacao, substituindo strings genericas como "Tecnico".
 
