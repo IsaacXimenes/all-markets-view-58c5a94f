@@ -1023,7 +1023,10 @@ export default function OSAssistenciaNova() {
                 <Label className={!lojaId ? 'text-destructive' : ''}>Loja *</Label>
                 <AutocompleteLoja
                   value={lojaId}
-                  onChange={setLojaId}
+                  onChange={(v) => {
+                    setLojaId(v);
+                    if (v !== lojaId) setTecnicoId('');
+                  }}
                   filtrarPorTipo="Assistência"
                   className={!lojaId ? 'border-destructive' : ''}
                   placeholder="Selecione a loja..."
@@ -1035,8 +1038,10 @@ export default function OSAssistenciaNova() {
                   value={tecnicoId}
                   onChange={setTecnicoId}
                   filtrarPorTipo="tecnicos"
+                  filtrarPorLoja={lojaId || undefined}
                   className={!tecnicoId ? 'border-destructive' : ''}
-                  placeholder="Selecione o técnico..."
+                  placeholder={lojaId ? "Selecione o técnico..." : "Selecione a loja primeiro..."}
+                  disabled={!lojaId}
                 />
               </div>
               <div className="space-y-2">
@@ -1171,17 +1176,19 @@ export default function OSAssistenciaNova() {
                               <SelectValue placeholder="Selecione a peça do estoque..." />
                             </SelectTrigger>
                             <SelectContent>
-                             {pecasEstoque
-                                .filter(p => !lojaId || p.lojaId === lojaId)
+                            {pecasEstoque
                                 .map(p => (
                                   <SelectItem key={p.id} value={p.id}>
                                     <div className="flex items-center gap-2">
                                       <span>{p.descricao}</span>
-                                      <Badge variant="outline" className="ml-2">
-                                        {p.quantidade} un.
+                                      <Badge variant="outline" className="ml-1 text-xs">
+                                        {obterNomeLoja(p.lojaId)}
                                       </Badge>
                                       <Badge variant="secondary" className="ml-1 text-xs">
                                         {p.origem}
+                                      </Badge>
+                                      <Badge variant="outline" className="ml-1">
+                                        {p.quantidade} un.
                                       </Badge>
                                     </div>
                                   </SelectItem>
