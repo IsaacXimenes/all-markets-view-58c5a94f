@@ -281,8 +281,13 @@ export default function OSAssistenciaDetalhes() {
 
   const handleConcluirServico = () => {
     if (!os) return;
-    if (!valorCustoTecnico || !valorVendaTecnico) {
-      toast.error('Preencha os valores de Custo e Valor a ser cobrado antes de concluir o serviço.');
+    const valorVendaCalculado = valorCustoTecnico + valorServico;
+    if (!valorCustoTecnico) {
+      toast.error('Preencha o Valor de Custo antes de concluir o serviço.');
+      return;
+    }
+    if (valorVendaCalculado <= 0) {
+      toast.error('O Valor a ser cobrado deve ser maior que 0.');
       return;
     }
     // Ler OS mais recente do store para evitar dados obsoletos
@@ -293,13 +298,13 @@ export default function OSAssistenciaDetalhes() {
       status: 'Serviço concluído',
       proximaAtuacao: 'Atendente',
       valorCustoTecnico,
-      valorVendaTecnico,
+      valorVendaTecnico: valorVendaCalculado,
       valorServico,
-      pecas: osFresh.pecas, // Preservar peças atualizadas
+      pecas: osFresh.pecas,
       timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
         tipo: 'conclusao_servico',
-        descricao: `Serviço finalizado pelo técnico. Custo: R$ ${valorCustoTecnico.toFixed(2)}, Venda: R$ ${valorVendaTecnico.toFixed(2)}`,
+        descricao: `Serviço finalizado pelo técnico. Custo: R$ ${valorCustoTecnico.toFixed(2)}, Venda: R$ ${valorVendaCalculado.toFixed(2)}`,
         responsavel: tecnico?.nome || 'Técnico'
       }]
     });
@@ -956,12 +961,13 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                     <label className="text-sm font-medium">Valor a ser cobrado (R$)</label>
                     <InputComMascara
                       mascara="moeda"
-                      value={valorVendaTecnico}
-                      onChange={(formatted, raw) => setValorVendaTecnico(typeof raw === 'number' ? raw : 0)}
+                      value={valorCustoTecnico + valorServico}
+                      onChange={() => {}}
                       placeholder="0,00"
-                      disabled={os.proximaAtuacao !== 'Técnico: Avaliar/Executar' && os.proximaAtuacao !== 'Técnico' && !!os.valorVendaTecnico}
+                      disabled
+                      className="bg-muted"
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Valor cobrado do cliente</p>
+                    <p className="text-xs text-muted-foreground mt-1">Custo + Serviço (calculado automaticamente)</p>
                   </div>
                 </div>
                 {(os.proximaAtuacao === 'Técnico: Avaliar/Executar' || os.proximaAtuacao === 'Técnico') && os.status !== 'Finalizado' && os.status !== 'Liquidado' && os.status !== 'Serviço concluído' && (

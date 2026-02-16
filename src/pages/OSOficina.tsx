@@ -132,8 +132,9 @@ export default function OSOficina() {
       toast.error('Informe o Valor de Custo (deve ser maior que 0).');
       return;
     }
-    if (!valorVendaRaw || valorVendaRaw <= 0) {
-      toast.error('Informe o Valor a ser cobrado (deve ser maior que 0).');
+    const valorVendaCalculado = valorCustoRaw + valorServicoRaw;
+    if (valorVendaCalculado <= 0) {
+      toast.error('O Valor a ser cobrado deve ser maior que 0.');
       return;
     }
 
@@ -146,12 +147,12 @@ export default function OSOficina() {
       proximaAtuacao: 'Atendente',
       resumoConclusao,
       valorCustoTecnico: valorCustoRaw,
-      valorVendaTecnico: valorVendaRaw,
+      valorVendaTecnico: valorVendaCalculado,
       valorServico: valorServicoRaw,
       timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
         tipo: 'conclusao_servico',
-        descricao: `Serviço finalizado pelo técnico. Custo: R$ ${valorCustoRaw.toFixed(2)}, Venda: R$ ${valorVendaRaw.toFixed(2)}. Resumo: ${resumoConclusao}`,
+        descricao: `Serviço finalizado pelo técnico. Custo: R$ ${valorCustoRaw.toFixed(2)}, Venda: R$ ${valorVendaCalculado.toFixed(2)}. Resumo: ${resumoConclusao}`,
         responsavel: user?.colaborador?.nome || 'Técnico'
       }]
     });
@@ -502,18 +503,16 @@ export default function OSOficina() {
                 <p className="text-xs text-muted-foreground">Valor da mão de obra</p>
               </div>
               <div className="space-y-2">
-                <Label>Valor a ser cobrado (R$) *</Label>
+                <Label>Valor a ser cobrado (R$)</Label>
                 <InputComMascara
                   mascara="moeda"
-                  value={valorVendaRaw}
-                  onChange={(formatted, raw) => {
-                    setValorVendaFormatado(formatted);
-                    setValorVendaRaw(typeof raw === 'number' ? raw : 0);
-                  }}
+                  value={valorCustoRaw + valorServicoRaw}
+                  onChange={() => {}}
                   placeholder="0,00"
-                  className={cn(!valorVendaRaw && 'border-destructive')}
+                  disabled
+                  className="bg-muted"
                 />
-                <p className="text-xs text-muted-foreground">Valor cobrado do cliente</p>
+                <p className="text-xs text-muted-foreground">Custo + Serviço (calculado automaticamente)</p>
               </div>
             </div>
 
