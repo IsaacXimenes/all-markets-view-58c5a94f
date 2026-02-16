@@ -339,8 +339,8 @@ export default function EstoqueProdutoPendenteDetalhes() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {produto.parecerEstoque ? (
-                // Exibir parecer já preenchido
+            {/* Exibir parecer existente como histórico */}
+              {produto.parecerEstoque && (
                 <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
                   <div>
                     <Label className="text-muted-foreground">Status</Label>
@@ -361,9 +361,14 @@ export default function EstoqueProdutoPendenteDetalhes() {
                     <span className="text-sm">{produto.parecerEstoque.responsavel}</span>
                   </div>
                 </div>
-              ) : (
-                // Formulário para preencher parecer
+              )}
+
+              {/* Formulário para novo parecer: mostra quando não há parecer OU quando retornou da assistência */}
+              {(!produto.parecerEstoque || produto.statusGeral === 'Retornado da Assistência') && (
                 <>
+                  {produto.parecerEstoque && produto.statusGeral === 'Retornado da Assistência' && (
+                    <Separator />
+                  )}
                   <div className="space-y-2">
                     <Label>Status do Parecer *</Label>
                     <Select value={parecerStatus} onValueChange={setParecerStatus}>
@@ -423,7 +428,7 @@ export default function EstoqueProdutoPendenteDetalhes() {
 
                   <Button onClick={handleAbrirConfirmacao} className="w-full">
                     <ShieldCheck className="h-4 w-4 mr-2" />
-                    Salvar Parecer Estoque
+                    {produto.statusGeral === 'Retornado da Assistência' ? 'Deferir Produto' : 'Salvar Parecer Estoque'}
                   </Button>
                 </>
               )}
