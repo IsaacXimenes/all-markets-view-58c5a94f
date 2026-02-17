@@ -1,49 +1,102 @@
 
 
-## Confirmacao em Duas Etapas com Registro de Usuario e Hora
+## Mapeamento Completo: Auto-preenchimento de "Responsavel" com Usuario Logado
 
-### Contexto
-Os botoes "Registrar Pagamento" e "Confirmar Recebimento" na tela de detalhes da OS precisam de confirmacao em duas etapas, registrando o usuario logado e a data/hora da confirmacao. Apos confirmar, o botao fica desabilitado. Tambem sera removido o botao "Editar" da listagem na aba Nova Assistencia, e os comprovantes do financeiro serao visiveis na consulta da OS.
+### Objetivo
+Todos os campos onde o usuario precisa selecionar manualmente um "Responsavel" passarao a ser preenchidos automaticamente com o colaborador logado no sistema (via `useAuthStore`). Os campos serao exibidos como somente leitura (disabled/read-only).
 
-### Alteracoes
+**Nota:** Campos que ja sao preenchidos automaticamente, campos usados como FILTRO de busca, e campos de selecao de tecnico/vendedor (que sao atribuicao a outra pessoa) NAO serao alterados.
 
-#### 1. Remover botao Editar na listagem (OSAssistencia.tsx)
-Remover o botao com icone de lapis (linhas 582-589) da coluna de acoes na tabela.
+---
 
-#### 2. Persistencia de comprovantes (OSAssistenciaDetalhes.tsx)
-Corrigir o mapeamento de pagamentos (linhas 84-92) para ler `p.comprovante` e `p.comprovanteNome` dos dados da OS, em vez de strings vazias. Adicionar coluna "Comprovante" na tabela read-only de pagamentos.
+### Campos Encontrados por Modulo
 
-#### 3. Dupla confirmacao para "Registrar Pagamento" (OSAssistenciaDetalhes.tsx)
+#### MODULO: Estoque
 
-- Importar `useAuthStore` e `AlertDialog` components
-- Criar estados: `modalConfirmarPagamento`, `pagamentoConfirmado`, `checkPagamento`
-- Ao clicar em "Registrar Pagamento", abrir AlertDialog com:
-  - Texto: "Confirme o registro de pagamento para a OS #ID"
-  - Exibicao automatica do usuario logado (nome do colaborador) e data/hora atual
-  - Checkbox: "Confirmo que os dados de pagamento estao corretos"
-  - Botao "Confirmar" habilitado somente com checkbox marcado
-- Ao confirmar: executar `handleSalvarPagamentoVendedor()`, registrar na timeline o usuario e hora, setar `pagamentoConfirmado = true`
-- Com `pagamentoConfirmado = true`, o botao fica `disabled`
+| Pagina | Campo | Estado Atual |
+|---|---|---|
+| `EstoqueMovimentacoes.tsx` | "Responsavel" (nova movimentacao) | Select manual (AutocompleteColaborador) |
+| `EstoqueMovimentacoes.tsx` | "Responsavel" (confirmar recebimento) | Select manual |
+| `EstoqueMovimentacoesAcessorios.tsx` | "Responsavel" (nova movimentacao) | Select manual |
+| `EstoqueMovimentacoesAcessorios.tsx` | "Responsavel" (confirmar recebimento) | Select manual |
+| `EstoqueNovaMovimentacaoMatriz.tsx` | "Responsavel pelo Lancamento" | Ja auto-preenchido (useEffect) - OK |
+| `EstoqueMovimentacaoMatrizDetalhes.tsx` | "Responsavel pela Conferencia" (devolucao) | Select manual |
+| `EstoqueNotaCadastrar.tsx` | "Responsavel pelo Lancamento" | Ja auto-preenchido com user.colaborador.id - OK |
+| `EstoqueNotasUrgenciaPendentes.tsx` | "Responsavel Estoque" (inserir produtos) | Select manual |
+| `EstoqueProdutosPendentes.tsx` | "Responsavel Conferencia" (validacao em lote) | Select manual |
+| `EstoqueProdutos.tsx` | "Usuario que Informou" (valor recomendado) | AutocompleteColaborador manual |
 
-#### 4. Dupla confirmacao para "Confirmar Recebimento" (OSAssistenciaDetalhes.tsx)
+#### MODULO: Financeiro
 
-- Criar estados: `modalConfirmarRecebimento`, `recebimentoConfirmado`, `checkRecebimento`
-- Ao clicar em "Confirmar Recebimento", abrir AlertDialog com:
-  - Texto: "Confirme o recebimento da peca para a OS #ID"
-  - Exibicao automatica do usuario logado e data/hora atual
-  - Checkbox: "Confirmo o recebimento fisico da peca"
-  - Botao "Confirmar" habilitado somente com checkbox marcado
-- Ao confirmar: executar a logica existente de atualizar status para "Em servico", registrar na timeline com nome do usuario logado (em vez de "Tecnico" generico), setar `recebimentoConfirmado = true`
-- Com `recebimentoConfirmado = true`, o botao fica `disabled`
+| Pagina | Campo | Estado Atual |
+|---|---|---|
+| `FinanceiroConferenciaNotas.tsx` | "Responsavel Financeiro" | Select manual |
+| `FinanceiroNotasAssistencia.tsx` | "Responsavel Financeiro" | AutocompleteColaborador manual |
+| `ModalFinalizarPagamento.tsx` | "Responsavel" (finalizar pagamento nota) | Select manual |
 
-### Detalhes Tecnicos
+#### MODULO: OS / Assistencia
 
-| Arquivo | Alteracao |
-|---|---|
-| `src/pages/OSAssistencia.tsx` | Remover botao Editar (linhas 582-589) |
-| `src/pages/OSAssistenciaDetalhes.tsx` | Importar useAuthStore e AlertDialog; corrigir leitura de comprovantes; criar modais de dupla confirmacao com registro de usuario/hora para pagamento e recebimento |
+| Pagina | Campo | Estado Atual |
+|---|---|---|
+| `OSMovimentacaoPecas.tsx` | "Responsavel" (movimentacao de pecas) | AutocompleteColaborador manual |
+| `OSSolicitacoesPecas.tsx` | "Responsavel pela Compra" | AutocompleteColaborador manual |
+| `OSProdutoDetalhes.tsx` | "Responsavel" (parecer) | Select manual |
 
-**Registro de auditoria nos modais:** Os campos "Responsavel" e "Data/Hora" sao preenchidos automaticamente a partir do `useAuthStore` (colaborador logado) e `new Date()`, exibidos como campos somente leitura (disabled) no modal, garantindo rastreabilidade sem possibilidade de alteracao manual.
+#### MODULO: Garantias
 
-**Timeline:** Ao confirmar, o evento na timeline registra o nome do colaborador autenticado (ex: "Joao Gestor") e o timestamp exato da confirmacao, substituindo strings genericas como "Tecnico".
+| Pagina | Campo | Estado Atual |
+|---|---|---|
+| `GarantiaExtendidaDetalhes.tsx` | "Responsavel" (confirmacao adesao) | Select manual |
+
+#### MODULO: Vendas
+
+| Pagina | Campo | Estado Atual |
+|---|---|---|
+| `VendasNovaDigital.tsx` | "Responsavel pela Venda" | Select manual |
+
+---
+
+### Total: 16 campos a alterar (2 ja estao corretos)
+
+---
+
+### Implementacao Tecnica
+
+Para cada campo listado acima (exceto os ja auto-preenchidos):
+
+1. **Importar** `useAuthStore` no componente (se ainda nao importado)
+2. **Inicializar** o estado com o ID ou nome do colaborador logado:
+   ```typescript
+   const { user } = useAuthStore();
+   // Para campos que usam ID:
+   const [responsavel, setResponsavel] = useState(user?.colaborador?.id || '');
+   // Para campos que usam nome:
+   const [responsavel, setResponsavel] = useState(user?.colaborador?.nome || '');
+   ```
+3. **Substituir** o componente Select/Autocomplete por um campo `Input` somente leitura exibindo o nome do colaborador logado:
+   ```typescript
+   <Input
+     value={user?.colaborador?.nome || 'Nao identificado'}
+     disabled
+     className="bg-muted"
+   />
+   ```
+4. **Manter** o valor no state para envio nos dados do formulario
+
+### Arquivos a editar (14 arquivos)
+
+1. `src/pages/EstoqueMovimentacoes.tsx` - 2 campos
+2. `src/pages/EstoqueMovimentacoesAcessorios.tsx` - 2 campos
+3. `src/pages/EstoqueMovimentacaoMatrizDetalhes.tsx` - 1 campo
+4. `src/pages/EstoqueNotasUrgenciaPendentes.tsx` - 1 campo
+5. `src/pages/EstoqueProdutosPendentes.tsx` - 1 campo
+6. `src/pages/EstoqueProdutos.tsx` - 1 campo
+7. `src/pages/FinanceiroConferenciaNotas.tsx` - 1 campo
+8. `src/pages/FinanceiroNotasAssistencia.tsx` - 1 campo
+9. `src/components/estoque/ModalFinalizarPagamento.tsx` - 1 campo
+10. `src/pages/OSMovimentacaoPecas.tsx` - 1 campo
+11. `src/pages/OSSolicitacoesPecas.tsx` - 1 campo
+12. `src/pages/OSProdutoDetalhes.tsx` - 1 campo
+13. `src/pages/GarantiaExtendidaDetalhes.tsx` - 1 campo
+14. `src/pages/VendasNovaDigital.tsx` - 1 campo
 
