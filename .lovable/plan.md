@@ -1,102 +1,64 @@
 
 
-## Mapeamento Completo: Auto-preenchimento de "Responsavel" com Usuario Logado
+## Plano de Implementacao - 3 Ajustes no Modulo de Assistencia
 
-### Objetivo
-Todos os campos onde o usuario precisa selecionar manualmente um "Responsavel" passarao a ser preenchidos automaticamente com o colaborador logado no sistema (via `useAuthStore`). Os campos serao exibidos como somente leitura (disabled/read-only).
+### 1. Quadro de Pecas/Servicos na Edicao (Aba Servicos)
 
-**Nota:** Campos que ja sao preenchidos automaticamente, campos usados como FILTRO de busca, e campos de selecao de tecnico/vendedor (que sao atribuicao a outra pessoa) NAO serao alterados.
+**Problema:** O quadro de Pecas/Servicos na tela de edicao (`OSAssistenciaEditar.tsx`) tem funcionalidades mais simples que o da Nova Assistencia (`OSAssistenciaNova.tsx`). Faltam:
+- Selecao de peca do estoque (checkbox "Peca no estoque" com dropdown de pecas disponiveis)
+- Checkbox "Fornecedor" com campo de selecao de fornecedor via AutocompleteFornecedor
+- Checkbox "Servico Terceirizado" com campos: descricao, fornecedor do servico e nome do responsavel
+- Campo "Unidade de Servico" (AutocompleteLoja)
+- Campo "Desconto (%)" com mascara
+- Campo "Valor Total" calculado (desabilitado)
 
----
-
-### Campos Encontrados por Modulo
-
-#### MODULO: Estoque
-
-| Pagina | Campo | Estado Atual |
-|---|---|---|
-| `EstoqueMovimentacoes.tsx` | "Responsavel" (nova movimentacao) | Select manual (AutocompleteColaborador) |
-| `EstoqueMovimentacoes.tsx` | "Responsavel" (confirmar recebimento) | Select manual |
-| `EstoqueMovimentacoesAcessorios.tsx` | "Responsavel" (nova movimentacao) | Select manual |
-| `EstoqueMovimentacoesAcessorios.tsx` | "Responsavel" (confirmar recebimento) | Select manual |
-| `EstoqueNovaMovimentacaoMatriz.tsx` | "Responsavel pelo Lancamento" | Ja auto-preenchido (useEffect) - OK |
-| `EstoqueMovimentacaoMatrizDetalhes.tsx` | "Responsavel pela Conferencia" (devolucao) | Select manual |
-| `EstoqueNotaCadastrar.tsx` | "Responsavel pelo Lancamento" | Ja auto-preenchido com user.colaborador.id - OK |
-| `EstoqueNotasUrgenciaPendentes.tsx` | "Responsavel Estoque" (inserir produtos) | Select manual |
-| `EstoqueProdutosPendentes.tsx` | "Responsavel Conferencia" (validacao em lote) | Select manual |
-| `EstoqueProdutos.tsx` | "Usuario que Informou" (valor recomendado) | AutocompleteColaborador manual |
-
-#### MODULO: Financeiro
-
-| Pagina | Campo | Estado Atual |
-|---|---|---|
-| `FinanceiroConferenciaNotas.tsx` | "Responsavel Financeiro" | Select manual |
-| `FinanceiroNotasAssistencia.tsx` | "Responsavel Financeiro" | AutocompleteColaborador manual |
-| `ModalFinalizarPagamento.tsx` | "Responsavel" (finalizar pagamento nota) | Select manual |
-
-#### MODULO: OS / Assistencia
-
-| Pagina | Campo | Estado Atual |
-|---|---|---|
-| `OSMovimentacaoPecas.tsx` | "Responsavel" (movimentacao de pecas) | AutocompleteColaborador manual |
-| `OSSolicitacoesPecas.tsx` | "Responsavel pela Compra" | AutocompleteColaborador manual |
-| `OSProdutoDetalhes.tsx` | "Responsavel" (parecer) | Select manual |
-
-#### MODULO: Garantias
-
-| Pagina | Campo | Estado Atual |
-|---|---|---|
-| `GarantiaExtendidaDetalhes.tsx` | "Responsavel" (confirmacao adesao) | Select manual |
-
-#### MODULO: Vendas
-
-| Pagina | Campo | Estado Atual |
-|---|---|---|
-| `VendasNovaDigital.tsx` | "Responsavel pela Venda" | Select manual |
+**Solucao:** Atualizar o formulario de pecas em `OSAssistenciaEditar.tsx` para replicar 100% do layout e logica do `OSAssistenciaNova.tsx`, incluindo:
+- Adicionar campos `pecaEstoqueId`, `pecaDeFornecedor`, `nomeRespFornecedor` ao `PecaForm` da edicao
+- Importar `getPecas`, `initializePecasWithLojaIds`, `darBaixaPeca` de `pecasApi`
+- Importar `InputComMascara`, `AutocompleteFornecedor`, `AutocompleteLoja`
+- Replicar os checkboxes e campos condicionais exatamente como na Nova Assistencia
+- Adicionar calculo de valor total com desconto
 
 ---
 
-### Total: 16 campos a alterar (2 ja estao corretos)
+### 2. Campos Chave Pix e Banco no Modal de Aprovacao (Solicitacoes de Pecas)
+
+**Problema:** No modal de aprovacao de solicitacao de pecas (`OSSolicitacoesPecas.tsx`), faltam os campos "Banco do Destinatario" e "Chave Pix" quando a forma de pagamento e Pix. Alem disso, o campo "Origem da Peca" deve ser sempre "Fornecedor" (fixo).
+
+**Solucao:** No modal de aprovacao (Dialog `aprovarOpen`):
+- Adicionar campos `bancoDestinatario` e `chavePix` ao estado `fornecedoresPorPeca`
+- Reordenar os campos: Fornecedor, Forma de Pagamento, Banco do Destinatario (visivel quando Pix), Chave Pix (visivel quando Pix)
+- Remover o select de "Origem da Peca" e fixar o valor como "Fornecedor" automaticamente
+- Remover a validacao de `origemPeca` obrigatoria (ja que sera sempre "Fornecedor")
+- Manter o campo de Observacao
 
 ---
 
-### Implementacao Tecnica
+### 3. Comprovante nao Visualizavel na Conferencia do Gestor
 
-Para cada campo listado acima (exceto os ja auto-preenchidos):
+**Problema:** Na aba de Conferencia do Gestor (`OSConferenciaGestor.tsx`), o comprovante aparece apenas como texto clicavel (nome do arquivo) mas nao exibe miniatura e nao abre ao clicar.
 
-1. **Importar** `useAuthStore` no componente (se ainda nao importado)
-2. **Inicializar** o estado com o ID ou nome do colaborador logado:
-   ```typescript
-   const { user } = useAuthStore();
-   // Para campos que usam ID:
-   const [responsavel, setResponsavel] = useState(user?.colaborador?.id || '');
-   // Para campos que usam nome:
-   const [responsavel, setResponsavel] = useState(user?.colaborador?.nome || '');
-   ```
-3. **Substituir** o componente Select/Autocomplete por um campo `Input` somente leitura exibindo o nome do colaborador logado:
-   ```typescript
-   <Input
-     value={user?.colaborador?.nome || 'Nao identificado'}
-     disabled
-     className="bg-muted"
-   />
-   ```
-4. **Manter** o valor no state para envio nos dados do formulario
+**Analise:** O componente `ComprovantePreview` esta sendo usado corretamente (linha 714). O problema provavel e que o `comprovante` armazenado no pagamento da OS e um dado base64 (`data:image/...`) que deveria renderizar como miniatura. Possiveis causas:
+- O campo `comprovante` pode estar vazio ou corrompido na hora de salvar
+- A renderizacao da miniatura pode estar sendo bloqueada pelo layout muito comprimido (texto truncado)
 
-### Arquivos a editar (14 arquivos)
+**Solucao:** Melhorar a exibicao do comprovante no painel lateral:
+- Exibir a miniatura da imagem diretamente (thumbnail clicavel) em vez de apenas o componente ComprovantePreview inline
+- Adicionar preview de imagem expandido ao clicar
+- Garantir que o container tenha espaco suficiente para mostrar a miniatura
+- Adicionar fallback visual caso o comprovante nao seja uma imagem valida
 
-1. `src/pages/EstoqueMovimentacoes.tsx` - 2 campos
-2. `src/pages/EstoqueMovimentacoesAcessorios.tsx` - 2 campos
-3. `src/pages/EstoqueMovimentacaoMatrizDetalhes.tsx` - 1 campo
-4. `src/pages/EstoqueNotasUrgenciaPendentes.tsx` - 1 campo
-5. `src/pages/EstoqueProdutosPendentes.tsx` - 1 campo
-6. `src/pages/EstoqueProdutos.tsx` - 1 campo
-7. `src/pages/FinanceiroConferenciaNotas.tsx` - 1 campo
-8. `src/pages/FinanceiroNotasAssistencia.tsx` - 1 campo
-9. `src/components/estoque/ModalFinalizarPagamento.tsx` - 1 campo
-10. `src/pages/OSMovimentacaoPecas.tsx` - 1 campo
-11. `src/pages/OSSolicitacoesPecas.tsx` - 1 campo
-12. `src/pages/OSProdutoDetalhes.tsx` - 1 campo
-13. `src/pages/GarantiaExtendidaDetalhes.tsx` - 1 campo
-14. `src/pages/VendasNovaDigital.tsx` - 1 campo
+---
+
+### Detalhes Tecnicos
+
+**Arquivos a editar:**
+
+| Arquivo | Alteracao |
+|---|---|
+| `src/pages/OSAssistenciaEditar.tsx` | Replicar quadro Pecas/Servicos completo da Nova Assistencia |
+| `src/pages/OSSolicitacoesPecas.tsx` | Adicionar campos Banco/Chave Pix, fixar origem como Fornecedor |
+| `src/pages/OSConferenciaGestor.tsx` | Melhorar exibicao de comprovantes com miniatura visivel |
+
+**Dependencias:** Nenhuma nova dependencia necessaria. Todos os componentes ja existem no projeto.
 
