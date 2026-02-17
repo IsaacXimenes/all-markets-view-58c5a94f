@@ -333,6 +333,7 @@ export default function EstoqueProdutos() {
             <TableHeader>
               <TableRow>
                 <TableHead className="sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Produto</TableHead>
+                <TableHead className="sticky left-[150px] z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Saúde</TableHead>
                 <TableHead>Loja</TableHead>
                 <TableHead>Venda Recomendada</TableHead>
                 <TableHead>Custo</TableHead>
@@ -343,7 +344,6 @@ export default function EstoqueProdutos() {
                 <TableHead>Tipo</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead>Qtd</TableHead>
-                <TableHead>Saúde Bat.</TableHead>
                 <TableHead>Estoque</TableHead>
                 <TableHead>Assistência</TableHead>
                 <TableHead>Ações</TableHead>
@@ -372,7 +372,7 @@ export default function EstoqueProdutos() {
                   className={getRowClassByBattery(produto.saudeBateria)}
                 >
                   {/* Produto (sticky) */}
-                  <TableCell className={cn("sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]", getStickyBgByBattery(produto.saudeBateria))}>
+                   <TableCell className={cn("sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]", getStickyBgByBattery(produto.saudeBateria))}>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium">{produto.modelo}</span>
@@ -385,6 +385,17 @@ export default function EstoqueProdutos() {
                       </div>
                       <span className="text-xs text-muted-foreground">{produto.cor}</span>
                     </div>
+                  </TableCell>
+                  {/* Saúde (sticky) */}
+                  <TableCell className={cn("sticky left-[150px] z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]", getStickyBgByBattery(produto.saudeBateria))}>
+                    <span className={cn(
+                      'font-semibold',
+                      produto.saudeBateria < 70 ? 'text-destructive' :
+                      produto.saudeBateria < 80 ? 'text-orange-500' :
+                      produto.saudeBateria < 90 ? 'text-yellow-500' : 'text-green-500'
+                    )}>
+                      {produto.saudeBateria}%
+                    </span>
                   </TableCell>
                   {/* Loja */}
                   <TableCell className="text-sm">{getLojaNome(produto.lojaAtualId || produto.loja)}</TableCell>
@@ -477,17 +488,6 @@ export default function EstoqueProdutos() {
                   </TableCell>
                   {/* Qtd */}
                   <TableCell>{produto.quantidade}</TableCell>
-                  {/* Saúde Bat. */}
-                  <TableCell>
-                    <span className={cn(
-                      'font-semibold',
-                      produto.saudeBateria < 70 ? 'text-destructive' :
-                      produto.saudeBateria < 80 ? 'text-orange-500' :
-                      produto.saudeBateria < 90 ? 'text-yellow-500' : 'text-green-500'
-                    )}>
-                      {produto.saudeBateria}%
-                    </span>
-                  </TableCell>
                   {/* Estoque */}
                   <TableCell>
                     {produto.estoqueConferido ? (
