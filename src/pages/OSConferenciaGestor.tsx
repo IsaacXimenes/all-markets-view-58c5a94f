@@ -19,7 +19,8 @@ import { getOrdensServico, getOrdemServicoById, updateOrdemServico, formatCurren
 import { getClientes, getContasFinanceiras } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
-import { Eye, Download, Filter, X, Check, XCircle, Clock, DollarSign, CreditCard, Banknote, Smartphone, Wallet, Lock, MessageSquare } from 'lucide-react';
+import { Eye, Download, Filter, X, Check, XCircle, Clock, DollarSign, CreditCard, Banknote, Smartphone, Wallet, Lock, MessageSquare, Paperclip } from 'lucide-react';
+import { ComprovanteBadgeSemAnexo } from '@/components/vendas/ComprovantePreview';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -542,13 +543,14 @@ export default function OSConferenciaGestor() {
                       <TableHead>V. Venda</TableHead>
                       <TableHead>Total Pago</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Anexo</TableHead>
                       <TableHead className="text-center">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {osConferencia.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                           Nenhuma OS para conferência
                         </TableCell>
                       </TableRow>
@@ -577,6 +579,15 @@ export default function OSConferenciaGestor() {
                             <TableCell className="text-sm font-medium">{formatCurrency(os.valorVendaTecnico || 0)}</TableCell>
                             <TableCell className="text-sm font-medium">{formatCurrency(totalPago)}</TableCell>
                             <TableCell>{getStatusBadge(os.status)}</TableCell>
+                            <TableCell>
+                              {os.pagamentos?.some(p => p.comprovante) ? (
+                                <Badge className="bg-green-100 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400 dark:border-green-700 text-xs">
+                                  <Paperclip className="h-3 w-3 mr-1" /> Contém Anexo
+                                </Badge>
+                              ) : (
+                                <ComprovanteBadgeSemAnexo />
+                              )}
+                            </TableCell>
                             <TableCell className="text-center">
                               <div className="flex items-center justify-center gap-1">
                                 <Button variant="ghost" size="sm" onClick={(e) => {

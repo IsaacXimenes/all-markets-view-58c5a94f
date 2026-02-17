@@ -11,12 +11,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getOrdensServico, getOrdemServicoById, updateOrdemServico, calcularSLADias, formatCurrency, OrdemServico } from '@/utils/assistenciaApi';
 import { getClientes } from '@/utils/cadastrosApi';
-import { addSolicitacao, getSolicitacoesByOS } from '@/utils/solicitacaoPecasApi';
+import { addSolicitacao, getSolicitacoesByOS, cancelarSolicitacao, SolicitacaoPeca } from '@/utils/solicitacaoPecasApi';
+import { addPeca, addMovimentacaoPeca } from '@/utils/pecasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
 import { InputComMascara } from '@/components/ui/InputComMascara';
 import { formatIMEI } from '@/utils/imeiMask';
-import { Eye, Play, CheckCircle, Clock, Wrench, AlertTriangle, Package, Plus, ShoppingCart, MessageSquare } from 'lucide-react';
+import { Eye, Play, CheckCircle, Clock, Wrench, AlertTriangle, Package, Plus, ShoppingCart, MessageSquare, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -51,6 +52,12 @@ export default function OSOficina() {
   const [solJustificativa, setSolJustificativa] = useState('');
   const [solicitacoesOS, setSolicitacoesOS] = useState<any[]>([]);
 
+  // Modal de Peça Não Utilizada
+  const [pecaNaoUtilizadaModal, setPecaNaoUtilizadaModal] = useState(false);
+  const [osParaGerenciarPeca, setOsParaGerenciarPeca] = useState<OrdemServico | null>(null);
+  const [solicitacoesParaGerenciar, setSolicitacoesParaGerenciar] = useState<SolicitacaoPeca[]>([]);
+  const [justificativaNaoUso, setJustificativaNaoUso] = useState('');
+  const [solicitacaoSelecionada, setSolicitacaoSelecionada] = useState<SolicitacaoPeca | null>(null);
 
   // Filtrar OSs onde proximaAtuacao contém "Técnico" OU recém-finalizadas
   const osTecnico = useMemo(() => {
@@ -112,6 +119,16 @@ export default function OSOficina() {
   };
 
   const handleAbrirFinalizar = (os: OrdemServico) => {
+    // Trava de finalização: verificar solicitações pendentes
+    const solicitacoesOS = getSolicitacoesByOS(os.id);
+    const pendentes = solicitacoesOS.filter(s => 
+      ['Pendente', 'Aprovada', 'Enviada', 'Aguardando Chegada', 'Pagamento - Financeiro', 'Aguardando Aprovação'].includes(s.status)
+    );
+    if (pendentes.length > 0) {
+      toast.error('Existem solicitações de peças pendentes. Confirme o recebimento ou gerencie como "Não Utilizada" antes de finalizar.');
+      return;
+    }
+
     setOsParaFinalizar(os);
     setResumoConclusao(os.resumoConclusao || '');
     setValorCustoRaw(os.valorCustoTecnico || 0);
@@ -232,6 +249,103 @@ export default function OSOficina() {
     recarregar();
   };
 
+  // Gerenciar Peça Não Utilizada
+  const handleAbrirGerenciarPeca = (os: OrdemServico) => {
+    setOsParaGerenciarPeca(os);
+    const sols = getSolicitacoesByOS(os.id).filter(s => 
+      !['Cancelada', 'Rejeitada'].includes(s.status)
+    );
+    setSolicitacoesParaGerenciar(sols);
+    setJustificativaNaoUso('');
+    setSolicitacaoSelecionada(null);
+    setPecaNaoUtilizadaModal(true);
+  };
+
+  const handleMarcarNaoUtilizada = () => {
+    if (!solicitacaoSelecionada || !osParaGerenciarPeca) return;
+    if (!justificativaNaoUso.trim()) {
+      toast.error('Informe a justificativa para a não utilização.');
+      return;
+    }
+
+    const statusNaoPagos = ['Pendente', 'Aprovada', 'Enviada', 'Aguardando Aprovação', 'Solicitação de Peça'];
+    const statusPagos = ['Pagamento Finalizado', 'Recebida', 'Em Estoque', 'Pagamento Concluído', 'Aguardando Chegada'];
+    const isPaga = statusPagos.includes(solicitacaoSelecionada.status);
+
+    if (statusNaoPagos.includes(solicitacaoSelecionada.status)) {
+      // Cenário A: Peça NÃO Paga - Cancelar
+      cancelarSolicitacao(solicitacaoSelecionada.id, justificativaNaoUso);
+      toast.success(`Solicitação ${solicitacaoSelecionada.id} cancelada com sucesso.`);
+    } else if (isPaga) {
+      // Cenário B: Peça JÁ PAGA - Entrada no estoque
+      const osFresh = getOrdemServicoById(osParaGerenciarPeca.id);
+      if (!osFresh) return;
+
+      // Criar entrada no estoque
+      const novaPeca = addPeca({
+        descricao: solicitacaoSelecionada.peca,
+        lojaId: osParaGerenciarPeca.lojaId,
+        modelo: solicitacaoSelecionada.modeloImei || 'N/A',
+        valorCusto: solicitacaoSelecionada.valorPeca || 0,
+        valorRecomendado: solicitacaoSelecionada.valorPeca || 0,
+        quantidade: solicitacaoSelecionada.quantidade,
+        dataEntrada: new Date().toISOString(),
+        origem: 'Solicitação',
+        status: 'Disponível'
+      });
+
+      // Registrar movimentação
+      addMovimentacaoPeca({
+        pecaId: novaPeca.id,
+        tipo: 'Entrada',
+        quantidade: solicitacaoSelecionada.quantidade,
+        data: new Date().toISOString(),
+        osId: osParaGerenciarPeca.id,
+        descricao: `Peça não utilizada na OS ${osParaGerenciarPeca.id} - incorporada ao estoque`
+      });
+
+      // Recalcular valores da OS
+      const valorPeca = solicitacaoSelecionada.valorPeca || 0;
+      const novoValorCusto = Math.max(0, (osFresh.valorCustoTecnico || 0) - valorPeca);
+      const novoValorVenda = Math.max(0, (osFresh.valorVendaTecnico || 0) - valorPeca);
+
+      // Cancelar a solicitação
+      cancelarSolicitacao(solicitacaoSelecionada.id, justificativaNaoUso);
+
+      // Atualizar OS
+      const osFresh2 = getOrdemServicoById(osParaGerenciarPeca.id);
+      if (osFresh2) {
+        updateOrdemServico(osParaGerenciarPeca.id, {
+          status: 'Em serviço',
+          proximaAtuacao: 'Técnico',
+          valorCustoTecnico: novoValorCusto,
+          valorVendaTecnico: novoValorVenda,
+          timeline: [...osFresh2.timeline, {
+            data: new Date().toISOString(),
+            tipo: 'peca',
+            descricao: `Peça ${solicitacaoSelecionada.peca} (Paga) não utilizada na OS. Item incorporado ao estoque da loja como 'Disponível'. Motivo: ${justificativaNaoUso}`,
+            responsavel: user?.colaborador?.nome || 'Técnico'
+          }]
+        });
+      }
+
+      toast.success(`Peça ${solicitacaoSelecionada.peca} incorporada ao estoque. Valores da OS recalculados.`);
+    }
+
+    // Atualizar lista e fechar
+    const solsAtualizadas = getSolicitacoesByOS(osParaGerenciarPeca.id).filter(s => 
+      !['Cancelada', 'Rejeitada'].includes(s.status)
+    );
+    setSolicitacoesParaGerenciar(solsAtualizadas);
+    setSolicitacaoSelecionada(null);
+    setJustificativaNaoUso('');
+    recarregar();
+
+    if (solsAtualizadas.length === 0) {
+      setPecaNaoUtilizadaModal(false);
+    }
+  };
+
   const getStatusBadge = (os: OrdemServico) => {
     const status = os.status;
     if (status === 'Aguardando Análise' || status === 'Em Aberto') {
@@ -293,13 +407,23 @@ export default function OSOficina() {
       );
     }
 
-    // Em serviço - finalizar
+    // Em serviço - finalizar + gerenciar peça
     if (status === 'Em serviço') {
+      const solicitacoesOS = getSolicitacoesByOS(os.id).filter(s => 
+        !['Cancelada', 'Rejeitada'].includes(s.status)
+      );
       return (
-        <Button size="sm" onClick={() => handleAbrirFinalizar(os)} className="gap-1 bg-green-600 hover:bg-green-700">
-          <CheckCircle className="h-3.5 w-3.5" />
-          Finalizar Serviço
-        </Button>
+        <div className="flex gap-1">
+          {solicitacoesOS.length > 0 && (
+            <Button size="sm" variant="outline" onClick={() => handleAbrirGerenciarPeca(os)} title="Gerenciar Peça Não Utilizada" className="gap-1">
+              <Undo2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <Button size="sm" onClick={() => handleAbrirFinalizar(os)} className="gap-1 bg-green-600 hover:bg-green-700">
+            <CheckCircle className="h-3.5 w-3.5" />
+            Finalizar Serviço
+          </Button>
+        </div>
       );
     }
 
@@ -649,6 +773,124 @@ export default function OSOficina() {
               <ShoppingCart className="h-4 w-4" />
               Enviar Solicitação
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Gerenciar Peça Não Utilizada */}
+      <Dialog open={pecaNaoUtilizadaModal} onOpenChange={setPecaNaoUtilizadaModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Undo2 className="h-5 w-5" />
+              Gerenciar Peça Não Utilizada – OS {osParaGerenciarPeca?.id}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Info da OS */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-3 rounded-lg bg-muted/50 text-sm">
+              <div>
+                <span className="text-muted-foreground text-xs">Modelo</span>
+                <p className="font-medium">{osParaGerenciarPeca?.modeloAparelho || '-'}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs">IMEI</span>
+                <p className="font-medium font-mono text-xs">{osParaGerenciarPeca?.imeiAparelho || '-'}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground text-xs">Loja</span>
+                <p className="font-medium">{osParaGerenciarPeca ? obterNomeLoja(osParaGerenciarPeca.lojaId) : '-'}</p>
+              </div>
+            </div>
+
+            {/* Lista de solicitações */}
+            {solicitacoesParaGerenciar.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhuma solicitação ativa para esta OS.</p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Solicitações Ativas ({solicitacoesParaGerenciar.length})</p>
+                {solicitacoesParaGerenciar.map(sol => {
+                  const statusNaoPagos = ['Pendente', 'Aprovada', 'Enviada', 'Aguardando Aprovação'];
+                  const isPaga = !statusNaoPagos.includes(sol.status);
+                  const isSelected = solicitacaoSelecionada?.id === sol.id;
+                  return (
+                    <div
+                      key={sol.id}
+                      className={cn(
+                        'p-3 rounded-lg border cursor-pointer transition-colors',
+                        isSelected ? 'ring-2 ring-primary bg-primary/5' : 'hover:bg-muted/50'
+                      )}
+                      onClick={() => {
+                        setSolicitacaoSelecionada(isSelected ? null : sol);
+                        setJustificativaNaoUso('');
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono text-xs text-muted-foreground">{sol.id}</span>
+                          <span className="font-medium text-sm">{sol.peca}</span>
+                          <span className="text-muted-foreground text-xs">x{sol.quantidade}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {isPaga && sol.valorPeca && (
+                            <span className="text-xs font-medium text-green-600">{formatCurrency(sol.valorPeca * sol.quantidade)}</span>
+                          )}
+                          <Badge variant={isPaga ? 'default' : 'outline'} className={cn(
+                            'text-xs',
+                            isPaga ? 'bg-green-600' : 'bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/20 dark:text-yellow-400'
+                          )}>
+                            {isPaga ? 'Paga' : 'Não Paga'}
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs">{sol.status}</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Justificativa e ação */}
+            {solicitacaoSelecionada && (
+              <div className="border-t pt-4 space-y-3">
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">
+                    {['Pendente', 'Aprovada', 'Enviada', 'Aguardando Aprovação'].includes(solicitacaoSelecionada.status)
+                      ? '⚠️ Esta peça será CANCELADA (não paga).'
+                      : '📦 Esta peça será INCORPORADA AO ESTOQUE da loja (já paga). O valor será subtraído da OS.'
+                    }
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Justificativa *</Label>
+                  <Textarea
+                    value={justificativaNaoUso}
+                    onChange={(e) => setJustificativaNaoUso(e.target.value)}
+                    placeholder="Informe o motivo da não utilização da peça..."
+                    rows={3}
+                    className={cn(!justificativaNaoUso.trim() && 'border-destructive')}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPecaNaoUtilizadaModal(false)}>
+              Fechar
+            </Button>
+            {solicitacaoSelecionada && (
+              <Button
+                onClick={handleMarcarNaoUtilizada}
+                disabled={!justificativaNaoUso.trim()}
+                variant="destructive"
+                className="gap-2"
+              >
+                <Undo2 className="h-4 w-4" />
+                Marcar Não Utilizada
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

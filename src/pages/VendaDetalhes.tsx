@@ -125,20 +125,6 @@ export default function VendaDetalhes() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline"
-            onClick={() => {
-              if (venda.itens.length === 1) {
-                navigate(`/os/assistencia/nova?vendaId=${venda.id}&itemIndex=0`);
-              } else {
-                // Para múltiplos itens, navegar para seleção
-                navigate(`/os/assistencia/nova?vendaId=${venda.id}`);
-              }
-            }}
-          >
-            <Wrench className="h-4 w-4 mr-2" />
-            Abrir OS
-          </Button>
           <Button onClick={handleImprimir}>
             <Printer className="h-4 w-4 mr-2" />
             Imprimir Recibo
