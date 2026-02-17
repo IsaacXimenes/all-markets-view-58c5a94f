@@ -281,7 +281,7 @@ export default function FinanceiroExtratoContas() {
   // IDs das contas de assistência segregadas
   const CONTAS_ASSISTENCIA_SEGREGADAS = ['CTA-011', 'CTA-012', 'CTA-013', 'CTA-014'];
   // IDs das contas de dinheiro por loja (não inclui Dinheiro-Geral CTA-020 nem Águas Lindas CTA-017)
-  const CONTAS_DINHEIRO_SEGREGADAS = ['CTA-015', 'CTA-016', 'CTA-017', 'CTA-018', 'CTA-019'];
+  const CONTAS_DINHEIRO_SEGREGADAS = ['CTA-015', 'CTA-016', 'CTA-017', 'CTA-018', 'CTA-019', 'CTA-022', 'CTA-023', 'CTA-024', 'CTA-025'];
 
   // Separar contas em 3 seções
   const { contasPrincipais, contasSegregadas, contasTerceirizadas, totais } = useMemo(() => {
@@ -323,6 +323,7 @@ export default function FinanceiroExtratoContas() {
     const ordemSegregadas = [
       'CTA-014', 'CTA-012', 'CTA-013', 'CTA-011',
       'CTA-015', 'CTA-019', 'CTA-018', 'CTA-016',
+      'CTA-022', 'CTA-023', 'CTA-024', 'CTA-025',
     ];
     segregadas.sort((a, b) => {
       const idxA = ordemSegregadas.indexOf(a.id);
