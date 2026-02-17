@@ -278,10 +278,10 @@ export default function FinanceiroExtratoContas() {
     return contasFinanceiras.filter(c => c.lojaVinculada === filtroLoja);
   }, [contasFinanceiras, filtroLoja]);
 
-  // IDs das contas de assistência segregadas
-  const CONTAS_ASSISTENCIA_SEGREGADAS = ['CTA-011', 'CTA-012', 'CTA-013', 'CTA-014'];
-  // IDs das contas de dinheiro por loja (não inclui Dinheiro-Geral CTA-020 nem Águas Lindas CTA-017)
-  const CONTAS_DINHEIRO_SEGREGADAS = ['CTA-015', 'CTA-016', 'CTA-017', 'CTA-018', 'CTA-019', 'CTA-022', 'CTA-023', 'CTA-024', 'CTA-025'];
+  // IDs das contas de assistência segregadas (centralizadas - não há mais segregação)
+  const CONTAS_ASSISTENCIA_SEGREGADAS: string[] = [];
+  // IDs das contas de dinheiro por loja
+  const CONTAS_DINHEIRO_SEGREGADAS = ['CTA-015', 'CTA-016', 'CTA-017', 'CTA-018', 'CTA-019'];
 
   // Separar contas em 3 seções
   const { contasPrincipais, contasSegregadas, contasTerceirizadas, totais } = useMemo(() => {
@@ -319,14 +319,9 @@ export default function FinanceiroExtratoContas() {
       return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
     });
 
-    // Ordenar segregadas: 1) Dinheiro Loja, 2) Dinheiro Assistência, 3) Bradesco Assistência
+    // Ordenar segregadas: Dinheiro por Loja
     const ordemSegregadas = [
-      // Linha 1: Dinheiro + Loja
       'CTA-015', 'CTA-016', 'CTA-017', 'CTA-018', 'CTA-019',
-      // Linha 2: Dinheiro + Assistência
-      'CTA-022', 'CTA-023', 'CTA-024', 'CTA-025',
-      // Linha 3: Bradesco Assistência
-      'CTA-014', 'CTA-012', 'CTA-013', 'CTA-011',
     ];
     segregadas.sort((a, b) => {
       const idxA = ordemSegregadas.indexOf(a.id);

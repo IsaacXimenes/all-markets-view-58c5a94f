@@ -89,21 +89,7 @@ export function PagamentoQuadro({
   const [contasFinanceiras] = useState<ContaFinanceira[]>(getContasFinanceiras());
   const [maquinasCartao] = useState<MaquinaCartao[]>(getMaquinasCartao().filter(m => m.status === 'Ativo'));
   
-  // Importar store para obter nome da loja e encontrar loja de assistência
-  const { obterNomeLoja, obterLojaById, lojas } = useCadastroStore();
-  
-  // Quando apenasContasAssistencia, encontrar a loja de assistência correspondente à loja regular
-  const lojaAssistenciaId = useMemo(() => {
-    if (!apenasContasAssistencia || !lojaVendaId) return null;
-    const lojaOriginal = obterLojaById(lojaVendaId);
-    if (!lojaOriginal) return null;
-    if (lojaOriginal.tipo === 'Assistência') return lojaVendaId;
-    const nomeBase = lojaOriginal.nome.replace(/^Loja\s*-\s*/i, '').trim().toLowerCase();
-    const lojaAssist = lojas.find(l => 
-      l.tipo === 'Assistência' && l.nome.toLowerCase().includes(nomeBase)
-    );
-    return lojaAssist?.id || null;
-  }, [apenasContasAssistencia, lojaVendaId, obterLojaById, lojas]);
+  const { obterNomeLoja } = useCadastroStore();
   
   const [pagamentos, setPagamentos] = useState<Pagamento[]>(pagamentosIniciais);
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
@@ -861,9 +847,7 @@ export function PagamentoQuadro({
                     .filter(c => c.status === 'Ativo')
                     .filter(c => {
                       if (apenasContasAssistencia) {
-                        const targetLojaId = lojaAssistenciaId || lojaVendaId;
-                        return c.lojaVinculada === targetLojaId && 
-                          (c.nome.toLowerCase().includes('assistência') || c.nome.toLowerCase().includes('assistencia'));
+                        return c.lojaVinculada === 'geral-assistencia';
                       }
                       return !lojaVendaId || c.lojaVinculada === lojaVendaId;
                     })
