@@ -725,30 +725,32 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                           </div>
                         </div>
                         <div className="flex items-center gap-4 text-sm">
-                          <label className="flex items-center gap-2">
-                            <Checkbox checked={peca.pecaNoEstoque} onCheckedChange={(checked) => {
-                              const updated = [...editPecas];
-                              updated[index] = { ...updated[index], pecaNoEstoque: !!checked };
-                              setEditPecas(updated);
-                            }} />
-                            Estoque
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <Checkbox checked={peca.pecaDeFornecedor} onCheckedChange={(checked) => {
-                              const updated = [...editPecas];
-                              updated[index] = { ...updated[index], pecaDeFornecedor: !!checked };
-                              setEditPecas(updated);
-                            }} />
-                            Fornecedor
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <Checkbox checked={peca.servicoTerceirizado} onCheckedChange={(checked) => {
-                              const updated = [...editPecas];
-                              updated[index] = { ...updated[index], servicoTerceirizado: !!checked };
-                              setEditPecas(updated);
-                            }} />
-                            Terceirizado
-                          </label>
+                          <div className="flex-1 max-w-[200px]">
+                            <label className="text-xs text-muted-foreground mb-1 block">Origem da Peça</label>
+                            <Select
+                              value={peca.pecaNoEstoque ? 'estoque' : peca.pecaDeFornecedor ? 'fornecedor' : peca.servicoTerceirizado ? 'terceirizado' : 'nenhum'}
+                              onValueChange={(val) => {
+                                const updated = [...editPecas];
+                                updated[index] = {
+                                  ...updated[index],
+                                  pecaNoEstoque: val === 'estoque',
+                                  pecaDeFornecedor: val === 'fornecedor',
+                                  servicoTerceirizado: val === 'terceirizado',
+                                };
+                                setEditPecas(updated);
+                              }}
+                            >
+                              <SelectTrigger className="h-8">
+                                <SelectValue placeholder="Selecione..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="nenhum">Nenhum</SelectItem>
+                                <SelectItem value="estoque">Peça no estoque</SelectItem>
+                                <SelectItem value="fornecedor">Fornecedor</SelectItem>
+                                <SelectItem value="terceirizado">Serviço Terceirizado</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                           <span className="ml-auto font-medium">{formatCurrency(peca.valorTotal)}</span>
                         </div>
 

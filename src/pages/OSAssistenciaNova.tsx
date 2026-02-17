@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
@@ -1254,29 +1254,32 @@ export default function OSAssistenciaNova() {
                         className="bg-muted font-medium"
                       />
                     </div>
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="flex items-center gap-6">
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={peca.pecaNoEstoque}
-                            onCheckedChange={checked => handlePecaChange(index, 'pecaNoEstoque', checked)}
-                          />
-                          <Label className="text-sm">Peça no estoque</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={peca.pecaDeFornecedor}
-                            onCheckedChange={checked => handlePecaChange(index, 'pecaDeFornecedor', checked)}
-                          />
-                          <Label className="text-sm">Fornecedor</Label>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={peca.servicoTerceirizado}
-                            onCheckedChange={checked => handlePecaChange(index, 'servicoTerceirizado', checked)}
-                          />
-                          <Label className="text-sm">Serviço Terceirizado</Label>
-                        </div>
+                    <div className="flex items-center justify-between pt-2 gap-4">
+                      <div className="flex-1 max-w-[220px]">
+                        <Label className="text-sm mb-1 block">Origem da Peça</Label>
+                        <Select
+                          value={peca.pecaNoEstoque ? 'estoque' : peca.pecaDeFornecedor ? 'fornecedor' : peca.servicoTerceirizado ? 'terceirizado' : 'nenhum'}
+                          onValueChange={(val) => {
+                            const updates: Partial<PecaForm> = {
+                              pecaNoEstoque: val === 'estoque',
+                              pecaDeFornecedor: val === 'fornecedor',
+                              servicoTerceirizado: val === 'terceirizado',
+                            };
+                            const newPecas = [...pecas];
+                            newPecas[index] = { ...newPecas[index], ...updates };
+                            setPecas(newPecas);
+                          }}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="nenhum">Nenhum</SelectItem>
+                            <SelectItem value="estoque">Peça no estoque</SelectItem>
+                            <SelectItem value="fornecedor">Fornecedor</SelectItem>
+                            <SelectItem value="terceirizado">Serviço Terceirizado</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <Button variant="ghost" size="sm" onClick={() => removePeca(index)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
