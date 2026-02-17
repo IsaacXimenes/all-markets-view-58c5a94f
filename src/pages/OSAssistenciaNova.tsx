@@ -1159,6 +1159,32 @@ export default function OSAssistenciaNova() {
               {pecas.map((peca, index) => (
               <div key={index} className="p-4 border rounded-lg space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                      <Label>Origem da Peça</Label>
+                      <Select
+                        value={peca.pecaNoEstoque ? 'estoque' : peca.pecaDeFornecedor ? 'fornecedor' : peca.servicoTerceirizado ? 'terceirizado' : 'nenhum'}
+                        onValueChange={(val) => {
+                          const updates: Partial<PecaForm> = {
+                            pecaNoEstoque: val === 'estoque',
+                            pecaDeFornecedor: val === 'fornecedor',
+                            servicoTerceirizado: val === 'terceirizado',
+                          };
+                          const newPecas = [...pecas];
+                          newPecas[index] = { ...newPecas[index], ...updates };
+                          setPecas(newPecas);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="nenhum">Nenhum</SelectItem>
+                          <SelectItem value="estoque">Peça no estoque</SelectItem>
+                          <SelectItem value="fornecedor">Fornecedor</SelectItem>
+                          <SelectItem value="terceirizado">Serviço Terceirizado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="space-y-2 md:col-span-2">
                       <Label>Peça/Serviço</Label>
                       {peca.pecaNoEstoque ? (
@@ -1225,6 +1251,9 @@ export default function OSAssistenciaNova() {
                         placeholder="R$ 0,00"
                       />
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
                       <Label>Desconto (%)</Label>
                       <InputComMascara
@@ -1234,9 +1263,6 @@ export default function OSAssistenciaNova() {
                         placeholder="0%"
                       />
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label>Unidade de Serviço</Label>
                       <AutocompleteLoja
@@ -1254,33 +1280,7 @@ export default function OSAssistenciaNova() {
                         className="bg-muted font-medium"
                       />
                     </div>
-                    <div className="flex items-center justify-between pt-2 gap-4">
-                      <div className="flex-1 max-w-[220px]">
-                        <Label className="text-sm mb-1 block">Origem da Peça</Label>
-                        <Select
-                          value={peca.pecaNoEstoque ? 'estoque' : peca.pecaDeFornecedor ? 'fornecedor' : peca.servicoTerceirizado ? 'terceirizado' : 'nenhum'}
-                          onValueChange={(val) => {
-                            const updates: Partial<PecaForm> = {
-                              pecaNoEstoque: val === 'estoque',
-                              pecaDeFornecedor: val === 'fornecedor',
-                              servicoTerceirizado: val === 'terceirizado',
-                            };
-                            const newPecas = [...pecas];
-                            newPecas[index] = { ...newPecas[index], ...updates };
-                            setPecas(newPecas);
-                          }}
-                        >
-                          <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="nenhum">Nenhum</SelectItem>
-                            <SelectItem value="estoque">Peça no estoque</SelectItem>
-                            <SelectItem value="fornecedor">Fornecedor</SelectItem>
-                            <SelectItem value="terceirizado">Serviço Terceirizado</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div className="flex items-end pb-1">
                       <Button variant="ghost" size="sm" onClick={() => removePeca(index)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
