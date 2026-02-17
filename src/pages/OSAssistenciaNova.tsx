@@ -1493,6 +1493,7 @@ export default function OSAssistenciaNova() {
             lojaVendaId={lojaId}
             onPagamentosChange={(pags) => setPagamentosQuadro(pags)}
             ocultarCards
+            apenasContasAssistencia
           />
         </div>
 

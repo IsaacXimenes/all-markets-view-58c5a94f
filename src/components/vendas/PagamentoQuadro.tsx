@@ -32,6 +32,7 @@ export interface PagamentoQuadroProps {
   }) => void;
   pagamentosIniciais?: Pagamento[];
   ocultarCards?: boolean;
+  apenasContasAssistencia?: boolean;
 }
 
 interface NovoPagamentoState extends Partial<Pagamento> {
@@ -82,7 +83,8 @@ export function PagamentoQuadro({
   onPagamentosChange, 
   onValoresChange,
   pagamentosIniciais = [],
-  ocultarCards = false
+  ocultarCards = false,
+  apenasContasAssistencia = false
 }: PagamentoQuadroProps) {
   const [contasFinanceiras] = useState<ContaFinanceira[]>(getContasFinanceiras());
   const [maquinasCartao] = useState<MaquinaCartao[]>(getMaquinasCartao().filter(m => m.status === 'Ativo'));
@@ -845,6 +847,7 @@ export function PagamentoQuadro({
                   {contasFinanceiras
                     .filter(c => c.status === 'Ativo')
                     .filter(c => !lojaVendaId || c.lojaVinculada === lojaVendaId)
+                    .filter(c => !apenasContasAssistencia || c.nome.toLowerCase().includes('assistência') || c.nome.toLowerCase().includes('assistencia'))
                     .map(conta => {
                       const lojaNome = conta.lojaVinculada ? obterNomeLoja(conta.lojaVinculada) : '';
                       const displayName = lojaNome ? `${lojaNome} - ${conta.nome}` : conta.nome;
