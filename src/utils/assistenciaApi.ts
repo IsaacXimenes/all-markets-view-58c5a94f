@@ -284,7 +284,7 @@ let ordensServico: OrdemServico[] = [
     tecnicoId: '53a1a9ad',
     lojaId: 'db894e7d',
     status: 'Conferência do Gestor',
-    proximaAtuacao: 'Gestor (Conferência)',
+    proximaAtuacao: 'Gestor',
     resumoConclusao: 'Alto-falante e microfone substituídos com sucesso.',
     valorCustoTecnico: 80,
     valorVendaTecnico: 200,
