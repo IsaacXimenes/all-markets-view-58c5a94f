@@ -1117,6 +1117,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                         onPagamentosChange={setEditPagamentosQuadro}
                         pagamentosIniciais={editPagamentosQuadro}
                         ocultarCards={true}
+                        apenasContasAssistencia={true}
                       />
                       <Button 
                         onClick={() => { setCheckPagamento(false); setModalConfirmarPagamento(true); }} 
@@ -1171,6 +1172,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                     onPagamentosChange={setEditPagamentosQuadro}
                     pagamentosIniciais={editPagamentosQuadro}
                     ocultarCards={true}
+                    apenasContasAssistencia={true}
                   />
                 ) : (
                   <Table>
