@@ -60,7 +60,7 @@ export default function OSSolicitacoesPecas() {
   // Modal aprovar com campos por peça
   const [aprovarOpen, setAprovarOpen] = useState(false);
   const [solicitacoesSelecionadasAprovar, setSolicitacoesSelecionadasAprovar] = useState<SolicitacaoPeca[]>([]);
-  const [fornecedoresPorPeca, setFornecedoresPorPeca] = useState<{[key: string]: { fornecedorId: string; valorPeca: string; formaPagamento: string; origemPeca: string; observacao: string }}>({});
+  const [fornecedoresPorPeca, setFornecedoresPorPeca] = useState<{[key: string]: { fornecedorId: string; valorPeca: string; formaPagamento: string; origemPeca: string; observacao: string; bancoDestinatario: string; chavePix: string }}>({});
   const [responsavelCompraGlobal, setResponsavelCompraGlobal] = useState('');
   const [dataRecebimentoGlobal, setDataRecebimentoGlobal] = useState('');
   
@@ -148,7 +148,7 @@ export default function OSSolicitacoesPecas() {
   const handleAbrirAprovar = (solicitacao: SolicitacaoPeca) => {
     setSolicitacoesSelecionadasAprovar([solicitacao]);
     setFornecedoresPorPeca({
-      [solicitacao.id]: { fornecedorId: '', valorPeca: '', formaPagamento: '', origemPeca: '', observacao: '' }
+      [solicitacao.id]: { fornecedorId: '', valorPeca: '', formaPagamento: '', origemPeca: 'Fornecedor', observacao: '', bancoDestinatario: '', chavePix: '' }
     });
     setResponsavelCompraGlobal(user?.colaborador?.id || '');
     setDataRecebimentoGlobal('');
@@ -161,9 +161,9 @@ export default function OSSolicitacoesPecas() {
     if (selecionadas.length === 0) return;
     
     setSolicitacoesSelecionadasAprovar(selecionadas);
-    const fornecedoresInit: {[key: string]: { fornecedorId: string; valorPeca: string; formaPagamento: string; origemPeca: string; observacao: string }} = {};
+    const fornecedoresInit: {[key: string]: { fornecedorId: string; valorPeca: string; formaPagamento: string; origemPeca: string; observacao: string; bancoDestinatario: string; chavePix: string }} = {};
     selecionadas.forEach(s => {
-      fornecedoresInit[s.id] = { fornecedorId: '', valorPeca: '', formaPagamento: '', origemPeca: '', observacao: '' };
+      fornecedoresInit[s.id] = { fornecedorId: '', valorPeca: '', formaPagamento: '', origemPeca: 'Fornecedor', observacao: '', bancoDestinatario: '', chavePix: '' };
     });
     setFornecedoresPorPeca(fornecedoresInit);
     setResponsavelCompraGlobal(user?.colaborador?.id || '');
@@ -189,10 +189,6 @@ export default function OSSolicitacoesPecas() {
         toast({ title: 'Erro', description: `Selecione a forma de pagamento para: ${sol.peca}`, variant: 'destructive' });
         return;
       }
-      if (!dados?.origemPeca) {
-        toast({ title: 'Erro', description: `Selecione a origem da peça para: ${sol.peca}`, variant: 'destructive' });
-        return;
-      }
       if (!dados?.observacao.trim()) {
         toast({ title: 'Erro', description: `Preencha a observação para: ${sol.peca}`, variant: 'destructive' });
         return;
@@ -209,7 +205,7 @@ export default function OSSolicitacoesPecas() {
         dataRecebimento: dataRecebimentoGlobal,
         dataEnvio: dataEnvioGlobal,
         formaPagamento: dados.formaPagamento,
-        origemPeca: dados.origemPeca,
+        origemPeca: 'Fornecedor',
         observacao: dados.observacao
       });
 
@@ -712,22 +708,37 @@ export default function OSSolicitacoesPecas() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Origem da Peça *</Label>
-                    <Select 
-                      value={fornecedoresPorPeca[sol.id]?.origemPeca || ''} 
-                      onValueChange={v => setFornecedoresPorPeca({
-                        ...fornecedoresPorPeca, 
-                        [sol.id]: { ...fornecedoresPorPeca[sol.id], origemPeca: v }
-                      })}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Fornecedor">Fornecedor</SelectItem>
-                        <SelectItem value="Estoque Assistência Thiago">Estoque Assistência Thiago</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-xs">Origem da Peça</Label>
+                    <Input value="Fornecedor" disabled className="bg-muted text-sm" />
                   </div>
                 </div>
+
+                {fornecedoresPorPeca[sol.id]?.formaPagamento === 'Pix' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Banco do Destinatário</Label>
+                      <Input
+                        value={fornecedoresPorPeca[sol.id]?.bancoDestinatario || ''}
+                        onChange={e => setFornecedoresPorPeca({
+                          ...fornecedoresPorPeca,
+                          [sol.id]: { ...fornecedoresPorPeca[sol.id], bancoDestinatario: e.target.value }
+                        })}
+                        placeholder="Ex: Nubank, Itaú..."
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Chave Pix</Label>
+                      <Input
+                        value={fornecedoresPorPeca[sol.id]?.chavePix || ''}
+                        onChange={e => setFornecedoresPorPeca({
+                          ...fornecedoresPorPeca,
+                          [sol.id]: { ...fornecedoresPorPeca[sol.id], chavePix: e.target.value }
+                        })}
+                        placeholder="CPF, e-mail, telefone..."
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-1">
                   <Label className="text-xs">Observação *</Label>

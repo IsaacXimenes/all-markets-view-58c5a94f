@@ -690,7 +690,6 @@ export default function OSConferenciaGestor() {
                   </Card>
                 </div>
 
-                {/* Pagamentos com comprovantes */}
                 <div>
                   <h4 className="font-semibold text-sm mb-2">Pagamentos Registrados</h4>
                   {osSelecionada.pagamentos.length > 0 ? (
@@ -699,8 +698,10 @@ export default function OSConferenciaGestor() {
                         const contaDestino = pag.contaDestino 
                           ? contasFinanceiras.find(c => c.id === pag.contaDestino)
                           : null;
+                        const isImage = pag.comprovante?.startsWith('data:image/');
+                        const isPdf = pag.comprovante?.startsWith('data:application/pdf');
                         return (
-                          <div key={i} className="text-xs p-2 bg-muted/50 rounded space-y-1">
+                          <div key={i} className="text-xs p-2 bg-muted/50 rounded space-y-2">
                             <div className="flex justify-between">
                               <span>{pag.meio}</span>
                               <span className="font-medium">{formatCurrency(pag.valor)}</span>
@@ -714,7 +715,11 @@ export default function OSConferenciaGestor() {
                               <ComprovantePreview
                                 comprovante={pag.comprovante}
                                 comprovanteNome={pag.comprovanteNome || 'Comprovante'}
+                                size="md"
                               />
+                            )}
+                            {!pag.comprovante && (
+                              <span className="text-muted-foreground italic">Sem comprovante anexado</span>
                             )}
                           </div>
                         );

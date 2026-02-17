@@ -27,6 +27,8 @@ import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
+import { getPecas, Peca, darBaixaPeca, initializePecasWithLojaIds } from '@/utils/pecasApi';
+import { InputComMascara } from '@/components/ui/InputComMascara';
 import { Plus, Trash2, Save, ArrowLeft, History, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -36,6 +38,7 @@ import { format } from 'date-fns';
 interface PecaForm {
   id: string;
   peca: string;
+  pecaEstoqueId: string;
   imei: string;
   valor: string;
   percentual: string;
@@ -45,6 +48,7 @@ interface PecaForm {
   unidadeServico: string;
   pecaNoEstoque: boolean;
   pecaDeFornecedor: boolean;
+  nomeRespFornecedor: string;
 }
 
 interface PagamentoForm {
@@ -66,6 +70,16 @@ export default function OSAssistenciaEditar() {
   const lojas = obterLojasTipoLoja();
   const tecnicos = obterTecnicos();
   const fornecedores = getFornecedores().filter(f => f.status === 'Ativo');
+
+  // Inicializar peças do estoque
+  useEffect(() => {
+    const lojaIds = lojas.map(l => l.id);
+    if (lojaIds.length > 0) {
+      initializePecasWithLojaIds(lojaIds);
+    }
+  }, [lojas]);
+
+  const pecasEstoque = getPecas().filter(p => p.status === 'Disponível');
 
   // State
   const [loading, setLoading] = useState(true);
@@ -138,15 +152,17 @@ export default function OSAssistenciaEditar() {
       setPecas(os.pecas.map((p: PecaServico) => ({
         id: p.id,
         peca: p.peca,
+        pecaEstoqueId: p.pecaEstoqueId || '',
         imei: p.imei || '',
-        valor: p.valor.toString(),
+        valor: p.valor > 0 ? formatCurrencyInput(String(Math.round(p.valor * 100))) : '',
         percentual: p.percentual?.toString() || '',
         servicoTerceirizado: p.servicoTerceirizado || false,
         descricaoTerceirizado: p.descricaoTerceirizado || '',
         fornecedorId: p.fornecedorId || '',
         unidadeServico: p.unidadeServico || '',
         pecaNoEstoque: p.pecaNoEstoque || false,
-        pecaDeFornecedor: p.pecaDeFornecedor || false
+        pecaDeFornecedor: p.pecaDeFornecedor || false,
+        nomeRespFornecedor: (p as any).nomeRespFornecedor || ''
       })));
     } else {
       setPecas([createEmptyPeca()]);
@@ -158,6 +174,7 @@ export default function OSAssistenciaEditar() {
   const createEmptyPeca = (): PecaForm => ({
     id: `PC-NEW-${Date.now()}`,
     peca: '',
+    pecaEstoqueId: '',
     imei: '',
     valor: '',
     percentual: '',
@@ -166,8 +183,21 @@ export default function OSAssistenciaEditar() {
     fornecedorId: '',
     unidadeServico: '',
     pecaNoEstoque: false,
-    pecaDeFornecedor: false
+    pecaDeFornecedor: false,
+    nomeRespFornecedor: ''
   });
+
+  const formatCurrencyInput = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    const amount = parseInt(numbers || '0') / 100;
+    return amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  const calcularValorTotalPeca = (peca: PecaForm) => {
+    const valor = parseFloat(peca.valor.replace(/\D/g, '')) / 100 || 0;
+    const percentual = parseFloat(peca.percentual) || 0;
+    return valor - (valor * percentual / 100);
+  };
 
 
   const getClienteNome = (clienteId: string) => {
@@ -197,10 +227,7 @@ export default function OSAssistenciaEditar() {
 
   // Cálculos
   const calcularValorTotalPecas = () => {
-    return pecas.reduce((acc, peca) => {
-      const valor = parseFloat(peca.valor.replace(',', '.')) || 0;
-      return acc + valor;
-    }, 0);
+    return pecas.reduce((acc, peca) => acc + calcularValorTotalPeca(peca), 0);
   };
 
   const handleSave = () => {
@@ -214,14 +241,15 @@ export default function OSAssistenciaEditar() {
     }
 
     const pecasFormatadas: PecaServico[] = pecas
-      .filter(p => p.peca.trim() !== '')
+      .filter(p => p.peca.trim() !== '' || p.pecaEstoqueId)
       .map(p => ({
         id: p.id,
         peca: p.peca,
+        pecaEstoqueId: p.pecaEstoqueId || undefined,
         imei: p.imei || undefined,
-        valor: parseFloat(p.valor.replace(',', '.')) || 0,
+        valor: parseFloat(p.valor.replace(/\D/g, '')) / 100 || 0,
         percentual: p.percentual ? parseFloat(p.percentual) : 0,
-        valorTotal: parseFloat(p.valor.replace(',', '.')) || 0,
+        valorTotal: calcularValorTotalPeca(p),
         servicoTerceirizado: p.servicoTerceirizado,
         descricaoTerceirizado: p.descricaoTerceirizado || undefined,
         fornecedorId: p.fornecedorId || undefined,
@@ -490,92 +518,182 @@ export default function OSAssistenciaEditar() {
             <div className="space-y-4">
               {pecas.map((peca, index) => (
                 <div key={peca.id} className="border rounded-lg p-4 space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Item {index + 1}</span>
-                    {pecas.length > 1 && (
-                      <Button variant="ghost" size="sm" onClick={() => removePeca(index)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
-                  </div>
-                  
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="md:col-span-2 space-y-2">
+                    <div className="space-y-2 md:col-span-2">
                       <Label>Peça/Serviço</Label>
-                      <Input 
-                        value={peca.peca}
-                        onChange={(e) => updatePeca(index, 'peca', e.target.value)}
-                        placeholder="Nome da peça ou serviço"
-                      />
+                      {peca.pecaNoEstoque ? (
+                        <div className="space-y-2">
+                          <Select
+                            value={peca.pecaEstoqueId}
+                            onValueChange={(v) => {
+                              const pecaSelecionada = pecasEstoque.find(p => p.id === v);
+                              const newPecas = [...pecas];
+                              newPecas[index] = {
+                                ...newPecas[index],
+                                pecaEstoqueId: v,
+                                peca: pecaSelecionada?.descricao || newPecas[index].peca,
+                                valor: pecaSelecionada ? formatCurrencyInput(String(Math.round(pecaSelecionada.valorRecomendado * 100))) : newPecas[index].valor
+                              };
+                              setPecas(newPecas);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a peça do estoque..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {pecasEstoque.map(p => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  <div className="flex items-center gap-2">
+                                    <span>{p.descricao}</span>
+                                    <Badge variant="outline" className="ml-1 text-xs">
+                                      {obterNomeLoja(p.lojaId)}
+                                    </Badge>
+                                    <Badge variant="secondary" className="ml-1 text-xs">
+                                      {p.origem}
+                                    </Badge>
+                                    <Badge variant="outline" className="ml-1">
+                                      {p.quantidade} un.
+                                    </Badge>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {peca.pecaEstoqueId && (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Package className="h-4 w-4" />
+                              <span>
+                                Estoque atual: {pecasEstoque.find(p => p.id === peca.pecaEstoqueId)?.quantidade || 0} unidades
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <Input 
+                          value={peca.peca}
+                          onChange={(e) => updatePeca(index, 'peca', e.target.value)}
+                          placeholder="Nome da peça ou serviço"
+                        />
+                      )}
                     </div>
                     <div className="space-y-2">
-                      <Label>IMEI (se aplicável)</Label>
-                      <Input 
-                        value={peca.imei}
-                        onChange={(e) => updatePeca(index, 'imei', applyIMEIMask(e.target.value))}
-                        placeholder="IMEI"
-                        maxLength={17}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Valor</Label>
+                      <Label>Valor (R$)</Label>
                       <Input 
                         value={peca.valor}
-                        onChange={(e) => updatePeca(index, 'valor', e.target.value)}
-                        placeholder="0,00"
+                        onChange={(e) => updatePeca(index, 'valor', formatCurrencyInput(e.target.value))}
+                        placeholder="R$ 0,00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Desconto (%)</Label>
+                      <InputComMascara
+                        mascara="percentual"
+                        value={peca.percentual}
+                        onChange={(formatted, raw) => updatePeca(index, 'percentual', String(raw))}
+                        placeholder="0%"
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-6 pt-2">
-                    <div className="flex items-center gap-2">
-                      <Checkbox 
-                        id={`estoque-${index}`}
-                        checked={peca.pecaNoEstoque}
-                        onCheckedChange={(checked) => updatePeca(index, 'pecaNoEstoque', checked)}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Unidade de Serviço</Label>
+                      <AutocompleteLoja
+                        value={peca.unidadeServico}
+                        onChange={v => updatePeca(index, 'unidadeServico', v)}
+                        filtrarPorTipo="Assistência"
+                        placeholder="Selecione..."
                       />
-                      <Label htmlFor={`estoque-${index}`} className="text-sm">Peça do estoque</Label>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox 
-                        id={`terceiro-${index}`}
-                        checked={peca.servicoTerceirizado}
-                        onCheckedChange={(checked) => updatePeca(index, 'servicoTerceirizado', checked)}
+                    <div className="space-y-2">
+                      <Label>Valor Total</Label>
+                      <Input 
+                        value={formatCurrency(calcularValorTotalPeca(peca))} 
+                        disabled 
+                        className="bg-muted font-medium"
                       />
-                      <Label htmlFor={`terceiro-${index}`} className="text-sm">Serviço terceirizado</Label>
+                    </div>
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex items-center gap-6">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={peca.pecaNoEstoque}
+                            onCheckedChange={checked => updatePeca(index, 'pecaNoEstoque', checked)}
+                          />
+                          <Label className="text-sm">Peça no estoque</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={peca.pecaDeFornecedor}
+                            onCheckedChange={checked => updatePeca(index, 'pecaDeFornecedor', checked)}
+                          />
+                          <Label className="text-sm">Fornecedor</Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={peca.servicoTerceirizado}
+                            onCheckedChange={checked => updatePeca(index, 'servicoTerceirizado', checked)}
+                          />
+                          <Label className="text-sm">Serviço Terceirizado</Label>
+                        </div>
+                      </div>
+                      {pecas.length > 1 && (
+                        <Button variant="ghost" size="sm" onClick={() => removePeca(index)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
                     </div>
                   </div>
 
-                  {peca.servicoTerceirizado && (
+                  {peca.pecaDeFornecedor && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
                       <div className="space-y-2">
                         <Label>Fornecedor</Label>
-                        <Select 
-                          value={peca.fornecedorId} 
-                          onValueChange={(v) => updatePeca(index, 'fornecedorId', v)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {fornecedores.map(f => (
-                              <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <AutocompleteFornecedor
+                          value={peca.fornecedorId}
+                          onChange={v => updatePeca(index, 'fornecedorId', v)}
+                          placeholder="Selecione o fornecedor..."
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {peca.servicoTerceirizado && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t">
+                      <div className="space-y-2">
+                        <Label>Descrição do Serviço Terceirizado</Label>
+                        <Input
+                          value={peca.descricaoTerceirizado}
+                          onChange={e => updatePeca(index, 'descricaoTerceirizado', e.target.value)}
+                          placeholder="Descreva o serviço..."
+                        />
                       </div>
                       <div className="space-y-2">
-                        <Label>Descrição do serviço</Label>
-                        <Input 
-                          value={peca.descricaoTerceirizado}
-                          onChange={(e) => updatePeca(index, 'descricaoTerceirizado', e.target.value)}
-                          placeholder="Descrição"
+                        <Label>Fornecedor do Serviço</Label>
+                        <AutocompleteFornecedor
+                          value={peca.fornecedorId}
+                          onChange={v => updatePeca(index, 'fornecedorId', v)}
+                          placeholder="Selecione..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nome Resp. Fornecedor *</Label>
+                        <Input
+                          value={peca.nomeRespFornecedor}
+                          onChange={e => updatePeca(index, 'nomeRespFornecedor', e.target.value)}
+                          placeholder="Nome do responsável..."
+                          className={!peca.nomeRespFornecedor ? 'border-destructive' : ''}
                         />
                       </div>
                     </div>
                   )}
                 </div>
               ))}
+
+              <Button variant="outline" onClick={addPeca}>
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar Peça/Serviço
+              </Button>
             </div>
 
             <div className="mt-4 pt-4 border-t">

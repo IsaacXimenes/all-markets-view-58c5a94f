@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Paperclip, Image, FileText, ExternalLink } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ComprovantePreviewProps {
   comprovante?: string;
@@ -36,11 +37,14 @@ export function ComprovantePreview({ comprovante, comprovanteNome, size = 'sm' }
       <button
         type="button"
         onClick={handleClick}
-        className="flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors cursor-pointer"
+        className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors cursor-pointer group"
         title={comprovanteNome || 'Ver comprovante'}
       >
         {isImage ? (
-          <img src={comprovante} alt="Comprovante" className="h-6 w-6 rounded object-cover border" />
+          <img src={comprovante} alt="Comprovante" className={cn(
+            "rounded object-cover border shadow-sm group-hover:shadow-md transition-shadow",
+            size === 'sm' ? 'h-8 w-8' : 'h-16 w-16'
+          )} />
         ) : isPdf ? (
           <FileText className={`${iconSize} text-red-500`} />
         ) : isUrl ? (
@@ -48,7 +52,9 @@ export function ComprovantePreview({ comprovante, comprovanteNome, size = 'sm' }
         ) : (
           <Paperclip className={iconSize} />
         )}
-        <span className="text-xs truncate max-w-[80px]">{comprovanteNome || 'Anexo'}</span>
+        <span className={cn("truncate", size === 'sm' ? 'text-xs max-w-[80px]' : 'text-sm max-w-[150px]')}>
+          {comprovanteNome || 'Anexo'}
+        </span>
       </button>
 
       {isImage && (

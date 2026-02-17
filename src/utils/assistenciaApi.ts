@@ -40,6 +40,7 @@ export const isOSIdRegistered = (id: string): boolean => {
 export interface PecaServico {
   id: string;
   peca: string;
+  pecaEstoqueId?: string;
   imei?: string;
   valor: number;
   percentual: number;
