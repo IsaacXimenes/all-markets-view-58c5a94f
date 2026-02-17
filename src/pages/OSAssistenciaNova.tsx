@@ -67,6 +67,7 @@ interface PecaForm {
   pecaNoEstoque: boolean;
   pecaDeFornecedor: boolean;
   nomeRespFornecedor: string;
+  quantidadePeca: number;
 }
 
 interface SolicitacaoPecaForm {
@@ -130,7 +131,7 @@ export default function OSAssistenciaNova() {
 
   // Peças
   const [pecas, setPecas] = useState<PecaForm[]>([
-    { peca: '', pecaEstoqueId: '', valor: '', percentual: '', servicoTerceirizado: false, descricaoTerceirizado: '', fornecedorId: '', unidadeServico: '', pecaNoEstoque: false, pecaDeFornecedor: false, nomeRespFornecedor: '' }
+    { peca: '', pecaEstoqueId: '', valor: '', percentual: '', servicoTerceirizado: false, descricaoTerceirizado: '', fornecedorId: '', unidadeServico: '', pecaNoEstoque: false, pecaDeFornecedor: false, nomeRespFornecedor: '', quantidadePeca: 1 }
   ]);
 
   // Peças do estoque (carregadas dinamicamente)
@@ -367,7 +368,7 @@ export default function OSAssistenciaNova() {
       setClienteId(draft.clienteId || '');
       setDescricao(draft.descricao || '');
       setStatus(draft.status || 'Em serviço');
-      setPecas(draft.pecas || [{ peca: '', pecaEstoqueId: '', valor: '', percentual: '', servicoTerceirizado: false, descricaoTerceirizado: '', fornecedorId: '', unidadeServico: '', pecaNoEstoque: false, pecaDeFornecedor: false, nomeRespFornecedor: '' }]);
+      setPecas(draft.pecas || [{ peca: '', pecaEstoqueId: '', valor: '', percentual: '', servicoTerceirizado: false, descricaoTerceirizado: '', fornecedorId: '', unidadeServico: '', pecaNoEstoque: false, pecaDeFornecedor: false, nomeRespFornecedor: '', quantidadePeca: 1 }]);
       setPagamentos(draft.pagamentos || [{ meio: '', valor: '', parcelas: '' }]);
       toast({ title: "Rascunho carregado", description: "Dados da OS anterior foram restaurados" });
     }
@@ -480,7 +481,7 @@ export default function OSAssistenciaNova() {
   };
 
   const addPeca = () => {
-    setPecas([...pecas, { peca: '', pecaEstoqueId: '', valor: '', percentual: '', servicoTerceirizado: false, descricaoTerceirizado: '', fornecedorId: '', unidadeServico: '', pecaNoEstoque: false, pecaDeFornecedor: false, nomeRespFornecedor: '' }]);
+    setPecas([...pecas, { peca: '', pecaEstoqueId: '', valor: '', percentual: '', servicoTerceirizado: false, descricaoTerceirizado: '', fornecedorId: '', unidadeServico: '', pecaNoEstoque: false, pecaDeFornecedor: false, nomeRespFornecedor: '', quantidadePeca: 1 }]);
   };
 
   const removePeca = (index: number) => {
@@ -708,7 +709,7 @@ export default function OSAssistenciaNova() {
     const resultadosBaixa: string[] = [];
     
     for (const peca of pecasComBaixa) {
-      const resultado = darBaixaPeca(peca.pecaEstoqueId, 1);
+      const resultado = darBaixaPeca(peca.pecaEstoqueId, peca.quantidadePeca || 1);
       if (resultado.sucesso) {
         resultadosBaixa.push(resultado.mensagem);
         // Adicionar registro na timeline
@@ -1234,11 +1235,29 @@ export default function OSAssistenciaNova() {
                             </SelectContent>
                           </Select>
                           {peca.pecaEstoqueId && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Package className="h-4 w-4" />
-                              <span>
-                                Estoque atual: {pecasEstoque.find(p => p.id === peca.pecaEstoqueId)?.quantidade || 0} unidades
-                              </span>
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Package className="h-4 w-4" />
+                                <span>
+                                  Estoque atual: {pecasEstoque.find(p => p.id === peca.pecaEstoqueId)?.quantidade || 0} unidades
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Label className="text-sm whitespace-nowrap">Qtd:</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={pecasEstoque.find(p => p.id === peca.pecaEstoqueId)?.quantidade || 1}
+                                  value={peca.quantidadePeca}
+                                  onChange={e => {
+                                    const qty = Math.max(1, Math.min(parseInt(e.target.value) || 1, pecasEstoque.find(p => p.id === peca.pecaEstoqueId)?.quantidade || 1));
+                                    const newPecas = [...pecas];
+                                    newPecas[index] = { ...newPecas[index], quantidadePeca: qty };
+                                    setPecas(newPecas);
+                                  }}
+                                  className="w-20 h-8"
+                                />
+                              </div>
                             </div>
                           )}
                         </div>

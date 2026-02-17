@@ -49,6 +49,7 @@ interface PecaForm {
   pecaNoEstoque: boolean;
   pecaDeFornecedor: boolean;
   nomeRespFornecedor: string;
+  quantidadePeca: number;
 }
 
 interface PagamentoForm {
@@ -162,7 +163,8 @@ export default function OSAssistenciaEditar() {
         unidadeServico: p.unidadeServico || '',
         pecaNoEstoque: p.pecaNoEstoque || false,
         pecaDeFornecedor: p.pecaDeFornecedor || false,
-        nomeRespFornecedor: (p as any).nomeRespFornecedor || ''
+        nomeRespFornecedor: (p as any).nomeRespFornecedor || '',
+        quantidadePeca: (p as any).quantidadePeca || 1
       })));
     } else {
       setPecas([createEmptyPeca()]);
@@ -184,7 +186,8 @@ export default function OSAssistenciaEditar() {
     unidadeServico: '',
     pecaNoEstoque: false,
     pecaDeFornecedor: false,
-    nomeRespFornecedor: ''
+    nomeRespFornecedor: '',
+    quantidadePeca: 1
   });
 
   const formatCurrencyInput = (value: string) => {
@@ -588,11 +591,27 @@ export default function OSAssistenciaEditar() {
                             </SelectContent>
                           </Select>
                           {peca.pecaEstoqueId && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Package className="h-4 w-4" />
-                              <span>
-                                Estoque atual: {pecasEstoque.find(p => p.id === peca.pecaEstoqueId)?.quantidade || 0} unidades
-                              </span>
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Package className="h-4 w-4" />
+                                <span>
+                                  Estoque atual: {pecasEstoque.find(p => p.id === peca.pecaEstoqueId)?.quantidade || 0} unidades
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Label className="text-sm whitespace-nowrap">Qtd:</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={pecasEstoque.find(p => p.id === peca.pecaEstoqueId)?.quantidade || 1}
+                                  value={peca.quantidadePeca}
+                                  onChange={e => {
+                                    const qty = Math.max(1, Math.min(parseInt(e.target.value) || 1, pecasEstoque.find(p => p.id === peca.pecaEstoqueId)?.quantidade || 1));
+                                    updatePeca(index, 'quantidadePeca', qty);
+                                  }}
+                                  className="w-20 h-8"
+                                />
+                              </div>
                             </div>
                           )}
                         </div>
