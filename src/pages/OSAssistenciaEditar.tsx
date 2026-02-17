@@ -564,16 +564,23 @@ export default function OSAssistenciaEditar() {
                             <SelectContent>
                               {pecasEstoque.map(p => (
                                 <SelectItem key={p.id} value={p.id}>
-                                  <div className="flex items-center gap-2">
-                                    <span>{p.descricao}</span>
-                                    <Badge variant="outline" className="ml-1 text-xs">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-medium">{p.descricao}</span>
+                                    <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
                                       {obterNomeLoja(p.lojaId)}
                                     </Badge>
-                                    <Badge variant="secondary" className="ml-1 text-xs">
-                                      {p.origem}
-                                    </Badge>
-                                    <Badge variant="outline" className="ml-1">
+                                    <Badge className={cn(
+                                      "text-xs",
+                                      p.quantidade > 3 
+                                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200" 
+                                        : p.quantidade > 0 
+                                          ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                                    )}>
                                       {p.quantidade} un.
+                                    </Badge>
+                                    <Badge variant="secondary" className="text-xs">
+                                      {p.origem}
                                     </Badge>
                                   </div>
                                 </SelectItem>

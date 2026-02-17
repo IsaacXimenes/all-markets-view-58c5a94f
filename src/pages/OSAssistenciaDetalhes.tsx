@@ -701,7 +701,20 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                                     .filter(p => p.status === 'Disponível' && p.quantidade > 0)
                                     .map(p => (
                                        <SelectItem key={p.id} value={p.descricao}>
-                                         {p.descricao} (Qtd: {p.quantidade} | {obterNomeLoja(p.lojaId)})
+                                         <div className="flex items-center gap-2 flex-wrap">
+                                           <span className="font-medium">{p.descricao}</span>
+                                           <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 text-xs">
+                                             {obterNomeLoja(p.lojaId)}
+                                           </Badge>
+                                           <Badge className={cn(
+                                             "text-xs",
+                                             p.quantidade > 3 
+                                               ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200" 
+                                               : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                                           )}>
+                                             {p.quantidade} un.
+                                           </Badge>
+                                         </div>
                                        </SelectItem>
                                      ))}
                                 </SelectContent>
