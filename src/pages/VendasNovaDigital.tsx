@@ -58,7 +58,8 @@ export default function VendasNovaDigital() {
     setLoading(true);
     
     const colaborador = colaboradoresDigital.find(c => c.id === responsavelId);
-    if (!colaborador) {
+    const nomeResponsavel = colaborador?.nome || user?.colaborador?.nome || 'Colaborador';
+    if (!nomeResponsavel || nomeResponsavel === 'Colaborador') {
       toast.error('Colaborador não encontrado');
       setLoading(false);
       return;
@@ -66,7 +67,7 @@ export default function VendasNovaDigital() {
 
     const novaVenda = criarPreCadastro(
       responsavelId,
-      colaborador.nome,
+      nomeResponsavel,
       clienteNome,
       getValorNumerico()
     );
