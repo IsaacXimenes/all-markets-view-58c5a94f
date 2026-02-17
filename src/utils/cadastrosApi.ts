@@ -324,14 +324,6 @@ let contasFinanceiras: ContaFinanceira[] = [
   // Loja - Shopping Sul
   { id: 'CTA-009', nome: 'Santander (Bradesco Shopping Sul)', tipo: 'Conta Bancária', lojaVinculada: '5b9446d5', banco: 'Santander', agencia: '', conta: '', cnpj: '55.449.390/0001-73', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Terceirizada', notaFiscal: false },
   { id: 'CTA-010', nome: 'Bradesco Acessórios', tipo: 'Conta Bancária', lojaVinculada: '5b9446d5', banco: 'Bradesco', agencia: '', conta: '', cnpj: '55.449.390/0001-73', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
-  // Assistência - SIA
-  { id: 'CTA-011', nome: 'Bradesco Assistência', tipo: 'Conta Bancária', lojaVinculada: '3cfbf69f', banco: 'Bradesco', agencia: '', conta: '', cnpj: '54.872.234/0001-58', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
-  // Assistência - Shopping JK
-  { id: 'CTA-012', nome: 'Bradesco Assistência', tipo: 'Conta Bancária', lojaVinculada: '94dbe2b1', banco: 'Bradesco', agencia: '', conta: '', cnpj: '54.872.234/0001-58', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
-  // Assistência - Shopping Sul
-  { id: 'CTA-013', nome: 'Bradesco Assistência', tipo: 'Conta Bancária', lojaVinculada: 'ba1802b9', banco: 'Bradesco', agencia: '', conta: '', cnpj: '54.872.234/0001-58', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
-  // Assistência - Águas Lindas
-  { id: 'CTA-014', nome: 'Bradesco Assistência', tipo: 'Conta Bancária', lojaVinculada: 'be961085', banco: 'Bradesco', agencia: '', conta: '', cnpj: '54.872.234/0001-58', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
   // Contas de Dinheiro por Loja
   { id: 'CTA-015', nome: 'Dinheiro - JK Shopping', tipo: 'Dinheiro', lojaVinculada: 'db894e7d', banco: '', agencia: '', conta: '', cnpj: '62.968.637/0001-23', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
   { id: 'CTA-016', nome: 'Dinheiro - Shopping Sul', tipo: 'Dinheiro', lojaVinculada: '5b9446d5', banco: '', agencia: '', conta: '', cnpj: '55.449.390/0001-73', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
@@ -341,11 +333,8 @@ let contasFinanceiras: ContaFinanceira[] = [
   { id: 'CTA-020', nome: 'Cofre', tipo: 'Dinheiro - Geral', lojaVinculada: 'geral-dinheiro', banco: '', agencia: '', conta: '', cnpj: '62.968.637/0001-23', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
   // Assistência - Geral
   { id: 'CTA-021', nome: 'Bradesco Assistência', tipo: 'Conta Bancária', lojaVinculada: 'geral-assistencia', banco: 'Bradesco', agencia: '', conta: '', cnpj: '54.872.234/0001-58', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
-  // Dinheiro - Assistências
-  { id: 'CTA-022', nome: 'Dinheiro - Assistência JK Shopping', tipo: 'Dinheiro', lojaVinculada: '94dbe2b1', banco: '', agencia: '', conta: '', cnpj: '62.968.637/0001-23', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
-  { id: 'CTA-023', nome: 'Dinheiro - Assistência Shopping Sul', tipo: 'Dinheiro', lojaVinculada: 'ba1802b9', banco: '', agencia: '', conta: '', cnpj: '55.449.390/0001-73', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
-  { id: 'CTA-024', nome: 'Dinheiro - Assistência Águas Lindas', tipo: 'Dinheiro', lojaVinculada: 'be961085', banco: '', agencia: '', conta: '', cnpj: '56.221.743/0001-46', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
-  { id: 'CTA-025', nome: 'Dinheiro - Assistência Online', tipo: 'Dinheiro', lojaVinculada: 'fcc78c1a', banco: '', agencia: '', conta: '', cnpj: '46.197.533/0001-06', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
+  // Dinheiro - Assistência (centralizada)
+  { id: 'CTA-022', nome: 'Dinheiro - Assistência', tipo: 'Dinheiro', lojaVinculada: 'geral-assistencia', banco: '', agencia: '', conta: '', cnpj: '53.295.194/0001-66', saldoInicial: 0, saldoAtual: 0, status: 'Ativo', statusMaquina: 'Própria', notaFiscal: true },
 ];
 
 let maquinasCartao: MaquinaCartao[] = [
