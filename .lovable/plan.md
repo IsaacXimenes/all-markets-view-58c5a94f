@@ -1,28 +1,45 @@
 
 
-## Adicionar 4 Contas de Dinheiro para Assistencias
+## Filtrar Contas de Destino para Assistencia no Quadro de Pagamento
+
+### Contexto
+
+No modulo de Assistencia (Nova OS, Detalhes OS, Editar OS), o componente `PagamentoQuadro` ja filtra as contas de destino pelo `lojaVendaId` (ID da loja de assistencia). Porem, e necessario garantir que apenas contas vinculadas a assistencia aparecam (Bradesco Assistencia + Dinheiro Assistencia), e nao contas de lojas regulares.
 
 ### O que sera feito
 
-Adicionar 4 novas contas financeiras do tipo "Dinheiro" vinculadas as lojas de Assistencia, e inclui-las na secao "Contas Segregadas" do Extrato por Conta.
+Adicionar uma prop `apenasContasAssistencia` ao componente `PagamentoQuadro` para filtrar explicitamente apenas contas de assistencia (Bradesco Assistencia e Dinheiro Assistencia) no dropdown de Conta de Destino.
 
-### Novas Contas
+**Exemplo pratico:**
+- OS na Assistencia - Shopping JK: dropdown mostra apenas:
+  - "Assistencia - Shopping JK - Bradesco Assistencia" (CTA-012)
+  - "Assistencia - Shopping JK - Dinheiro - Assistencia JK Shopping" (CTA-022)
 
-| ID | Nome | Vinculada a | CNPJ |
-|---|---|---|---|
-| CTA-022 | Dinheiro - Assistencia JK Shopping | Assistencia - Shopping JK (94dbe2b1) | 62.968.637/0001-23 |
-| CTA-023 | Dinheiro - Assistencia Shopping Sul | Assistencia - Shopping Sul (ba1802b9) | 55.449.390/0001-73 |
-| CTA-024 | Dinheiro - Assistencia Aguas Lindas | Assistencia - Aguas Lindas (be961085) | 56.221.743/0001-46 |
-| CTA-025 | Dinheiro - Assistencia Online | Loja - Online (fcc78c1a) | 46.197.533/0001-06 |
+### Detalhes Tecnicos
 
-Todas com: tipo "Dinheiro", saldo R$ 0,00, statusMaquina "Propria", status "Ativo", notaFiscal true.
+**Arquivo 1: `src/components/vendas/PagamentoQuadro.tsx`**
+- Adicionar prop `apenasContasAssistencia?: boolean` na interface `PagamentoQuadroProps`
+- No filtro do Select de "Conta de Destino" (linha ~845), quando `apenasContasAssistencia` for true, filtrar apenas contas cujo nome contenha "Assistencia" ou "Assistência" (abrange tanto "Bradesco Assistencia" quanto "Dinheiro - Assistencia...")
+- Isso garante que contas de loja regular (Santander, Bradesco Thiago, etc.) nao aparecam
 
-### Alteracoes por Arquivo
+**Arquivo 2: `src/pages/OSAssistenciaNova.tsx`**
+- Passar `apenasContasAssistencia={true}` no componente `PagamentoQuadro` (linha ~1490)
 
-**1. `src/utils/cadastrosApi.ts`**
-- Inserir as 4 novas contas (CTA-022 a CTA-025) no array `contasFinanceiras`, logo antes do fechamento do array (apos CTA-021)
+**Arquivo 3: `src/pages/OSAssistenciaDetalhes.tsx`**
+- Passar `apenasContasAssistencia={true}` nas duas instancias de `PagamentoQuadro` (linhas ~1113 e ~1167)
 
-**2. `src/pages/FinanceiroExtratoContas.tsx`**
-- Adicionar CTA-022, CTA-023, CTA-024, CTA-025 ao array `CONTAS_DINHEIRO_SEGREGADAS` (ou criar constante propria) para que aparecam na secao "Contas Segregadas"
-- Adicionar os novos IDs na lista `ordemSegregadas` para manter a ordenacao correta dos cards (assistencia bancaria, depois dinheiro loja, depois dinheiro assistencia)
+**Arquivo 4: `src/pages/OSAssistenciaEditar.tsx`** (se usar PagamentoQuadro)
+- Passar `apenasContasAssistencia={true}` tambem
 
+### Logica do filtro
+
+```text
+contasFinanceiras
+  .filter(c => c.status === 'Ativo')
+  .filter(c => !lojaVendaId || c.lojaVinculada === lojaVendaId)
+  .filter(c => !apenasContasAssistencia || 
+    c.nome.toLowerCase().includes('assistência') || 
+    c.nome.toLowerCase().includes('assistencia'))
+```
+
+Isso garante que mesmo que futuras contas sejam adicionadas a uma loja de assistencia, apenas as que contenham "Assistencia" no nome serao exibidas no contexto de OS.
