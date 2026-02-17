@@ -1,6 +1,6 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
-import { Users, ShoppingCart, CreditCard, PackageOpen, Wrench, Hammer, Receipt, ListOrdered, Package } from 'lucide-react';
+import { Users, ShoppingCart, CreditCard, PackageOpen, Wrench, Hammer, Receipt, ListOrdered, Package, Calendar } from 'lucide-react';
 
 interface DadosSistemaAntigoLayoutProps {
   children: React.ReactNode;
@@ -17,6 +17,7 @@ const tabs = [
   { name: 'Vendas', href: '/dados-sistema-antigo/vendas', icon: Receipt },
   { name: 'Vendas Pagamentos', href: '/dados-sistema-antigo/vendas-pagamentos', icon: ListOrdered },
   { name: 'Vendas Produtos', href: '/dados-sistema-antigo/vendas-produtos', icon: Package },
+  { name: 'Dados - 2023', href: '/dados-sistema-antigo/dados-2023', icon: Calendar },
 ];
 
 export function DadosSistemaAntigoLayout({ children, title }: DadosSistemaAntigoLayoutProps) {

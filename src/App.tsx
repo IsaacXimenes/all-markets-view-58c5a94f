@@ -131,6 +131,7 @@ import DadosAntigoReparos from "./pages/DadosAntigoReparos";
 import DadosAntigoVendas from "./pages/DadosAntigoVendas";
 import DadosAntigoVendasPagamentos from "./pages/DadosAntigoVendasPagamentos";
 import DadosAntigoVendasProdutos from "./pages/DadosAntigoVendasProdutos";
+import DadosAntigo2023 from "./pages/DadosAntigo2023";
 
 const queryClient = new QueryClient();
 
@@ -287,6 +288,7 @@ const App = () => (
               <Route path="/dados-sistema-antigo/vendas" element={<DadosAntigoVendas />} />
               <Route path="/dados-sistema-antigo/vendas-pagamentos" element={<DadosAntigoVendasPagamentos />} />
               <Route path="/dados-sistema-antigo/vendas-produtos" element={<DadosAntigoVendasProdutos />} />
+              <Route path="/dados-sistema-antigo/dados-2023" element={<DadosAntigo2023 />} />
             </Route>
             
             {/* Rota 404 */}
