@@ -848,7 +848,8 @@ export function PagamentoQuadro({
                     .filter(c => c.status === 'Ativo')
                     .filter(c => {
                       if (apenasContasAssistencia) {
-                        return c.nome.toLowerCase().includes('assistência') || c.nome.toLowerCase().includes('assistencia');
+                        return c.lojaVinculada === lojaVendaId && 
+                          (c.nome.toLowerCase().includes('assistência') || c.nome.toLowerCase().includes('assistencia'));
                       }
                       return !lojaVendaId || c.lojaVinculada === lojaVendaId;
                     })
