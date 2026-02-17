@@ -709,7 +709,7 @@ export default function OSAssistenciaNova() {
     const resultadosBaixa: string[] = [];
     
     for (const peca of pecasComBaixa) {
-      const resultado = darBaixaPeca(peca.pecaEstoqueId, peca.quantidadePeca || 1);
+      const resultado = darBaixaPeca(peca.pecaEstoqueId, peca.quantidadePeca || 1, novaOS.id);
       if (resultado.sucesso) {
         resultadosBaixa.push(resultado.mensagem);
         // Adicionar registro na timeline

@@ -527,9 +527,14 @@ export default function OSAssistenciaEditar() {
                       <Select
                         value={peca.pecaNoEstoque ? 'estoque' : peca.pecaDeFornecedor ? 'fornecedor' : peca.servicoTerceirizado ? 'terceirizado' : 'nenhum'}
                         onValueChange={(val) => {
-                          updatePeca(index, 'pecaNoEstoque', val === 'estoque');
-                          updatePeca(index, 'pecaDeFornecedor', val === 'fornecedor');
-                          updatePeca(index, 'servicoTerceirizado', val === 'terceirizado');
+                          const newPecas = [...pecas];
+                          newPecas[index] = {
+                            ...newPecas[index],
+                            pecaNoEstoque: val === 'estoque',
+                            pecaDeFornecedor: val === 'fornecedor',
+                            servicoTerceirizado: val === 'terceirizado',
+                          };
+                          setPecas(newPecas);
                         }}
                       >
                         <SelectTrigger>

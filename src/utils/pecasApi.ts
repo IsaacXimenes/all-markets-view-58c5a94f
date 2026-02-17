@@ -1,5 +1,18 @@
 // API para gestão de Peças no Estoque
 
+export interface MovimentacaoPeca {
+  id: string;
+  pecaId: string;
+  tipo: 'Entrada' | 'Saída' | 'Reserva';
+  quantidade: number;
+  data: string;
+  osId?: string;
+  descricao: string;
+}
+
+let movimentacoesPecas: MovimentacaoPeca[] = [];
+let nextMovId = 1;
+
 export interface Peca {
   id: string;
   descricao: string;
@@ -89,6 +102,16 @@ export const initializePecasWithLojaIds = (lojaIds: string[]): void => {
     ...peca,
     lojaId: lojaIds[index % lojaIds.length] || lojaIds[0] || ''
   }));
+
+  // Criar movimentações de entrada iniciais
+  movimentacoesPecas = pecas.map((peca) => ({
+    id: `MOV-${String(nextMovId++).padStart(4, '0')}`,
+    pecaId: peca.id,
+    tipo: 'Entrada' as const,
+    quantidade: peca.quantidade,
+    data: peca.dataEntrada,
+    descricao: `Entrada inicial - ${peca.origem}${peca.notaCompraId ? ` (${peca.notaCompraId})` : ''}`
+  }));
 };
 
 let nextPecaId = 6;
@@ -113,6 +136,17 @@ export const addPeca = (peca: Omit<Peca, 'id'>): Peca => {
     id: `PEC-${String(nextPecaId++).padStart(4, '0')}`
   };
   pecas.push(newPeca);
+
+  // Registrar movimentação de entrada
+  movimentacoesPecas.push({
+    id: `MOV-${String(nextMovId++).padStart(4, '0')}`,
+    pecaId: newPeca.id,
+    tipo: 'Entrada',
+    quantidade: newPeca.quantidade,
+    data: newPeca.dataEntrada,
+    descricao: `Entrada - ${newPeca.origem}`
+  });
+
   return newPeca;
 };
 
@@ -131,7 +165,7 @@ export const deletePeca = (id: string): boolean => {
 };
 
 // Dar baixa em peça do estoque (decrementar quantidade ou marcar como utilizada)
-export const darBaixaPeca = (id: string, quantidade: number = 1): { sucesso: boolean; mensagem: string } => {
+export const darBaixaPeca = (id: string, quantidade: number = 1, osId?: string): { sucesso: boolean; mensagem: string } => {
   const peca = pecas.find(p => p.id === id);
   
   if (!peca) {
@@ -153,8 +187,36 @@ export const darBaixaPeca = (id: string, quantidade: number = 1): { sucesso: boo
   if (peca.quantidade === 0) {
     peca.status = 'Utilizada';
   }
+
+  // Registrar movimentação de saída
+  movimentacoesPecas.push({
+    id: `MOV-${String(nextMovId++).padStart(4, '0')}`,
+    pecaId: id,
+    tipo: 'Saída',
+    quantidade,
+    data: new Date().toISOString(),
+    osId,
+    descricao: `Baixa para OS${osId ? ` ${osId}` : ''} - ${peca.descricao}`
+  });
   
   return { sucesso: true, mensagem: `Baixa de ${quantidade} unidade(s) de ${peca.descricao} realizada com sucesso` };
+};
+
+// Buscar movimentações por peça
+export const getMovimentacoesByPecaId = (pecaId: string): MovimentacaoPeca[] => {
+  return movimentacoesPecas
+    .filter(m => m.pecaId === pecaId)
+    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+};
+
+// Adicionar movimentação manual
+export const addMovimentacaoPeca = (mov: Omit<MovimentacaoPeca, 'id'>): MovimentacaoPeca => {
+  const newMov: MovimentacaoPeca = {
+    ...mov,
+    id: `MOV-${String(nextMovId++).padStart(4, '0')}`
+  };
+  movimentacoesPecas.push(newMov);
+  return newMov;
 };
 
 // Reservar peça (para uso futuro se necessário)

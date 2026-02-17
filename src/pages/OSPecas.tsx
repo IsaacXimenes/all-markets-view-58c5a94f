@@ -8,13 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getPecas, Peca, exportPecasToCSV, addPeca, initializePecasWithLojaIds } from '@/utils/pecasApi';
+import { getPecas, Peca, exportPecasToCSV, addPeca, initializePecasWithLojaIds, getMovimentacoesByPecaId, MovimentacaoPeca } from '@/utils/pecasApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { getProdutosCadastro } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { getPecasCadastro } from '@/pages/CadastrosPecas';
-import { Download, Eye, Plus, Package } from 'lucide-react';
+import { Download, Eye, Plus, Package, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 
@@ -55,6 +55,9 @@ export default function OSPecas() {
   const [showModal, setShowModal] = useState(false);
   const [pecaSelecionada, setPecaSelecionada] = useState<Peca | null>(null);
   const [showNovaModal, setShowNovaModal] = useState(false);
+  const [showHistoricoModal, setShowHistoricoModal] = useState(false);
+  const [pecaHistorico, setPecaHistorico] = useState<Peca | null>(null);
+  const [movimentacoes, setMovimentacoes] = useState<MovimentacaoPeca[]>([]);
   const [novaPeca, setNovaPeca] = useState({
     descricao: '',
     lojaId: '',
@@ -118,6 +121,25 @@ export default function OSPecas() {
   const handleVerDetalhes = (peca: Peca) => {
     setPecaSelecionada(peca);
     setShowModal(true);
+  };
+
+  const handleVerHistorico = (peca: Peca) => {
+    setPecaHistorico(peca);
+    setMovimentacoes(getMovimentacoesByPecaId(peca.id));
+    setShowHistoricoModal(true);
+  };
+
+  const getTipoBadge = (tipo: string) => {
+    switch (tipo) {
+      case 'Entrada':
+        return <Badge className="bg-green-500 hover:bg-green-600">Entrada</Badge>;
+      case 'Saída':
+        return <Badge className="bg-red-500 hover:bg-red-600">Saída</Badge>;
+      case 'Reserva':
+        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Reserva</Badge>;
+      default:
+        return <Badge variant="secondary">{tipo}</Badge>;
+    }
   };
 
   const formatCurrencyInput = (value: string) => {
@@ -294,9 +316,14 @@ export default function OSPecas() {
                 <TableCell>{getOrigemBadge(peca.origem)}</TableCell>
                 <TableCell>{getStatusBadge(peca.status)}</TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="sm" onClick={() => handleVerDetalhes(peca)}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => handleVerDetalhes(peca)}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleVerHistorico(peca)} title="Histórico de Movimentação">
+                      <History className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -464,6 +491,76 @@ export default function OSPecas() {
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Peça
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Histórico de Movimentação */}
+      <Dialog open={showHistoricoModal} onOpenChange={setShowHistoricoModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Histórico de Movimentação
+            </DialogTitle>
+          </DialogHeader>
+          {pecaHistorico && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4 p-3 bg-muted rounded-lg">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Peça</Label>
+                  <p className="font-medium text-sm">{pecaHistorico.descricao}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Modelo</Label>
+                  <p className="text-sm">{pecaHistorico.modelo}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Loja</Label>
+                  <p className="text-sm">{getLojaNome(pecaHistorico.lojaId)}</p>
+                </div>
+              </div>
+
+              <div className="rounded-md border max-h-64 overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Qtd</TableHead>
+                      <TableHead>OS/Referência</TableHead>
+                      <TableHead>Descrição</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {movimentacoes.map(mov => (
+                      <TableRow key={mov.id}>
+                        <TableCell className="text-xs">{new Date(mov.data).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell>{getTipoBadge(mov.tipo)}</TableCell>
+                        <TableCell className="font-medium">{mov.tipo === 'Saída' ? `-${mov.quantidade}` : `+${mov.quantidade}`}</TableCell>
+                        <TableCell className="text-xs font-mono">{mov.osId || '-'}</TableCell>
+                        <TableCell className="text-xs">{mov.descricao}</TableCell>
+                      </TableRow>
+                    ))}
+                    {movimentacoes.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                          Nenhuma movimentação registrada
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="p-3 bg-muted rounded-lg flex items-center justify-between">
+                <span className="text-sm font-medium">Quantidade disponível atual:</span>
+                <span className="text-lg font-bold">{pecaHistorico.quantidade} unidades</span>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowHistoricoModal(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
