@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { getMovimentacoes, addMovimentacao, getProdutos, Produto, confirmarRecebimentoMovimentacao, Movimentacao } from '@/utils/estoqueApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
-import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+import { useAuthStore } from '@/store/authStore';
 import { exportToCSV } from '@/utils/formatUtils';
 import { formatIMEI } from '@/utils/imeiMask';
 import { Download, Plus, CheckCircle, Clock, Search, Package, Eye, Edit, X, Camera } from 'lucide-react';
@@ -24,6 +24,7 @@ import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 
 export default function EstoqueMovimentacoes() {
   const { obterLojasTipoLoja, obterColaboradoresAtivos, obterLojaById, obterNomeLoja } = useCadastroStore();
+  const user = useAuthStore(state => state.user);
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>(getMovimentacoes());
   const [origemFilter, setOrigemFilter] = useState<string>('todas');
   const [destinoFilter, setDestinoFilter] = useState<string>('todas');
@@ -49,7 +50,7 @@ export default function EstoqueMovimentacoes() {
   // Form state
   const [formData, setFormData] = useState({
     produtoId: '',
-    responsavel: '',
+    responsavel: user?.colaborador?.id || '',
     data: '',
     motivo: '',
     origem: '',
@@ -126,7 +127,7 @@ export default function EstoqueMovimentacoes() {
   // Abrir diálogo de confirmação
   const handleAbrirConfirmacao = (movId: string) => {
     setMovimentacaoParaConfirmar(movId);
-    setResponsavelConfirmacao('');
+    setResponsavelConfirmacao(user?.colaborador?.id || '');
     setConfirmDialogOpen(true);
   };
 
@@ -279,7 +280,7 @@ export default function EstoqueMovimentacoes() {
     setDialogOpen(false);
     setFormData({
       produtoId: '',
-      responsavel: '',
+      responsavel: user?.colaborador?.id || '',
       data: '',
       motivo: '',
       origem: '',
@@ -425,14 +426,13 @@ export default function EstoqueMovimentacoes() {
                     )}
                   </div>
 
-                  {/* 2. Responsável */}
+                  {/* 2. Responsável (auto-preenchido) */}
                   <div>
                     <Label htmlFor="responsavel">Responsável *</Label>
-                    <AutocompleteColaborador
-                      value={formData.responsavel}
-                      onChange={(v) => setFormData(prev => ({ ...prev, responsavel: v }))}
-                      placeholder="Selecione o colaborador"
-                      filtrarPorTipo="estoquistas"
+                    <Input
+                      value={user?.colaborador?.nome || 'Não identificado'}
+                      disabled
+                      className="bg-muted"
                     />
                   </div>
 
@@ -628,19 +628,11 @@ export default function EstoqueMovimentacoes() {
             </AlertDialogHeader>
             <div className="py-4">
               <Label htmlFor="responsavelConfirmacao">Responsável *</Label>
-              <Select 
-                value={responsavelConfirmacao}
-                onValueChange={setResponsavelConfirmacao}
-              >
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Selecione o colaborador" />
-                </SelectTrigger>
-                <SelectContent>
-                  {colaboradoresComPermissao.map(col => (
-                    <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                value={user?.colaborador?.nome || 'Não identificado'}
+                disabled
+                className="bg-muted mt-2"
+              />
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => {

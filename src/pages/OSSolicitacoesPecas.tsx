@@ -31,7 +31,7 @@ import {
 import { getFornecedores, addFornecedor } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
-import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+import { useAuthStore } from '@/store/authStore';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { getOrdemServicoById, updateOrdemServico } from '@/utils/assistenciaApi';
 import { Eye, Check, X, Package, Clock, AlertTriangle, Layers, Send, Plus, Edit, History } from 'lucide-react';
@@ -46,6 +46,7 @@ export default function OSSolicitacoesPecas() {
   const [solicitacoes, setSolicitacoes] = useState(getSolicitacoes());
   const [lotes, setLotes] = useState(getLotes());
   const { obterLojasTipoLoja, obterNomeLoja, obterColaboradoresAtivos } = useCadastroStore();
+  const user = useAuthStore(state => state.user);
   const lojas = obterLojasTipoLoja();
   const fornecedores = getFornecedores().filter(f => f.status === 'Ativo');
   const colaboradores = obterColaboradoresAtivos();
@@ -149,7 +150,7 @@ export default function OSSolicitacoesPecas() {
     setFornecedoresPorPeca({
       [solicitacao.id]: { fornecedorId: '', valorPeca: '', formaPagamento: '', origemPeca: '', observacao: '' }
     });
-    setResponsavelCompraGlobal('');
+    setResponsavelCompraGlobal(user?.colaborador?.id || '');
     setDataRecebimentoGlobal('');
     setDataEnvioGlobal('');
     setAprovarOpen(true);
@@ -165,7 +166,7 @@ export default function OSSolicitacoesPecas() {
       fornecedoresInit[s.id] = { fornecedorId: '', valorPeca: '', formaPagamento: '', origemPeca: '', observacao: '' };
     });
     setFornecedoresPorPeca(fornecedoresInit);
-    setResponsavelCompraGlobal('');
+    setResponsavelCompraGlobal(user?.colaborador?.id || '');
     setDataRecebimentoGlobal('');
     setDataEnvioGlobal('');
     setAprovarOpen(true);
@@ -746,10 +747,10 @@ export default function OSSolicitacoesPecas() {
             <div className="border-t pt-4 space-y-4">
               <div className="space-y-2">
                 <Label>Responsável pela Compra *</Label>
-                <AutocompleteColaborador
-                  value={responsavelCompraGlobal}
-                  onChange={setResponsavelCompraGlobal}
-                  placeholder="Selecione..."
+                <Input
+                  value={user?.colaborador?.nome || 'Não identificado'}
+                  disabled
+                  className="bg-muted"
                 />
               </div>
 

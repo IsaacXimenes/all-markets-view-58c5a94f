@@ -13,7 +13,7 @@ import { getProdutos, getEstoqueStats, updateValorRecomendado, updateProdutoLoja
 import { getStatusBadgeClasses } from '@/utils/statusColors';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
-import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+import { useAuthStore } from '@/store/authStore';
 import { Download, Eye, CheckCircle, XCircle, Package, DollarSign, AlertTriangle, FileWarning, AlertCircle, Edit, Wrench, ArrowRightLeft, X, Scissors } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -30,6 +30,7 @@ import { formatCurrency, exportToCSV, parseMoeda } from '@/utils/formatUtils';
 export default function EstoqueProdutos() {
   const navigate = useNavigate();
   const { obterLojasAtivas, obterColaboradoresAtivos, obterLojaById, obterEstoquistas } = useCadastroStore();
+  const user = useAuthStore(state => state.user);
   const [produtos, setProdutos] = useState(getProdutos());
   const stats = getEstoqueStats();
   const lojasEstoque = obterLojasAtivas();
@@ -95,7 +96,7 @@ export default function EstoqueProdutos() {
   const handleOpenValorModal = (produto: Produto) => {
     setProdutoSelecionado(produto);
     setNovoValorRecomendado(produto.vendaRecomendada?.toString() || '');
-    setUsuarioSelecionado('');
+    setUsuarioSelecionado(user?.colaborador?.id || '');
     setShowValorModal(true);
   };
 
@@ -564,11 +565,10 @@ export default function EstoqueProdutos() {
 
               <div className="space-y-2">
                 <Label htmlFor="usuario">Usuário que Informou *</Label>
-                <AutocompleteColaborador
-                  value={usuarioSelecionado}
-                  onChange={setUsuarioSelecionado}
-                  placeholder="Selecione o colaborador"
-                  filtrarPorTipo="estoquistas"
+                <Input
+                  value={user?.colaborador?.nome || 'Não identificado'}
+                  disabled
+                  className="bg-muted"
                 />
               </div>
 

@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { migrarProdutosNotaParaPendentes } from '@/utils/osApi';
 import { adicionarEstoqueAcessorio, getOrCreateAcessorio } from '@/utils/acessoriosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
+import { useAuthStore } from '@/store/authStore';
 import { getPendenciaPorNota } from '@/utils/pendenciasFinanceiraApi';
 import { ModalDetalhePendencia } from '@/components/estoque/ModalDetalhePendencia';
 
@@ -42,6 +43,7 @@ export default function FinanceiroConferenciaNotas() {
   const [dialogOpen, setDialogOpen] = useState(false);
   
   const { obterLojasAtivas, obterFinanceiros, obterNomeLoja } = useCadastroStore();
+  const user = useAuthStore(state => state.user);
   
   const contasFinanceiras = getContasFinanceiras().filter(c => c.status === 'Ativo');
   const colaboradoresFinanceiros = obterFinanceiros();
@@ -51,7 +53,7 @@ export default function FinanceiroConferenciaNotas() {
   const [contaPagamento, setContaPagamento] = useState('');
   const [formaPagamento, setFormaPagamento] = useState('');
   const [parcelas, setParcelas] = useState('1');
-  const [responsavelFinanceiro, setResponsavelFinanceiro] = useState('');
+  const [responsavelFinanceiro, setResponsavelFinanceiro] = useState(user?.colaborador?.nome || '');
   const lojaDestino = ESTOQUE_SIA_LOJA_ID;
   
   // Estado para modal de pendência
@@ -113,7 +115,7 @@ export default function FinanceiroConferenciaNotas() {
     setContaPagamento('');
     setFormaPagamento('');
     setParcelas('1');
-    setResponsavelFinanceiro('');
+    setResponsavelFinanceiro(user?.colaborador?.nome || '');
     setDialogOpen(true);
   };
   
@@ -624,19 +626,11 @@ export default function FinanceiroConferenciaNotas() {
 
                         <div>
                           <Label htmlFor="responsavelFinanceiro">Responsável Financeiro *</Label>
-                          <Select value={responsavelFinanceiro} onValueChange={setResponsavelFinanceiro}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione o responsável" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {colaboradoresFinanceiros.map(col => (
-                                <SelectItem key={col.id} value={col.nome}>{col.nome}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {!responsavelFinanceiro && (
-                            <p className="text-sm text-muted-foreground mt-1">Selecione um colaborador com permissão financeira</p>
-                          )}
+                          <Input
+                            value={user?.colaborador?.nome || 'Não identificado'}
+                            disabled
+                            className="bg-muted"
+                          />
                         </div>
 
                         <div>

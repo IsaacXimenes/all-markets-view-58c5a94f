@@ -30,7 +30,7 @@ import {
 import { getNotasCompra, NotaCompra, ESTOQUE_SIA_LOJA_ID } from '@/utils/estoqueApi';
 import { migrarProdutosNotaParaPendentes } from '@/utils/osApi';
 import { useCadastroStore } from '@/store/cadastroStore';
-import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+import { useAuthStore } from '@/store/authStore';
 import { getCores } from '@/utils/coresApi';
 import { Clock, AlertTriangle, AlertCircle, Plus, Trash2, Package, CheckCircle, Zap } from 'lucide-react';
 import { toast } from 'sonner';
@@ -58,6 +58,7 @@ interface ProdutoInserido {
 export default function EstoqueNotasUrgenciaPendentes() {
   const [notasBase] = useState(getNotasCompra());
   const { obterLojasTipoLoja, obterEstoquistas, obterColaboradoresAtivos, obterNomeLoja } = useCadastroStore();
+  const user = useAuthStore(state => state.user);
   const lojas = obterLojasTipoLoja();
   const cores = getCores();
   const colaboradoresEstoque = obterEstoquistas();
@@ -146,7 +147,7 @@ export default function EstoqueNotasUrgenciaPendentes() {
   const handleAbrirInserir = (nota: NotaUrgenciaExtendida) => {
     setNotaSelecionada(nota);
     setProdutosInseridos([]);
-    setResponsavelEstoque('');
+    setResponsavelEstoque(user?.colaborador?.nome || '');
     setNovoProduto({
       imei: '',
       marca: 'Apple',
@@ -539,16 +540,11 @@ export default function EstoqueNotasUrgenciaPendentes() {
                 {/* Responsável */}
                 <div>
                   <Label htmlFor="responsavel">Responsável Estoque *</Label>
-                  <Select value={responsavelEstoque} onValueChange={setResponsavelEstoque}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o responsável" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {colaboradoresEstoque.map(col => (
-                        <SelectItem key={col.id} value={col.nome}>{col.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    value={user?.colaborador?.nome || 'Não identificado'}
+                    disabled
+                    className="bg-muted"
+                  />
                 </div>
 
                 {/* Comparação de Valores */}

@@ -14,13 +14,15 @@ import {
   formatCurrency 
 } from '@/utils/vendasDigitalApi';
 import { useCadastroStore } from '@/store/cadastroStore';
+import { useAuthStore } from '@/store/authStore';
 
 export default function VendasNovaDigital() {
   const navigate = useNavigate();
   const { obterVendedores } = useCadastroStore();
   const colaboradoresDigital = obterVendedores();
+  const user = useAuthStore(state => state.user);
   
-  const [responsavelId, setResponsavelId] = useState('');
+  const [responsavelId, setResponsavelId] = useState(user?.colaborador?.id || '');
   const [clienteNome, setClienteNome] = useState('');
   const [valorTotal, setValorTotal] = useState('');
   const [observacao, setObservacao] = useState('');
@@ -103,21 +105,14 @@ export default function VendasNovaDigital() {
               </div>
             </div>
 
-            {/* Responsável pela Venda */}
+            {/* Responsável pela Venda (auto-preenchido) */}
             <div className="space-y-2">
               <Label htmlFor="responsavel">Responsável pela Venda *</Label>
-              <Select value={responsavelId} onValueChange={setResponsavelId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o vendedor digital" />
-                </SelectTrigger>
-                <SelectContent>
-                  {colaboradoresDigital.map(col => (
-                    <SelectItem key={col.id} value={col.id}>
-                      {col.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                value={user?.colaborador?.nome || 'Não identificado'}
+                disabled
+                className="bg-muted"
+              />
             </div>
 
             {/* Nome do Cliente */}

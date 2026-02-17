@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
-import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+import { useAuthStore } from '@/store/authStore';
 import { getPecas, Peca, initializePecasWithLojaIds } from '@/utils/pecasApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { Plus, ArrowRightLeft, Package, Search, X, CheckCircle, Clock } from 'lucide-react';
@@ -39,6 +39,7 @@ let movPecaCounter = 1;
 export default function OSMovimentacaoPecas() {
   const { toast } = useToast();
   const { obterLojasTipoLoja, obterNomeLoja, obterColaboradoresAtivos } = useCadastroStore();
+  const user = useAuthStore(state => state.user);
   const lojas = obterLojasTipoLoja();
   const colaboradores = obterColaboradoresAtivos();
 
@@ -63,7 +64,7 @@ export default function OSMovimentacaoPecas() {
   const [formData, setFormData] = useState({
     quantidade: '1',
     destino: '',
-    responsavel: '',
+    responsavel: user?.colaborador?.id || '',
     motivo: '',
     data: '',
   });
@@ -107,7 +108,7 @@ export default function OSMovimentacaoPecas() {
 
   const resetForm = () => {
     setPecaSelecionada(null);
-    setFormData({ quantidade: '1', destino: '', responsavel: '', motivo: '', data: '' });
+    setFormData({ quantidade: '1', destino: '', responsavel: user?.colaborador?.id || '', motivo: '', data: '' });
   };
 
   const handleRegistrar = (e: React.FormEvent<HTMLFormElement>) => {
@@ -382,14 +383,13 @@ export default function OSMovimentacaoPecas() {
               />
             </div>
 
-            {/* 3. Responsável */}
+            {/* 3. Responsável (auto-preenchido) */}
             <div>
               <Label htmlFor="responsavel">Responsável *</Label>
-              <AutocompleteColaborador
-                value={formData.responsavel}
-                onChange={(v) => setFormData(prev => ({ ...prev, responsavel: v }))}
-                placeholder="Selecione o colaborador"
-                filtrarPorTipo="estoquistas"
+              <Input
+                value={user?.colaborador?.nome || 'Não identificado'}
+                disabled
+                className="bg-muted"
               />
             </div>
 

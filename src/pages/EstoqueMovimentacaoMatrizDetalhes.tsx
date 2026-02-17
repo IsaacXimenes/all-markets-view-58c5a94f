@@ -37,6 +37,7 @@ import {
 import { formatIMEI } from '@/utils/imeiMask';
 import { cn } from '@/lib/utils';
 import { BarcodeScanner } from '@/components/ui/barcode-scanner';
+import { useAuthStore } from '@/store/authStore';
 
 // Timer Regressivo
 const TimerRegressivo = ({ dataLimite }: { dataLimite: string }) => {
@@ -99,12 +100,13 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { obterNomeLoja, obterColaboradoresAtivos, obterNomeColaborador } = useCadastroStore();
+  const user = useAuthStore(state => state.user);
   
   const [movimentacao, setMovimentacao] = useState<MovimentacaoMatriz | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showDevolucaoModal, setShowDevolucaoModal] = useState(false);
   const [imeiDevolucao, setImeiDevolucao] = useState('');
-  const [responsavelDevolucao, setResponsavelDevolucao] = useState('');
+  const [responsavelDevolucao, setResponsavelDevolucao] = useState(user?.colaborador?.id || '');
   const [showScanner, setShowScanner] = useState(false);
   
   const colaboradores = obterColaboradoresAtivos();
@@ -523,16 +525,11 @@ export default function EstoqueMovimentacaoMatrizDetalhes() {
             
             <div className="space-y-2">
               <Label>Responsável pela Conferência</Label>
-              <Select value={responsavelDevolucao} onValueChange={setResponsavelDevolucao}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent className="z-[100]">
-                  {colaboradores.map(col => (
-                    <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                value={user?.colaborador?.nome || 'Não identificado'}
+                disabled
+                className="bg-muted"
+              />
             </div>
             
             {/* Lista de pendentes para referência */}

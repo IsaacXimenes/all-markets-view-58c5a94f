@@ -25,6 +25,7 @@ import {
   notificarFinanceiroAdesao, formatCurrency
 } from '@/utils/garantiaExtendidaApi';
 import { adicionarVendaParaConferencia } from '@/utils/conferenciaGestorApi';
+import { useAuthStore } from '@/store/authStore';
 
 export default function GarantiaExtendidaDetalhes() {
   const { id } = useParams();
@@ -38,6 +39,7 @@ export default function GarantiaExtendidaDetalhes() {
   const maquinas = getMaquinasCartao();
   const meiosPagamento = getModelosPagamento();
   const planosGarantia = getPlanosGarantia();
+  const user = useAuthStore(state => state.user);
   
   // Estados
   const [tipoTratativa, setTipoTratativa] = useState<string>('');
@@ -55,7 +57,7 @@ export default function GarantiaExtendidaDetalhes() {
   // Estados para confirmação dupla
   const [dialogConfirmacao1, setDialogConfirmacao1] = useState(false);
   const [dialogConfirmacao2, setDialogConfirmacao2] = useState(false);
-  const [responsavelConfirmacao, setResponsavelConfirmacao] = useState('');
+  const [responsavelConfirmacao, setResponsavelConfirmacao] = useState(user?.colaborador?.id || '');
   const [observacaoFinal, setObservacaoFinal] = useState('');
   const [dadosAdesaoTemp, setDadosAdesaoTemp] = useState<any>(null);
   
@@ -742,16 +744,11 @@ export default function GarantiaExtendidaDetalhes() {
             
             <div>
               <Label>Responsável pela Confirmação *</Label>
-              <Select value={responsavelConfirmacao} onValueChange={setResponsavelConfirmacao}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {colaboradores.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                value={user?.colaborador?.nome || 'Não identificado'}
+                disabled
+                className="bg-muted"
+              />
             </div>
             
             <p className="text-sm text-muted-foreground">

@@ -45,6 +45,7 @@ import { getPendenciaPorNota } from '@/utils/pendenciasFinanceiraApi';
 import { validarAparelhosEmLote, Produto } from '@/utils/estoqueApi';
 import { ModalRetiradaPecas } from '@/components/estoque/ModalRetiradaPecas';
 import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
+import { useAuthStore } from '@/store/authStore';
 
 // Tipos de status disponíveis
 type StatusAparelhosPendentes = 
@@ -58,6 +59,7 @@ type StatusAparelhosPendentes =
 export default function EstoqueProdutosPendentes() {
   const navigate = useNavigate();
   const { obterLojasTipoLoja, obterLojaById, obterNomeLoja, obterEstoquistas } = useCadastroStore();
+  const user = useAuthStore(state => state.user);
   const [produtosPendentes, setProdutosPendentes] = useState<ProdutoPendente[]>([]);
   
   // Estado para linha selecionada (destaque visual)
@@ -67,7 +69,7 @@ export default function EstoqueProdutosPendentes() {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [dialogValidacaoLote, setDialogValidacaoLote] = useState(false);
   const [loteForm, setLoteForm] = useState({
-    responsavel: '',
+    responsavel: user?.colaborador?.nome || '',
     observacoes: ''
   });
   
@@ -780,19 +782,11 @@ export default function EstoqueProdutosPendentes() {
 
                 <div>
                   <Label>Responsável Conferência *</Label>
-                  <Select 
-                    value={loteForm.responsavel} 
-                    onValueChange={(v) => setLoteForm(prev => ({ ...prev, responsavel: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {estoquistas.map(e => (
-                        <SelectItem key={e.id} value={e.nome}>{e.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Input
+                    value={user?.colaborador?.nome || 'Não identificado'}
+                    disabled
+                    className="bg-muted"
+                  />
                 </div>
 
                 <div>

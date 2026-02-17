@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { ResponsiveTableContainer } from '@/components/ui/ResponsiveContainers';
+import { useAuthStore } from '@/store/authStore';
 
 interface MovimentacaoAcessorio {
   id: string;
@@ -81,6 +82,7 @@ let movimentacoesData = [...mockMovimentacoes];
 
 export default function EstoqueMovimentacoesAcessorios() {
   const { obterLojasTipoLoja, obterColaboradoresAtivos, obterLojaById, obterNomeLoja } = useCadastroStore();
+  const user = useAuthStore(state => state.user);
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoAcessorio[]>(movimentacoesData);
   const [origemFilter, setOrigemFilter] = useState<string>('todas');
   const [destinoFilter, setDestinoFilter] = useState<string>('todas');
@@ -133,7 +135,7 @@ export default function EstoqueMovimentacoesAcessorios() {
   // Abrir diálogo de confirmação
   const handleAbrirConfirmacao = (movId: string) => {
     setMovimentacaoParaConfirmar(movId);
-    setResponsavelConfirmacao('');
+    setResponsavelConfirmacao(user?.colaborador?.id || '');
     setConfirmDialogOpen(true);
   };
 
@@ -398,16 +400,12 @@ export default function EstoqueMovimentacoesAcessorios() {
 
                   <div>
                     <Label htmlFor="responsavel">Responsável *</Label>
-                    <Select name="responsavel" required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o colaborador" />
-                      </SelectTrigger>
-                      <SelectContent className="z-[100]">
-                        {colaboradoresComPermissao.map(col => (
-                          <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <input type="hidden" name="responsavel" value={user?.colaborador?.id || ''} />
+                    <Input
+                      value={user?.colaborador?.nome || 'Não identificado'}
+                      disabled
+                      className="bg-muted"
+                    />
                   </div>
 
                   <div>
@@ -543,19 +541,11 @@ export default function EstoqueMovimentacoesAcessorios() {
             </AlertDialogHeader>
             <div className="py-4">
               <Label htmlFor="responsavelConfirmacao">Responsável *</Label>
-              <Select 
-                value={responsavelConfirmacao}
-                onValueChange={setResponsavelConfirmacao}
-              >
-                <SelectTrigger className="mt-2">
-                  <SelectValue placeholder="Selecione o colaborador" />
-                </SelectTrigger>
-                <SelectContent>
-                  {colaboradoresComPermissao.map(col => (
-                    <SelectItem key={col.id} value={col.id}>{col.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                value={user?.colaborador?.nome || 'Não identificado'}
+                disabled
+                className="bg-muted mt-2"
+              />
             </div>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => {

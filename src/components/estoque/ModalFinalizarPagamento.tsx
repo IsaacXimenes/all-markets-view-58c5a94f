@@ -332,21 +332,11 @@ export function ModalFinalizarPagamento({
 
             <div>
               <Label>Responsável *</Label>
-              <Select 
-                value={form.responsavel} 
-                onValueChange={(v) => setForm(prev => ({ ...prev, responsavel: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {colaboradoresFinanceiros.map(col => (
-                    <SelectItem key={col.id} value={col.nome}>
-                      {col.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                value={user?.colaborador?.nome || usuarioLogado}
+                disabled
+                className="bg-muted"
+              />
             </div>
 
             <FileUploadComprovante

@@ -50,6 +50,7 @@ import {
 import { getColaboradores, getCargos, getFornecedores } from '@/utils/cadastrosApi';
 
 import { formatCurrency } from '@/utils/formatUtils';
+import { useAuthStore } from '@/store/authStore';
 
 const formatDateTime = (dateString: string) => {
   const date = new Date(dateString);
@@ -78,11 +79,12 @@ export default function OSProdutoDetalhes() {
   const [produto, setProduto] = useState<ProdutoPendente | null>(null);
   const [colaboradores, setColaboradores] = useState<{ id: string; nome: string }[]>([]);
   const [fornecedores, setFornecedores] = useState<string[]>([]);
+  const user = useAuthStore(state => state.user);
   
   // Form state
   const [parecerStatus, setParecerStatus] = useState<string>('');
   const [parecerObservacoes, setParecerObservacoes] = useState('');
-  const [parecerResponsavel, setParecerResponsavel] = useState('');
+  const [parecerResponsavel, setParecerResponsavel] = useState(user?.colaborador?.nome || '');
   const [pecas, setPecas] = useState<PecaForm[]>([]);
 
   // Modal de confirmação dupla
@@ -383,18 +385,11 @@ export default function OSProdutoDetalhes() {
 
               <div className="space-y-2">
                 <Label>Responsável *</Label>
-                <Select value={parecerResponsavel} onValueChange={setParecerResponsavel}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o responsável" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {colaboradores.map((colab) => (
-                      <SelectItem key={colab.id} value={colab.nome}>
-                        {colab.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  value={user?.colaborador?.nome || 'Não identificado'}
+                  disabled
+                  className="bg-muted"
+                />
               </div>
 
               {/* Peças para Assistência (apenas se Ajustes realizados) */}

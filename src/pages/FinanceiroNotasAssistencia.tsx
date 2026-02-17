@@ -24,7 +24,7 @@ import { useCadastroStore } from '@/store/cadastroStore';
 import { ResponsiveCardGrid, ResponsiveFilterGrid } from '@/components/ui/ResponsiveContainers';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
-import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+import { useAuthStore } from '@/store/authStore';
 import { getStatusRowClass } from '@/utils/statusColors';
 
 export default function FinanceiroNotasAssistencia() {
@@ -33,6 +33,7 @@ export default function FinanceiroNotasAssistencia() {
   const [dialogOpen, setDialogOpen] = useState(false);
   
   const { obterLojasAtivas, obterFinanceiros, obterNomeLoja, obterColaboradorById } = useCadastroStore();
+  const user = useAuthStore(state => state.user);
   
   const contasFinanceiras = getContasFinanceiras().filter(c => c.status === 'Ativo');
   const colaboradoresFinanceiros = obterFinanceiros();
@@ -41,7 +42,7 @@ export default function FinanceiroNotasAssistencia() {
   
   const [contaPagamento, setContaPagamento] = useState('');
   const [formaPagamento, setFormaPagamento] = useState('');
-  const [responsavelFinanceiro, setResponsavelFinanceiro] = useState('');
+  const [responsavelFinanceiro, setResponsavelFinanceiro] = useState(user?.colaborador?.nome || '');
   const [comprovante, setComprovante] = useState('');
   const [comprovanteNome, setComprovanteNome] = useState('');
 
@@ -84,7 +85,7 @@ export default function FinanceiroNotasAssistencia() {
     setNotaSelecionada(nota);
     setContaPagamento('');
     setFormaPagamento('');
-    setResponsavelFinanceiro('');
+    setResponsavelFinanceiro(user?.colaborador?.nome || '');
     setComprovante('');
     setComprovanteNome('');
     setDialogOpen(true);
@@ -430,13 +431,10 @@ export default function FinanceiroNotasAssistencia() {
 
                         <div>
                           <Label htmlFor="responsavelFinanceiro">Responsável Financeiro *</Label>
-                          <AutocompleteColaborador
-                            value={responsavelFinanceiro}
-                            onChange={(id) => {
-                              const col = obterColaboradorById(id);
-                              setResponsavelFinanceiro(col?.nome || id);
-                            }}
-                            placeholder="Buscar colaborador..."
+                          <Input
+                            value={user?.colaborador?.nome || 'Não identificado'}
+                            disabled
+                            className="bg-muted"
                           />
                         </div>
 
