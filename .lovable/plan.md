@@ -1,42 +1,28 @@
 
 
-## Ajuste: Trocar Checkboxes por Listas Suspensas (Select) no Quadro de Pecas/Servicos
+## Adicionar 4 Contas de Dinheiro para Assistencias
 
-### Problema
-Os checkboxes (flags) de "Peca no estoque", "Fornecedor" e "Servico Terceirizado" estao com comportamento inconsistente -- as vezes marcam, as vezes nao. Isso ocorre por conflitos na propagacao de eventos do componente `Checkbox` do Radix UI dentro do layout de cards.
+### O que sera feito
 
-### Solucao
-Substituir os 3 checkboxes por um unico campo **Select (lista suspensa)** com as opcoes de origem/tipo da peca. Isso resolve o bug e melhora a usabilidade.
+Adicionar 4 novas contas financeiras do tipo "Dinheiro" vinculadas as lojas de Assistencia, e inclui-las na secao "Contas Segregadas" do Extrato por Conta.
 
-O Select tera as seguintes opcoes:
-- **Nenhum** (valor padrao -- peca manual sem flags)
-- **Peca no estoque** (ativa selecao de peca do estoque)
-- **Fornecedor** (ativa campo de fornecedor)
-- **Servico Terceirizado** (ativa campos de terceirizado)
+### Novas Contas
 
-### Arquivos a Editar (3 arquivos)
+| ID | Nome | Vinculada a | CNPJ |
+|---|---|---|---|
+| CTA-022 | Dinheiro - Assistencia JK Shopping | Assistencia - Shopping JK (94dbe2b1) | 62.968.637/0001-23 |
+| CTA-023 | Dinheiro - Assistencia Shopping Sul | Assistencia - Shopping Sul (ba1802b9) | 55.449.390/0001-73 |
+| CTA-024 | Dinheiro - Assistencia Aguas Lindas | Assistencia - Aguas Lindas (be961085) | 56.221.743/0001-46 |
+| CTA-025 | Dinheiro - Assistencia Online | Loja - Online (fcc78c1a) | 46.197.533/0001-06 |
 
-| Arquivo | Alteracao |
-|---|---|
-| `src/pages/OSAssistenciaNova.tsx` | Substituir 3 checkboxes por 1 Select de "Origem da Peca" |
-| `src/pages/OSAssistenciaEditar.tsx` | Mesmo ajuste |
-| `src/pages/OSAssistenciaDetalhes.tsx` | Mesmo ajuste (modo edicao inline) |
+Todas com: tipo "Dinheiro", saldo R$ 0,00, statusMaquina "Propria", status "Ativo", notaFiscal true.
 
-### Detalhes Tecnicos
+### Alteracoes por Arquivo
 
-Em cada arquivo, os 3 checkboxes serao substituidos por um unico `Select`:
+**1. `src/utils/cadastrosApi.ts`**
+- Inserir as 4 novas contas (CTA-022 a CTA-025) no array `contasFinanceiras`, logo antes do fechamento do array (apos CTA-021)
 
-```text
-Antes (3 checkboxes):
-[x] Peca no estoque  [ ] Fornecedor  [ ] Servico Terceirizado
-
-Depois (1 Select):
-Origem da Peca: [ Selecione... v ]
-  - Nenhum
-  - Peca no estoque
-  - Fornecedor
-  - Servico Terceirizado
-```
-
-A logica interna sera mantida: ao selecionar uma opcao, os campos `pecaNoEstoque`, `pecaDeFornecedor` e `servicoTerceirizado` serao atualizados automaticamente (marcando o selecionado como `true` e os demais como `false`), garantindo que os campos condicionais continuem aparecendo corretamente.
+**2. `src/pages/FinanceiroExtratoContas.tsx`**
+- Adicionar CTA-022, CTA-023, CTA-024, CTA-025 ao array `CONTAS_DINHEIRO_SEGREGADAS` (ou criar constante propria) para que aparecam na secao "Contas Segregadas"
+- Adicionar os novos IDs na lista `ordemSegregadas` para manter a ordenacao correta dos cards (assistencia bancaria, depois dinheiro loja, depois dinheiro assistencia)
 
