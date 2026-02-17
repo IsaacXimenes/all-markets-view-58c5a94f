@@ -22,6 +22,7 @@ import {
   updateOrdemServico
 } from '@/utils/assistenciaApi';
 import { getClientes, getFornecedores } from '@/utils/cadastrosApi';
+import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { getSolicitacoesByOS, addSolicitacao, SolicitacaoPeca } from '@/utils/solicitacaoPecasApi';
 import { getPecas } from '@/utils/pecasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -750,6 +751,65 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                           </label>
                           <span className="ml-auto font-medium">{formatCurrency(peca.valorTotal)}</span>
                         </div>
+
+                        {peca.pecaDeFornecedor && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
+                            <div>
+                              <label className="text-xs text-muted-foreground">Fornecedor</label>
+                              <AutocompleteFornecedor
+                                value={peca.fornecedorId || ''}
+                                onChange={(v) => {
+                                  const updated = [...editPecas];
+                                  updated[index] = { ...updated[index], fornecedorId: v };
+                                  setEditPecas(updated);
+                                }}
+                                placeholder="Selecione o fornecedor..."
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {peca.servicoTerceirizado && (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t">
+                            <div>
+                              <label className="text-xs text-muted-foreground">Descrição do Serviço Terceirizado</label>
+                              <Input
+                                value={peca.descricaoTerceirizado || ''}
+                                onChange={(e) => {
+                                  const updated = [...editPecas];
+                                  updated[index] = { ...updated[index], descricaoTerceirizado: e.target.value };
+                                  setEditPecas(updated);
+                                }}
+                                placeholder="Descreva o serviço..."
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground">Fornecedor do Serviço</label>
+                              <AutocompleteFornecedor
+                                value={peca.fornecedorId || ''}
+                                onChange={(v) => {
+                                  const updated = [...editPecas];
+                                  updated[index] = { ...updated[index], fornecedorId: v };
+                                  setEditPecas(updated);
+                                }}
+                                placeholder="Selecione..."
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-muted-foreground">Nome Resp. Fornecedor *</label>
+                              <Input
+                                value={(peca as any).nomeRespFornecedor || ''}
+                                onChange={(e) => {
+                                  const updated = [...editPecas];
+                                  updated[index] = { ...updated[index], nomeRespFornecedor: e.target.value } as any;
+                                  setEditPecas(updated);
+                                }}
+                                placeholder="Nome do responsável..."
+                                className={cn(!(peca as any).nomeRespFornecedor && 'border-destructive')}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
