@@ -172,7 +172,8 @@ export default function OSAssistenciaEditar() {
     }
 
     setLoading(false);
-  }, [id, navigate, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const createEmptyPeca = (): PecaForm => ({
     id: `PC-NEW-${Date.now()}`,
