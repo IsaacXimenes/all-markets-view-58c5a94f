@@ -8,13 +8,16 @@ import { useIsMobile } from '@/hooks/use-mobile';
 export const LoginCard = () => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [formVisible, setFormVisible] = useState(true);
-  const [bgPulse, setBgPulse] = useState(false);
+  const [bgFading, setBgFading] = useState(false);
   const isMobile = useIsMobile();
 
   const handleLoginSuccess = () => {
-    setBgPulse(true);
+    // Step 1: fade out form
     setFormVisible(false);
-    setTimeout(() => setIsTransitioning(true), 1000);
+    // Step 2: after form fades, fade out entire background
+    setTimeout(() => setBgFading(true), 500);
+    // Step 3: navigate
+    setTimeout(() => setIsTransitioning(true), 1200);
   };
 
   return (
@@ -22,24 +25,9 @@ export const LoginCard = () => {
       <motion.div
         className="h-screen w-full bg-cover bg-center bg-no-repeat flex items-center justify-center"
         style={{ backgroundImage: `url(${loginBg})` }}
-        animate={bgPulse ? {
-          filter: ['brightness(1)', 'brightness(1.3)', 'brightness(1.05)'],
-          scale: [1, 1.05, 1.05],
-        } : {}}
-        transition={{ duration: 1.2, ease: [0.4, 0, 0.2, 1] }}
+        animate={bgFading ? { opacity: 0 } : { opacity: 1 }}
+        transition={{ duration: 1, ease: [0.4, 0, 0.2, 1] }}
       >
-        <AnimatePresence>
-          {bgPulse && (
-            <motion.div
-              className="fixed inset-0 z-10 pointer-events-none"
-              style={{ backgroundColor: 'rgba(247, 187, 5, 0.1)' }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0.3, 0] }}
-              transition={{ duration: 1, ease: 'easeInOut' }}
-            />
-          )}
-        </AnimatePresence>
-
         <AnimatePresence>
           {formVisible && (
             <motion.div
@@ -50,7 +38,7 @@ export const LoginCard = () => {
                 marginLeft: isMobile ? '0' : '26%',
               }}
               initial={{ opacity: 1 }}
-              exit={{ opacity: 0, y: 10 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
             >
               <LoginForm onLoginSuccess={handleLoginSuccess} />
