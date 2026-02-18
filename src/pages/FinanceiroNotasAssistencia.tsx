@@ -158,10 +158,10 @@ export default function FinanceiroNotasAssistencia() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#212121]">Qtd de Notas</p>
-                  <p className="text-2xl font-bold text-[#111111]">{estatisticas.qtdNotas}</p>
+                  <p className="text-xs text-secondary-foreground">Qtd de Notas</p>
+                  <p className="text-2xl font-bold text-foreground">{estatisticas.qtdNotas}</p>
                 </div>
-                <FileText className="h-8 w-8 text-[#7F7F7F] opacity-40" />
+                <FileText className="h-8 w-8 text-muted-foreground opacity-40" />
               </div>
             </CardContent>
           </Card>
@@ -169,10 +169,10 @@ export default function FinanceiroNotasAssistencia() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#212121]">Pendentes</p>
-                  <p className="text-2xl font-bold text-[#F7BB05]">{estatisticas.qtdPendentes}</p>
+                  <p className="text-xs text-secondary-foreground">Pendentes</p>
+                  <p className="text-2xl font-bold text-primary">{estatisticas.qtdPendentes}</p>
                 </div>
-                <Clock className="h-8 w-8 text-[#F7BB05] opacity-40" />
+                <Clock className="h-8 w-8 text-primary opacity-40" />
               </div>
             </CardContent>
           </Card>
@@ -180,10 +180,10 @@ export default function FinanceiroNotasAssistencia() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-[#212121]">Conferidas</p>
-                  <p className="text-2xl font-bold text-green-600">{estatisticas.qtdConferidas}</p>
+                  <p className="text-xs text-secondary-foreground">Conferidas</p>
+                  <p className="text-2xl font-bold text-success">{estatisticas.qtdConferidas}</p>
                 </div>
-                <CheckCircle className="h-8 w-8 text-green-600 opacity-40" />
+                <CheckCircle className="h-8 w-8 text-success opacity-40" />
               </div>
             </CardContent>
           </Card>
@@ -191,10 +191,10 @@ export default function FinanceiroNotasAssistencia() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
-                  <p className="text-xs text-[#212121]">Total Pendente</p>
-                  <p className="text-2xl font-bold text-[#F7BB05] truncate">{formatCurrency(totalPendente)}</p>
+                  <p className="text-xs text-secondary-foreground">Total Pendente</p>
+                  <p className="text-2xl font-bold text-primary truncate">{formatCurrency(totalPendente)}</p>
                 </div>
-                <DollarSign className="h-8 w-8 text-[#F7BB05] opacity-40 shrink-0" />
+                <DollarSign className="h-8 w-8 text-primary opacity-40 shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -205,7 +205,7 @@ export default function FinanceiroNotasAssistencia() {
           <CardContent className="p-4">
             <ResponsiveFilterGrid cols={5}>
               <div className="space-y-1">
-                <Label className="text-xs text-[#212121]">Data Início</Label>
+                <Label className="text-xs text-secondary-foreground">Data Início</Label>
                 <Input
                   type="date"
                   value={filters.dataInicio}
@@ -213,7 +213,7 @@ export default function FinanceiroNotasAssistencia() {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-[#212121]">Data Fim</Label>
+                <Label className="text-xs text-secondary-foreground">Data Fim</Label>
                 <Input
                   type="date"
                   value={filters.dataFim}
@@ -221,7 +221,7 @@ export default function FinanceiroNotasAssistencia() {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-[#212121]">Fornecedor</Label>
+                <Label className="text-xs text-secondary-foreground">Fornecedor</Label>
                 <AutocompleteFornecedor
                   value={filters.fornecedor === 'todos' ? '' : filters.fornecedor}
                   onChange={(v) => setFilters({ ...filters, fornecedor: v || 'todos' })}
@@ -229,7 +229,7 @@ export default function FinanceiroNotasAssistencia() {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-[#212121]">Loja Solicitante</Label>
+                <Label className="text-xs text-secondary-foreground">Loja Solicitante</Label>
                 <AutocompleteLoja
                   value={filters.lojaSolicitante === 'todos' ? '' : filters.lojaSolicitante}
                   onChange={(v) => setFilters({ ...filters, lojaSolicitante: v || 'todos' })}
@@ -237,7 +237,7 @@ export default function FinanceiroNotasAssistencia() {
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-[#212121]">Status</Label>
+                <Label className="text-xs text-secondary-foreground">Status</Label>
                 <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Todos" />
@@ -251,7 +251,7 @@ export default function FinanceiroNotasAssistencia() {
               </div>
             </ResponsiveFilterGrid>
             <div className="flex justify-end mt-3">
-              <Button variant="outline" size="sm" onClick={handleLimpar} className="border-[#212121] text-[#212121]">
+              <Button variant="outline" size="sm" onClick={handleLimpar}>
                 <X className="h-4 w-4 mr-1" />
                 Limpar
               </Button>
@@ -264,7 +264,7 @@ export default function FinanceiroNotasAssistencia() {
           <CardHeader>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <CardTitle>Notas de Assistência</CardTitle>
-              <Button onClick={handleExport} variant="outline" className="border-[#212121] text-[#212121]">
+              <Button onClick={handleExport} variant="outline">
                 <Download className="h-4 w-4 mr-2" />
                 Exportar CSV
               </Button>
@@ -274,17 +274,17 @@ export default function FinanceiroNotasAssistencia() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-b border-[#7F7F7F]/20">
-                    <TableHead className="text-[#212121]">Data/Hora</TableHead>
-                    <TableHead className="text-[#212121]">ID</TableHead>
-                    <TableHead className="text-[#212121]">Fornecedor</TableHead>
-                    <TableHead className="text-[#212121]">Loja Solicitante</TableHead>
-                    <TableHead className="text-[#212121]">OS Vinculada</TableHead>
-                    <TableHead className="text-[#212121]">Tipo</TableHead>
-                    <TableHead className="text-[#212121] text-right">Valor Total</TableHead>
-                    <TableHead className="text-[#212121]">Status</TableHead>
-                    <TableHead className="text-[#212121]">Dias</TableHead>
-                    <TableHead className="text-[#212121]">Ações</TableHead>
+                  <TableRow>
+                    <TableHead>Data/Hora</TableHead>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Fornecedor</TableHead>
+                    <TableHead>Loja Solicitante</TableHead>
+                    <TableHead>OS Vinculada</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead className="text-right">Valor Total</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Dias</TableHead>
+                    <TableHead>Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -300,50 +300,50 @@ export default function FinanceiroNotasAssistencia() {
                       return (
                         <TableRow 
                           key={nota.id}
-                          className="bg-white border-b border-[#7F7F7F]/15 hover:bg-gray-50/50"
+                          className="bg-card hover:bg-muted/50"
                         >
                           <TableCell>
-                            <div className="flex items-center gap-1.5 text-xs text-[#212121] whitespace-nowrap">
-                              <Clock className="h-3 w-3 text-[#7F7F7F]" />
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+                              <Clock className="h-3 w-3" />
                               {new Date(nota.dataCriacao).toLocaleString('pt-BR', {
                                 day: '2-digit', month: '2-digit', year: 'numeric',
                                 hour: '2-digit', minute: '2-digit'
                               })}
                             </div>
                           </TableCell>
-                          <TableCell className="font-mono text-xs text-[#111111]">{nota.id}</TableCell>
-                          <TableCell className="text-[#111111]">{getFornecedorNome(nota.fornecedor)}</TableCell>
-                          <TableCell className="text-[#111111]">{obterNomeLoja(nota.lojaSolicitante)}</TableCell>
-                          <TableCell className="font-mono text-xs text-[#111111]">{nota.osId || '-'}</TableCell>
+                          <TableCell className="font-mono text-xs">{nota.id}</TableCell>
+                          <TableCell>{getFornecedorNome(nota.fornecedor)}</TableCell>
+                          <TableCell>{obterNomeLoja(nota.lojaSolicitante)}</TableCell>
+                          <TableCell className="font-mono text-xs">{nota.osId || '-'}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="text-[#212121]">Peças</Badge>
+                            <Badge variant="outline">Peças</Badge>
                           </TableCell>
-                          <TableCell className="font-semibold text-[#111111] text-right">
+                          <TableCell className="font-semibold text-right">
                             {formatCurrency(nota.valorTotal)}
                           </TableCell>
                           <TableCell>
                             {nota.status === 'Concluído' ? (
-                              <Badge className="bg-green-500/15 text-green-700 border border-green-500/30">
+                              <Badge className="bg-success/15 text-success border border-success/30">
                                 {nota.status}
                               </Badge>
                             ) : (
-                              <Badge className="bg-[#F7BB05]/15 text-[#F48F03] border border-[#F7BB05]/30">
+                              <Badge className="bg-primary/15 text-warning border border-primary/30">
                                 {nota.status}
                               </Badge>
                             )}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className={
-                              dias >= 7 ? 'bg-red-500/10 text-red-600 border-red-500/30' :
-                              dias >= 5 ? 'bg-[#F7BB05]/15 text-[#F48F03] border-[#F7BB05]/30' :
-                              'bg-[#7F7F7F]/10 text-[#7F7F7F]'
+                              dias >= 7 ? 'bg-destructive/10 text-destructive' :
+                              dias >= 5 ? 'bg-primary/15 text-warning' :
+                              'bg-muted text-muted-foreground'
                             }>
                               {dias}d
                             </Badge>
                           </TableCell>
                           <TableCell>
                             {nota.status === 'Pendente' ? (
-                              <Button size="sm" onClick={() => handleVerNota(nota)} className="bg-[#F7BB05] text-[#111111] hover:bg-[#F48F03]">
+                              <Button size="sm" onClick={() => handleVerNota(nota)}>
                                 <Check className="h-4 w-4 mr-1" />
                                 Conferir
                               </Button>
@@ -360,11 +360,11 @@ export default function FinanceiroNotasAssistencia() {
                 </TableBody>
               </Table>
             </div>
-            <div className="mt-4 pt-4 border-t border-[#7F7F7F]/20 flex justify-between items-center">
-              <span className="text-sm text-[#212121]">
+            <div className="mt-4 pt-4 border-t flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">
                 {filteredNotas.filter(n => n.status === 'Pendente').length} nota(s) pendente(s)
               </span>
-              <span className="text-lg font-bold text-[#111111]">
+              <span className="text-lg font-bold text-foreground">
                 Total Pendente: {formatCurrency(totalPendente)}
               </span>
             </div>
