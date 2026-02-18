@@ -10,7 +10,7 @@ export interface SolicitacaoPeca {
   modeloImei: string;
   lojaSolicitante: string;
   dataSolicitacao: string;
-  status: 'Pendente' | 'Aprovada' | 'Rejeitada' | 'Enviada' | 'Recebida' | 'Aguardando Aprovação' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Aguardando Chegada' | 'Em Estoque' | 'Cancelada';
+  status: 'Pendente' | 'Aprovada' | 'Rejeitada' | 'Enviada' | 'Recebida' | 'Aguardando Aprovação' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Aguardando Chegada' | 'Em Estoque' | 'Cancelada' | 'Devolvida ao Fornecedor' | 'Retida para Estoque';
   fornecedorId?: string;
   valorPeca?: number;
   responsavelCompra?: string;
@@ -25,6 +25,9 @@ export interface SolicitacaoPeca {
   observacao?: string;
   bancoDestinatario?: string;
   chavePix?: string;
+  osCancelada?: boolean;
+  motivoTratamento?: string;
+  tratadaPor?: string;
 }
 
 export interface LoteTimeline {
@@ -670,3 +673,74 @@ export const calcularSLASolicitacao = (dataSolicitacao: string): number => {
 
 // formatCurrency removido - usar import { formatCurrency } from '@/utils/formatUtils'
 export { formatCurrency } from '@/utils/formatUtils';
+
+// Marcar solicitações ativas de uma OS cancelada
+export const marcarSolicitacoesOSCancelada = (osId: string): void => {
+  solicitacoes.forEach((sol, idx) => {
+    if (sol.osId === osId && ['Pendente', 'Aprovada', 'Enviada', 'Recebida', 'Pagamento - Financeiro', 'Pagamento Finalizado', 'Aguardando Chegada', 'Em Estoque'].includes(sol.status)) {
+      solicitacoes[idx] = { ...sol, osCancelada: true };
+    }
+  });
+};
+
+// Tratar peça de OS cancelada
+export const tratarPecaOSCancelada = (
+  id: string, 
+  decisao: 'devolver' | 'reter', 
+  motivo: string, 
+  responsavel: string
+): SolicitacaoPeca | null => {
+  const index = solicitacoes.findIndex(s => s.id === id);
+  if (index === -1) return null;
+  
+  const sol = solicitacoes[index];
+  if (!sol.osCancelada) return null;
+
+  if (decisao === 'devolver') {
+    solicitacoes[index] = {
+      ...sol,
+      status: 'Devolvida ao Fornecedor',
+      motivoTratamento: motivo,
+      tratadaPor: responsavel
+    };
+  } else {
+    solicitacoes[index] = {
+      ...sol,
+      status: 'Retida para Estoque',
+      motivoTratamento: motivo,
+      tratadaPor: responsavel
+    };
+  }
+
+  // Registrar na timeline da OS
+  const os = getOrdemServicoById(sol.osId);
+  if (os) {
+    const descricaoTimeline = decisao === 'devolver'
+      ? `Peça "${sol.peca}" devolvida ao fornecedor por ${responsavel} - Motivo: ${motivo}`
+      : `Peça "${sol.peca}" retida para estoque próprio por ${responsavel} - Motivo: ${motivo}`;
+    
+    updateOrdemServico(sol.osId, {
+      timeline: [...os.timeline, {
+        data: new Date().toISOString(),
+        tipo: 'peca',
+        descricao: descricaoTimeline,
+        responsavel
+      }]
+    });
+  }
+
+  return solicitacoes[index];
+};
+
+// Verificar se peça já foi paga (nota concluída)
+export const isPecaPaga = (sol: SolicitacaoPeca): boolean => {
+  if (sol.status === 'Recebida' || sol.status === 'Pagamento Finalizado') return true;
+  if (sol.loteId) {
+    const lote = getLoteById(sol.loteId);
+    if (lote && lote.notaId) {
+      const nota = notasAssistencia.find(n => n.id === lote.notaId);
+      if (nota && nota.status === 'Concluído') return true;
+    }
+  }
+  return false;
+};

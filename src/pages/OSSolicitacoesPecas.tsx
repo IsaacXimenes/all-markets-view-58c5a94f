@@ -26,7 +26,9 @@ import {
   LotePecas,
   LoteTimeline,
   editarLote,
-  getLoteById
+  getLoteById,
+  tratarPecaOSCancelada,
+  isPecaPaga
 } from '@/utils/solicitacaoPecasApi';
 import { getFornecedores, addFornecedor } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -92,6 +94,11 @@ export default function OSSolicitacoesPecas() {
   const [detalheSolicitacaoOpen, setDetalheSolicitacaoOpen] = useState(false);
   const [detalheSolicitacao, setDetalheSolicitacao] = useState<SolicitacaoPeca | null>(null);
 
+  // Modal tratar peça de OS cancelada
+  const [tratarPecaOpen, setTratarPecaOpen] = useState(false);
+  const [solicitacaoParaTratar, setSolicitacaoParaTratar] = useState<SolicitacaoPeca | null>(null);
+  const [motivoTratamento, setMotivoTratamento] = useState('');
+
   // Filtrar solicitações
   const solicitacoesFiltradas = useMemo(() => {
     return solicitacoes.filter(s => {
@@ -120,6 +127,10 @@ export default function OSSolicitacoesPecas() {
         return <Badge className="bg-blue-500 hover:bg-blue-600">Enviada</Badge>;
       case 'Recebida':
         return <Badge className="bg-green-500 hover:bg-green-600">Recebida</Badge>;
+      case 'Devolvida ao Fornecedor':
+        return <Badge className="bg-purple-500 hover:bg-purple-600">Devolvida ao Fornecedor</Badge>;
+      case 'Retida para Estoque':
+        return <Badge className="bg-emerald-700 hover:bg-emerald-800">Retida para Estoque</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -428,6 +439,8 @@ export default function OSSolicitacoesPecas() {
                       <SelectItem value="Enviada">Enviada</SelectItem>
                       <SelectItem value="Recebida">Recebida</SelectItem>
                       <SelectItem value="Cancelada">Cancelada</SelectItem>
+                      <SelectItem value="Devolvida ao Fornecedor">Devolvida ao Fornecedor</SelectItem>
+                      <SelectItem value="Retida para Estoque">Retida para Estoque</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -484,7 +497,8 @@ export default function OSSolicitacoesPecas() {
                     key={sol.id}
                     className={cn(
                       sol.status === 'Pendente' && 'bg-yellow-50 dark:bg-yellow-900/10',
-                      sol.status === 'Aprovada' && 'bg-blue-50 dark:bg-blue-900/10'
+                      sol.status === 'Aprovada' && 'bg-blue-50 dark:bg-blue-900/10',
+                      sol.osCancelada && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && 'bg-red-50 dark:bg-red-900/20 border-l-4 border-l-red-500'
                     )}
                   >
                     <TableCell>
@@ -520,7 +534,17 @@ export default function OSSolicitacoesPecas() {
                       {sol.justificativa}
                     </TableCell>
                     <TableCell>{getSLABadge(sol.dataSolicitacao)}</TableCell>
-                    <TableCell>{getStatusBadge(sol.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        {getStatusBadge(sol.status)}
+                        {sol.osCancelada && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">
+                            <AlertTriangle className="h-3 w-3" />
+                            OS Cancelada
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         {sol.status === 'Pendente' && (
@@ -556,6 +580,21 @@ export default function OSSolicitacoesPecas() {
                             title="Cancelar"
                           >
                             <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {sol.osCancelada && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="text-orange-600"
+                            onClick={() => {
+                              setSolicitacaoParaTratar(sol);
+                              setMotivoTratamento('');
+                              setTratarPecaOpen(true);
+                            }}
+                            title="Tratar Peça de OS Cancelada"
+                          >
+                            <AlertTriangle className="h-4 w-4" />
                           </Button>
                         )}
                         <Button 
@@ -1003,6 +1042,43 @@ export default function OSSolicitacoesPecas() {
                 </div>
               )}
 
+              {detalheSolicitacao.motivoTratamento && (
+                <div className="border-t pt-3 space-y-2">
+                  <p className="font-medium text-muted-foreground">Tratamento de OS Cancelada</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <span className="text-muted-foreground">Decisão:</span>
+                      <div className="mt-1">{getStatusBadge(detalheSolicitacao.status)}</div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Responsável:</span>
+                      <p className="font-medium">{detalheSolicitacao.tratadaPor}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Motivo:</span>
+                    <p>{detalheSolicitacao.motivoTratamento}</p>
+                  </div>
+                </div>
+              )}
+
+              {detalheSolicitacao.osCancelada && detalheSolicitacao.status !== 'Devolvida ao Fornecedor' && detalheSolicitacao.status !== 'Retida para Estoque' && (
+                <div className="border-t pt-3">
+                  <Button
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white"
+                    onClick={() => {
+                      setDetalheSolicitacaoOpen(false);
+                      setSolicitacaoParaTratar(detalheSolicitacao);
+                      setMotivoTratamento('');
+                      setTratarPecaOpen(true);
+                    }}
+                  >
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Tratar Peça de OS Cancelada
+                  </Button>
+                </div>
+              )}
+
               {(detalheSolicitacao as any).timeline && (detalheSolicitacao as any).timeline.length > 0 && (
                 <div className="border-t pt-3">
                   <p className="font-medium text-muted-foreground mb-2">Timeline</p>
@@ -1021,6 +1097,78 @@ export default function OSSolicitacoesPecas() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Tratar Peça de OS Cancelada */}
+      <Dialog open={tratarPecaOpen} onOpenChange={setTratarPecaOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-orange-600 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Tratar Peça de OS Cancelada
+            </DialogTitle>
+            <DialogDescription>
+              {solicitacaoParaTratar && (
+                <>Peça: <strong>{solicitacaoParaTratar.peca}</strong> | OS: <strong>{solicitacaoParaTratar.osId}</strong> | Valor: {solicitacaoParaTratar.valorPeca ? formatCurrency(solicitacaoParaTratar.valorPeca) : 'N/A'}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {solicitacaoParaTratar && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Motivo da Decisão *</Label>
+                <Textarea
+                  value={motivoTratamento}
+                  onChange={(e) => setMotivoTratamento(e.target.value)}
+                  placeholder="Descreva o motivo da decisão (mínimo 10 caracteres)..."
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">Campo obrigatório. Será registrado na timeline da OS e da solicitação.</p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {(() => {
+                  const paga = isPecaPaga(solicitacaoParaTratar);
+                  return (
+                    <div className="relative group">
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                        disabled={motivoTratamento.trim().length < 10 || paga}
+                        onClick={() => {
+                          const nomeGestor = user?.colaborador?.nome || 'Gestor';
+                          tratarPecaOSCancelada(solicitacaoParaTratar.id, 'devolver', motivoTratamento, nomeGestor);
+                          setSolicitacoes(getSolicitacoes());
+                          setTratarPecaOpen(false);
+                          toast({ title: 'Peça devolvida ao fornecedor', description: `${solicitacaoParaTratar.peca} marcada como devolvida.` });
+                        }}
+                      >
+                        Devolver ao Fornecedor
+                      </Button>
+                      {paga && (
+                        <p className="text-xs text-red-500 mt-1">Peça já paga, não pode ser devolvida ao fornecedor. Opte por reter para estoque.</p>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  disabled={motivoTratamento.trim().length < 10}
+                  onClick={() => {
+                    const nomeGestor = user?.colaborador?.nome || 'Gestor';
+                    tratarPecaOSCancelada(solicitacaoParaTratar.id, 'reter', motivoTratamento, nomeGestor);
+                    setSolicitacoes(getSolicitacoes());
+                    setTratarPecaOpen(false);
+                    toast({ title: 'Peça retida para estoque', description: `${solicitacaoParaTratar.peca} retida para estoque próprio.` });
+                  }}
+                >
+                  Reter para Estoque Próprio
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
