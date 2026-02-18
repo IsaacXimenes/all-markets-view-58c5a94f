@@ -511,9 +511,6 @@ export default function OSAssistencia() {
                 <Plus className="h-4 w-4 mr-2" />
                 Nova Assistência
               </Button>
-              <Button variant="outline" onClick={() => navigate('/assistencia/lotes-pagamento')} title="Lotes de Pagamento">
-                <FileText className="h-4 w-4" />
-              </Button>
               <Button variant="outline" onClick={handleExport}>
                 <Download className="h-4 w-4" />
               </Button>

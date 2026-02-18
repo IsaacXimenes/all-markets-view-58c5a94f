@@ -17,16 +17,10 @@ import {
   aprovarSolicitacao, 
   rejeitarSolicitacao,
   cancelarSolicitacao,
-  criarLote,
-  enviarLote,
-  getLotes,
+  encaminharParaFinanceiro,
   calcularSLASolicitacao,
   formatCurrency,
   SolicitacaoPeca,
-  LotePecas,
-  LoteTimeline,
-  editarLote,
-  getLoteById,
   tratarPecaOSCancelada,
   isPecaPaga
 } from '@/utils/solicitacaoPecasApi';
@@ -36,17 +30,14 @@ import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { useAuthStore } from '@/store/authStore';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { getOrdemServicoById, updateOrdemServico } from '@/utils/assistenciaApi';
-import { Eye, Check, X, Package, Clock, AlertTriangle, Layers, Send, Plus, Edit, History } from 'lucide-react';
+import { Eye, Check, X, Package, Clock, AlertTriangle, Send, Plus, Edit, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function OSSolicitacoesPecas() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useUrlTabs('solicitacoes');
   const [solicitacoes, setSolicitacoes] = useState(getSolicitacoes());
-  const [lotes, setLotes] = useState(getLotes());
   const { obterLojasTipoLoja, obterNomeLoja, obterColaboradoresAtivos } = useCadastroStore();
   const user = useAuthStore(state => state.user);
   const lojas = obterLojasTipoLoja();
@@ -65,18 +56,12 @@ export default function OSSolicitacoesPecas() {
   const [fornecedoresPorPeca, setFornecedoresPorPeca] = useState<{[key: string]: { fornecedorId: string; valorPeca: string; formaPagamento: string; origemPeca: string; observacao: string; bancoDestinatario: string; chavePix: string }}>({});
   const [responsavelCompraGlobal, setResponsavelCompraGlobal] = useState('');
   const [dataRecebimentoGlobal, setDataRecebimentoGlobal] = useState('');
+  const [dataEnvioGlobal, setDataEnvioGlobal] = useState('');
   
   // Modal de rejeição com motivo obrigatório
   const [rejeitarOpen, setRejeitarOpen] = useState(false);
   const [solicitacaoParaRejeitar, setSolicitacaoParaRejeitar] = useState<SolicitacaoPeca | null>(null);
   const [motivoRejeicao, setMotivoRejeicao] = useState('');
-  const [dataEnvioGlobal, setDataEnvioGlobal] = useState('');
-
-  // Modal ver/editar lote
-  const [verLoteOpen, setVerLoteOpen] = useState(false);
-  const [editarLoteOpen, setEditarLoteOpen] = useState(false);
-  const [loteSelecionado, setLoteSelecionado] = useState<LotePecas | null>(null);
-  const [editLoteValorTotal, setEditLoteValorTotal] = useState('');
 
   // Modal cancelar solicitação
   const [cancelarOpen, setCancelarOpen] = useState(false);
@@ -87,7 +72,7 @@ export default function OSSolicitacoesPecas() {
   const [novoFornecedorOpen, setNovoFornecedorOpen] = useState(false);
   const [novoFornecedorNome, setNovoFornecedorNome] = useState('');
 
-  // Seleção para lote
+  // Seleção para encaminhar em massa
   const [selecionadas, setSelecionadas] = useState<string[]>([]);
 
   // Modal detalhamento solicitação
@@ -98,6 +83,9 @@ export default function OSSolicitacoesPecas() {
   const [tratarPecaOpen, setTratarPecaOpen] = useState(false);
   const [solicitacaoParaTratar, setSolicitacaoParaTratar] = useState<SolicitacaoPeca | null>(null);
   const [motivoTratamento, setMotivoTratamento] = useState('');
+
+  // Modal confirmação encaminhar
+  const [confirmEncaminharOpen, setConfirmEncaminharOpen] = useState(false);
 
   // Filtrar solicitações
   const solicitacoesFiltradas = useMemo(() => {
@@ -125,6 +113,8 @@ export default function OSSolicitacoesPecas() {
         return <Badge className="bg-gray-500 hover:bg-gray-600">Cancelada</Badge>;
       case 'Enviada':
         return <Badge className="bg-blue-500 hover:bg-blue-600">Enviada</Badge>;
+      case 'Pagamento - Financeiro':
+        return <Badge className="bg-purple-500 hover:bg-purple-600">Pagamento - Financeiro</Badge>;
       case 'Recebida':
         return <Badge className="bg-green-500 hover:bg-green-600">Recebida</Badge>;
       case 'Devolvida ao Fornecedor':
@@ -188,7 +178,6 @@ export default function OSSolicitacoesPecas() {
   };
 
   const handleAprovar = () => {
-    // Validar campos obrigatórios
     if (!responsavelCompraGlobal) {
       toast({ title: 'Erro', description: 'Selecione o responsável pela compra', variant: 'destructive' });
       return;
@@ -210,7 +199,6 @@ export default function OSSolicitacoesPecas() {
       }
     }
 
-    // Aprovar cada solicitação
     for (const sol of solicitacoesSelecionadasAprovar) {
       const dados = fornecedoresPorPeca[sol.id];
       aprovarSolicitacao(sol.id, {
@@ -225,8 +213,6 @@ export default function OSSolicitacoesPecas() {
         bancoDestinatario: dados.bancoDestinatario,
         chavePix: dados.chavePix
       });
-
-      // Timeline já é atualizada pela API aprovarSolicitacao()
     }
 
     setSolicitacoes(getSolicitacoes());
@@ -258,7 +244,7 @@ export default function OSSolicitacoesPecas() {
     }
   };
 
-  const handleSelecionarParaLote = (id: string, checked: boolean) => {
+  const handleSelecionarParaEncaminhar = (id: string, checked: boolean) => {
     if (checked) {
       setSelecionadas([...selecionadas, id]);
     } else {
@@ -266,64 +252,25 @@ export default function OSSolicitacoesPecas() {
     }
   };
 
-  const handleVerLote = (lote: LotePecas) => {
-    setLoteSelecionado(lote);
-    setVerLoteOpen(true);
-  };
-
-  const handleEditarLote = (lote: LotePecas) => {
-    setLoteSelecionado(lote);
-    setEditLoteValorTotal(formatCurrencyInput(String(Math.round(lote.valorTotal * 100))));
-    setEditarLoteOpen(true);
-  };
-
-  const handleSalvarEdicaoLote = () => {
-    if (!loteSelecionado) return;
-    const novoValor = parseFloat(editLoteValorTotal.replace(/\D/g, '')) / 100;
-    const resultado = editarLote(loteSelecionado.id, { valorTotal: novoValor }, 'Usuário Sistema');
-    if (resultado) {
-      setLotes(getLotes());
-      setEditarLoteOpen(false);
-      toast({ title: 'Sucesso', description: 'Lote atualizado!' });
-    }
-  };
-
-  const handleCriarLote = () => {
+  const handleEncaminharSelecionados = () => {
     if (selecionadas.length === 0) {
       toast({ title: 'Erro', description: 'Selecione ao menos uma solicitação aprovada', variant: 'destructive' });
       return;
     }
-
-    // Agrupar por fornecedor
-    const solicitacoesParaLote = solicitacoes.filter(s => selecionadas.includes(s.id) && s.status === 'Aprovada');
-    const fornecedoresUnicos = [...new Set(solicitacoesParaLote.map(s => s.fornecedorId))];
-
-    if (fornecedoresUnicos.length > 1) {
-      toast({ title: 'Erro', description: 'Selecione apenas solicitações do mesmo fornecedor', variant: 'destructive' });
-      return;
-    }
-
-    if (fornecedoresUnicos.length === 0 || !fornecedoresUnicos[0]) {
-      toast({ title: 'Erro', description: 'Nenhuma solicitação aprovada selecionada', variant: 'destructive' });
-      return;
-    }
-
-    const novoLote = criarLote(fornecedoresUnicos[0], selecionadas);
-    if (novoLote) {
-      setSolicitacoes(getSolicitacoes());
-      setLotes(getLotes());
-      setSelecionadas([]);
-      toast({ title: 'Sucesso', description: `Lote ${novoLote.id} criado com ${selecionadas.length} solicitações!` });
-    }
+    setConfirmEncaminharOpen(true);
   };
 
-  const handleEnviarLote = (loteId: string) => {
-    const resultado = enviarLote(loteId);
-    if (resultado) {
-      setSolicitacoes(getSolicitacoes());
-      setLotes(getLotes());
-      toast({ title: 'Sucesso', description: `Lote ${loteId} enviado! Nota ${resultado.nota.id} criada no Financeiro.` });
-    }
+  const handleConfirmarEncaminhamento = () => {
+    const nomeUsuario = user?.colaborador?.nome || 'Gestor';
+    const notasCriadas = encaminharParaFinanceiro(selecionadas, nomeUsuario);
+    
+    setSolicitacoes(getSolicitacoes());
+    setSelecionadas([]);
+    setConfirmEncaminharOpen(false);
+    toast({ 
+      title: 'Sucesso', 
+      description: `${notasCriadas.length} solicitação(ões) encaminhada(s) para o Financeiro!` 
+    });
   };
 
   const handleAdicionarFornecedor = () => {
@@ -350,15 +297,19 @@ export default function OSSolicitacoesPecas() {
   // Stats
   const totalPendentes = solicitacoes.filter(s => s.status === 'Pendente').length;
   const totalAprovadas = solicitacoes.filter(s => s.status === 'Aprovada').length;
-  const totalEnviadas = solicitacoes.filter(s => s.status === 'Enviada').length;
+  const totalEnviadas = solicitacoes.filter(s => s.status === 'Enviada' || s.status === 'Pagamento - Financeiro').length;
   const totalRecebidas = solicitacoes.filter(s => s.status === 'Recebida').length;
-  const lotesAtivos = lotes.filter(l => l.status === 'Pendente' || l.status === 'Enviado');
+
+  // Valor total das selecionadas
+  const valorSelecionadas = solicitacoes
+    .filter(s => selecionadas.includes(s.id))
+    .reduce((acc, s) => acc + (s.valorPeca || 0) * s.quantidade, 0);
 
   return (
     <OSLayout title="Aprovações - Gestor">
       {/* Dashboard Cards */}
       <div className="sticky top-0 z-10 bg-background pb-4">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-yellow-600">{totalPendentes}</div>
@@ -374,7 +325,7 @@ export default function OSSolicitacoesPecas() {
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-blue-600">{totalEnviadas}</div>
-              <div className="text-xs text-muted-foreground">Enviadas</div>
+              <div className="text-xs text-muted-foreground">Enviadas/Financeiro</div>
             </CardContent>
           </Card>
           <Card>
@@ -383,319 +334,269 @@ export default function OSSolicitacoesPecas() {
               <div className="text-xs text-muted-foreground">Recebidas</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">{lotesAtivos.length}</div>
-              <div className="text-xs text-muted-foreground">Lotes</div>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="solicitacoes">Solicitações</TabsTrigger>
-          <TabsTrigger value="lotes">Lotes ({lotesAtivos.length})</TabsTrigger>
-        </TabsList>
+      {/* Filtros */}
+      <Card className="mb-4">
+        <CardContent className="p-4">
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            <div className="space-y-2">
+              <Label>Loja Solicitante</Label>
+              <AutocompleteLoja
+                value={filtroLoja === 'todos' ? '' : filtroLoja}
+                onChange={(v) => setFiltroLoja(v || 'todos')}
+                apenasLojasTipoLoja={true}
+                placeholder="Todas"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Número da OS</Label>
+              <Input
+                placeholder="Buscar OS..."
+                value={filtroNumeroOS}
+                onChange={e => setFiltroNumeroOS(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Peça</Label>
+              <Input
+                placeholder="Buscar peça..."
+                value={filtroPeca}
+                onChange={e => setFiltroPeca(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  <SelectItem value="Pendente">Pendente</SelectItem>
+                  <SelectItem value="Aprovada">Aprovada</SelectItem>
+                  <SelectItem value="Pagamento - Financeiro">Pagamento - Financeiro</SelectItem>
+                  <SelectItem value="Enviada">Enviada</SelectItem>
+                  <SelectItem value="Recebida">Recebida</SelectItem>
+                  <SelectItem value="Cancelada">Cancelada</SelectItem>
+                  <SelectItem value="Devolvida ao Fornecedor">Devolvida ao Fornecedor</SelectItem>
+                  <SelectItem value="Retida para Estoque">Retida para Estoque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setFiltroLoja('todos');
+                  setFiltroNumeroOS('');
+                  setFiltroPeca('');
+                  setFiltroStatus('todos');
+                }}
+                className="w-full"
+              >
+                Limpar Filtros
+              </Button>
+            </div>
+            <div className="flex items-end">
+              <Button 
+                onClick={handleEncaminharSelecionados} 
+                disabled={selecionadas.length === 0}
+                className="w-full"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Encaminhar Selecionados ({selecionadas.length})
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <TabsContent value="solicitacoes" className="space-y-4">
-          {/* Filtros */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                <div className="space-y-2">
-                  <Label>Loja Solicitante</Label>
-                  <AutocompleteLoja
-                    value={filtroLoja === 'todos' ? '' : filtroLoja}
-                    onChange={(v) => setFiltroLoja(v || 'todos')}
-                    apenasLojasTipoLoja={true}
-                    placeholder="Todas"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Número da OS</Label>
-                  <Input
-                    placeholder="Buscar OS..."
-                    value={filtroNumeroOS}
-                    onChange={e => setFiltroNumeroOS(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Peça</Label>
-                  <Input
-                    placeholder="Buscar peça..."
-                    value={filtroPeca}
-                    onChange={e => setFiltroPeca(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-                    <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="todos">Todos</SelectItem>
-                      <SelectItem value="Pendente">Pendente</SelectItem>
-                      <SelectItem value="Aprovada">Aprovada</SelectItem>
-                      <SelectItem value="Enviada">Enviada</SelectItem>
-                      <SelectItem value="Recebida">Recebida</SelectItem>
-                      <SelectItem value="Cancelada">Cancelada</SelectItem>
-                      <SelectItem value="Devolvida ao Fornecedor">Devolvida ao Fornecedor</SelectItem>
-                      <SelectItem value="Retida para Estoque">Retida para Estoque</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-end">
+      {/* Tabela */}
+      <div className="rounded-md border overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-10"></TableHead>
+              <TableHead>Data</TableHead>
+              <TableHead>Loja</TableHead>
+              <TableHead>OS</TableHead>
+              <TableHead>Peça</TableHead>
+              <TableHead>Qtd</TableHead>
+              <TableHead>Valor</TableHead>
+              <TableHead>Fornecedor</TableHead>
+              <TableHead>Justificativa</TableHead>
+              <TableHead>SLA</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {solicitacoesFiltradas.map(sol => (
+              <TableRow 
+                key={sol.id}
+                className={cn(
+                  sol.status === 'Pendente' && 'bg-yellow-50 dark:bg-yellow-900/10',
+                  sol.status === 'Aprovada' && 'bg-blue-50 dark:bg-blue-900/10',
+                  sol.osCancelada && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && 'bg-red-50 dark:bg-red-900/20 border-l-4 border-l-red-500'
+                )}
+              >
+                <TableCell>
+                  {sol.status === 'Aprovada' && (
+                    <Checkbox 
+                      checked={selecionadas.includes(sol.id)}
+                      onCheckedChange={(checked) => handleSelecionarParaEncaminhar(sol.id, checked as boolean)}
+                    />
+                  )}
+                </TableCell>
+                <TableCell className="text-xs">
+                  {new Date(sol.dataSolicitacao).toLocaleDateString('pt-BR')}
+                </TableCell>
+                <TableCell className="text-xs">{getLojaNome(sol.lojaSolicitante)}</TableCell>
+                <TableCell>
                   <Button 
-                    variant="outline" 
-                    onClick={() => {
-                      setFiltroLoja('todos');
-                      setFiltroNumeroOS('');
-                      setFiltroPeca('');
-                      setFiltroStatus('todos');
-                    }}
-                    className="w-full"
+                    variant="link" 
+                    className="p-0 h-auto text-xs font-mono"
+                    onClick={() => navigate(`/os/assistencia/${sol.osId}?from=solicitacoes`)}
                   >
-                    Limpar Filtros
+                    {sol.osId}
                   </Button>
-                </div>
-                <div className="flex items-end">
-                  <Button 
-                    onClick={handleCriarLote} 
-                    disabled={selecionadas.length === 0}
-                    className="w-full"
-                  >
-                    <Layers className="h-4 w-4 mr-2" />
-                    Criar Lote ({selecionadas.length})
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tabela */}
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10"></TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Loja</TableHead>
-                  <TableHead>OS</TableHead>
-                  <TableHead>Peça</TableHead>
-                  <TableHead>Qtd</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Fornecedor</TableHead>
-                  <TableHead>Justificativa</TableHead>
-                  <TableHead>SLA</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {solicitacoesFiltradas.map(sol => (
-                  <TableRow 
-                    key={sol.id}
-                    className={cn(
-                      sol.status === 'Pendente' && 'bg-yellow-50 dark:bg-yellow-900/10',
-                      sol.status === 'Aprovada' && 'bg-blue-50 dark:bg-blue-900/10',
-                      sol.osCancelada && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && 'bg-red-50 dark:bg-red-900/20 border-l-4 border-l-red-500'
+                </TableCell>
+                <TableCell className="font-medium">{sol.peca}</TableCell>
+                <TableCell>{sol.quantidade}</TableCell>
+                <TableCell className="text-sm">
+                  {sol.valorPeca ? formatCurrency(sol.valorPeca) : '-'}
+                </TableCell>
+                <TableCell className="text-xs">
+                  {sol.fornecedorId ? getFornecedorNome(sol.fornecedorId) : '-'}
+                </TableCell>
+                <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                  {sol.justificativa}
+                </TableCell>
+                <TableCell>{getSLABadge(sol.dataSolicitacao)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    {getStatusBadge(sol.status)}
+                    {sol.osCancelada && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">
+                        <AlertTriangle className="h-3 w-3" />
+                        OS Cancelada
+                      </span>
                     )}
-                  >
-                    <TableCell>
-                      {sol.status === 'Aprovada' && !sol.loteId && (
-                        <Checkbox 
-                          checked={selecionadas.includes(sol.id)}
-                          onCheckedChange={(checked) => handleSelecionarParaLote(sol.id, checked as boolean)}
-                        />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {new Date(sol.dataSolicitacao).toLocaleDateString('pt-BR')}
-                    </TableCell>
-                    <TableCell className="text-xs">{getLojaNome(sol.lojaSolicitante)}</TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="link" 
-                        className="p-0 h-auto text-xs font-mono"
-                        onClick={() => navigate(`/os/assistencia/${sol.osId}?from=solicitacoes`)}
-                      >
-                        {sol.osId}
-                      </Button>
-                    </TableCell>
-                    <TableCell className="font-medium">{sol.peca}</TableCell>
-                    <TableCell>{sol.quantidade}</TableCell>
-                    <TableCell className="text-sm">
-                      {sol.valorPeca ? formatCurrency(sol.valorPeca) : '-'}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {sol.fornecedorId ? getFornecedorNome(sol.fornecedorId) : '-'}
-                    </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                      {sol.justificativa}
-                    </TableCell>
-                    <TableCell>{getSLABadge(sol.dataSolicitacao)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {getStatusBadge(sol.status)}
-                        {sol.osCancelada && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && (
-                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">
-                            <AlertTriangle className="h-3 w-3" />
-                            OS Cancelada
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {sol.status === 'Pendente' && (
-                          <>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="text-green-600"
-                              onClick={() => handleAbrirAprovar(sol)}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              className="text-red-600"
-                              onClick={() => handleAbrirRejeitar(sol)}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                        {(sol.status === 'Pendente' || sol.status === 'Aprovada') && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-gray-600"
-                            onClick={() => {
-                              setSolicitacaoParaCancelar(sol);
-                              setObservacaoCancelamento('');
-                              setCancelarOpen(true);
-                            }}
-                            title="Cancelar"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {sol.osCancelada && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="text-orange-600"
-                            onClick={() => {
-                              setSolicitacaoParaTratar(sol);
-                              setMotivoTratamento('');
-                              setTratarPecaOpen(true);
-                            }}
-                            title="Tratar Peça de OS Cancelada"
-                          >
-                            <AlertTriangle className="h-4 w-4" />
-                          </Button>
-                        )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    {sol.status === 'Pendente' && (
+                      <>
                         <Button 
                           variant="ghost" 
                           size="sm"
-                          onClick={() => {
-                            setDetalheSolicitacao(sol);
-                            setDetalheSolicitacaoOpen(true);
-                          }}
-                          title="Ver detalhes"
+                          className="text-green-600"
+                          onClick={() => handleAbrirAprovar(sol)}
                         >
-                          <Eye className="h-4 w-4" />
+                          <Check className="h-4 w-4" />
                         </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {solicitacoesFiltradas.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
-                      Nenhuma solicitação encontrada
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="lotes" className="space-y-4">
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID Lote</TableHead>
-                  <TableHead>Data Criação</TableHead>
-                  <TableHead>Fornecedor</TableHead>
-                  <TableHead>Qtd Solicitações</TableHead>
-                  <TableHead>Valor Total</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lotesAtivos.map(lote => (
-                  <TableRow 
-                    key={lote.id}
-                    className={cn(
-                      lote.status === 'Pendente' && 'bg-yellow-500/10',
-                      lote.status === 'Enviado' && 'bg-blue-500/10'
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="text-red-600"
+                          onClick={() => handleAbrirRejeitar(sol)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
                     )}
-                  >
-                    <TableCell className="font-mono text-xs">{lote.id}</TableCell>
-                    <TableCell className="text-xs">
-                      {new Date(lote.dataCriacao).toLocaleDateString('pt-BR')}
-                    </TableCell>
-                    <TableCell>{getFornecedorNome(lote.fornecedorId)}</TableCell>
-                    <TableCell>{lote.solicitacoes.length}</TableCell>
-                    <TableCell className="font-medium">{formatCurrency(lote.valorTotal)}</TableCell>
-                    <TableCell>
-                      {lote.status === 'Pendente' && <Badge className="bg-yellow-500 hover:bg-yellow-600">Pendente</Badge>}
-                      {lote.status === 'Enviado' && <Badge className="bg-blue-500 hover:bg-blue-600">Enviado</Badge>}
-                      {lote.status === 'Finalizado' && <Badge className="bg-green-500 hover:bg-green-600">Finalizado</Badge>}
-                    </TableCell>
-                    <TableCell>
-                      {lote.status === 'Pendente' ? (
-                        <div className="flex gap-1">
-                          <Button 
-                            size="sm"
-                            onClick={() => handleEnviarLote(lote.id)}
-                          >
-                            <Send className="h-4 w-4 mr-2" />
-                            Enviar Lote
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleVerLote(lote)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex gap-1 items-center">
-                          <Badge variant="outline" className="text-blue-600 border-blue-300">Enviado ao Financeiro</Badge>
-                          <Button variant="ghost" size="sm" onClick={() => handleVerLote(lote)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {lotesAtivos.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      Nenhum lote encontrado
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                    {(sol.status === 'Pendente' || sol.status === 'Aprovada') && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-gray-600"
+                        onClick={() => {
+                          setSolicitacaoParaCancelar(sol);
+                          setObservacaoCancelamento('');
+                          setCancelarOpen(true);
+                        }}
+                        title="Cancelar"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {sol.osCancelada && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-orange-600"
+                        onClick={() => {
+                          setSolicitacaoParaTratar(sol);
+                          setMotivoTratamento('');
+                          setTratarPecaOpen(true);
+                        }}
+                        title="Tratar Peça de OS Cancelada"
+                      >
+                        <AlertTriangle className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        setDetalheSolicitacao(sol);
+                        setDetalheSolicitacaoOpen(true);
+                      }}
+                      title="Ver detalhes"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+            {solicitacoesFiltradas.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                  Nenhuma solicitação encontrada
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Modal Confirmar Encaminhamento */}
+      <Dialog open={confirmEncaminharOpen} onOpenChange={setConfirmEncaminharOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Encaminhamento para Financeiro</DialogTitle>
+            <DialogDescription>
+              Você está prestes a encaminhar {selecionadas.length} solicitação(ões) aprovada(s) para conferência financeira.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="p-3 bg-muted rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>Total de solicitações:</span>
+                <strong>{selecionadas.length}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span>Valor total:</span>
+                <strong className="text-primary">{formatCurrency(valorSelecionadas)}</strong>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Cada registro será processado individualmente e encaminhado para conferência no Financeiro.
+            </p>
           </div>
-        </TabsContent>
-      </Tabs>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmEncaminharOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmarEncaminhamento}>
+              <Send className="h-4 w-4 mr-2" />
+              Confirmar Encaminhamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal Aprovar - Com campos por peça */}
       <Dialog open={aprovarOpen} onOpenChange={setAprovarOpen}>
@@ -705,7 +606,6 @@ export default function OSSolicitacoesPecas() {
           </DialogHeader>
           
           <div className="space-y-4">
-            {/* Lista de peças com campos individuais */}
             {solicitacoesSelecionadasAprovar.map((sol, idx) => (
               <div key={sol.id} className="p-4 border rounded-lg space-y-3">
                 <div className="flex items-center justify-between">
@@ -743,7 +643,6 @@ export default function OSSolicitacoesPecas() {
                   </div>
                 </div>
 
-                {/* Novos campos obrigatórios */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <Label className="text-xs">Forma de Pagamento *</Label>
@@ -808,7 +707,6 @@ export default function OSSolicitacoesPecas() {
               </div>
             ))}
 
-            {/* Campos globais */}
             <div className="border-t pt-4 space-y-4">
               <div className="space-y-2">
                 <Label>Responsável pela Compra *</Label>
@@ -1076,25 +974,6 @@ export default function OSSolicitacoesPecas() {
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Tratar Peça de OS Cancelada
                   </Button>
-                </div>
-              )}
-
-              {(detalheSolicitacao as any).timeline && (detalheSolicitacao as any).timeline.length > 0 && (
-                <div className="border-t pt-3">
-                  <p className="font-medium text-muted-foreground mb-2">Timeline</p>
-                  <div className="space-y-2">
-                    {(detalheSolicitacao as any).timeline.map((evento: any, idx: number) => (
-                      <div key={idx} className="flex gap-2 items-start">
-                        <div className="w-1.5 h-1.5 mt-2 rounded-full bg-primary flex-shrink-0" />
-                        <div>
-                          <p className="text-xs">{evento.descricao}</p>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(evento.data).toLocaleDateString('pt-BR')} {evento.responsavel && `• ${evento.responsavel}`}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>
