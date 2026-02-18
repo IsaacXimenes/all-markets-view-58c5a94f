@@ -142,6 +142,10 @@ const statusColorMap: Record<string, StatusColor> = {
   'Baixo Estoque': 'orange',
   'Atenção': 'orange',
   'Retirada de Peças': 'orange',
+  'Serviço Concluído - Validar Aparelho': 'orange',
+  
+  // Status de retrabalho (vermelho)
+  'Retrabalho - Recusado pelo Estoque': 'red',
   
   // Status de aparelho
   'Vendido': 'red',

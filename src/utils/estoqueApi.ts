@@ -905,6 +905,49 @@ export const updateProduto = (id: string, updates: Partial<Produto>): Produto | 
   return produtos[index];
 };
 
+// Atualizar custo de assistência atomicamente (soma ao existente)
+export const atualizarCustoAssistencia = (produtoId: string, osId: string, custoReparo: number): Produto | null => {
+  const produto = produtos.find(p => p.id === produtoId);
+  if (!produto) return null;
+  
+  const custoAtual = produto.custoAssistencia || 0;
+  produto.custoAssistencia = custoAtual + custoReparo;
+  
+  // Registrar na timeline do produto
+  if (!produto.timeline) produto.timeline = [];
+  produto.timeline.push({
+    id: `TL-ASSIST-${Date.now()}`,
+    tipo: 'parecer_assistencia',
+    data: new Date().toISOString(),
+    titulo: `Investimento em Reparo (${osId})`,
+    descricao: `Custo de reparo: R$ ${custoReparo.toFixed(2)} — Custo acumulado: R$ ${produto.custoAssistencia.toFixed(2)}`,
+    responsavel: 'Sistema',
+    valor: custoReparo,
+    aparelhoId: produtoId
+  });
+  
+  return produto;
+};
+
+// Obter histórico de custos de reparo vinculados a um produto
+export const getHistoricoCustosReparo = (produtoId: string): { osId: string; valor: number; data: string }[] => {
+  const produto = produtos.find(p => p.id === produtoId);
+  if (!produto || !produto.timeline) return [];
+  
+  return produto.timeline
+    .filter(t => t.tipo === 'parecer_assistencia' && t.titulo?.includes('Investimento em Reparo'))
+    .map(t => ({
+      osId: t.titulo?.match(/\(([^)]+)\)/)?.[1] || '',
+      valor: t.valor || 0,
+      data: t.data
+    }));
+};
+
+// Obter produto por IMEI
+export const getProdutoByIMEI = (imei: string): Produto | null => {
+  return produtos.find(p => p.imei === imei) || null;
+};
+
 // Atualizar valor recomendado com histórico
 export const updateValorRecomendado = (
   id: string, 

@@ -81,6 +81,7 @@ import OSAssistenciaNova from "./pages/OSAssistenciaNova";
 import OSAssistenciaDetalhes from "./pages/OSAssistenciaDetalhes";
 import OSAssistenciaEditar from "./pages/OSAssistenciaEditar";
 import OSOficina from "./pages/OSOficina";
+import OSAparelhosPendentes from "./pages/OSAparelhosPendentes";
 import OSConferenciaGestor from "./pages/OSConferenciaGestor";
 import OSSolicitacoesPecas from "./pages/OSSolicitacoesPecas";
 import OSHistoricoNotas from "./pages/OSHistoricoNotas";
@@ -206,6 +207,7 @@ const App = () => (
               <Route path="/os/assistencia/:id" element={<OSAssistenciaDetalhes />} />
               <Route path="/os/assistencia/:id/editar" element={<OSAssistenciaEditar />} />
               <Route path="/os/oficina" element={<OSOficina />} />
+              <Route path="/os/aparelhos-pendentes" element={<OSAparelhosPendentes />} />
               <Route path="/os/conferencia-gestor" element={<OSConferenciaGestor />} />
               <Route path="/os/solicitacoes-pecas" element={<OSSolicitacoesPecas />} />
               <Route path="/os/historico-notas" element={<OSHistoricoNotas />} />

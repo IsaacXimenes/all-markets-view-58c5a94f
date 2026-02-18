@@ -290,6 +290,10 @@ export default function OSAssistenciaDetalhes() {
         return <Badge className="bg-blue-600 hover:bg-blue-700">Aguardando Financeiro</Badge>;
       case 'Liquidado':
         return <Badge className="bg-green-700 hover:bg-green-800">Liquidado</Badge>;
+      case 'Serviço Concluído - Validar Aparelho':
+        return <Badge className="bg-orange-500 hover:bg-orange-600">Validar Aparelho</Badge>;
+      case 'Retrabalho - Recusado pelo Estoque':
+        return <Badge className="bg-red-600 hover:bg-red-700">🔄 Retrabalho</Badge>;
       case 'Recusada pelo Técnico':
         return <Badge variant="destructive">Recusada pelo Técnico</Badge>;
       default:
@@ -299,12 +303,14 @@ export default function OSAssistenciaDetalhes() {
 
   const handleConcluirServicoClick = () => {
     if (!os) return;
-    const valorVendaCalculado = valorCustoTecnico + valorServico;
+    const isEstoque = os.origemOS === 'Estoque';
+    const valorServicoFinal = isEstoque ? 0 : valorServico;
+    const valorVendaCalculado = valorCustoTecnico + valorServicoFinal;
     if (!valorCustoTecnico) {
       toast.error('Preencha o Valor de Custo antes de concluir o serviço.');
       return;
     }
-    if (valorVendaCalculado <= 0) {
+    if (!isEstoque && valorVendaCalculado <= 0) {
       toast.error('O Valor a ser cobrado deve ser maior que 0.');
       return;
     }
@@ -314,21 +320,29 @@ export default function OSAssistenciaDetalhes() {
 
   const handleConfirmarFinalizacao = () => {
     if (!os) return;
-    const valorVendaCalculado = valorCustoTecnico + valorServico;
+    const isEstoque = os.origemOS === 'Estoque';
+    const valorServicoFinal = isEstoque ? 0 : valorServico;
+    const valorVendaCalculado = valorCustoTecnico + valorServicoFinal;
     const osFresh = getOrdemServicoById(os.id);
     if (!osFresh) return;
     
+    const novoStatus = isEstoque ? 'Serviço Concluído - Validar Aparelho' : 'Serviço concluído';
+    const novaAtuacao = isEstoque ? 'Gestor (Estoque)' : 'Atendente';
+    const descMsg = isEstoque
+      ? `Serviço finalizado pelo técnico (Origem: Estoque). Custo peças: R$ ${valorCustoTecnico.toFixed(2)}. Encaminhado para validação do Gestor de Estoque.`
+      : `Serviço finalizado pelo técnico. Custo: R$ ${valorCustoTecnico.toFixed(2)}, Venda: R$ ${valorVendaCalculado.toFixed(2)}`;
+
     updateOrdemServico(os.id, {
-      status: 'Serviço concluído',
-      proximaAtuacao: 'Atendente',
+      status: novoStatus as any,
+      proximaAtuacao: novaAtuacao as any,
       valorCustoTecnico,
       valorVendaTecnico: valorVendaCalculado,
-      valorServico,
+      valorServico: valorServicoFinal,
       pecas: osFresh.pecas,
       timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
         tipo: 'conclusao_servico',
-        descricao: `Serviço finalizado pelo técnico. Custo: R$ ${valorCustoTecnico.toFixed(2)}, Venda: R$ ${valorVendaCalculado.toFixed(2)}`,
+        descricao: descMsg,
         responsavel: user?.colaborador?.nome || tecnico?.nome || 'Técnico'
       }]
     });
@@ -337,7 +351,10 @@ export default function OSAssistenciaDetalhes() {
     setFinalizacaoConfirmada(true);
     setModalConfirmarFinalizacao(false);
     setCheckFinalizacao(false);
-    toast.success('Serviço finalizado! Aguardando pagamento do atendente.');
+    const toastMsg = isEstoque
+      ? 'Serviço finalizado! Encaminhado para validação do Gestor de Estoque.'
+      : 'Serviço finalizado! Aguardando pagamento do atendente.';
+    toast.success(toastMsg);
   };
 
   const handleSalvarPagamentoVendedor = () => {
@@ -1063,12 +1080,19 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                     <label className="text-sm font-medium">Valor do serviço (R$)</label>
                     <InputComMascara
                       mascara="moeda"
-                      value={valorServico}
-                      onChange={(formatted, raw) => setValorServico(typeof raw === 'number' ? raw : 0)}
+                      value={os.origemOS === 'Estoque' ? 0 : valorServico}
+                      onChange={(formatted, raw) => {
+                        if (os.origemOS !== 'Estoque') {
+                          setValorServico(typeof raw === 'number' ? raw : 0);
+                        }
+                      }}
                       placeholder="0,00"
-                      disabled={os.proximaAtuacao !== 'Técnico: Avaliar/Executar' && os.proximaAtuacao !== 'Técnico' && !!os.valorServico}
+                      disabled={os.origemOS === 'Estoque' || (os.proximaAtuacao !== 'Técnico: Avaliar/Executar' && os.proximaAtuacao !== 'Técnico' && !!os.valorServico)}
+                      className={os.origemOS === 'Estoque' ? 'bg-muted' : ''}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">Valor da mão de obra</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {os.origemOS === 'Estoque' ? 'Mão de obra zerada (Origem: Estoque)' : 'Valor da mão de obra'}
+                    </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium">Valor a ser cobrado (R$)</label>
@@ -1096,7 +1120,8 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
               </CardContent>
             </Card>
 
-            {/* Pagamentos - Etapa 3 (Vendedor) */}
+            {/* Pagamentos - Etapa 3 (Vendedor) - Oculto para Origem: Estoque */}
+            {os.origemOS !== 'Estoque' && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -1207,6 +1232,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                 )}
               </CardContent>
             </Card>
+            )}
 
             {/* Observação do Estoque */}
             {os.observacaoOrigem && (

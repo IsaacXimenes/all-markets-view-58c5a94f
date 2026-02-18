@@ -11,6 +11,7 @@ const tabs = [
   { name: 'Análise de Tratativas', href: '/os/analise-garantia', icon: FileSearch },
   { name: 'Nova Assistência', href: '/os/assistencia', icon: Wrench },
   { name: 'Serviços', href: '/os/oficina', icon: Settings },
+  { name: 'Aparelhos Pendentes', href: '/os/aparelhos-pendentes', icon: Package },
   { name: 'Conferência Gestor', href: '/os/conferencia-gestor', icon: ClipboardCheck },
   { name: 'Solicitações de Peças', href: '/os/solicitacoes-pecas', icon: ShoppingCart },
   { name: 'Estoque - Assistência', href: '/os/pecas', icon: Package },

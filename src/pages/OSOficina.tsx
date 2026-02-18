@@ -72,7 +72,9 @@ export default function OSOficina() {
       const isRecentFinalizada = osFinalizadas.has(os.id);
       const isHistorico = statusHistorico.includes(os.status);
       const isPecaPendente = statusPecas.includes(os.status);
-      return isTecnico || isRecentFinalizada || isHistorico || isPecaPendente;
+      const isRetrabalho = os.status === 'Retrabalho - Recusado pelo Estoque';
+      const isValidarAparelho = os.status === 'Serviço Concluído - Validar Aparelho' && os.origemOS === 'Estoque';
+      return isTecnico || isRecentFinalizada || isHistorico || isPecaPendente || isRetrabalho || isValidarAparelho;
     }).sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
   }, [ordensServico, osFinalizadas]);
 
@@ -156,8 +158,12 @@ export default function OSOficina() {
       toast.error('Informe o Valor de Custo (deve ser maior que 0).');
       return;
     }
-    const valorVendaCalculado = valorCustoRaw + valorServicoRaw;
-    if (valorVendaCalculado <= 0) {
+
+    const isOrigemEstoque = osParaFinalizar.origemOS === 'Estoque';
+    const valorServicoFinal = isOrigemEstoque ? 0 : valorServicoRaw;
+    const valorVendaCalculado = valorCustoRaw + valorServicoFinal;
+
+    if (!isOrigemEstoque && valorVendaCalculado <= 0) {
       toast.error('O Valor a ser cobrado deve ser maior que 0.');
       return;
     }
@@ -166,18 +172,24 @@ export default function OSOficina() {
     const osFresh = getOrdemServicoById(osParaFinalizar.id);
     if (!osFresh) return;
 
+    const novoStatus = isOrigemEstoque ? 'Serviço Concluído - Validar Aparelho' : 'Serviço concluído';
+    const novaAtuacao = isOrigemEstoque ? 'Gestor (Estoque)' : 'Atendente';
+    const descMsg = isOrigemEstoque 
+      ? `Serviço finalizado pelo técnico (Origem: Estoque). Conclusão: ${conclusaoServico}. Custo peças: R$ ${valorCustoRaw.toFixed(2)}. Resumo: ${resumoConclusao}. Encaminhado para validação do Gestor de Estoque.`
+      : `Serviço finalizado pelo técnico. Conclusão: ${conclusaoServico}. Custo: R$ ${valorCustoRaw.toFixed(2)}, Venda: R$ ${valorVendaCalculado.toFixed(2)}. Resumo: ${resumoConclusao}`;
+
     updateOrdemServico(osParaFinalizar.id, {
-      status: 'Serviço concluído',
-      proximaAtuacao: 'Atendente',
+      status: novoStatus as any,
+      proximaAtuacao: novaAtuacao as any,
       conclusaoServico,
       resumoConclusao,
       valorCustoTecnico: valorCustoRaw,
       valorVendaTecnico: valorVendaCalculado,
-      valorServico: valorServicoRaw,
+      valorServico: valorServicoFinal,
       timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
         tipo: 'conclusao_servico',
-        descricao: `Serviço finalizado pelo técnico. Conclusão: ${conclusaoServico}. Custo: R$ ${valorCustoRaw.toFixed(2)}, Venda: R$ ${valorVendaCalculado.toFixed(2)}. Resumo: ${resumoConclusao}`,
+        descricao: descMsg,
         responsavel: user?.colaborador?.nome || 'Técnico'
       }]
     });
@@ -185,7 +197,10 @@ export default function OSOficina() {
     // Manter a OS visível na tela
     setOsFinalizadas(prev => new Set(prev).add(osParaFinalizar.id));
 
-    toast.success(`Serviço da OS ${osParaFinalizar.id} finalizado! Encaminhada para pagamento na aba Nova Assistência.`);
+    const toastMsg = isOrigemEstoque 
+      ? `Serviço da OS ${osParaFinalizar.id} finalizado! Encaminhada para validação do Gestor de Estoque.`
+      : `Serviço da OS ${osParaFinalizar.id} finalizado! Encaminhada para pagamento na aba Nova Assistência.`;
+    toast.success(toastMsg);
     setFinalizarModal(false);
     setOsParaFinalizar(null);
     recarregar();
@@ -355,6 +370,12 @@ export default function OSOficina() {
 
   const getStatusBadge = (os: OrdemServico) => {
     const status = os.status;
+    if (status === 'Retrabalho - Recusado pelo Estoque') {
+      return <Badge className="bg-red-600 hover:bg-red-700">🔄 Retrabalho</Badge>;
+    }
+    if (status === 'Serviço Concluído - Validar Aparelho') {
+      return <Badge className="bg-orange-500 hover:bg-orange-600">Validar Aparelho</Badge>;
+    }
     if (status === 'Aguardando Análise' || status === 'Em Aberto') {
       return <Badge className="bg-slate-500 hover:bg-slate-600">Aguardando Check-in</Badge>;
     }
@@ -427,8 +448,8 @@ export default function OSOficina() {
       );
     }
 
-    // Em serviço - finalizar + gerenciar peça
-    if (status === 'Em serviço') {
+    // Em serviço ou Retrabalho - finalizar + gerenciar peça
+    if (status === 'Em serviço' || status === 'Retrabalho - Recusado pelo Estoque') {
       const solicitacoesOS = getSolicitacoesByOS(os.id).filter(s => 
         !['Cancelada', 'Rejeitada'].includes(s.status)
       );
@@ -660,14 +681,20 @@ export default function OSOficina() {
                 <Label>Valor do serviço (R$)</Label>
                 <InputComMascara
                   mascara="moeda"
-                  value={valorServicoRaw}
+                  value={osParaFinalizar?.origemOS === 'Estoque' ? 0 : valorServicoRaw}
                   onChange={(formatted, raw) => {
-                    setValorServicoFormatado(formatted);
-                    setValorServicoRaw(typeof raw === 'number' ? raw : 0);
+                    if (osParaFinalizar?.origemOS !== 'Estoque') {
+                      setValorServicoFormatado(formatted);
+                      setValorServicoRaw(typeof raw === 'number' ? raw : 0);
+                    }
                   }}
                   placeholder="0,00"
+                  disabled={osParaFinalizar?.origemOS === 'Estoque'}
+                  className={osParaFinalizar?.origemOS === 'Estoque' ? 'bg-muted' : ''}
                 />
-                <p className="text-xs text-muted-foreground">Valor da mão de obra</p>
+                <p className="text-xs text-muted-foreground">
+                  {osParaFinalizar?.origemOS === 'Estoque' ? 'Mão de obra zerada (Origem: Estoque)' : 'Valor da mão de obra'}
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Valor a ser cobrado (R$)</Label>
