@@ -81,12 +81,12 @@ export function TabsNavigation({ tabs, size = 'default' }: TabsNavigationProps) 
               key={tab.href}
               to={tab.href}
               className={cn(
-                "flex items-center gap-2 border-b-2 transition-colors whitespace-nowrap",
-                isSmall ? "px-3 py-2 text-xs" : "px-4 py-2 text-sm xl:px-5 xl:text-base",
+                "flex items-center gap-2 rounded-lg transition-colors whitespace-nowrap",
+                isSmall ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm xl:px-5 xl:text-base",
                 "font-medium",
                 isActive
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
+                  ? "bg-[#F7BB05]/10 text-[#F7BB05] font-semibold border border-[#F7BB05]/30"
+                  : "bg-[#111111] text-[#E0E0E0] hover:bg-[#212121] border border-[#333]"
               )}
             >
               <Icon className={cn(isSmall ? "h-3.5 w-3.5" : "h-4 w-4 xl:h-5 xl:w-5")} />

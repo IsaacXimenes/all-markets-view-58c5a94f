@@ -78,8 +78,8 @@ export function CarouselTabsNavigation({ tabs, size = 'default' }: CarouselTabsN
                 "flex items-center gap-1.5 rounded-lg whitespace-nowrap transition-colors",
                 isSmall ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm",
                 isActive
-                  ? "bg-primary/10 text-primary font-semibold"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  ? "bg-[#F7BB05]/10 text-[#F7BB05] font-semibold border border-[#F7BB05]/30"
+                  : "bg-[#111111] text-[#E0E0E0] hover:bg-[#212121] border border-[#333]"
               )}
             >
               <Icon className={cn(isSmall ? "h-3.5 w-3.5" : "h-4 w-4")} />
