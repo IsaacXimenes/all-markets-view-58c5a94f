@@ -316,16 +316,16 @@ export default function OSAssistenciaDetalhes() {
       toast.error('O Valor a ser cobrado deve ser maior que 0.');
       return;
     }
-    if (!resumoConclusao.trim()) {
-      toast.error('Preencha o Resumo da Conclusão antes de finalizar.');
-      return;
-    }
     setCheckFinalizacao(false);
     setModalConfirmarFinalizacao(true);
   };
 
   const handleConfirmarFinalizacao = () => {
     if (!os) return;
+    if (!resumoConclusao.trim()) {
+      toast.error('Preencha o Resumo da Conclusão antes de finalizar.');
+      return;
+    }
     const isEstoque = os.origemOS === 'Estoque';
     const valorServicoFinal = isEstoque ? 0 : valorServico;
     const valorVendaCalculado = valorCustoTecnico + valorServicoFinal;
