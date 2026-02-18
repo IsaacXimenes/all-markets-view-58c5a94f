@@ -49,7 +49,7 @@ export const LoginForm = ({ onLoginSuccess, className }: LoginFormProps) => {
     <div className={cn('w-full', className)} style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">Bem-vindo</h1>
+        <h1 className="text-4xl font-black text-[#F7BB05] tracking-tighter uppercase mb-2" style={{ fontFamily: 'Inter, sans-serif' }}>Bem-vindo</h1>
         <p className="text-sm tracking-wide" style={{ color: '#9CA3AF' }}>
           Acesse sua conta para continuar
         </p>
