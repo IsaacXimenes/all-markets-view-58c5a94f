@@ -46,8 +46,8 @@ export function Navbar({ className, isMobile, onMenuClick }: NavbarProps) {
         }}
       />
 
-      <div className="container flex items-center justify-between h-16 px-4 relative z-10">
-        <div className="flex items-center gap-2 lg:gap-4">
+      <div className="flex items-center h-16 px-4 relative z-10 gap-4">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           {isMobile && (
             <Button 
               variant="ghost" 
@@ -59,7 +59,9 @@ export function Navbar({ className, isMobile, onMenuClick }: NavbarProps) {
               <span className="sr-only">Abrir menu</span>
             </Button>
           )}
-          <GlobalSearch />
+          <div className="flex-1 min-w-0">
+            <GlobalSearch />
+          </div>
         </div>
         
         <div className="flex items-center gap-4">
