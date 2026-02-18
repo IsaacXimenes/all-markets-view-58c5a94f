@@ -1,90 +1,38 @@
 
-## Fluxo de Tratamento de Pecas de OS Cancelada
 
-### Resumo
+## Ajustes: Sidebar (icones colapsados) e Login Mobile
 
-Implementar um fluxo completo para que, quando uma OS com solicitacoes de pecas ativas for cancelada, o gestor possa decidir entre devolver a peca ao fornecedor ou rete-la para o estoque proprio, com total rastreabilidade.
+### 1. Sidebar - Espacamento dos icones ao colapsar
 
----
+**Problema**: Quando a sidebar esta colapsada (`w-16`), os icones ficam com espacamento irregular -- o `gap-0.5`, `px-2`, `py-1.5` e `mx-1` nao centralizam bem os icones no espaco disponivel.
 
-### 1. Novos Status na Interface `SolicitacaoPeca`
-
-**Arquivo: `src/utils/solicitacaoPecasApi.ts`**
-
-- Adicionar dois novos status ao tipo union: `'Devolvida ao Fornecedor'` e `'Retida para Estoque'`.
-- Adicionar campo opcional `osCancelada?: boolean` para marcar solicitacoes cuja OS foi cancelada.
-- Adicionar campo opcional `motivoTratamento?: string` para armazenar o motivo da decisao do gestor.
-- Adicionar campo opcional `tratadaPor?: string` para registrar quem tomou a decisao.
-- Criar funcao `tratarPecaOSCancelada(id, decisao, motivo, responsavel)` que:
-  - Valida se a solicitacao pertence a uma OS cancelada.
-  - Se decisao = "devolver": altera status para "Devolvida ao Fornecedor", cancela fluxo financeiro pendente, registra na timeline da OS.
-  - Se decisao = "reter": altera status para "Retida para Estoque", mantem fluxo de pagamento ativo, registra na timeline da OS.
-- Criar funcao `marcarSolicitacoesOSCancelada(osId)` para ser chamada quando uma OS e cancelada, marcando todas as solicitacoes ativas (Pendente, Aprovada, Enviada) com `osCancelada = true`.
+**Solucao no arquivo `src/components/layout/Sidebar.tsx`**:
+- Ajustar o padding e gap dos itens no modo colapsado para que fiquem centralizados e com espacamento uniforme.
+- Quando `isCollapsed`:
+  - Cada link tera `px-0 py-2.5 mx-auto w-10 h-10 flex items-center justify-center` para garantir centralizacao perfeita.
+  - O `gap` do nav sera aumentado para `gap-1` quando colapsado.
+  - Remover o `mx-1` atual que causa desalinhamento.
+- Ocultar o indicador lateral ativo (barra branca) quando colapsado, pois nao faz sentido visual.
+- Ocultar o rodape "Status da Loja" completamente quando colapsado (usar `hidden` em vez de `opacity-0` para nao ocupar espaco).
 
 ---
 
-### 2. Integracao com Cancelamento de OS
+### 2. Tela de Login - Versao Mobile
 
-**Arquivo: `src/utils/assistenciaApi.ts`**
+**Problema**: No mobile, o formulario usa `marginLeft: '0'` mas o background (imagem grande de desktop) nao se adapta bem, e o formulario pode ficar mal posicionado ou com tamanho inadequado.
 
-- Localizar o ponto onde uma OS pode ter seu status alterado para "Cancelada".
-- Apos a alteracao, chamar `marcarSolicitacoesOSCancelada(osId)` para sinalizar todas as solicitacoes ativas daquela OS.
+**Solucao no arquivo `src/components/login/LoginCard.tsx`**:
+- No mobile, usar `bg-contain` ou uma cor de fundo escura em vez de `bg-cover` (a imagem de desktop nao funciona bem em telas estreitas).
+- Centralizar o formulario completamente no mobile sem margin lateral.
+- Reduzir a largura maxima do formulario para `maxWidth: '85vw'` no mobile.
+- Adicionar padding seguro para evitar que o formulario encoste nas bordas.
 
----
-
-### 3. Alerta Visual na Listagem (Aba Solicitacoes de Pecas)
-
-**Arquivo: `src/pages/OSSolicitacoesPecas.tsx`**
-
-- Na tabela de solicitacoes (linha ~482), verificar se a solicitacao tem `osCancelada === true` e status ainda nao tratado (diferente de "Devolvida ao Fornecedor" e "Retida para Estoque"):
-  - Destacar a linha com fundo vermelho claro.
-  - Adicionar badge/icone `AlertTriangle` com texto "OS Cancelada - Acao Necessaria" ao lado do status.
-
----
-
-### 4. Botao "Tratar Peca de OS Cancelada"
-
-**Arquivo: `src/pages/OSSolicitacoesPecas.tsx`**
-
-- Na coluna de acoes da tabela, quando `osCancelada === true` e status nao e "Devolvida ao Fornecedor" nem "Retida para Estoque":
-  - Exibir botao "Tratar Peca" (icone AlertTriangle, cor laranja/warning).
-- Na area de detalhamento (modal de detalhes, linha ~924), tambem exibir o botao "Tratar Peca de OS Cancelada" quando aplicavel.
-
----
-
-### 5. Modal "Tratar Peca de OS Cancelada"
-
-**Arquivo: `src/pages/OSSolicitacoesPecas.tsx`**
-
-Novo modal com:
-
-- **Cabecalho**: Titulo "Tratar Peca de OS Cancelada" + info da peca e OS.
-- **Campo obrigatorio**: "Motivo da Decisao" (Textarea, minimo 10 caracteres).
-- **Botao A (Vermelho)**: "Devolver ao Fornecedor"
-  - Desabilitado se `valorPeca > 0` e a solicitacao ja teve pagamento concluido (status 'Recebida' ou nota associada com status 'Concluido'). Tooltip: "Peca ja paga, nao pode ser devolvida. Opte por reter para estoque."
-  - Acao: chama `tratarPecaOSCancelada(id, 'devolver', motivo, nomeGestor)`.
-- **Botao B (Verde)**: "Reter para Estoque Proprio"
-  - Acao: chama `tratarPecaOSCancelada(id, 'reter', motivo, nomeGestor)`.
-  - Se a peca ja foi recebida fisicamente, registra entrada no estoque de assistencia via `addPeca` com origem "Retencao de OS Cancelada #[osId]".
-
----
-
-### 6. Novos Badges de Status
-
-**Arquivo: `src/pages/OSSolicitacoesPecas.tsx`**
-
-- Adicionar ao `getStatusBadge`:
-  - `'Devolvida ao Fornecedor'` -> Badge roxo/cinza.
-  - `'Retida para Estoque'` -> Badge verde-escuro.
-- Adicionar esses status ao filtro de status (SelectContent).
-
----
-
-### 7. Persistencia e Rastreabilidade
-
-- Os registros de solicitacao NUNCA sao removidos, apenas mudam de status.
-- Timeline da OS e atualizada via `updateOrdemServico` com descricao completa (acao, responsavel, motivo).
-- O campo `motivoTratamento` e `tratadaPor` ficam salvos na solicitacao para consulta futura no modal de detalhes.
+**Solucao no arquivo `src/components/login/LoginForm.tsx`**:
+- Reduzir tamanhos de fonte no mobile:
+  - Titulo "Bem-vindo": de `text-4xl` para `text-2xl` no mobile.
+  - Inputs: padding vertical reduzido de `py-3.5` para `py-3`.
+  - Botao "Entrar": padding de `py-4` para `py-3`.
+- Reduzir `mb-8` do header para `mb-5` no mobile.
 
 ---
 
@@ -92,25 +40,7 @@ Novo modal com:
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/utils/solicitacaoPecasApi.ts` | Novos status, campos `osCancelada`, `motivoTratamento`, `tratadaPor`. Funcoes `tratarPecaOSCancelada` e `marcarSolicitacoesOSCancelada`. |
-| `src/pages/OSSolicitacoesPecas.tsx` | Alerta visual na tabela, botao "Tratar Peca", modal de decisao, novos badges, filtro de status expandido. |
-| `src/utils/assistenciaApi.ts` | Hook de cancelamento de OS para marcar solicitacoes. |
+| `src/components/layout/Sidebar.tsx` | Centralizar icones no modo colapsado com tamanho fixo, ajustar gap, ocultar rodape quando colapsado |
+| `src/components/login/LoginCard.tsx` | Adaptar background e posicionamento do formulario para telas mobile |
+| `src/components/login/LoginForm.tsx` | Reduzir tamanhos de fonte, padding e espacamento para mobile |
 
----
-
-### Secao Tecnica: Estrutura da Funcao Principal
-
-```text
-tratarPecaOSCancelada(id, decisao, motivo, responsavel):
-  1. Busca solicitacao por ID
-  2. Valida osCancelada === true
-  3. Se decisao === 'devolver':
-     a. Verifica se peca nao foi paga (nota concluida)
-     b. Altera status -> 'Devolvida ao Fornecedor'
-     c. Registra timeline na OS
-  4. Se decisao === 'reter':
-     a. Altera status -> 'Retida para Estoque'
-     b. Se peca ja recebida -> addPeca ao estoque assistencia
-     c. Registra timeline na OS
-  5. Salva motivoTratamento e tratadaPor
-```
