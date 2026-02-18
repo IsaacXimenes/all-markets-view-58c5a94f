@@ -76,6 +76,7 @@ export default function OSAssistenciaDetalhes() {
   const [modalConfirmarFinalizacao, setModalConfirmarFinalizacao] = useState(false);
   const [finalizacaoConfirmada, setFinalizacaoConfirmada] = useState(false);
   const [checkFinalizacao, setCheckFinalizacao] = useState(false);
+  const [resumoConclusao, setResumoConclusao] = useState('');
 
   const { user } = useAuthStore();
 
@@ -315,6 +316,10 @@ export default function OSAssistenciaDetalhes() {
       toast.error('O Valor a ser cobrado deve ser maior que 0.');
       return;
     }
+    if (!resumoConclusao.trim()) {
+      toast.error('Preencha o Resumo da Conclusão antes de finalizar.');
+      return;
+    }
     setCheckFinalizacao(false);
     setModalConfirmarFinalizacao(true);
   };
@@ -339,6 +344,7 @@ export default function OSAssistenciaDetalhes() {
       valorCustoTecnico,
       valorVendaTecnico: valorVendaCalculado,
       valorServico: valorServicoFinal,
+      resumoConclusao,
       pecas: osFresh.pecas,
       timeline: [...osFresh.timeline, {
         data: new Date().toISOString(),
@@ -351,7 +357,7 @@ export default function OSAssistenciaDetalhes() {
     if (isEstoque && osFresh.imeiAparelho) {
       atualizarStatusProdutoPendente(osFresh.imeiAparelho, 'Serviço Concluído - Validar Aparelho', {
         osId: os.id,
-        resumo: descMsg,
+        resumo: resumoConclusao,
         custoPecas: valorCustoTecnico,
         tecnico: user?.colaborador?.nome || tecnico?.nome || 'Técnico'
       });
@@ -1627,6 +1633,16 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                 <label className="text-xs text-muted-foreground">Valor a Cobrar</label>
                 <p className="text-sm font-medium">R$ {(valorCustoTecnico + valorServico).toFixed(2)}</p>
               </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Resumo da Conclusão *</label>
+              <Textarea
+                value={resumoConclusao}
+                onChange={(e) => setResumoConclusao(e.target.value)}
+                placeholder="Descreva o serviço realizado, peças utilizadas e resultado..."
+                rows={3}
+                className={cn("mt-1", !resumoConclusao.trim() && "border-destructive")}
+              />
             </div>
             <div className="flex items-center gap-2 pt-2">
               <Checkbox
