@@ -47,7 +47,7 @@ export const LoginCard = () => {
               style={{
                 width: '420px',
                 maxWidth: '90vw',
-                marginLeft: isMobile ? '0' : '23%',
+                marginLeft: isMobile ? '0' : '26%',
               }}
               initial={{ opacity: 1 }}
               exit={{ opacity: 0, y: 10 }}
