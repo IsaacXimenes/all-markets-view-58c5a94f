@@ -300,7 +300,7 @@ export default function CadastrosColaboradores() {
 
   const getCargoBadgeClass = (cargo: string) => {
     const cargoLower = cargo.toLowerCase();
-    if (cargoLower.includes('gestor') || cargoLower.includes('soci')) return 'bg-purple-500/10 text-purple-600 border-purple-500/30';
+    if (cargoLower.includes('gestor') || cargoLower.includes('soci')) return 'bg-blue-500/10 text-blue-600 border-blue-500/30';
     if (cargoLower.includes('vendedor')) return 'bg-green-500/10 text-green-600 border-green-500/30';
     if (cargoLower.includes('estoquista')) return 'bg-blue-500/10 text-blue-600 border-blue-500/30';
     if (cargoLower.includes('técnico')) return 'bg-orange-500/10 text-orange-600 border-orange-500/30';
@@ -407,7 +407,7 @@ export default function CadastrosColaboradores() {
 
         {/* Contadores */}
         <div className="flex flex-wrap gap-2">
-          <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500/30">
+          <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">
             <Shield className="h-3 w-3 mr-1" /> Gestores: {contadores.gestores}
           </Badge>
           <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">

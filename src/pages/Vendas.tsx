@@ -270,8 +270,8 @@ export default function Vendas() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-500/10">
-                  <Percent className="h-5 w-5 text-purple-500" />
+                <div className="p-2 rounded-lg bg-blue-500/10">
+                  <Percent className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Margem Média</p>
@@ -453,7 +453,7 @@ export default function Vendas() {
                       <TableCell className="max-w-[200px] truncate sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]" title={modelos}>
                         {isAcessorioOnly ? (
                           <div className="flex items-center gap-1.5">
-                            <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 text-xs whitespace-nowrap">Acessório</Badge>
+                            <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 text-xs whitespace-nowrap">Acessório</Badge>
                             <span className="truncate">{modelos}</span>
                           </div>
                         ) : (

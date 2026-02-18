@@ -278,7 +278,7 @@ export default function OSConferenciaGestor() {
       case 'Conferência do Gestor':
         return <Badge className="bg-orange-500 hover:bg-orange-600">Pendente Conferência</Badge>;
       case 'Aguardando Financeiro':
-        return <Badge className="bg-purple-500 hover:bg-purple-600">Aguardando Financeiro</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Aguardando Financeiro</Badge>;
       case 'Liquidado':
         return <Badge className="bg-emerald-600 hover:bg-emerald-700">Liquidado</Badge>;
       default:
@@ -442,10 +442,10 @@ export default function OSConferenciaGestor() {
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <DollarSign className="h-8 w-8 text-purple-500 opacity-70" />
+                  <DollarSign className="h-8 w-8 text-blue-500 opacity-70" />
                   <div>
                     <p className="text-sm text-muted-foreground">Aguardando Financeiro</p>
-                    <p className="text-3xl font-bold text-purple-600">{aguardandoFinanceiro}</p>
+                    <p className="text-3xl font-bold text-blue-600">{aguardandoFinanceiro}</p>
                   </div>
                 </div>
               </CardContent>
@@ -624,7 +624,7 @@ export default function OSConferenciaGestor() {
             <span className="flex flex-wrap gap-2">
               <span>Pendente: <strong className="text-orange-600">{pendentes}</strong></span>
               <span>|</span>
-              <span>Financeiro: <strong className="text-purple-600">{aguardandoFinanceiro}</strong></span>
+              <span>Financeiro: <strong className="text-blue-600">{aguardandoFinanceiro}</strong></span>
               <span>|</span>
               <span>Liquidado: <strong className="text-green-600">{liquidadas}</strong></span>
             </span>

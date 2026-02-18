@@ -143,7 +143,7 @@ export function AutocompleteColaborador({
 
   const getCargoBadgeColor = (cargo: string) => {
     const cargoLower = cargo.toLowerCase();
-    if (cargoLower.includes('gestor') || cargoLower.includes('soci')) return 'bg-purple-500/10 text-purple-600 border-purple-500/30';
+    if (cargoLower.includes('gestor') || cargoLower.includes('soci')) return 'bg-blue-500/10 text-blue-600 border-blue-500/30';
     if (cargoLower.includes('vendedor')) return 'bg-green-500/10 text-green-600 border-green-500/30';
     if (cargoLower.includes('estoquista')) return 'bg-blue-500/10 text-blue-600 border-blue-500/30';
     if (cargoLower.includes('técnico')) return 'bg-orange-500/10 text-orange-600 border-orange-500/30';

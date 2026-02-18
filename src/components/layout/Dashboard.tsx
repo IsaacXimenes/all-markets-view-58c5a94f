@@ -104,7 +104,7 @@ export function Dashboard() {
                 value={formatCurrency(comissaoHoje)}
                 description="Estimativa"
                 icon={<Percent />}
-                className="bg-purple-500/10"
+                className="bg-blue-500/10"
               />
               <StatsCard 
                 title="Estoque" 

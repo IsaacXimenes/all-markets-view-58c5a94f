@@ -113,7 +113,7 @@ export default function OSHistoricoAssistencia() {
     switch (origem) {
       case 'Garantia':
         return (
-          <Badge className="bg-purple-500/10 text-purple-600 border-purple-500/30 gap-1">
+          <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/30 gap-1">
             <Shield className="h-3 w-3" />
             Garantia
           </Badge>
@@ -157,7 +157,7 @@ export default function OSHistoricoAssistencia() {
       case 'Peça Recebida':
         return <Badge className="bg-emerald-500 hover:bg-emerald-600">Peça Recebida</Badge>;
       case 'Aguardando Conferência':
-        return <Badge className="bg-violet-500 hover:bg-violet-600">Aguardando Conferência</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Aguardando Conferência</Badge>;
       case 'Finalizado':
         return <Badge className="bg-emerald-700 hover:bg-emerald-800">Finalizado</Badge>;
       default:
@@ -210,12 +210,12 @@ export default function OSHistoricoAssistencia() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Shield className="h-4 w-4 text-purple-500" />
+              <Shield className="h-4 w-4 text-blue-500" />
               Garantia
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{stats.garantia}</div>
+            <div className="text-2xl font-bold text-blue-600">{stats.garantia}</div>
           </CardContent>
         </Card>
 

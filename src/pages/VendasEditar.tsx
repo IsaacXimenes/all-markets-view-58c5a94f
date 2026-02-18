@@ -1068,15 +1068,15 @@ export default function VendasEditar() {
           </CardHeader>
           <CardContent>
             {garantiaExtendida ? (
-              <div className="p-4 bg-purple-100 dark:bg-purple-950/30 rounded-lg flex justify-between items-center">
+              <div className="p-4 bg-blue-100 dark:bg-blue-950/30 rounded-lg flex justify-between items-center">
                 <div>
-                  <p className="font-medium text-purple-900 dark:text-purple-100">Plano {garantiaExtendida.planoNome}</p>
-                  <p className="text-sm text-purple-700 dark:text-purple-300">
+                  <p className="font-medium text-blue-900 dark:text-blue-100">Plano {garantiaExtendida.planoNome}</p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
                     {garantiaExtendida.meses} meses - Vigência: {format(new Date(garantiaExtendida.dataInicio), 'dd/MM/yyyy')} a {format(new Date(garantiaExtendida.dataFim), 'dd/MM/yyyy')}
                   </p>
                 </div>
                 <div className="flex items-center gap-4">
-                  <span className="text-xl font-bold text-purple-600">{formatCurrency(garantiaExtendida.valor)}</span>
+                  <span className="text-xl font-bold text-blue-600">{formatCurrency(garantiaExtendida.valor)}</span>
                   <Button variant="ghost" size="icon" onClick={() => setGarantiaExtendida(null)}>
                     <X className="h-4 w-4 text-destructive" />
                   </Button>
@@ -1291,9 +1291,9 @@ export default function VendasEditar() {
                 <p className="text-xl font-bold">{formatCurrency(valorProdutos)}</p>
               </div>
               {valorGarantiaExtendida > 0 && (
-                <div className="p-3 bg-purple-100 dark:bg-purple-950/30 rounded-lg">
+                <div className="p-3 bg-blue-100 dark:bg-blue-950/30 rounded-lg">
                   <p className="text-sm text-muted-foreground">Garantia Extendida</p>
-                  <p className="text-xl font-bold text-purple-600">{formatCurrency(valorGarantiaExtendida)}</p>
+                  <p className="text-xl font-bold text-blue-600">{formatCurrency(valorGarantiaExtendida)}</p>
                 </div>
               )}
               <div className="p-3 bg-green-100 dark:bg-green-950/30 rounded-lg">
@@ -1724,7 +1724,7 @@ export default function VendasEditar() {
                     <p className="font-medium">Plano {plano.nome}</p>
                     <p className="text-sm text-muted-foreground">{plano.meses} meses de cobertura adicional</p>
                   </div>
-                  <span className="text-lg font-bold text-purple-600">{formatCurrency(plano.valor)}</span>
+                  <span className="text-lg font-bold text-blue-600">{formatCurrency(plano.valor)}</span>
                 </div>
               ))
             )}

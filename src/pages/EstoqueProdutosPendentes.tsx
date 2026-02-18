@@ -425,12 +425,12 @@ export default function EstoqueProdutosPendentes() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-purple-500/10">
-                <RotateCcw className="h-5 w-5 text-purple-500" />
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <RotateCcw className="h-5 w-5 text-blue-500" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Revisão Final</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.retornados}</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.retornados}</p>
               </div>
             </div>
           </CardContent>

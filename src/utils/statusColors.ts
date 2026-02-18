@@ -43,10 +43,10 @@ const statusConfigs: Record<StatusColor, StatusConfig> = {
     borderClass: 'border-gray-200 dark:border-gray-700'
   },
   purple: {
-    color: 'purple',
-    bgClass: 'bg-purple-100 dark:bg-purple-900/30',
-    textClass: 'text-purple-800 dark:text-purple-400',
-    borderClass: 'border-purple-200 dark:border-purple-800'
+    color: 'blue',
+    bgClass: 'bg-blue-100 dark:bg-blue-900/30',
+    textClass: 'text-blue-800 dark:text-blue-400',
+    borderClass: 'border-blue-200 dark:border-blue-800'
   },
   orange: {
     color: 'orange',
@@ -63,7 +63,7 @@ const rowConfigs: Record<StatusColor, string> = {
   red: 'bg-red-500/10',
   blue: 'bg-blue-500/10',
   gray: 'bg-gray-500/10',
-  purple: 'bg-purple-500/10',
+  purple: 'bg-blue-500/10',
   orange: 'bg-orange-500/10'
 };
 
@@ -133,10 +133,10 @@ const statusColorMap: Record<string, StatusColor> = {
   'Arquivado': 'gray',
   'N/A': 'gray',
   
-  // Status especiais (roxo)
-  'VIP': 'purple',
-  'Premium': 'purple',
-  'Empréstimo': 'purple',
+  // Status especiais (azul)
+  'VIP': 'blue',
+  'Premium': 'blue',
+  'Empréstimo': 'blue',
   
   // Status de alerta moderado (laranja)
   'Baixo Estoque': 'orange',

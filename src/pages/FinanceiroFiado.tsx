@@ -285,9 +285,9 @@ export default function FinanceiroFiado() {
 
       {/* Vendas Pendentes de Conferência Fiado */}
       {vendasPendentes.length > 0 && (
-        <Card className="mb-6 border-purple-200 dark:border-purple-800">
+        <Card className="mb-6 border-blue-200 dark:border-blue-800">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-purple-700 dark:text-purple-400">
+            <CardTitle className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
               <Clock className="h-5 w-5" />
               Vendas Pendentes de Conferência ({vendasPendentes.length})
             </CardTitle>
@@ -307,7 +307,7 @@ export default function FinanceiroFiado() {
                 </TableHeader>
                 <TableBody>
                   {vendasPendentes.map((venda: VendaComFluxo) => (
-                    <TableRow key={venda.id} className="bg-purple-500/10 hover:bg-purple-500/20">
+                    <TableRow key={venda.id} className="bg-blue-500/10 hover:bg-blue-500/20">
                       <TableCell className="font-mono text-xs">{venda.id}</TableCell>
                       <TableCell>{new Date(venda.dataHora).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell className="font-medium">{venda.clienteNome}</TableCell>
@@ -316,7 +316,7 @@ export default function FinanceiroFiado() {
                       <TableCell>
                         <Button
                           size="sm"
-                          className="bg-purple-600 hover:bg-purple-700 text-white"
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
                           onClick={() => {
                             const resultado = finalizarVendaFiado(
                               venda.id,

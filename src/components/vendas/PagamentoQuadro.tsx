@@ -511,13 +511,13 @@ export function PagamentoQuadro({
               </Card>
               
               {/* Card 4: Comissão da Venda */}
-              <Card className="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800">
+              <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
                 <CardContent className="pt-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Store className="h-5 w-5 text-purple-600" />
-                    <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Comissão da Venda</span>
+                    <Store className="h-5 w-5 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Comissão da Venda</span>
                   </div>
-                  <p className="text-2xl font-bold text-purple-600">
+                  <p className="text-2xl font-bold text-blue-600">
                     {comissaoVenda ? formatarMoeda(comissaoVenda.valorComissao) : '-'}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -793,8 +793,8 @@ export function PagamentoQuadro({
                 
                 {/* Card de resumo do Boleto */}
                 {novoPagamento.boletoValorFinalCliente && novoPagamento.boletoValorVenda && novoPagamento.boletoNumeroParcelas && (
-                  <div className="p-4 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg border border-indigo-200 dark:border-indigo-800">
-                    <h4 className="font-semibold text-indigo-700 dark:text-indigo-300 mb-3">Resumo Boleto/Crediário</h4>
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 className="font-semibold text-blue-700 dark:text-blue-300 mb-3">Resumo Boleto/Crediário</h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span>Valor Final Cliente:</span>
@@ -809,7 +809,7 @@ export function PagamentoQuadro({
                         <span className="font-medium">{formatarMoeda(novoPagamento.boletoValorFinalCliente - novoPagamento.boletoValorVenda)}</span>
                       </div>
                       <Separator />
-                      <div className="flex justify-between font-bold text-indigo-700 dark:text-indigo-300">
+                      <div className="flex justify-between font-bold text-blue-700 dark:text-blue-300">
                         <span>Valor das Parcelas pro Cliente:</span>
                         <span>{formatarMoeda(novoPagamento.boletoValorFinalCliente / novoPagamento.boletoNumeroParcelas)} mensais ({novoPagamento.boletoNumeroParcelas}x)</span>
                       </div>

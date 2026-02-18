@@ -161,7 +161,7 @@ export default function GarantiaDetalhes() {
   const getTimelineColor = (tipo: string) => {
     switch (tipo) {
       case 'registro_venda': return 'bg-blue-500';
-      case 'abertura_garantia': return 'bg-purple-500';
+      case 'abertura_garantia': return 'bg-blue-500';
       case 'tratativa': return 'bg-yellow-500';
       case 'os_criada': return 'bg-orange-500';
       case 'emprestimo': return 'bg-cyan-500';

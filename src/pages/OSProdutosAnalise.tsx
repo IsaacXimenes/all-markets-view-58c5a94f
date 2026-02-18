@@ -111,7 +111,7 @@ export default function OSProdutosAnalise() {
 
   const getOrigemBadge = (origem: string) => {
     if (origem === 'Base de Troca') {
-      return <Badge variant="outline" className="bg-purple-500/10 text-purple-600 border-purple-500/30">Base de Troca</Badge>;
+      return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">Base de Troca</Badge>;
     }
     return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30">Fornecedor</Badge>;
   };

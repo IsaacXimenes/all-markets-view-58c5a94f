@@ -373,7 +373,7 @@ export default function VendasConferenciaGestor() {
       case 'Conferência Gestor':
         return 'bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-950/50';
       case 'Devolvido pelo Financeiro':
-        return 'bg-purple-50 dark:bg-purple-950/30 hover:bg-purple-100 dark:hover:bg-purple-950/50';
+        return 'bg-blue-50 dark:bg-blue-950/30 hover:bg-blue-100 dark:hover:bg-blue-950/50';
       case 'Conferência Financeiro':
         return 'bg-yellow-50 dark:bg-yellow-950/30 hover:bg-yellow-100 dark:hover:bg-yellow-950/50';
       case 'Finalizado':
@@ -544,10 +544,10 @@ export default function VendasConferenciaGestor() {
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
-                  <Undo2 className="h-8 w-8 text-purple-500 opacity-70" />
+                  <Undo2 className="h-8 w-8 text-blue-500 opacity-70" />
                   <div>
                     <p className="text-sm text-muted-foreground">Devolvido Financeiro</p>
-                    <p className="text-3xl font-bold text-purple-600">{devolvidoFinanceiroCount}</p>
+                    <p className="text-3xl font-bold text-blue-600">{devolvidoFinanceiroCount}</p>
                   </div>
                 </div>
               </CardContent>
@@ -761,7 +761,7 @@ export default function VendasConferenciaGestor() {
             <span className="flex flex-wrap gap-2">
               <span>Gestor: <strong className="text-orange-600">{conferenciaGestorCount}</strong></span>
               <span>|</span>
-              <span>Devolvido: <strong className="text-purple-600">{devolvidoFinanceiroCount}</strong></span>
+              <span>Devolvido: <strong className="text-blue-600">{devolvidoFinanceiroCount}</strong></span>
               <span>|</span>
               <span>Financeiro: <strong className="text-yellow-600">{conferenciaFinanceiroCount}</strong></span>
               <span>|</span>
@@ -1030,11 +1030,11 @@ export default function VendasConferenciaGestor() {
 
                 {/* Aviso se devolvido pelo financeiro */}
                 {vendaSelecionada.statusFluxo === 'Devolvido pelo Financeiro' && vendaSelecionada.devolucaoFinanceiro && (
-                  <div className="p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
-                    <p className="text-sm font-medium text-purple-700 dark:text-purple-400 mb-1">
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <p className="text-sm font-medium text-blue-700 dark:text-blue-400 mb-1">
                       Motivo da Devolução pelo Financeiro:
                     </p>
-                    <p className="text-sm text-purple-600 dark:text-purple-300">
+                    <p className="text-sm text-blue-600 dark:text-blue-300">
                       {vendaSelecionada.devolucaoFinanceiro.motivo}
                     </p>
                   </div>

@@ -148,7 +148,7 @@ export function NotificationBell() {
       case 'parecer_assistencia':
         return <Wrench className="h-4 w-4 text-orange-500" />;
       case 'os_registrada':
-        return <FileText className="h-4 w-4 text-purple-500" />;
+        return <FileText className="h-4 w-4 text-blue-500" />;
       case 'nota_finalizada':
         return <DollarSign className="h-4 w-4 text-emerald-500" />;
       case 'migracao_produto':

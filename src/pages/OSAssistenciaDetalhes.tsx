@@ -254,13 +254,13 @@ export default function OSAssistenciaDetalhes() {
       case 'Solicitação de Peça':
         return <Badge className="bg-orange-500 hover:bg-orange-600">Solicitação de Peça</Badge>;
       case 'Em Análise':
-        return <Badge className="bg-indigo-500 hover:bg-indigo-600">Em Análise</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Em Análise</Badge>;
       case 'Aguardando Aprovação do Gestor':
         return <Badge className="bg-amber-500 hover:bg-amber-600">Aguardando Aprovação</Badge>;
       case 'Rejeitado pelo Gestor':
         return <Badge className="bg-red-500 hover:bg-red-600">Rejeitado</Badge>;
       case 'Pagamento - Financeiro':
-        return <Badge className="bg-purple-500 hover:bg-purple-600">Pagamento - Financeiro</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Pagamento - Financeiro</Badge>;
       case 'Pagamento Finalizado':
         return <Badge className="bg-teal-500 hover:bg-teal-600">Pagamento Finalizado</Badge>;
       case 'Pagamento Concluído':
@@ -274,12 +274,12 @@ export default function OSAssistenciaDetalhes() {
       case 'Aguardando Recebimento':
         return <Badge className="bg-cyan-500 hover:bg-cyan-600">Aguardando Recebimento</Badge>;
       case 'Em Execução':
-        return <Badge className="bg-indigo-500 hover:bg-indigo-600">Em Execução</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Em Execução</Badge>;
       case 'Aguardando Pagamento':
         return <Badge className="bg-amber-500 hover:bg-amber-600">Aguardando Pagamento</Badge>;
       case 'Aguardando Conferência':
       case 'Pendente de Pagamento':
-        return <Badge className="bg-violet-500 hover:bg-violet-600">Pendente de Pagamento</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Pendente de Pagamento</Badge>;
       case 'Conferência do Gestor':
         return <Badge className="bg-orange-500 hover:bg-orange-600">Conferência do Gestor</Badge>;
       case 'Concluído':
@@ -287,7 +287,7 @@ export default function OSAssistenciaDetalhes() {
       case 'Finalizado':
         return <Badge className="bg-emerald-700 hover:bg-emerald-800">Finalizado</Badge>;
       case 'Aguardando Financeiro':
-        return <Badge className="bg-purple-600 hover:bg-purple-700">Aguardando Financeiro</Badge>;
+        return <Badge className="bg-blue-600 hover:bg-blue-700">Aguardando Financeiro</Badge>;
       case 'Liquidado':
         return <Badge className="bg-green-700 hover:bg-green-800">Liquidado</Badge>;
       case 'Recusada pelo Técnico':
@@ -403,7 +403,7 @@ export default function OSAssistenciaDetalhes() {
       case 'ASSISTÊNCIA':
         return <Badge variant="outline" className="border-blue-500 text-blue-600">Assistência</Badge>;
       case 'TROCA':
-        return <Badge variant="outline" className="border-purple-500 text-purple-600">Troca</Badge>;
+        return <Badge variant="outline" className="border-blue-500 text-blue-600">Troca</Badge>;
       default:
         return <Badge variant="outline">{setor}</Badge>;
     }
@@ -1401,7 +1401,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                           <Badge className={cn(
                             os.proximaAtuacao === 'Técnico: Avaliar/Executar' ? 'bg-blue-500 hover:bg-blue-600' :
                             os.proximaAtuacao === 'Vendedor: Registrar Pagamento' ? 'bg-amber-500 hover:bg-amber-600' :
-                            os.proximaAtuacao === 'Financeiro: Conferir Lançamento' ? 'bg-purple-500 hover:bg-purple-600' :
+                            os.proximaAtuacao === 'Financeiro: Conferir Lançamento' ? 'bg-blue-500 hover:bg-blue-600' :
                             os.proximaAtuacao === 'Gestor: Aprovar Peça' ? 'bg-orange-500 hover:bg-orange-600' :
                             os.proximaAtuacao === 'Logística: Enviar Peça' ? 'bg-cyan-500 hover:bg-cyan-600' :
                             'bg-emerald-600 hover:bg-emerald-700'

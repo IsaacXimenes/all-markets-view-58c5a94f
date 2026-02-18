@@ -276,7 +276,7 @@ export default function EstoqueProdutoDetalhes() {
                       variant="outline" 
                       className={cn(
                         produto.statusRetiradaPecas === 'Pendente Assistência' && 'bg-orange-100 text-orange-700 border-orange-300',
-                        produto.statusRetiradaPecas === 'Em Desmonte' && 'bg-purple-100 text-purple-700 border-purple-300',
+                        produto.statusRetiradaPecas === 'Em Desmonte' && 'bg-blue-100 text-blue-700 border-blue-300',
                         produto.statusRetiradaPecas === 'Concluída' && 'bg-gray-100 text-gray-700 border-gray-300'
                       )}
                     >

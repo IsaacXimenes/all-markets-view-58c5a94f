@@ -659,7 +659,7 @@ export default function FinanceiroExtratoContas() {
         {/* Seção: Contas Terceirizadas */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <Landmark className="h-5 w-5 text-purple-600" />
+            <Landmark className="h-5 w-5 text-blue-600" />
             <h2 className="text-lg font-bold">Contas Terceirizadas</h2>
             <Badge variant="secondary">{contasTerceirizadas.length}</Badge>
           </div>

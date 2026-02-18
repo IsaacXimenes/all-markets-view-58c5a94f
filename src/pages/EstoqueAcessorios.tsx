@@ -226,12 +226,12 @@ export default function EstoqueAcessorios() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-purple-500/10">
-                  <TrendingUp className="h-5 w-5 text-purple-500" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Valor Recomendado Total</p>
-                  <p className="text-2xl font-bold text-purple-500">{formatCurrency(estatisticas.valorRecomendadoTotal)}</p>
+              <div className="p-2 rounded-lg bg-blue-500/10">
+                <TrendingUp className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Valor Recomendado Total</p>
+                <p className="text-2xl font-bold text-blue-500">{formatCurrency(estatisticas.valorRecomendadoTotal)}</p>
                 </div>
               </div>
             </CardContent>

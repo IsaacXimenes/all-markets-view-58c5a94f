@@ -602,7 +602,7 @@ export default function EstoqueNotaConferencia() {
                           evento.statusNovo === 'Finalizada' ? 'bg-primary' :
                           evento.statusNovo === 'Com Divergencia' ? 'bg-destructive' :
                           evento.acao.includes('conferido') ? 'bg-green-500' :
-                          evento.acao.includes('Pagamento') ? 'bg-purple-500' :
+                          evento.acao.includes('Pagamento') ? 'bg-blue-500' :
                           'bg-blue-500'
                         }`} />
                         {index < nota.timeline.length - 1 && (
