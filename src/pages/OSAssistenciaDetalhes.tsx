@@ -21,6 +21,7 @@ import {
   OrdemServico,
   updateOrdemServico
 } from '@/utils/assistenciaApi';
+import { atualizarStatusProdutoPendente } from '@/utils/osApi';
 import { getClientes, getFornecedores } from '@/utils/cadastrosApi';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { getSolicitacoesByOS, addSolicitacao, SolicitacaoPeca } from '@/utils/solicitacaoPecasApi';
@@ -346,6 +347,15 @@ export default function OSAssistenciaDetalhes() {
         responsavel: user?.colaborador?.nome || tecnico?.nome || 'Técnico'
       }]
     });
+    // Sincronizar com Aparelhos Pendentes no Estoque
+    if (isEstoque && osFresh.imeiAparelho) {
+      atualizarStatusProdutoPendente(osFresh.imeiAparelho, 'Serviço Concluído - Validar Aparelho', {
+        osId: os.id,
+        resumo: descMsg,
+        custoPecas: valorCustoTecnico,
+        tecnico: user?.colaborador?.nome || tecnico?.nome || 'Técnico'
+      });
+    }
     const updatedOS = getOrdemServicoById(os.id);
     setOS(updatedOS || null);
     setFinalizacaoConfirmada(true);
