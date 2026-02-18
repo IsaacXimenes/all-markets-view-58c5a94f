@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { getOrdensServico, getOrdemServicoById, updateOrdemServico, calcularSLADias, formatCurrency, OrdemServico } from '@/utils/assistenciaApi';
 import { getClientes } from '@/utils/cadastrosApi';
-import { addSolicitacao, getSolicitacoesByOS, cancelarSolicitacao, SolicitacaoPeca } from '@/utils/solicitacaoPecasApi';
+import { addSolicitacao, getSolicitacoesByOS, cancelarSolicitacao, isPecaPaga, SolicitacaoPeca } from '@/utils/solicitacaoPecasApi';
 import { addPeca, addMovimentacaoPeca } from '@/utils/pecasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
@@ -274,8 +274,9 @@ export default function OSOficina() {
   // Gerenciar Peça Não Utilizada
   const handleAbrirGerenciarPeca = (os: OrdemServico) => {
     setOsParaGerenciarPeca(os);
+    const statusFinais = ['Cancelada', 'Rejeitada', 'Devolvida ao Fornecedor', 'Retida para Estoque'];
     const sols = getSolicitacoesByOS(os.id).filter(s => 
-      !['Cancelada', 'Rejeitada'].includes(s.status)
+      !statusFinais.includes(s.status)
     );
     setSolicitacoesParaGerenciar(sols);
     setJustificativaNaoUso('');
@@ -290,15 +291,20 @@ export default function OSOficina() {
       return;
     }
 
+    const statusFinais = ['Cancelada', 'Rejeitada', 'Devolvida ao Fornecedor', 'Retida para Estoque'];
+    if (statusFinais.includes(solicitacaoSelecionada.status)) {
+      toast.error('Esta solicitação já teve seu ciclo encerrado.');
+      return;
+    }
+
     const statusNaoPagos = ['Pendente', 'Aprovada', 'Enviada', 'Aguardando Aprovação', 'Solicitação de Peça'];
-    const statusPagos = ['Pagamento Finalizado', 'Recebida', 'Em Estoque', 'Pagamento Concluído', 'Aguardando Chegada'];
-    const isPaga = statusPagos.includes(solicitacaoSelecionada.status);
+    const paga = isPecaPaga(solicitacaoSelecionada);
 
     if (statusNaoPagos.includes(solicitacaoSelecionada.status)) {
       // Cenário A: Peça NÃO Paga - Cancelar
       cancelarSolicitacao(solicitacaoSelecionada.id, justificativaNaoUso);
       toast.success(`Solicitação ${solicitacaoSelecionada.id} cancelada com sucesso.`);
-    } else if (isPaga) {
+    } else if (paga) {
       // Cenário B: Peça JÁ PAGA - Entrada no estoque
       const osFresh = getOrdemServicoById(osParaGerenciarPeca.id);
       if (!osFresh) return;
@@ -354,9 +360,16 @@ export default function OSOficina() {
       toast.success(`Peça ${solicitacaoSelecionada.peca} incorporada ao estoque. Valores da OS recalculados.`);
     }
 
+    if (!paga && !statusNaoPagos.includes(solicitacaoSelecionada.status)) {
+      // Status intermediário (ex: 'Pagamento - Financeiro') - não permite incorporar
+      toast.error('Esta peça ainda não teve o pagamento concluído. Aguarde a finalização pelo financeiro.');
+      return;
+    }
+
     // Atualizar lista e fechar
+    const statusFinaisPos = ['Cancelada', 'Rejeitada', 'Devolvida ao Fornecedor', 'Retida para Estoque'];
     const solsAtualizadas = getSolicitacoesByOS(osParaGerenciarPeca.id).filter(s => 
-      !['Cancelada', 'Rejeitada'].includes(s.status)
+      !statusFinaisPos.includes(s.status)
     );
     setSolicitacoesParaGerenciar(solsAtualizadas);
     setSolicitacaoSelecionada(null);
@@ -430,8 +443,9 @@ export default function OSOficina() {
         atuacao === 'Técnico: Avaliar/Executar' || 
         status === 'Peça Recebida' || 
         status === 'Pagamento Concluído') {
+      const statusFinaisBtn = ['Cancelada', 'Rejeitada', 'Devolvida ao Fornecedor', 'Retida para Estoque'];
       const solicitacoesOS = getSolicitacoesByOS(os.id).filter(s => 
-        !['Cancelada', 'Rejeitada'].includes(s.status)
+        !statusFinaisBtn.includes(s.status)
       );
       return (
         <div className="flex gap-1">
@@ -450,8 +464,9 @@ export default function OSOficina() {
 
     // Em serviço ou Retrabalho - finalizar + gerenciar peça
     if (status === 'Em serviço' || status === 'Retrabalho - Recusado pelo Estoque') {
+      const statusFinaisBtn2 = ['Cancelada', 'Rejeitada', 'Devolvida ao Fornecedor', 'Retida para Estoque'];
       const solicitacoesOS = getSolicitacoesByOS(os.id).filter(s => 
-        !['Cancelada', 'Rejeitada'].includes(s.status)
+        !statusFinaisBtn2.includes(s.status)
       );
       return (
         <div className="flex gap-1">
@@ -868,8 +883,10 @@ export default function OSOficina() {
               <div className="space-y-2">
                 <p className="text-sm font-medium">Solicitações Ativas ({solicitacoesParaGerenciar.length})</p>
                 {solicitacoesParaGerenciar.map(sol => {
+                  const paga = isPecaPaga(sol);
                   const statusNaoPagos = ['Pendente', 'Aprovada', 'Enviada', 'Aguardando Aprovação'];
-                  const isPaga = !statusNaoPagos.includes(sol.status);
+                  const isNaoPaga = statusNaoPagos.includes(sol.status);
+                  const isAguardandoPagamento = !paga && !isNaoPaga;
                   const isSelected = solicitacaoSelecionada?.id === sol.id;
                   return (
                     <div
@@ -890,14 +907,14 @@ export default function OSOficina() {
                           <span className="text-muted-foreground text-xs">x{sol.quantidade}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          {isPaga && sol.valorPeca && (
+                          {paga && sol.valorPeca && (
                             <span className="text-xs font-medium text-green-600">{formatCurrency(sol.valorPeca * sol.quantidade)}</span>
                           )}
-                          <Badge variant={isPaga ? 'default' : 'outline'} className={cn(
+                          <Badge variant={paga ? 'default' : 'outline'} className={cn(
                             'text-xs',
-                            isPaga ? 'bg-green-600' : 'bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/20 dark:text-yellow-400'
+                            paga ? 'bg-green-600' : isAguardandoPagamento ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-900/20 dark:text-amber-400' : 'bg-gray-50 text-gray-600 border-gray-300 dark:bg-gray-900/20 dark:text-gray-400'
                           )}>
-                            {isPaga ? 'Paga' : 'Não Paga'}
+                            {paga ? 'Paga' : isAguardandoPagamento ? 'Aguardando Pagamento' : 'Não Paga'}
                           </Badge>
                           <Badge variant="secondary" className="text-xs">{sol.status}</Badge>
                         </div>
@@ -915,7 +932,9 @@ export default function OSOficina() {
                   <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">
                     {['Pendente', 'Aprovada', 'Enviada', 'Aguardando Aprovação'].includes(solicitacaoSelecionada.status)
                       ? '⚠️ Esta peça será CANCELADA (não paga).'
-                      : '📦 Esta peça será INCORPORADA AO ESTOQUE da loja (já paga). O valor será subtraído da OS.'
+                      : isPecaPaga(solicitacaoSelecionada)
+                        ? '📦 Esta peça será INCORPORADA AO ESTOQUE da loja (já paga). O valor será subtraído da OS.'
+                        : '⏳ Pagamento ainda em andamento. Não é possível incorporar ao estoque até a conclusão do pagamento.'
                     }
                   </p>
                 </div>
@@ -937,17 +956,22 @@ export default function OSOficina() {
             <Button variant="outline" onClick={() => setPecaNaoUtilizadaModal(false)}>
               Fechar
             </Button>
-            {solicitacaoSelecionada && (
-              <Button
-                onClick={handleMarcarNaoUtilizada}
-                disabled={!justificativaNaoUso.trim()}
-                variant="destructive"
-                className="gap-2"
-              >
-                <Undo2 className="h-4 w-4" />
-                Marcar Não Utilizada
-              </Button>
-            )}
+            {solicitacaoSelecionada && (() => {
+              const isNaoPaga = ['Pendente', 'Aprovada', 'Enviada', 'Aguardando Aprovação'].includes(solicitacaoSelecionada.status);
+              const paga = isPecaPaga(solicitacaoSelecionada);
+              const aguardandoPgto = !paga && !isNaoPaga;
+              return (
+                <Button
+                  onClick={handleMarcarNaoUtilizada}
+                  disabled={!justificativaNaoUso.trim() || aguardandoPgto}
+                  variant="destructive"
+                  className="gap-2"
+                >
+                  <Undo2 className="h-4 w-4" />
+                  {isNaoPaga ? 'Cancelar Solicitação' : 'Marcar Não Utilizada'}
+                </Button>
+              );
+            })()}
           </DialogFooter>
         </DialogContent>
       </Dialog>
