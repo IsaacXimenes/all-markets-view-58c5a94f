@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, User, Lock } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
 
@@ -48,80 +48,111 @@ export const LoginForm = ({ onLoginSuccess, className }: LoginFormProps) => {
   return (
     <div className={cn('w-full', className)} style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Header */}
-      <div className="mb-10">
-        <h1 className="text-3xl font-semibold text-white mb-1">Bem-vindo</h1>
-        <p className="text-base" style={{ color: '#7F7F7F' }}>Acesse sua conta para continuar</p>
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">Bem-vindo</h1>
+        <p className="text-sm tracking-wide" style={{ color: '#9CA3AF' }}>
+          Acesse sua conta para continuar
+        </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         {/* Username */}
-        <div className="space-y-1">
-          <input
-            {...register('username')}
-            type="text"
-            placeholder="Usuário"
-            autoComplete="username"
-            className={cn(
-              'w-full bg-transparent border-0 border-b border-gray-600 px-0 py-3 text-white placeholder:text-[#7F7F7F] outline-none transition-colors duration-200',
-              'focus:border-[#F7BB05]',
-              errors.username && 'border-red-500'
-            )}
-          />
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#9CA3AF' }}>
+            Usuário
+          </label>
+          <div className="relative">
+            <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#6B7280' }} />
+            <input
+              {...register('username')}
+              type="text"
+              placeholder="Digite seu usuário"
+              autoComplete="username"
+              className={cn(
+                'w-full rounded-xl pl-11 pr-4 py-3.5 text-white text-sm',
+                'border border-white/10 outline-none transition-all duration-300',
+                'focus:border-[#F7BB05] focus:shadow-[0_0_0_3px_rgba(247,187,5,0.15)]',
+                errors.username && 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.15)]'
+              )}
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.07)',
+                fontFamily: 'Inter, sans-serif',
+              }}
+            />
+          </div>
           {errors.username && (
-            <p className="text-red-400 text-xs">{errors.username.message}</p>
+            <p className="text-red-400 text-xs pl-1">{errors.username.message}</p>
           )}
         </div>
 
         {/* Password */}
-        <div className="space-y-1">
+        <div className="space-y-1.5">
+          <label className="text-xs font-medium uppercase tracking-widest" style={{ color: '#9CA3AF' }}>
+            Senha
+          </label>
           <div className="relative">
+            <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: '#6B7280' }} />
             <input
               {...register('password')}
               type={showPassword ? 'text' : 'password'}
-              placeholder="Senha"
+              placeholder="Digite sua senha"
               autoComplete="current-password"
               className={cn(
-                'w-full bg-transparent border-0 border-b border-gray-600 px-0 py-3 pr-10 text-white placeholder:text-[#7F7F7F] outline-none transition-colors duration-200',
-                'focus:border-[#F7BB05]',
-                errors.password && 'border-red-500'
+                'w-full rounded-xl pl-11 pr-12 py-3.5 text-white text-sm',
+                'border border-white/10 outline-none transition-all duration-300',
+                'focus:border-[#F7BB05] focus:shadow-[0_0_0_3px_rgba(247,187,5,0.15)]',
+                errors.password && 'border-red-500/50 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,0.15)]'
               )}
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.07)',
+                fontFamily: 'Inter, sans-serif',
+              }}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 p-1"
-              style={{ color: '#7F7F7F' }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-0.5 rounded-md transition-colors hover:bg-white/10"
+              style={{ color: '#6B7280' }}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
           {errors.password && (
-            <p className="text-red-400 text-xs">{errors.password.message}</p>
+            <p className="text-red-400 text-xs pl-1">{errors.password.message}</p>
           )}
         </div>
 
         {/* Error */}
         {error && (
-          <p className="text-red-400 text-sm text-center">{error}</p>
+          <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.25)' }}>
+            <p className="text-red-400 text-sm text-center">{error}</p>
+          </div>
         )}
 
         {/* Button */}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className={cn(
-            'w-full py-4 rounded-xl font-bold text-base transition-all duration-200',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-            'hover:shadow-[0_0_20px_rgba(247,187,5,0.4)]'
-          )}
-          style={{ backgroundColor: '#F7BB05', color: '#111111' }}
-        >
-          {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Entrar'}
-        </button>
+        <div className="pt-2">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className={cn(
+              'w-full py-4 rounded-xl font-bold text-base tracking-wide transition-all duration-300',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'hover:shadow-[0_0_25px_rgba(247,187,5,0.45)] hover:brightness-110',
+              'active:scale-[0.98]'
+            )}
+            style={{ backgroundColor: '#F7BB05', color: '#111111' }}
+          >
+            {isLoading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Entrar'}
+          </button>
+        </div>
 
         {/* Forgot */}
-        <div className="text-center pt-2">
-          <button type="button" className="text-sm hover:text-white transition-colors" style={{ color: '#7F7F7F' }}>
+        <div className="text-center pt-1">
+          <button
+            type="button"
+            className="text-sm transition-colors duration-200 hover:text-[#F7BB05]"
+            style={{ color: '#6B7280' }}
+          >
             Esqueceu a senha?
           </button>
         </div>
