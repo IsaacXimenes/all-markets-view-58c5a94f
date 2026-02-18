@@ -146,12 +146,12 @@ export function GlobalSearch() {
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="relative h-9 w-full justify-start rounded-md bg-muted/50 text-sm text-muted-foreground hover:bg-muted/80 md:w-64 lg:w-80"
+          className="relative h-9 w-full justify-start rounded-md bg-white/5 border-[#333] text-[#E0E0E0] hover:bg-white/10 hover:text-white hover:border-[#F7BB05]/50 md:w-64 lg:w-80 transition-colors"
         >
-          <Search className="mr-2 h-4 w-4" />
+          <Search className="mr-2 h-4 w-4 text-[#F7BB05]" />
           <span className="hidden lg:inline-flex">Buscar no sistema...</span>
           <span className="inline-flex lg:hidden">Buscar...</span>
-          <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+          <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 hidden h-5 select-none items-center gap-1 rounded border border-[#444] bg-[#1a1a1a] px-1.5 font-mono text-[10px] font-medium text-[#999] sm:flex">
             <span className="text-xs">⌘</span>K
           </kbd>
         </Button>

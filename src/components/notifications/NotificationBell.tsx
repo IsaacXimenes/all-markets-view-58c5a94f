@@ -200,7 +200,7 @@ export function NotificationBell() {
     <>
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative h-9 w-9">
+          <Button variant="ghost" size="icon" className="relative h-9 w-9 text-white hover:text-[#F7BB05] hover:bg-white/5">
             <Bell className="h-5 w-5" />
             {naoLidas > 0 && (
               <Badge 

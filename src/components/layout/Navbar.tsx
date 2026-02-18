@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { GlobalSearch } from '@/components/layout/GlobalSearch';
 import { useAuthStore } from '@/store/authStore';
+import circuitBg from '@/assets/sidebar-circuit-bg.png';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,16 +30,30 @@ export function Navbar({ className, isMobile, onMenuClick }: NavbarProps) {
   };
 
   return (
-    <header className={cn("bg-background/95 backdrop-blur-sm sticky top-0 z-30 border-b", className)}>
-      <div className="container flex items-center justify-between h-16 px-4">
+    <header className={cn(
+      "bg-[#111111] sticky top-0 z-30 border-b border-[#222222] relative overflow-hidden",
+      className
+    )}>
+      {/* Circuit pattern overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: `url(${circuitBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.08,
+        }}
+      />
+
+      <div className="container flex items-center justify-between h-16 px-4 relative z-10">
         <div className="flex items-center gap-2 lg:gap-4">
-          {/* Botão hambúrguer - só em mobile */}
           {isMobile && (
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={onMenuClick}
-              className="shrink-0"
+              className="shrink-0 text-white hover:text-[#F7BB05] hover:bg-white/5"
             >
               <Menu className="h-5 w-5" />
               <span className="sr-only">Abrir menu</span>
@@ -53,8 +68,8 @@ export function Navbar({ className, isMobile, onMenuClick }: NavbarProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="focus:outline-none">
-                <Avatar className="h-9 w-9 transition-transform duration-200 hover:scale-105 cursor-pointer">
-                  <AvatarFallback className="bg-primary/10 text-primary">
+                <Avatar className="h-9 w-9 transition-transform duration-200 hover:scale-105 cursor-pointer border border-[#333]">
+                  <AvatarFallback className="bg-[#F7BB05]/15 text-[#F7BB05]">
                     <User className="h-5 w-5" />
                   </AvatarFallback>
                 </Avatar>
