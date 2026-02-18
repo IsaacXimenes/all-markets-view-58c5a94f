@@ -311,6 +311,58 @@ export default function EstoqueProdutoPendenteDetalhes() {
           </Badge>
         </div>
 
+        {/* Card Custo Composto + Resumo Técnico (aparece quando status = Validar Aparelho) */}
+        {produto.statusGeral === 'Serviço Concluído - Validar Aparelho' && (
+          <Card className="border-orange-500/30 mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-orange-500" />
+                Serviço Concluído - Validação Pendente
+              </CardTitle>
+              <CardDescription>
+                {osVinculada ? `OS Vinculada: ${osVinculada.id}` : 'Aguardando validação do gestor de estoque'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {osVinculada && (
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-muted-foreground">Resumo do Técnico</Label>
+                    <p className="mt-1 p-3 rounded-lg bg-muted/50 text-sm">
+                      {osVinculada.resumoConclusao || 'Sem resumo disponível'}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground">Custo Peças/Insumos (OS)</Label>
+                      <p className="text-lg font-bold text-orange-600">{formatCurrency(osVinculada.custoTotal || 0)}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground">OS ID</Label>
+                      <p className="font-mono">{osVinculada.id}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <Separator />
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-3 rounded-lg bg-muted/50 text-center">
+                  <p className="text-xs text-muted-foreground">Custo Aquisição</p>
+                  <p className="text-lg font-bold">{formatCurrency(produto.valorCustoOriginal)}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-orange-500/10 text-center">
+                  <p className="text-xs text-muted-foreground">Custo Assistência</p>
+                  <p className="text-lg font-bold text-orange-600">{formatCurrency(produto.custoAssistencia || 0)}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-primary/10 text-center">
+                  <p className="text-xs text-muted-foreground">Custo Composto</p>
+                  <p className="text-lg font-bold text-primary">{formatCurrency(produto.valorCustoOriginal + (produto.custoAssistencia || 0))}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Informações do Produto */}
           <Card>
@@ -390,58 +442,6 @@ export default function EstoqueProdutoPendenteDetalhes() {
               )}
             </CardContent>
           </Card>
-
-          {/* Card Custo Composto + Resumo Técnico (aparece quando status = Validar Aparelho) */}
-          {produto.statusGeral === 'Serviço Concluído - Validar Aparelho' && (
-            <Card className="border-orange-500/30 col-span-1 lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Wrench className="h-5 w-5 text-orange-500" />
-                  Serviço Concluído - Validação Pendente
-                </CardTitle>
-                <CardDescription>
-                  {osVinculada ? `OS Vinculada: ${osVinculada.id}` : 'Aguardando validação do gestor de estoque'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {osVinculada && (
-                  <div className="space-y-3">
-                    <div>
-                      <Label className="text-muted-foreground">Resumo do Técnico</Label>
-                      <p className="mt-1 p-3 rounded-lg bg-muted/50 text-sm">
-                        {osVinculada.resumoConclusao || 'Sem resumo disponível'}
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-muted-foreground">Custo Peças/Insumos (OS)</Label>
-                        <p className="text-lg font-bold text-orange-600">{formatCurrency(osVinculada.custoTotal || 0)}</p>
-                      </div>
-                      <div>
-                        <Label className="text-muted-foreground">OS ID</Label>
-                        <p className="font-mono">{osVinculada.id}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <Separator />
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="p-3 rounded-lg bg-muted/50 text-center">
-                    <p className="text-xs text-muted-foreground">Custo Aquisição</p>
-                    <p className="text-lg font-bold">{formatCurrency(produto.valorCustoOriginal)}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-orange-500/10 text-center">
-                    <p className="text-xs text-muted-foreground">Custo Assistência</p>
-                    <p className="text-lg font-bold text-orange-600">{formatCurrency(produto.custoAssistencia || 0)}</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-primary/10 text-center">
-                    <p className="text-xs text-muted-foreground">Custo Composto</p>
-                    <p className="text-lg font-bold text-primary">{formatCurrency(produto.valorCustoOriginal + (produto.custoAssistencia || 0))}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Quadro Parecer Estoque */}
           <Card className={produto.parecerEstoque ? 'border-green-500/30' : 'border-yellow-500/30'}>
