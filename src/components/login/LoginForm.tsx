@@ -36,7 +36,6 @@ export const LoginForm = ({ onLoginSuccess, className }: LoginFormProps) => {
     setIsLoading(true);
     setError(null);
 
-    // Simular delay de rede
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     const success = login(data.username, data.password);
@@ -50,36 +49,35 @@ export const LoginForm = ({ onLoginSuccess, className }: LoginFormProps) => {
   };
 
   return (
-    <div className={cn('w-full max-w-sm', className)}>
+    <div className={cn('w-full max-w-sm', className)} style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* Header */}
       <div className="mb-10">
-        <p className="text-black text-base mb-1 font-bold">Sistema de gestão</p>
-        <h1 className="text-3xl font-semibold" style={{ color: '#F7BB05' }}>Thiago Imports</h1>
+        <h1 className="text-3xl font-semibold text-white mb-1">Bem-vindo</h1>
+        <p className="text-base" style={{ color: '#7F7F7F' }}>Acesse sua conta para continuar</p>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Username Field */}
+        {/* Username */}
         <div className="space-y-1">
-          <div className="relative">
-            <input
-              {...register('username')}
-              type="text"
-              placeholder="Usuário"
-              autoComplete="username"
-              className={cn(
-                'w-full bg-transparent border-0 border-b-2 border-gray-200 px-0 py-3 text-foreground placeholder:text-gray-400',
-                'focus:outline-none focus:border-gray-900 transition-colors duration-200',
-                errors.username && 'border-red-400 focus:border-red-500'
-              )}
-            />
-          </div>
+          <input
+            {...register('username')}
+            type="text"
+            placeholder="Usuário"
+            autoComplete="username"
+            className={cn(
+              'w-full rounded-xl px-4 py-3.5 text-white placeholder:text-[#7F7F7F] border-2 border-transparent transition-all duration-200 outline-none',
+              'focus:border-[#F7BB05] focus:ring-2 focus:ring-[#F7BB05]/30',
+              errors.username && 'border-red-500 focus:border-red-500 focus:ring-red-500/30'
+            )}
+            style={{ backgroundColor: '#212121', fontFamily: 'Inter, sans-serif' }}
+          />
           {errors.username && (
-            <p className="text-red-500 text-xs">{errors.username.message}</p>
+            <p className="text-red-400 text-xs pl-1">{errors.username.message}</p>
           )}
         </div>
 
-        {/* Password Field */}
+        {/* Password */}
         <div className="space-y-1">
           <div className="relative">
             <input
@@ -88,42 +86,48 @@ export const LoginForm = ({ onLoginSuccess, className }: LoginFormProps) => {
               placeholder="Senha"
               autoComplete="current-password"
               className={cn(
-                'w-full bg-transparent border-0 border-b-2 border-gray-200 px-0 py-3 pr-10 text-foreground placeholder:text-gray-400',
-                'focus:outline-none focus:border-gray-900 transition-colors duration-200',
-                errors.password && 'border-red-400 focus:border-red-500'
+                'w-full rounded-xl px-4 py-3.5 pr-12 text-white placeholder:text-[#7F7F7F] border-2 border-transparent transition-all duration-200 outline-none',
+                'focus:border-[#F7BB05] focus:ring-2 focus:ring-[#F7BB05]/30',
+                errors.password && 'border-red-500 focus:border-red-500 focus:ring-red-500/30'
               )}
+              style={{ backgroundColor: '#212121', fontFamily: 'Inter, sans-serif' }}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 transition-colors"
+              style={{ color: '#7F7F7F' }}
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
           {errors.password && (
-            <p className="text-red-500 text-xs">{errors.password.message}</p>
+            <p className="text-red-400 text-xs pl-1">{errors.password.message}</p>
           )}
         </div>
 
-        {/* Error Message */}
+        {/* Error */}
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600 text-sm text-center">{error}</p>
+          <div className="p-3 rounded-xl" style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+            <p className="text-red-400 text-sm text-center">{error}</p>
           </div>
         )}
 
-        {/* Login Button */}
+        {/* Button */}
         <button
           type="submit"
           disabled={isLoading}
           className={cn(
-            'w-full py-4 rounded-xl font-medium text-white transition-all duration-200',
-            'bg-gradient-to-r from-gray-800 to-black hover:from-gray-900 hover:to-gray-800',
-            'focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2',
+            'w-full py-4 rounded-xl font-bold text-base transition-all duration-200',
+            'focus:outline-none focus:ring-2 focus:ring-[#F7BB05]/50 focus:ring-offset-2 focus:ring-offset-[#111111]',
             'disabled:opacity-50 disabled:cursor-not-allowed',
-            'shadow-lg hover:shadow-xl'
+            'hover:shadow-[0_0_20px_rgba(247,187,5,0.4)]'
           )}
+          style={{
+            backgroundColor: '#F7BB05',
+            color: '#111111',
+            fontFamily: 'Inter, sans-serif',
+          }}
         >
           {isLoading ? (
             <Loader2 className="w-5 h-5 animate-spin mx-auto" />
@@ -132,11 +136,12 @@ export const LoginForm = ({ onLoginSuccess, className }: LoginFormProps) => {
           )}
         </button>
 
-        {/* Forgot Password Link */}
-        <div className="text-center pt-4">
+        {/* Forgot password */}
+        <div className="text-center pt-2">
           <button
             type="button"
-            className="text-gray-500 text-sm hover:text-gray-700 transition-colors"
+            className="text-sm transition-colors hover:text-white"
+            style={{ color: '#7F7F7F', fontFamily: 'Inter, sans-serif' }}
           >
             Esqueceu a senha?
           </button>

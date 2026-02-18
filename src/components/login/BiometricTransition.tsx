@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
-import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface BiometricTransitionProps {
   isActive: boolean;
@@ -12,33 +13,34 @@ export const BiometricTransition = ({ isActive, onComplete }: BiometricTransitio
   const [visible, setVisible] = useState(false);
   const navigate = useNavigate();
   const setAnimating = useAuthStore((state) => state.setAnimating);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
-    if (!isActive) {
-      setVisible(false);
-      return;
-    }
+    if (!isActive) return;
 
-    // Fade in do overlay branco
     setVisible(true);
 
     const timer = setTimeout(() => {
       setAnimating(false);
       navigate('/', { replace: true });
       onComplete();
-    }, 600);
+    }, isMobile ? 400 : 1000);
 
     return () => clearTimeout(timer);
-  }, [isActive, navigate, onComplete, setAnimating]);
-
-  if (!isActive && !visible) return null;
+  }, [isActive, navigate, onComplete, setAnimating, isMobile]);
 
   return (
-    <div
-      className={cn(
-        'fixed inset-0 z-50 bg-white transition-opacity duration-500 ease-out',
-        visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+    <AnimatePresence>
+      {visible && isActive && (
+        <motion.div
+          className="fixed inset-0 z-50"
+          initial={{ backdropFilter: 'blur(20px)', opacity: 1 }}
+          animate={{ backdropFilter: 'blur(0px)', opacity: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: isMobile ? 0.4 : 1.0, ease: 'easeOut' }}
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+        />
       )}
-    />
+    </AnimatePresence>
   );
 };
