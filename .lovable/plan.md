@@ -1,37 +1,129 @@
 
-## Correção: Peças/Serviços desaparecendo ao editar OS
 
-### Problema identificado
-Na tela de detalhes da OS (`OSAssistenciaDetalhes.tsx`), ao clicar em "Editar OS", o quadro de Peças/Serviços mostra o item existente, porém o campo **Descrição** aparece vazio quando a peça tem origem "Peça no estoque" (`pecaNoEstoque: true`).
+## Reestruturacao do Fluxo de Assistencia com Ramificacao "Origem: Estoque" e Valorizacao de Ativos
 
-Isso acontece porque o campo Descrição renderiza como um `<Select>` com opções vindas do estoque atual (peças disponíveis com quantidade > 0). Se o valor salvo (ex: "Troca de bateria") não corresponde a nenhuma `descricao` das peças em estoque, o Select não consegue exibir o valor e aparece em branco.
+### Resumo
 
-### Solução
+Este plano implementa um fluxo especializado para OSs com **Origem: Estoque**, onde aparelhos internos passam pela assistencia sem cobranca ao cliente, com ciclo de retrabalho (ping-pong) entre tecnico e gestor de estoque, e acumulo de custos de reparo no cadastro do aparelho.
 
-**Arquivo: `src/pages/OSAssistenciaDetalhes.tsx`**
+---
 
-1. No `<Select>` de descrição da peça (quando `pecaNoEstoque` é true), incluir o valor já salvo como uma opção no dropdown caso ele não exista na lista de peças disponíveis no estoque. Isso garante que a descrição previamente cadastrada continue visível e selecionada ao entrar no modo de edição.
+### 1. Regras de Negocio para Origem: Estoque
 
-2. Alternativa mais simples e robusta: quando a peça já tem uma descrição preenchida e está marcada como "Peça no estoque", exibir a descrição atual como opção fixa no Select, mesmo que a peça não esteja mais disponível no estoque.
+Quando `origemOS === 'Estoque'`:
 
-### Detalhes Técnicos
+- **Mao de Obra Zero**: Campo "Valor do servico (R$)" fixado em R$ 0,00 e desabilitado
+- **Pagamento Oculto**: Quadro de pagamentos (PagamentoQuadro) e botao "Registrar Pagamento" sao escondidos
+- **Finalizacao redireciona para Estoque**: Ao finalizar, status muda para `"Servico Concluido - Validar Aparelho"` com `proximaAtuacao: "Gestor (Estoque)"`
+- **Resumo obrigatorio**: Tecnico deve preencher "Resumo da Conclusao" antes de finalizar
 
-No trecho do Select de descrição (linhas 699-733), antes de renderizar as opções do estoque, verificar se `peca.peca` (valor atual) já possui um valor e se esse valor **não** está na lista `pecasEstoque`. Caso positivo, incluir um `<SelectItem>` extra com o valor atual para que o Select consiga exibi-lo corretamente.
+---
+
+### 2. Nova Aba "Aparelhos Pendentes" no Modulo OS
+
+Uma nova aba no layout de abas da Assistencia (OSLayout/AssistenciaLayout) para o gestor de estoque validar retornos.
+
+**Funcionalidades:**
+- Lista OSs com status `"Servico Concluido - Validar Aparelho"`
+- **Aprovar**: Calcula Custo Composto (Custo Original + Custo de Reparo), atualiza o aparelho no estoque como "Disponivel"
+- **Recusar/Retrabalho**: Gestor informa motivo. OS volta para Oficina com status `"Retrabalho - Recusado pelo Estoque"`
+
+---
+
+### 3. Maquina de Estados - Ping-Pong de Retrabalho
 
 ```text
-Antes:
-  <SelectContent>
-    {pecasEstoque.filter(...).map(p => <SelectItem value={p.descricao}>...)}
-  </SelectContent>
-
-Depois:
-  <SelectContent>
-    {/* Incluir valor atual se não estiver na lista */}
-    {peca.peca && !pecasEstoque.some(p => p.descricao === peca.peca && p.status === 'Disponível' && p.quantidade > 0) && (
-      <SelectItem value={peca.peca}>{peca.peca} (salvo anteriormente)</SelectItem>
-    )}
-    {pecasEstoque.filter(...).map(p => <SelectItem value={p.descricao}>...)}
-  </SelectContent>
+Oficina (Tecnico)
+    |
+    v  [Finalizar OS]
+"Servico Concluido - Validar Aparelho" (Gestor Estoque)
+    |
+    +-- [Aprovar] --> Atualiza estoque, OS finalizada
+    |
+    +-- [Recusar] --> "Retrabalho - Recusado pelo Estoque" (Tecnico)
+                          |
+                          v  [Tecnico refaz e finaliza]
+                    "Servico Concluido - Validar Aparelho" (Gestor Estoque)
+                          |
+                          +-- [Aprovar / Recusar novamente...]
 ```
 
-Essa alteracao e pontual (apenas no arquivo `OSAssistenciaDetalhes.tsx`, na secao de renderizacao do Select de descricao) e resolve o problema sem impactar outros fluxos.
+---
+
+### 4. Timeline de Auditoria e Acumulo de Custos
+
+- Cada recusa gera registro na timeline: `"Retrabalho solicitado por [Usuario] - Motivo: [Texto]"`
+- Cada ciclo de retrabalho com novas pecas **soma** ao custo total do aparelho
+- O custo final eh atomico: `Custo Aquisicao + SUM(todos custos de reparo de todas as idas)`
+
+---
+
+### 5. Visualizacao de Custo no Cadastro do Aparelho
+
+No detalhamento do produto (`EstoqueProdutoDetalhes.tsx`):
+
+- Novo campo **"Custo Total"**: Exibe `valorCusto + custoAssistencia`
+- Novo botao **"Ver Detalhes do Custo"**: Abre modal com:
+  - Custo de Aquisicao: R$ [valor original]
+  - Investimento em Reparo (OS #[ID]): R$ [valor] (para cada OS vinculada)
+
+---
+
+### Detalhes Tecnicos
+
+#### Arquivos a modificar:
+
+**1. `src/utils/assistenciaApi.ts`**
+- Adicionar novos status ao tipo `OrdemServico.status`: `'Servico Concluido - Validar Aparelho'` e `'Retrabalho - Recusado pelo Estoque'`
+- Adicionar `'Gestor (Estoque)'` ao tipo `proximaAtuacao`
+- Na funcao `updateOrdemServico`: quando status muda para `'Servico Concluido - Validar Aparelho'` com origem Estoque, acumular custos no produto via `estoqueApi`
+
+**2. `src/components/layout/OSLayout.tsx` e `AssistenciaLayout.tsx`**
+- Adicionar nova aba "Aparelhos Pendentes" com icone `Package` e href `/os/aparelhos-pendentes`
+
+**3. Nova pagina: `src/pages/OSAparelhosPendentes.tsx`**
+- Listagem de OSs com status `"Servico Concluido - Validar Aparelho"`
+- Cards com info do aparelho (modelo, IMEI, tecnico, resumo)
+- Modal de Aprovacao: exibe calculo do Custo Composto, botao confirmar
+- Modal de Recusa: campo de motivo obrigatorio, botao recusar
+
+**4. `src/pages/OSOficina.tsx`**
+- Exibir OSs com status `"Retrabalho - Recusado pelo Estoque"` na fila do tecnico com badge vermelho "Retrabalho"
+- Na finalizacao: detectar se `origemOS === 'Estoque'` para redirecionar para validacao em vez de Atendente
+
+**5. `src/pages/OSAssistenciaDetalhes.tsx`**
+- Quando `origemOS === 'Estoque'`:
+  - Esconder quadro de pagamentos
+  - Fixar valor de servico em R$ 0,00
+  - Alterar destino da finalizacao para Gestor (Estoque)
+
+**6. `src/pages/OSAssistenciaNova.tsx`**
+- Quando `origemOS === 'estoque'` (ja existe parcialmente):
+  - Esconder campo de pagamento
+  - Desabilitar campo valor do servico
+
+**7. `src/utils/estoqueApi.ts`**
+- Nova funcao `atualizarCustoAssistencia(produtoId, osId, custoReparo)`: soma `custoReparo` ao campo `custoAssistencia` do produto
+- Nova funcao `getHistoricoCustosReparo(produtoId)`: retorna lista de OSs e seus custos vinculados ao IMEI/produto
+- Ao aprovar retorno: atualizar status do produto para "Disponivel" e somar custos
+
+**8. `src/pages/EstoqueProdutoDetalhes.tsx`**
+- Novo card "Custo Total" exibindo `valorCusto + custoAssistencia`
+- Novo botao "Ver Detalhes do Custo" com modal listando aquisicao + reparos por OS
+
+**9. `src/App.tsx`**
+- Adicionar rota `/os/aparelhos-pendentes` apontando para `OSAparelhosPendentes`
+
+**10. `src/components/ui/badge.tsx` (sem alteracao)**
+- Reutilizar badges existentes para novos status
+
+#### Novos status e badges:
+- `"Servico Concluido - Validar Aparelho"` - Badge amarelo/laranja
+- `"Retrabalho - Recusado pelo Estoque"` - Badge vermelho com icone de retorno
+
+#### Travas de seguranca:
+- Tecnico nao pode finalizar sem preencher resumo e valores de pecas (ja existente, mantido)
+- Campo "Loja" filtra apenas tipo "Assistencia" (ja existente, mantido)
+- Calculo de custo composto eh atomico (leitura + soma + escrita em uma unica operacao)
+- Campo "Responsavel" auto-preenchido pelo usuario logado (regra global mantida)
+
