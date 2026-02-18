@@ -1,48 +1,33 @@
 
 
-## Correcao do Layout - Detalhes do Produto Pendente
+## Duas Implementacoes: Campo Resumo do Tecnico + Layout do Estoque
 
-### Problema
+### 1. Campo "Resumo da Conclusao" na finalizacao da OS (aba Servicos)
 
-O card "Servico Concluido - Validacao Pendente" (Custo Composto) foi inserido dentro do grid de 2 colunas com a classe `lg:col-span-2`, ocupando toda a largura e empurrando o quadro "Parecer Estoque" para baixo, desorganizando o layout original.
+**Arquivo: `src/pages/OSAssistenciaDetalhes.tsx`**
 
-### Layout Original (antes da mudanca)
+- Adicionar estado `resumoConclusao` (linha 78, apos `checkFinalizacao`)
+- Adicionar validacao em `handleConcluirServicoClick` (linha 305): exigir campo preenchido antes de abrir modal
+- Adicionar campo `Textarea` no modal de finalizacao (linha 1630, antes do checkbox), com label "Resumo da Conclusao *"
+- Salvar `resumoConclusao` no `updateOrdemServico` (linha 336)
+- Passar `resumoConclusao` (em vez de `descMsg`) para `atualizarStatusProdutoPendente` (linha 354)
+
+### 2. Layout do detalhamento no Estoque - mover card de validacao
+
+**Arquivo: `src/pages/EstoqueProdutoPendenteDetalhes.tsx`**
+
+- Mover o bloco condicional do card "Servico Concluido - Validacao Pendente" (linhas 315-364) de **antes** do grid para **depois** do grid de Informacoes do Produto + Parecer Estoque
+- O card ficara entre o primeiro grid (Informacoes + Parecer) e o segundo grid (Parecer Assistencia + Timeline)
+
+### Layout resultante no Estoque
 
 ```text
 +---------------------------+---------------------------+
 | Informacoes do Produto    | Parecer Estoque           |
 +---------------------------+---------------------------+
-| Parecer Assistencia       | Timeline                  |
-+---------------------------+---------------------------+
-```
-
-### Layout Atual (quebrado)
-
-```text
-+---------------------------+---------------------------+
-| Informacoes do Produto    |                           |
 +-----------------------------------------------------------+
-| Custo Composto (col-span-2 - ocupa tudo)                  |
+| Custo Composto + Resumo Tecnico (largura total)           |
 +-----------------------------------------------------------+
-| Parecer Estoque           | Parecer Assistencia       |
-+---------------------------+---------------------------+
-| Timeline                  |                           |
-+---------------------------+---------------------------+
-```
-
-### Correcao Proposta
-
-Mover o card de Custo Composto para **fora** do grid de 2 colunas, colocando-o **acima** do grid como um card de largura total independente. Assim o grid interno mantem o layout original com "Informacoes do Produto" e "Parecer Estoque" lado a lado.
-
-### Layout Corrigido
-
-```text
-+-----------------------------------------------------------+
-| Custo Composto + Resumo Tecnico (largura total, fora do   |
-| grid, so aparece quando status = Validar Aparelho)        |
-+-----------------------------------------------------------+
-+---------------------------+---------------------------+
-| Informacoes do Produto    | Parecer Estoque           |
 +---------------------------+---------------------------+
 | Parecer Assistencia       | Timeline                  |
 +---------------------------+---------------------------+
@@ -50,9 +35,41 @@ Mover o card de Custo Composto para **fora** do grid de 2 colunas, colocando-o *
 
 ### Detalhes Tecnicos
 
-**Arquivo: `src/pages/EstoqueProdutoPendenteDetalhes.tsx`**
+**OSAssistenciaDetalhes.tsx - Alteracoes:**
 
-- Mover o bloco condicional do card "Custo Composto" (linhas 394-444) para **antes** da abertura do grid (linha 314: `<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">`)
-- Remover a classe `col-span-1 lg:col-span-2` do card, pois ele estara fora do grid e ja ocupara a largura total naturalmente
+1. Novo estado (apos linha 78):
+```
+const [resumoConclusao, setResumoConclusao] = useState('');
+```
 
-Nenhum outro arquivo precisa ser alterado.
+2. Validacao em `handleConcluirServicoClick` (apos linha 313):
+```
+if (!resumoConclusao.trim()) {
+  toast.error('Preencha o Resumo da Conclusão antes de finalizar.');
+  return;
+}
+```
+
+3. Campo Textarea no modal (antes do checkbox, linha 1631):
+```
+<div>
+  <label className="text-xs text-muted-foreground">Resumo da Conclusão *</label>
+  <Textarea
+    value={resumoConclusao}
+    onChange={(e) => setResumoConclusao(e.target.value)}
+    placeholder="Descreva o serviço realizado, peças utilizadas e resultado..."
+    rows={3}
+    className="mt-1"
+  />
+</div>
+```
+
+4. Incluir `resumoConclusao` no `updateOrdemServico` (linha 336)
+
+5. Passar `resumo: resumoConclusao` no `atualizarStatusProdutoPendente` (linha 354)
+
+**EstoqueProdutoPendenteDetalhes.tsx - Alteracao:**
+
+- Remover o bloco condicional (linhas 315-364) de antes do grid
+- Inserir o mesmo bloco logo apos o fechamento do primeiro `</div>` do grid (apos linha 444, onde fecha o grid de Informacoes + Parecer Estoque)
+
