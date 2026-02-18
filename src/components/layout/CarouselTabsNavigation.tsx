@@ -78,7 +78,7 @@ export function CarouselTabsNavigation({ tabs, size = 'default' }: CarouselTabsN
                 "flex items-center gap-1.5 rounded-lg whitespace-nowrap transition-colors",
                 isSmall ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm",
                 isActive
-                  ? "bg-[#F7BB05]/10 text-[#F7BB05] font-semibold border border-[#F7BB05]/30"
+                  ? "bg-[#F7BB05] text-black font-semibold border border-[#F7BB05]"
                   : "bg-[#111111] text-[#E0E0E0] hover:bg-[#212121] border border-[#333]"
               )}
             >
