@@ -414,24 +414,15 @@ export default function EstoqueProdutos() {
                         </Button>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-1">
-                        {produto.statusNota === 'Pendente' ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive border-destructive hover:bg-destructive/10"
-                            onClick={() => handleOpenValorModal(produto)}
-                          >
-                            <AlertCircle className="h-4 w-4 mr-1" />
-                            Informar Valor
-                          </Button>
-                        ) : (
-                          <div className="flex items-center gap-1 text-destructive">
-                            <AlertCircle className="h-4 w-4" />
-                            <span className="text-xs">Pendente</span>
-                          </div>
-                        )}
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive border-destructive hover:bg-destructive/10"
+                        onClick={() => handleOpenValorModal(produto)}
+                      >
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        Informar Valor
+                      </Button>
                     )}
                   </TableCell>
                   {/* Custo */}

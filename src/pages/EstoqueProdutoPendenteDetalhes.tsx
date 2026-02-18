@@ -149,10 +149,10 @@ export default function EstoqueProdutoPendenteDetalhes() {
     }
 
     // Observação obrigatória ao encaminhar para assistência ou retrabalho
-    if ((parecerStatus === 'Encaminhado para conferência da Assistência' || parecerStatus === 'Retrabalho - Devolver para Oficina') && !parecerObservacoes.trim()) {
+    if ((parecerStatus === 'Encaminhado para conferência da Assistência' || parecerStatus === 'Retrabalho - Devolver para Laboratório') && !parecerObservacoes.trim()) {
       toast({
         title: "Observação obrigatória",
-        description: parecerStatus === 'Retrabalho - Devolver para Oficina'
+        description: parecerStatus === 'Retrabalho - Devolver para Laboratório'
           ? "Informe o motivo da recusa para o retrabalho."
           : "Preencha a Observação com as tratativas que o técnico deve realizar.",
         variant: "destructive"
@@ -177,7 +177,7 @@ export default function EstoqueProdutoPendenteDetalhes() {
 
     setConfirmDialogOpen(false);
 
-    // Fluxo de Validação pós-oficina (Aprovar / Retrabalho)
+    // Fluxo de Validação pós-laboratório (Aprovar / Retrabalho)
     if (parecerStatus === 'Aparelho Aprovado - Retornar ao Estoque') {
       // Aprovar: somar custo assistência e deferir
       const resultado = salvarParecerEstoque(id, 'Produto revisado e deferido', parecerObservacoes, parecerResponsavel);
@@ -192,7 +192,7 @@ export default function EstoqueProdutoPendenteDetalhes() {
       return;
     }
 
-    if (parecerStatus === 'Retrabalho - Devolver para Oficina') {
+    if (parecerStatus === 'Retrabalho - Devolver para Laboratório') {
       // Retrabalho: atualizar status do produto pendente e da OS vinculada
       if (produto) {
         atualizarStatusProdutoPendente(produto.imei, 'Retrabalho - Recusado pelo Estoque', {
@@ -219,7 +219,7 @@ export default function EstoqueProdutoPendenteDetalhes() {
       }
       toast({
         title: "Retrabalho solicitado",
-        description: `Produto ${id} devolvido para a oficina. Motivo: ${parecerObservacoes}`,
+        description: `Produto ${id} devolvido para o laboratório. Motivo: ${parecerObservacoes}`,
         variant: "destructive"
       });
       navigate('/estoque/produtos-pendentes');
@@ -421,8 +421,8 @@ export default function EstoqueProdutoPendenteDetalhes() {
                             <SelectItem value="Aparelho Aprovado - Retornar ao Estoque">
                               Aparelho Aprovado - Retornar ao Estoque
                             </SelectItem>
-                            <SelectItem value="Retrabalho - Devolver para Oficina">
-                              Retrabalho - Devolver para Oficina
+                            <SelectItem value="Retrabalho - Devolver para Laboratório">
+                              Retrabalho - Devolver para Laboratório
                             </SelectItem>
                           </>
                         ) : produto.statusGeral === 'Retornado da Assistência' ? (
@@ -445,10 +445,10 @@ export default function EstoqueProdutoPendenteDetalhes() {
 
                   <div className="space-y-2">
                     <Label>
-                      Observações {(parecerStatus === 'Encaminhado para conferência da Assistência' || parecerStatus === 'Retrabalho - Devolver para Oficina') && <span className="text-destructive">*</span>}
+                      Observações {(parecerStatus === 'Encaminhado para conferência da Assistência' || parecerStatus === 'Retrabalho - Devolver para Laboratório') && <span className="text-destructive">*</span>}
                     </Label>
                     <Textarea
-                      placeholder={parecerStatus === 'Retrabalho - Devolver para Oficina'
+                      placeholder={parecerStatus === 'Retrabalho - Devolver para Laboratório'
                         ? "Informe o motivo da recusa (obrigatório)..."
                         : parecerStatus === 'Encaminhado para conferência da Assistência' 
                         ? "Descreva as tratativas que o técnico deve realizar..." 
@@ -456,9 +456,9 @@ export default function EstoqueProdutoPendenteDetalhes() {
                       value={parecerObservacoes}
                       onChange={(e) => setParecerObservacoes(e.target.value)}
                       rows={3}
-                      className={(parecerStatus === 'Encaminhado para conferência da Assistência' || parecerStatus === 'Retrabalho - Devolver para Oficina') && !parecerObservacoes.trim() ? 'border-destructive' : ''}
+                      className={(parecerStatus === 'Encaminhado para conferência da Assistência' || parecerStatus === 'Retrabalho - Devolver para Laboratório') && !parecerObservacoes.trim() ? 'border-destructive' : ''}
                     />
-                    {parecerStatus === 'Retrabalho - Devolver para Oficina' && (
+                    {parecerStatus === 'Retrabalho - Devolver para Laboratório' && (
                       <p className="text-xs text-destructive">Motivo obrigatório ao solicitar retrabalho</p>
                     )}
                     {parecerStatus === 'Encaminhado para conferência da Assistência' && (

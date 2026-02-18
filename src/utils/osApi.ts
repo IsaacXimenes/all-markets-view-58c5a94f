@@ -251,7 +251,7 @@ let produtosPendentes: ProdutoPendente[] = [
     statusGeral: 'Aguardando Recebimento Assistência',
     contadorEncaminhamentos: 1
   },
-  // Produto de teste para validação pós-oficina (vinculado à OS-2025-0009)
+  // Produto de teste para validação pós-laboratório (vinculado à OS-2025-0009)
   {
     id: 'PROD-0006',
     imei: '999888777666555',
@@ -296,7 +296,7 @@ let produtosPendentes: ProdutoPendente[] = [
         id: 'TL-022',
         data: '2025-01-22T16:00:00',
         tipo: 'parecer_assistencia',
-        titulo: 'Serviço Concluído na Oficina – OS-2025-0009',
+        titulo: 'Serviço Concluído no Laboratório – OS-2025-0009',
         descricao: 'Tela OLED substituída com sucesso. Aparelho testado e funcionando normalmente.',
         responsavel: 'Jeferson Sousa Cabral',
         valor: 450
@@ -348,7 +348,7 @@ export const atualizarStatusProdutoPendente = (
       data: new Date().toISOString(),
       tipo: novoStatus === 'Serviço Concluído - Validar Aparelho' ? 'parecer_assistencia' : 'parecer_estoque',
       titulo: novoStatus === 'Serviço Concluído - Validar Aparelho'
-        ? `Serviço Concluído na Oficina – ${dadosOS.osId}`
+        ? `Serviço Concluído no Laboratório – ${dadosOS.osId}`
         : `Retrabalho Solicitado – ${dadosOS.osId}`,
       descricao: dadosOS.resumo || `Status atualizado para: ${novoStatus}`,
       responsavel: dadosOS.tecnico || 'Sistema',
