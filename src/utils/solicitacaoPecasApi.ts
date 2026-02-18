@@ -554,7 +554,7 @@ export const tratarPecaOSCancelada = (
   if (index === -1) return null;
   
   const sol = solicitacoes[index];
-  if (!sol.osCancelada) return null;
+  if (!sol.osCancelada && sol.status !== 'Cancelada') return null;
 
   if (decisao === 'devolver') {
     solicitacoes[index] = {

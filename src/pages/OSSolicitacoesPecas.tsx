@@ -437,7 +437,7 @@ export default function OSSolicitacoesPecas() {
                 className={cn(
                   sol.status === 'Pendente' && 'bg-yellow-50 dark:bg-yellow-900/10',
                   sol.status === 'Aprovada' && 'bg-blue-50 dark:bg-blue-900/10',
-                  sol.osCancelada && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && 'bg-red-50 dark:bg-red-900/20 border-l-4 border-l-red-500'
+                  (sol.osCancelada || sol.status === 'Cancelada') && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && 'bg-red-50 dark:bg-red-900/20 border-l-4 border-l-red-500'
                 )}
               >
                 <TableCell>
@@ -476,10 +476,10 @@ export default function OSSolicitacoesPecas() {
                 <TableCell>
                   <div className="flex items-center gap-1">
                     {getStatusBadge(sol.status)}
-                    {sol.osCancelada && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && (
+                    {(sol.osCancelada || sol.status === 'Cancelada') && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && (
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300">
                         <AlertTriangle className="h-3 w-3" />
-                        OS Cancelada
+                        {sol.status === 'Cancelada' ? 'Solicitação Cancelada' : 'OS Cancelada'}
                       </span>
                     )}
                   </div>
@@ -521,7 +521,7 @@ export default function OSSolicitacoesPecas() {
                         <X className="h-4 w-4" />
                       </Button>
                     )}
-                    {sol.osCancelada && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && (
+                    {(sol.osCancelada || sol.status === 'Cancelada') && sol.status !== 'Devolvida ao Fornecedor' && sol.status !== 'Retida para Estoque' && (
                       <Button 
                         variant="ghost" 
                         size="sm"
@@ -531,7 +531,7 @@ export default function OSSolicitacoesPecas() {
                           setMotivoTratamento('');
                           setTratarPecaOpen(true);
                         }}
-                        title="Tratar Peça de OS Cancelada"
+                        title="Tratar Peça Cancelada"
                       >
                         <AlertTriangle className="h-4 w-4" />
                       </Button>
@@ -960,7 +960,7 @@ export default function OSSolicitacoesPecas() {
                 </div>
               )}
 
-              {detalheSolicitacao.osCancelada && detalheSolicitacao.status !== 'Devolvida ao Fornecedor' && detalheSolicitacao.status !== 'Retida para Estoque' && (
+              {(detalheSolicitacao.osCancelada || detalheSolicitacao.status === 'Cancelada') && detalheSolicitacao.status !== 'Devolvida ao Fornecedor' && detalheSolicitacao.status !== 'Retida para Estoque' && (
                 <div className="border-t pt-3">
                   <Button
                     className="w-full bg-orange-500 hover:bg-orange-600 text-white"
@@ -972,7 +972,7 @@ export default function OSSolicitacoesPecas() {
                     }}
                   >
                     <AlertTriangle className="h-4 w-4 mr-2" />
-                    Tratar Peça de OS Cancelada
+                    {detalheSolicitacao.status === 'Cancelada' ? 'Tratar Peça de Solicitação Cancelada' : 'Tratar Peça de OS Cancelada'}
                   </Button>
                 </div>
               )}
@@ -987,7 +987,7 @@ export default function OSSolicitacoesPecas() {
           <DialogHeader>
             <DialogTitle className="text-orange-600 flex items-center gap-2">
               <AlertTriangle className="h-5 w-5" />
-              Tratar Peça de OS Cancelada
+              {solicitacaoParaTratar?.status === 'Cancelada' ? 'Tratar Peça de Solicitação Cancelada' : 'Tratar Peça de OS Cancelada'}
             </DialogTitle>
             <DialogDescription>
               {solicitacaoParaTratar && (
