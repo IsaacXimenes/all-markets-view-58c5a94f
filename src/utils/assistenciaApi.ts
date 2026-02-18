@@ -442,6 +442,14 @@ export const updateOrdemServico = (id: string, updates: Partial<OrdemServico>) =
       console.log(`[ASSISTÊNCIA] OS ${id} concluída - peças reduzidas do estoque`);
     }
     
+    // Se OS foi cancelada, marcar solicitações de peças ativas
+    if (updates.status === 'Cancelada' as any && osAnterior.status !== ('Cancelada' as any)) {
+      import('./solicitacaoPecasApi').then(({ marcarSolicitacoesOSCancelada }) => {
+        marcarSolicitacoesOSCancelada(id);
+        console.log(`[ASSISTÊNCIA] OS ${id} cancelada - solicitações de peças marcadas`);
+      });
+    }
+    
     return ordensServico[index];
   }
   return null;
