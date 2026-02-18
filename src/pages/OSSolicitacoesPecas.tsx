@@ -117,7 +117,7 @@ export default function OSSolicitacoesPecas() {
       case 'Cancelada':
         return <Badge className="bg-gray-500 hover:bg-gray-600">Cancelada</Badge>;
       case 'Enviada':
-        return <Badge className="bg-purple-500 hover:bg-purple-600">Enviada</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Enviada</Badge>;
       case 'Recebida':
         return <Badge className="bg-green-500 hover:bg-green-600">Recebida</Badge>;
       default:
@@ -362,7 +362,7 @@ export default function OSSolicitacoesPecas() {
           </Card>
           <Card>
             <CardContent className="p-4">
-              <div className="text-2xl font-bold text-purple-600">{totalEnviadas}</div>
+              <div className="text-2xl font-bold text-blue-600">{totalEnviadas}</div>
               <div className="text-xs text-muted-foreground">Enviadas</div>
             </CardContent>
           </Card>
@@ -605,7 +605,7 @@ export default function OSSolicitacoesPecas() {
                     key={lote.id}
                     className={cn(
                       lote.status === 'Pendente' && 'bg-yellow-500/10',
-                      lote.status === 'Enviado' && 'bg-purple-500/10'
+                      lote.status === 'Enviado' && 'bg-blue-500/10'
                     )}
                   >
                     <TableCell className="font-mono text-xs">{lote.id}</TableCell>
@@ -617,7 +617,7 @@ export default function OSSolicitacoesPecas() {
                     <TableCell className="font-medium">{formatCurrency(lote.valorTotal)}</TableCell>
                     <TableCell>
                       {lote.status === 'Pendente' && <Badge className="bg-yellow-500 hover:bg-yellow-600">Pendente</Badge>}
-                      {lote.status === 'Enviado' && <Badge className="bg-purple-500 hover:bg-purple-600">Enviado</Badge>}
+                      {lote.status === 'Enviado' && <Badge className="bg-blue-500 hover:bg-blue-600">Enviado</Badge>}
                       {lote.status === 'Finalizado' && <Badge className="bg-green-500 hover:bg-green-600">Finalizado</Badge>}
                     </TableCell>
                     <TableCell>
@@ -636,7 +636,7 @@ export default function OSSolicitacoesPecas() {
                         </div>
                       ) : (
                         <div className="flex gap-1 items-center">
-                          <Badge variant="outline" className="text-purple-600 border-purple-300">Enviado ao Financeiro</Badge>
+                          <Badge variant="outline" className="text-blue-600 border-blue-300">Enviado ao Financeiro</Badge>
                           <Button variant="ghost" size="sm" onClick={() => handleVerLote(lote)}>
                             <Eye className="h-4 w-4" />
                           </Button>

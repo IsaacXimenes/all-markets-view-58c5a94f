@@ -374,10 +374,10 @@ export default function OSOficina() {
       return <Badge className="bg-amber-500 hover:bg-amber-600">Aguardando Pagamento</Badge>;
     }
     if (status === 'Pendente de Pagamento') {
-      return <Badge className="bg-violet-500 hover:bg-violet-600">Pendente de Pagamento</Badge>;
+      return <Badge className="bg-blue-500 hover:bg-blue-600">Pendente de Pagamento</Badge>;
     }
     if (status === 'Aguardando Financeiro') {
-      return <Badge className="bg-purple-600 hover:bg-purple-700">Aguardando Financeiro</Badge>;
+      return <Badge className="bg-blue-600 hover:bg-blue-700">Aguardando Financeiro</Badge>;
     }
     if (status === 'Liquidado') {
       return <Badge className="bg-green-700 hover:bg-green-800">Liquidado</Badge>;
@@ -529,8 +529,8 @@ export default function OSOficina() {
                   return (
                     <TableRow key={os.id} className={cn(
                       os.status === 'Serviço concluído' && 'bg-green-500/10',
-                      os.status === 'Pendente de Pagamento' && 'bg-violet-500/10',
-                      os.status === 'Aguardando Financeiro' && 'bg-purple-500/10',
+                      os.status === 'Pendente de Pagamento' && 'bg-blue-500/10',
+                      os.status === 'Aguardando Financeiro' && 'bg-blue-500/10',
                       os.status === 'Liquidado' && 'bg-green-500/10',
                       os.status === 'Aguardando Pagamento' && 'bg-amber-500/10',
                     )}>

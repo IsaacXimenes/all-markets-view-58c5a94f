@@ -103,7 +103,7 @@ export default function OSPecas() {
       case 'Nota de Compra':
         return <Badge variant="outline" className="border-blue-500 text-blue-600">Nota de Compra</Badge>;
       case 'Produto Thiago':
-        return <Badge variant="outline" className="border-purple-500 text-purple-600">Produto Thiago</Badge>;
+        return <Badge variant="outline" className="border-blue-500 text-blue-600">Produto Thiago</Badge>;
       case 'Solicitação':
         return <Badge variant="outline" className="border-green-500 text-green-600">Solicitação</Badge>;
       case 'Retirada de Peça':

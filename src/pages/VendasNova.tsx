@@ -1994,11 +1994,11 @@ export default function VendasNova() {
           </CardHeader>
           <CardContent>
             {garantiaExtendida ? (
-              <div className="p-4 bg-purple-100 dark:bg-purple-950/30 rounded-lg">
+              <div className="p-4 bg-blue-100 dark:bg-blue-950/30 rounded-lg">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="font-medium text-purple-900 dark:text-purple-100">Plano {garantiaExtendida.planoNome}</p>
-                    <p className="text-sm text-purple-700 dark:text-purple-300">
+                    <p className="font-medium text-blue-900 dark:text-blue-100">Plano {garantiaExtendida.planoNome}</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
                       {garantiaExtendida.meses} meses - Vigência: {format(new Date(garantiaExtendida.dataInicio), 'dd/MM/yyyy')} a {format(new Date(garantiaExtendida.dataFim), 'dd/MM/yyyy')}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -2006,7 +2006,7 @@ export default function VendasNova() {
                     </p>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-xl font-bold text-purple-600">{formatCurrency(garantiaExtendida.valor)}</span>
+                    <span className="text-xl font-bold text-blue-600">{formatCurrency(garantiaExtendida.valor)}</span>
                     <Button variant="ghost" size="icon" onClick={() => setGarantiaExtendida(null)}>
                       <X className="h-4 w-4 text-destructive" />
                     </Button>
@@ -2014,8 +2014,8 @@ export default function VendasNova() {
                 </div>
                 
                 {/* Seção de Documento Físico */}
-                <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800">
-                  <p className="text-sm font-medium text-purple-900 dark:text-purple-100 mb-2">
+                <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
                     Documento Físico
                   </p>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -2036,7 +2036,7 @@ export default function VendasNova() {
                     />
                     <label 
                       htmlFor="arquivo-garantia"
-                      className="cursor-pointer inline-flex items-center px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-md"
+                      className="cursor-pointer inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md"
                     >
                       <Plus className="h-4 w-4 mr-1" />
                       Adicionar Ficheiro
@@ -2044,7 +2044,7 @@ export default function VendasNova() {
                     
                     {arquivoGarantia && (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-purple-700 dark:text-purple-300">{arquivoGarantia.name}</span>
+                        <span className="text-sm text-blue-700 dark:text-blue-300">{arquivoGarantia.name}</span>
                         <Button 
                           variant="ghost" 
                           size="sm"
@@ -2319,9 +2319,9 @@ export default function VendasNova() {
                 </div>
               )}
               {valorGarantiaExtendida > 0 && (
-                <div className={cn("p-2 bg-purple-100 dark:bg-purple-950/30 rounded-lg")}>
+                <div className={cn("p-2 bg-blue-100 dark:bg-blue-950/30 rounded-lg")}>
                   <p className={cn("text-muted-foreground", isMobilePreview ? "text-xs" : "text-sm")}>Garantia Ext.</p>
-                  <p className={cn("font-bold text-purple-600", isMobilePreview ? "text-sm" : "text-xl")}>{formatCurrency(valorGarantiaExtendida)}</p>
+                  <p className={cn("font-bold text-blue-600", isMobilePreview ? "text-sm" : "text-xl")}>{formatCurrency(valorGarantiaExtendida)}</p>
                 </div>
               )}
               <div className={cn("p-2 bg-green-100 dark:bg-green-950/30 rounded-lg")}>

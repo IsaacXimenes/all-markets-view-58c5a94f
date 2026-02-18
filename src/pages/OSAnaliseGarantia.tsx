@@ -83,7 +83,7 @@ export default function OSAnaliseGarantia() {
       case 'Garantia':
         return <Badge className="bg-blue-500 hover:bg-blue-600"><Shield className="h-3 w-3 mr-1" />Garantia</Badge>;
       case 'Estoque':
-        return <Badge className="bg-purple-500 hover:bg-purple-600"><Package className="h-3 w-3 mr-1" />Estoque</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600"><Package className="h-3 w-3 mr-1" />Estoque</Badge>;
       default:
         return <Badge variant="secondary">{origem}</Badge>;
     }

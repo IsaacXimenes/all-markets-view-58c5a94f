@@ -895,7 +895,7 @@ export default function GarantiasNovaManual() {
                         <TableCell>
                           <Badge variant="outline" className={tipoPessoaAbrev === 'PF' 
                             ? 'bg-blue-500/10 text-blue-600 border-blue-500/30' 
-                            : 'bg-purple-500/10 text-purple-600 border-purple-500/30'
+                            : 'bg-blue-500/10 text-blue-600 border-blue-500/30'
                           }>
                             {tipoPessoaAbrev}
                           </Badge>

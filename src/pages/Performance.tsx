@@ -35,7 +35,7 @@ export default function Performance() {
   const absoluteReturn = currentValue - initialValue;
   const percentReturn = initialValue > 0 ? ((absoluteReturn / initialValue) * 100) : 0;
 
-  const COLORS = ['#8b5cf6', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
+  const COLORS = ['#3b82f6', '#2563eb', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -112,7 +112,7 @@ export default function Performance() {
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  <Pie data={brandData} cx="50%" cy="50%" labelLine={false} label={(entry) => entry.brand} outerRadius={100} fill="#8884d8" dataKey="value">
+                  <Pie data={brandData} cx="50%" cy="50%" labelLine={false} label={(entry) => entry.brand} outerRadius={100} fill="#3b82f6" dataKey="value">
                     {brandData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
                   </Pie>
                   <Tooltip content={<CustomTooltip />} />
@@ -183,8 +183,8 @@ export default function Performance() {
                 <Legend />
                 <Bar dataKey="morning" stackId="a" fill="#94a3b8" name="06-10h" />
                 <Bar dataKey="midday" stackId="a" fill="#3b82f6" name="10-14h" />
-                <Bar dataKey="afternoon" stackId="a" fill="#8b5cf6" name="14-18h" />
-                <Bar dataKey="evening" stackId="a" fill="#6366f1" name="18-24h" />
+                <Bar dataKey="afternoon" stackId="a" fill="#3b82f6" name="14-18h" />
+                <Bar dataKey="evening" stackId="a" fill="#1d4ed8" name="18-24h" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>

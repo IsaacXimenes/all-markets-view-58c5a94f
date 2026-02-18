@@ -105,7 +105,7 @@ export function RankingVendedores() {
                       {formatCurrency(seller.sales)}
                     </p>
                     <p 
-                      className="text-[10px] lg:text-xs text-purple-600 font-medium truncate"
+                      className="text-[10px] lg:text-xs text-blue-600 font-medium truncate"
                       title={`${formatCurrency(seller.commission)} (${seller.percentualComissao}%)`}
                     >
                       {formatCurrency(seller.commission)} ({seller.percentualComissao}%)
@@ -145,7 +145,7 @@ export function RankingVendedores() {
                   </div>
                   <div className="text-right min-w-0 flex-shrink-0">
                     <p className="text-xs lg:text-sm font-semibold truncate">{formatCurrency(seller.sales)}</p>
-                    <p className="text-[10px] lg:text-xs text-purple-600 truncate">
+                    <p className="text-[10px] lg:text-xs text-blue-600 truncate">
                       {formatCurrency(seller.commission)} ({seller.percentualComissao}%)
                     </p>
                   </div>

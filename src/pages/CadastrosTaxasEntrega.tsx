@@ -247,8 +247,8 @@ export default function CadastrosTaxasEntrega() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-purple-500" />
+              <div className="h-10 w-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-blue-500" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Maior Valor</p>

@@ -111,7 +111,7 @@ export default function OSAssistencia() {
       case 'Solicitação Enviada':
         return <Badge className="bg-orange-500 hover:bg-orange-600">Solicitação Enviada</Badge>;
       case 'Em Análise':
-        return <Badge className="bg-purple-500 hover:bg-purple-600">Em Análise</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Em Análise</Badge>;
       case 'Peça Recebida':
         return <Badge className="bg-teal-500 hover:bg-teal-600">Peça Recebida</Badge>;
       case 'Pagamento Concluído':
@@ -119,15 +119,15 @@ export default function OSAssistencia() {
       case 'Aguardando Recebimento':
         return <Badge className="bg-cyan-500 hover:bg-cyan-600">Aguardando Recebimento</Badge>;
       case 'Em Execução':
-        return <Badge className="bg-indigo-500 hover:bg-indigo-600">Em Execução</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Em Execução</Badge>;
       case 'Aguardando Pagamento':
         return <Badge className="bg-amber-500 hover:bg-amber-600">Aguardando Pagamento</Badge>;
       case 'Aguardando Conferência':
-        return <Badge className="bg-violet-500 hover:bg-violet-600">Aguardando Conferência</Badge>;
+        return <Badge className="bg-blue-500 hover:bg-blue-600">Aguardando Conferência</Badge>;
       case 'Conferência do Gestor':
         return <Badge className="bg-orange-500 hover:bg-orange-600">Conferência do Gestor</Badge>;
       case 'Aguardando Financeiro':
-        return <Badge className="bg-purple-600 hover:bg-purple-700">Aguardando Financeiro</Badge>;
+        return <Badge className="bg-blue-600 hover:bg-blue-700">Aguardando Financeiro</Badge>;
       case 'Liquidado':
         return <Badge className="bg-green-700 hover:bg-green-800">Liquidado</Badge>;
       case 'Concluído':
@@ -157,7 +157,7 @@ export default function OSAssistencia() {
         return <Badge variant="outline" className="border-orange-500 text-orange-600 text-xs">Gestor</Badge>;
       case 'Financeiro: Conferir Lançamento':
       case 'Financeiro':
-        return <Badge variant="outline" className="border-purple-500 text-purple-600 text-xs">Financeiro</Badge>;
+        return <Badge variant="outline" className="border-blue-500 text-blue-600 text-xs">Financeiro</Badge>;
       case 'Logística: Enviar Peça':
         return <Badge variant="outline" className="border-cyan-500 text-cyan-600 text-xs">Logística</Badge>;
       case 'Concluído':
@@ -196,7 +196,7 @@ export default function OSAssistencia() {
       case 'ASSISTÊNCIA':
         return <Badge variant="outline" className="border-blue-500 text-blue-600">Assistência</Badge>;
       case 'TROCA':
-        return <Badge variant="outline" className="border-purple-500 text-purple-600">Troca</Badge>;
+        return <Badge variant="outline" className="border-blue-500 text-blue-600">Troca</Badge>;
       default:
         return <Badge variant="outline">{setor}</Badge>;
     }
@@ -224,7 +224,7 @@ export default function OSAssistencia() {
       case 'Garantia':
         return <Badge variant="outline" className="border-blue-500 text-blue-600">Garantia</Badge>;
       case 'Estoque':
-        return <Badge variant="outline" className="border-purple-500 text-purple-600">Estoque</Badge>;
+        return <Badge variant="outline" className="border-blue-500 text-blue-600">Estoque</Badge>;
       default:
         return <Badge variant="outline">{os.origemOS}</Badge>;
     }
@@ -250,7 +250,7 @@ export default function OSAssistencia() {
         );
         if (produtoTroca && produtoTroca.valorOrigem) {
           return (
-            <span className="font-medium text-purple-600">
+            <span className="font-medium text-blue-600">
               {formatCurrency(produtoTroca.valorOrigem)}
             </span>
           );
@@ -354,9 +354,9 @@ export default function OSAssistencia() {
 
         {/* Card de Produtos de Troca */}
         {totalProdutosTroca > 0 && (
-          <Card className="border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/20 mb-4">
+          <Card className="border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 mb-4">
             <CardHeader className="pb-2 pt-3 px-4">
-              <CardTitle className="text-sm font-medium flex items-center gap-2 text-purple-700 dark:text-purple-300">
+              <CardTitle className="text-sm font-medium flex items-center gap-2 text-blue-700 dark:text-blue-300">
                 <RefreshCcw className="h-4 w-4" />
                 Produtos de Troca (Trade-In)
               </CardTitle>
@@ -365,18 +365,18 @@ export default function OSAssistencia() {
               <div className="flex items-center justify-between">
                 <div className="flex gap-6">
                   <div>
-                    <span className="text-2xl font-bold text-purple-700 dark:text-purple-300">{totalProdutosTroca}</span>
+                    <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">{totalProdutosTroca}</span>
                     <span className="text-xs text-muted-foreground ml-2">produtos pendentes</span>
                   </div>
                   <div>
-                    <span className="text-2xl font-bold text-purple-700 dark:text-purple-300">{formatCurrency(valorTotalTroca)}</span>
+                    <span className="text-2xl font-bold text-blue-700 dark:text-blue-300">{formatCurrency(valorTotalTroca)}</span>
                     <span className="text-xs text-muted-foreground ml-2">valor total</span>
                   </div>
                 </div>
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="border-purple-300 text-purple-700 hover:bg-purple-100 dark:border-purple-700 dark:text-purple-300 dark:hover:bg-purple-900/40"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-300 dark:hover:bg-blue-900/40"
                   onClick={() => navigate('/os/produtos-pendentes')}
                 >
                   Ver Produtos

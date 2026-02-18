@@ -228,8 +228,8 @@ export default function Relatorios() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-purple-500/10">
-                    <MessageSquareWarning className="h-5 w-5 text-purple-500" />
+                  <div className="p-2 rounded-lg bg-blue-500/10">
+                    <MessageSquareWarning className="h-5 w-5 text-blue-500" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Feedbacks no Período</p>
@@ -337,8 +337,8 @@ export default function Relatorios() {
               <Card className="border-2 hover:border-primary/50 transition-colors h-full flex flex-col">
                 <CardContent className="p-6 flex flex-col flex-1">
                   <div className="flex-1 flex flex-col items-center text-center">
-                    <div className="p-4 rounded-full bg-purple-500/10 mb-4">
-                      <MessageSquareWarning className="h-8 w-8 text-purple-500" />
+                    <div className="p-4 rounded-full bg-blue-500/10 mb-4">
+                      <MessageSquareWarning className="h-8 w-8 text-blue-500" />
                     </div>
                     <h3 className="font-semibold text-lg mb-2">Feedbacks</h3>
                     <p className="text-sm text-muted-foreground flex-1">

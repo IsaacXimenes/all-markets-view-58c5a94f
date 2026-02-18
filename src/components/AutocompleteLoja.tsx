@@ -74,7 +74,7 @@ export function AutocompleteLoja({
       case 'Loja': return 'bg-green-500/10 text-green-600 border-green-500/30';
       case 'Estoque': return 'bg-blue-500/10 text-blue-600 border-blue-500/30';
       case 'Assistência': return 'bg-orange-500/10 text-orange-600 border-orange-500/30';
-      case 'Financeiro': return 'bg-purple-500/10 text-purple-600 border-purple-500/30';
+      case 'Financeiro': return 'bg-blue-500/10 text-blue-600 border-blue-500/30';
       case 'Administrativo': return 'bg-gray-500/10 text-gray-600 border-gray-500/30';
       default: return '';
     }

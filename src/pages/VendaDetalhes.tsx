@@ -114,7 +114,7 @@ export default function VendaDetalhes() {
             Voltar
           </Button>
           {isFiadoVenda ? (
-            <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 text-sm px-3 py-1">
+            <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 text-sm px-3 py-1">
               <CreditCard className="h-4 w-4 mr-1" />
               Fiado
             </Badge>
@@ -508,9 +508,9 @@ export default function VendaDetalhes() {
                         case 'aprovacao_lancamento':
                           return { 
                             icon: <Clock className="h-4 w-4" />, 
-                            bgColor: 'bg-purple-500/10', 
-                            textColor: 'text-purple-600',
-                            borderColor: 'border-purple-500'
+                            bgColor: 'bg-blue-500/10', 
+                            textColor: 'text-blue-600',
+                            borderColor: 'border-blue-500'
                           };
                         case 'recusa_gestor':
                           return { 
@@ -522,9 +522,9 @@ export default function VendaDetalhes() {
                         case 'aprovacao_gestor':
                           return { 
                             icon: <Shield className="h-4 w-4" />, 
-                            bgColor: 'bg-indigo-500/10', 
-                            textColor: 'text-indigo-600',
-                            borderColor: 'border-indigo-500'
+                            bgColor: 'bg-blue-500/10', 
+                            textColor: 'text-blue-600',
+                            borderColor: 'border-blue-500'
                           };
                         case 'devolucao_financeiro':
                           return { 
@@ -724,10 +724,10 @@ export default function VendaDetalhes() {
                   </span>
                 </div>
                 <div className={`flex justify-between ${isPrejuizo ? 'bg-destructive/10 p-2 rounded-lg' : ''}`}>
-                  <span className={isPrejuizo ? 'text-destructive font-medium' : 'text-purple-600'}>
+                  <span className={isPrejuizo ? 'text-destructive font-medium' : 'text-blue-600'}>
                     Margem %:
                   </span>
-                  <span className={`font-medium ${isPrejuizo ? 'text-destructive' : 'text-purple-600'}`}>
+                  <span className={`font-medium ${isPrejuizo ? 'text-destructive' : 'text-blue-600'}`}>
                     {totais.margem.toFixed(2)}%
                   </span>
                 </div>
