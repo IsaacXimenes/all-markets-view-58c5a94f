@@ -362,6 +362,7 @@ export default function OSAssistenciaDetalhes() {
         tecnico: user?.colaborador?.nome || tecnico?.nome || 'Técnico'
       });
     }
+    setEditStatus(novoStatus);
     const updatedOS = getOrdemServicoById(os.id);
     setOS(updatedOS || null);
     setFinalizacaoConfirmada(true);

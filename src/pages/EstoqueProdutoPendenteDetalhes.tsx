@@ -522,20 +522,70 @@ export default function EstoqueProdutoPendenteDetalhes() {
                   </div>
                 </div>
               )}
+              {/* Peças Utilizadas */}
+              {osVinculada?.pecas && osVinculada.pecas.length > 0 && (
+                <>
+                  <Separator />
+                  <div>
+                    <Label className="text-muted-foreground mb-2 block">Peças Utilizadas</Label>
+                    <div className="rounded-lg border overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="bg-muted/50">
+                            <th className="text-left p-2 text-xs text-muted-foreground font-medium">Descrição</th>
+                            <th className="text-right p-2 text-xs text-muted-foreground font-medium">Valor</th>
+                            <th className="text-left p-2 text-xs text-muted-foreground font-medium">Origem</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {osVinculada.pecas.map((peca: any, idx: number) => (
+                            <tr key={idx} className="border-t">
+                              <td className="p-2">{peca.descricao || peca.nome || '-'}</td>
+                              <td className="p-2 text-right font-medium">{formatCurrency(peca.valorCusto || peca.valor || 0)}</td>
+                              <td className="p-2">
+                                <Badge variant="outline" className="text-xs">{peca.origem || 'Estoque'}</Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+
               <Separator />
               <div className="grid grid-cols-3 gap-4">
                 <div className="p-3 rounded-lg bg-muted/50 text-center">
-                  <p className="text-xs text-muted-foreground">Custo Aquisição</p>
+                  <p className="text-xs text-muted-foreground">Valor de Entrada</p>
+                  <p className="text-lg font-bold">{formatCurrency(produto.valorOrigem || produto.valorCustoOriginal)}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/50 text-center">
+                  <p className="text-xs text-muted-foreground">Valor Original</p>
                   <p className="text-lg font-bold">{formatCurrency(produto.valorCustoOriginal)}</p>
                 </div>
+                <div className="p-3 rounded-lg bg-muted/50 text-center">
+                  <p className="text-xs text-muted-foreground">Valor de Custo</p>
+                  <p className="text-lg font-bold">{formatCurrency(produto.valorCusto || produto.valorCustoOriginal)}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
                 <div className="p-3 rounded-lg bg-orange-500/10 text-center">
                   <p className="text-xs text-muted-foreground">Custo Assistência</p>
                   <p className="text-lg font-bold text-orange-600">{formatCurrency(produto.custoAssistencia || 0)}</p>
                 </div>
-                <div className="p-3 rounded-lg bg-primary/10 text-center">
-                  <p className="text-xs text-muted-foreground">Custo Composto</p>
-                  <p className="text-lg font-bold text-primary">{formatCurrency(produto.valorCustoOriginal + (produto.custoAssistencia || 0))}</p>
+                <div className="p-3 rounded-lg bg-muted/50 text-center">
+                  <p className="text-xs text-muted-foreground">Venda Recomendada</p>
+                  <Badge variant="outline" className="mt-1 text-orange-600 border-orange-300">Pendente</Badge>
                 </div>
+                <div className="p-3 rounded-lg bg-muted/50 text-center">
+                  <p className="text-xs text-muted-foreground">Loja Atual</p>
+                  <p className="text-sm font-bold">{obterNomeLoja(produto.loja)}</p>
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-primary/10 text-center">
+                <p className="text-xs text-muted-foreground">Custo Composto</p>
+                <p className="text-xl font-bold text-primary">{formatCurrency(produto.valorCustoOriginal + (produto.custoAssistencia || 0))}</p>
               </div>
             </CardContent>
           </Card>
