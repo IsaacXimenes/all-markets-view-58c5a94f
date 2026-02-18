@@ -14,10 +14,8 @@ export const LoginCard = () => {
   const handleLoginSuccess = () => {
     // Step 1: fade out form
     setFormVisible(false);
-    // Step 2: after form fades, fade out entire background
-    setTimeout(() => setBgFading(true), 500);
-    // Step 3: navigate
-    setTimeout(() => setIsTransitioning(true), 1200);
+    setTimeout(() => setBgFading(true), 700);
+    setTimeout(() => setIsTransitioning(true), 1600);
   };
 
   return (
@@ -26,7 +24,7 @@ export const LoginCard = () => {
         className="h-screen w-full bg-cover bg-center bg-no-repeat flex items-center justify-center"
         style={{ backgroundImage: `url(${loginBg})` }}
         animate={bgFading ? { opacity: 0 } : { opacity: 1 }}
-        transition={{ duration: 1, ease: [0.4, 0, 0.2, 1] }}
+        transition={{ duration: 1.2, ease: [0.4, 0, 0.2, 1] }}
       >
         <AnimatePresence>
           {formVisible && (
@@ -39,7 +37,7 @@ export const LoginCard = () => {
               }}
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+              transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
             >
               <LoginForm onLoginSuccess={handleLoginSuccess} />
             </motion.div>
