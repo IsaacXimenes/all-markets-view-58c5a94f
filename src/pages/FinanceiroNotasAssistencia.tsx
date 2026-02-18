@@ -113,7 +113,7 @@ export default function FinanceiroNotasAssistencia() {
     const dataToExport = filteredNotas.map(n => ({
       ID: n.id,
       Data: new Date(n.dataCriacao).toLocaleDateString('pt-BR'),
-      'Lote': n.loteId,
+      'Solicitação': n.solicitacaoId,
       Fornecedor: getFornecedorNome(n.fornecedor),
       'Valor Total': formatCurrency(n.valorTotal),
       Status: n.status
@@ -393,8 +393,8 @@ export default function FinanceiroNotasAssistencia() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label>Lote</Label>
-                      <Input value={notaSelecionada.loteId} disabled />
+                      <Label>Solicitação</Label>
+                      <Input value={notaSelecionada.solicitacaoId} disabled />
                     </div>
                     <div>
                       <Label>Fornecedor</Label>

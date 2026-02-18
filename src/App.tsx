@@ -90,13 +90,11 @@ import OSMovimentacaoPecas from "./pages/OSMovimentacaoPecas";
 import FinanceiroNotasAssistencia from "./pages/FinanceiroNotasAssistencia";
 import FinanceiroExtrato from "./pages/FinanceiroExtrato";
 import FinanceiroFiado from "./pages/FinanceiroFiado";
-import FinanceiroLotesPagamento from "./pages/FinanceiroLotesPagamento";
-import FinanceiroExecucaoLotes from "./pages/FinanceiroExecucaoLotes";
 import FinanceiroPagamentosDowngrade from "./pages/FinanceiroPagamentosDowngrade";
 import FinanceiroTetoBancario from "./pages/FinanceiroTetoBancario";
 import FinanceiroExtratoContas from "./pages/FinanceiroExtratoContas";
 import FinanceiroNotasPendencias from "./pages/FinanceiroNotasPendencias";
-import AssistenciaLotesPagamento from "./pages/AssistenciaLotesPagamento";
+
 import AssistRetiradaPecas from "./pages/AssistRetiradaPecas";
 import AssistRetiradaPecasDetalhes from "./pages/AssistRetiradaPecasDetalhes";
 import Relatorios from "./pages/Relatorios";
@@ -217,13 +215,11 @@ const App = () => (
               <Route path="/os/retirada-pecas/:id" element={<AssistRetiradaPecasDetalhes />} />
               <Route path="/financeiro/notas-assistencia" element={<FinanceiroNotasAssistencia />} />
               <Route path="/financeiro/extrato" element={<FinanceiroExtrato />} />
-              <Route path="/financeiro/lotes-pagamento" element={<FinanceiroLotesPagamento />} />
-              <Route path="/financeiro/execucao-lotes" element={<FinanceiroExecucaoLotes />} />
               <Route path="/financeiro/pagamentos-downgrade" element={<FinanceiroPagamentosDowngrade />} />
               <Route path="/financeiro/teto-bancario" element={<FinanceiroTetoBancario />} />
               <Route path="/financeiro/extrato-contas" element={<FinanceiroExtratoContas />} />
               <Route path="/financeiro/notas-pendencias" element={<FinanceiroNotasPendencias />} />
-              <Route path="/assistencia/lotes-pagamento" element={<AssistenciaLotesPagamento />} />
+              
               <Route path="/cadastros" element={<Cadastros />} />
               <Route path="/cadastros/planos-garantia" element={<CadastrosPlanosGarantia />} />
               <Route path="/cadastros/lojas" element={<CadastrosLojas />} />

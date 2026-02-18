@@ -16,7 +16,6 @@ export interface SolicitacaoPeca {
   responsavelCompra?: string;
   dataRecebimento?: string;
   dataEnvio?: string;
-  loteId?: string;
   motivoRejeicao?: string;
   contaOrigemPagamento?: string;
   dataPagamento?: string;
@@ -30,27 +29,9 @@ export interface SolicitacaoPeca {
   tratadaPor?: string;
 }
 
-export interface LoteTimeline {
-  data: string;
-  tipo: 'criacao' | 'edicao' | 'envio';
-  descricao: string;
-  responsavel: string;
-}
-
-export interface LotePecas {
-  id: string;
-  fornecedorId: string;
-  solicitacoes: string[];
-  dataCriacao: string;
-  status: 'Pendente' | 'Enviado' | 'Finalizado';
-  valorTotal: number;
-  notaId?: string;
-  timeline?: LoteTimeline[];
-}
-
 export interface NotaAssistencia {
   id: string;
-  loteId: string;
+  solicitacaoId: string;
   fornecedor: string;
   lojaSolicitante: string;
   osId?: string;
@@ -70,7 +51,6 @@ export interface NotaAssistencia {
 
 // Mock data
 let solicitacoes: SolicitacaoPeca[] = [
-  // Solicitação vinculada à OS-2025-0020 (exemplo de fluxo completo)
   {
     id: 'SOL-020',
     osId: 'OS-2025-0020',
@@ -118,8 +98,7 @@ let solicitacoes: SolicitacaoPeca[] = [
     valorPeca: 180,
     responsavelCompra: 'COL-002',
     dataRecebimento: '2025-01-20',
-    dataEnvio: '2025-01-21',
-    loteId: 'LOTE-001'
+    dataEnvio: '2025-01-21'
   },
   {
     id: 'SOL-004',
@@ -135,8 +114,7 @@ let solicitacoes: SolicitacaoPeca[] = [
     valorPeca: 45,
     responsavelCompra: 'COL-002',
     dataRecebimento: '2025-01-20',
-    dataEnvio: '2025-01-21',
-    loteId: 'LOTE-001'
+    dataEnvio: '2025-01-21'
   },
   {
     id: 'SOL-005',
@@ -152,44 +130,14 @@ let solicitacoes: SolicitacaoPeca[] = [
     valorPeca: 320,
     responsavelCompra: 'COL-002',
     dataRecebimento: '2025-01-15',
-    dataEnvio: '2025-01-16',
-    loteId: 'LOTE-002'
-  }
-];
-
-let lotes: LotePecas[] = [
-  {
-    id: 'LOTE-001',
-    fornecedorId: 'FORN-003',
-    solicitacoes: ['SOL-003', 'SOL-004'],
-    dataCriacao: '2025-01-15T10:00:00',
-    status: 'Enviado',
-    valorTotal: 495,
-    timeline: [
-      { data: '2025-01-15T10:00:00', tipo: 'criacao', descricao: 'Lote criado', responsavel: 'Maria Santos' },
-      { data: '2025-01-15T14:30:00', tipo: 'envio', descricao: 'Lote enviado ao fornecedor', responsavel: 'Maria Santos' }
-    ]
-  },
-  {
-    id: 'LOTE-002',
-    fornecedorId: 'FORN-005',
-    solicitacoes: ['SOL-005'],
-    dataCriacao: '2025-01-12T14:00:00',
-    status: 'Finalizado',
-    valorTotal: 320,
-    notaId: 'NOTA-ASS-001',
-    timeline: [
-      { data: '2025-01-12T14:00:00', tipo: 'criacao', descricao: 'Lote criado', responsavel: 'João Lima' },
-      { data: '2025-01-13T09:00:00', tipo: 'envio', descricao: 'Lote enviado ao fornecedor', responsavel: 'João Lima' }
-    ]
+    dataEnvio: '2025-01-16'
   }
 ];
 
 let notasAssistencia: NotaAssistencia[] = [
-  // Notas Pendentes
   {
     id: 'NOTA-ASS-002',
-    loteId: 'LOTE-003',
+    solicitacaoId: 'SOL-020',
     fornecedor: 'FORN-003',
     lojaSolicitante: 'Loja Centro',
     osId: 'OS-2025-0020',
@@ -203,7 +151,7 @@ let notasAssistencia: NotaAssistencia[] = [
   },
   {
     id: 'NOTA-ASS-003',
-    loteId: 'LOTE-004',
+    solicitacaoId: 'SOL-018',
     fornecedor: 'FORN-005',
     lojaSolicitante: 'Loja Shopping',
     osId: 'OS-2025-0018',
@@ -218,7 +166,7 @@ let notasAssistencia: NotaAssistencia[] = [
   },
   {
     id: 'NOTA-ASS-004',
-    loteId: 'LOTE-005',
+    solicitacaoId: 'SOL-015',
     fornecedor: 'FORN-001',
     lojaSolicitante: 'Loja Norte',
     osId: 'OS-2025-0015',
@@ -232,7 +180,7 @@ let notasAssistencia: NotaAssistencia[] = [
   },
   {
     id: 'NOTA-ASS-005',
-    loteId: 'LOTE-006',
+    solicitacaoId: 'SOL-012',
     fornecedor: 'FORN-002',
     lojaSolicitante: 'Loja Sul',
     osId: 'OS-2025-0012',
@@ -246,7 +194,7 @@ let notasAssistencia: NotaAssistencia[] = [
   },
   {
     id: 'NOTA-ASS-006',
-    loteId: 'LOTE-007',
+    solicitacaoId: 'SOL-010',
     fornecedor: 'FORN-003',
     lojaSolicitante: 'Loja Oeste',
     osId: 'OS-2025-0010',
@@ -259,10 +207,9 @@ let notasAssistencia: NotaAssistencia[] = [
       { peca: 'Parafusos Pentalobe', quantidade: 1, valorUnitario: 150 }
     ]
   },
-  // Notas Finalizadas/Conferidas
   {
     id: 'NOTA-ASS-001',
-    loteId: 'LOTE-002',
+    solicitacaoId: 'SOL-005',
     fornecedor: 'FORN-005',
     lojaSolicitante: 'Loja Centro',
     osId: 'OS-2025-0005',
@@ -279,7 +226,7 @@ let notasAssistencia: NotaAssistencia[] = [
   },
   {
     id: 'NOTA-ASS-007',
-    loteId: 'LOTE-008',
+    solicitacaoId: 'SOL-003',
     fornecedor: 'FORN-001',
     lojaSolicitante: 'Loja Shopping',
     osId: 'OS-2025-0003',
@@ -297,7 +244,7 @@ let notasAssistencia: NotaAssistencia[] = [
   },
   {
     id: 'NOTA-ASS-008',
-    loteId: 'LOTE-009',
+    solicitacaoId: 'SOL-001',
     fornecedor: 'FORN-002',
     lojaSolicitante: 'Loja Norte',
     osId: 'OS-2025-0001',
@@ -316,15 +263,12 @@ let notasAssistencia: NotaAssistencia[] = [
 ];
 
 let solicitacaoCounter = 21;
-let loteCounter = 10;
 let notaAssistenciaCounter = 9;
 
 // Getters
 export const getSolicitacoes = () => [...solicitacoes];
 export const getSolicitacaoPendentes = () => solicitacoes.filter(s => s.status === 'Pendente');
 export const getSolicitacoesByOS = (osId: string) => solicitacoes.filter(s => s.osId === osId);
-export const getLotes = () => [...lotes];
-export const getLotesPendentes = () => lotes.filter(l => l.status === 'Pendente');
 export const getNotasAssistencia = () => [...notasAssistencia];
 export const getNotasAssistenciaPendentes = () => notasAssistencia.filter(n => n.status === 'Pendente');
 
@@ -363,7 +307,6 @@ export const aprovarSolicitacao = (id: string, dados: {
     status: 'Aprovada'
   };
 
-  // Atualizar status da OS - manter Aguardando Peça, atuação = Gestor: Aprovar Peça
   const osId = solicitacoes[index].osId;
   const os = getOrdemServicoById(osId);
   if (os) {
@@ -393,7 +336,6 @@ export const rejeitarSolicitacao = (id: string, motivoRejeicao?: string): Solici
     motivoRejeicao
   };
   
-  // Atualizar timeline da OS informando que a solicitação foi rejeitada
   const osId = solicitacao.osId;
   const os = getOrdemServicoById(osId);
   if (os) {
@@ -410,128 +352,57 @@ export const rejeitarSolicitacao = (id: string, motivoRejeicao?: string): Solici
   return solicitacoes[index];
 };
 
-export const criarLote = (fornecedorId: string, solicitacaoIds: string[]): LotePecas | null => {
-  const solicitacoesDoLote = solicitacoes.filter(s => 
-    solicitacaoIds.includes(s.id) && 
-    s.status === 'Aprovada' && 
-    s.fornecedorId === fornecedorId
-  );
-  
-  if (solicitacoesDoLote.length === 0) return null;
-  
-  const valorTotal = solicitacoesDoLote.reduce((acc, s) => acc + (s.valorPeca || 0) * s.quantidade, 0);
-  
-  const novoLote: LotePecas = {
-    id: `LOTE-${String(loteCounter++).padStart(3, '0')}`,
-    fornecedorId,
-    solicitacoes: solicitacaoIds,
-    dataCriacao: new Date().toISOString(),
-    status: 'Pendente',
-    valorTotal,
-    timeline: [
-      {
-        data: new Date().toISOString(),
-        tipo: 'criacao',
-        descricao: 'Lote criado',
-        responsavel: 'Usuário Sistema'
-      }
-    ]
-  };
-  
-  // Atualizar loteId nas solicitações
-  solicitacaoIds.forEach(id => {
-    const idx = solicitacoes.findIndex(s => s.id === id);
-    if (idx !== -1) {
-      solicitacoes[idx].loteId = novoLote.id;
-    }
-  });
-  
-  lotes.push(novoLote);
-  return novoLote;
-};
+// ========== AÇÕES EM MASSA - Encaminhar para Financeiro ==========
 
-export const editarLote = (loteId: string, dados: { valorTotal?: number; solicitacoes?: string[] }, responsavel: string): LotePecas | null => {
-  const loteIndex = lotes.findIndex(l => l.id === loteId);
-  if (loteIndex === -1 || lotes[loteIndex].status !== 'Pendente') return null;
+export const encaminharParaFinanceiro = (solicitacaoIds: string[], usuarioNome: string): NotaAssistencia[] => {
+  const notasCriadas: NotaAssistencia[] = [];
   
-  const lote = lotes[loteIndex];
-  const alteracoes: string[] = [];
-  
-  if (dados.valorTotal !== undefined && dados.valorTotal !== lote.valorTotal) {
-    alteracoes.push(`Valor alterado de R$ ${lote.valorTotal.toFixed(2)} para R$ ${dados.valorTotal.toFixed(2)}`);
-  }
-  if (dados.solicitacoes && dados.solicitacoes.length !== lote.solicitacoes.length) {
-    alteracoes.push(`Solicitações alteradas de ${lote.solicitacoes.length} para ${dados.solicitacoes.length} itens`);
+  for (const solId of solicitacaoIds) {
+    const idx = solicitacoes.findIndex(s => s.id === solId);
+    if (idx === -1 || solicitacoes[idx].status !== 'Aprovada') continue;
+    
+    const sol = solicitacoes[idx];
+    
+    // Atualizar status da solicitação
+    solicitacoes[idx] = { ...sol, status: 'Pagamento - Financeiro' };
+    
+    // Criar nota individual
+    const novaNota: NotaAssistencia = {
+      id: `NOTA-ASS-${String(notaAssistenciaCounter++).padStart(3, '0')}`,
+      solicitacaoId: solId,
+      fornecedor: sol.fornecedorId || '',
+      lojaSolicitante: sol.lojaSolicitante,
+      osId: sol.osId,
+      dataCriacao: new Date().toISOString(),
+      valorTotal: (sol.valorPeca || 0) * sol.quantidade,
+      status: 'Pendente',
+      itens: [{
+        peca: sol.peca,
+        quantidade: sol.quantidade,
+        valorUnitario: sol.valorPeca || 0
+      }]
+    };
+    notasAssistencia.push(novaNota);
+    notasCriadas.push(novaNota);
+    
+    // Registrar na timeline da OS
+    const os = getOrdemServicoById(sol.osId);
+    if (os) {
+      updateOrdemServico(sol.osId, {
+        timeline: [...os.timeline, {
+          data: new Date().toISOString(),
+          tipo: 'peca',
+          descricao: `Registro encaminhado para conferência financeira por ${usuarioNome} via ação em massa`,
+          responsavel: usuarioNome
+        }]
+      });
+    }
   }
   
-  const novaTimeline: LoteTimeline = {
-    data: new Date().toISOString(),
-    tipo: 'edicao',
-    descricao: alteracoes.join('; ') || 'Lote editado',
-    responsavel
-  };
-  
-  lotes[loteIndex] = {
-    ...lote,
-    ...dados,
-    timeline: [...(lote.timeline || []), novaTimeline]
-  };
-  
-  return lotes[loteIndex];
+  return notasCriadas;
 };
 
-export const getLoteById = (loteId: string): LotePecas | null => {
-  return lotes.find(l => l.id === loteId) || null;
-};
-
-export const enviarLote = (loteId: string): { lote: LotePecas; nota: NotaAssistencia } | null => {
-  const loteIndex = lotes.findIndex(l => l.id === loteId);
-  if (loteIndex === -1) return null;
-  
-  const lote = lotes[loteIndex];
-  const solicitacoesDoLote = solicitacoes.filter(s => lote.solicitacoes.includes(s.id));
-  
-  // Criar nota de assistência
-  const novaNota: NotaAssistencia = {
-    id: `NOTA-ASS-${String(notaAssistenciaCounter++).padStart(3, '0')}`,
-    loteId,
-    fornecedor: lote.fornecedorId,
-    lojaSolicitante: solicitacoesDoLote[0]?.lojaSolicitante || 'Loja Centro',
-    osId: solicitacoesDoLote[0]?.osId,
-    dataCriacao: new Date().toISOString(),
-    valorTotal: lote.valorTotal,
-    status: 'Pendente',
-    itens: solicitacoesDoLote.map(s => ({
-      peca: s.peca,
-      quantidade: s.quantidade,
-      valorUnitario: s.valorPeca || 0
-    }))
-  };
-  
-  // Atualizar lote
-  lotes[loteIndex] = {
-    ...lote,
-    status: 'Enviado',
-    notaId: novaNota.id,
-    timeline: [...(lote.timeline || []), {
-      data: new Date().toISOString(),
-      tipo: 'envio',
-      descricao: `Lote enviado ao fornecedor - Nota ${novaNota.id} criada`,
-      responsavel: 'Usuário Sistema'
-    }]
-  };
-  
-  // Atualizar status das solicitações
-  solicitacoesDoLote.forEach(s => {
-    const idx = solicitacoes.findIndex(sol => sol.id === s.id);
-    if (idx !== -1) {
-      solicitacoes[idx].status = 'Enviada';
-    }
-  });
-  
-  notasAssistencia.push(novaNota);
-  return { lote: lotes[loteIndex], nota: novaNota };
-};
+// ========== Finalizar Nota no Financeiro ==========
 
 export const finalizarNotaAssistencia = (notaId: string, dados: {
   responsavelFinanceiro: string;
@@ -549,34 +420,27 @@ export const finalizarNotaAssistencia = (notaId: string, dados: {
     dataConferencia: new Date().toISOString().split('T')[0]
   };
   
-  // Atualizar lote
-  const loteIndex = lotes.findIndex(l => l.notaId === notaId);
-  if (loteIndex !== -1) {
-    lotes[loteIndex].status = 'Finalizado';
-    
-    // Atualizar solicitações para "Recebida"
-    lotes[loteIndex].solicitacoes.forEach(solId => {
-      const idx = solicitacoes.findIndex(s => s.id === solId);
-      if (idx !== -1) {
-        solicitacoes[idx].status = 'Recebida';
-        
-        // Atualizar OS correspondente para "Pagamento Concluído" - técnico deve confirmar recebimento
-        const osId = solicitacoes[idx].osId;
-        const os = getOrdemServicoById(osId);
-        if (os) {
-          updateOrdemServico(osId, {
-            status: 'Pagamento Concluído',
-            proximaAtuacao: 'Técnico (Recebimento)',
-            timeline: [...os.timeline, {
-              data: new Date().toISOString(),
-              tipo: 'peca',
-              descricao: `Pagamento concluído via nota ${notaId} - ${solicitacoes[idx].peca}. Aguardando confirmação de recebimento pelo técnico.`,
-              responsavel: dados.responsavelFinanceiro
-            }]
-          });
-        }
+  // Atualizar solicitação vinculada
+  if (nota.solicitacaoId) {
+    const solIdx = solicitacoes.findIndex(s => s.id === nota.solicitacaoId);
+    if (solIdx !== -1) {
+      solicitacoes[solIdx].status = 'Recebida';
+      
+      const osId = solicitacoes[solIdx].osId;
+      const os = getOrdemServicoById(osId);
+      if (os) {
+        updateOrdemServico(osId, {
+          status: 'Pagamento Concluído',
+          proximaAtuacao: 'Técnico (Recebimento)',
+          timeline: [...os.timeline, {
+            data: new Date().toISOString(),
+            tipo: 'peca',
+            descricao: `Pagamento concluído via nota ${notaId} - ${solicitacoes[solIdx].peca}. Aguardando confirmação de recebimento pelo técnico.`,
+            responsavel: dados.responsavelFinanceiro
+          }]
+        });
       }
-    });
+    }
   }
 
   // Também atualizar OS se a nota tiver osId diretamente
@@ -596,7 +460,7 @@ export const finalizarNotaAssistencia = (notaId: string, dados: {
     }
   }
 
-  // Registrar despesa no financeiro para integração com Extrato
+  // Registrar despesa no financeiro
   const hoje = new Date().toISOString().split('T')[0];
   const meses = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
   const mesAtual = `${meses[new Date().getMonth()]}-${new Date().getFullYear()}`;
@@ -607,7 +471,7 @@ export const finalizarNotaAssistencia = (notaId: string, dados: {
     valor: nota.valorTotal,
     competencia: mesAtual,
     conta: dados.contaPagamento,
-    observacoes: `Fornecedor: ${nota.fornecedor} | Lote: ${nota.loteId}`,
+    observacoes: `Fornecedor: ${nota.fornecedor} | Solicitação: ${nota.solicitacaoId}`,
     lojaId: nota.lojaSolicitante,
     status: 'Pago',
     categoria: 'Assistência',
@@ -632,11 +496,9 @@ export const cancelarSolicitacao = (id: string, observacao: string): Solicitacao
     observacao
   };
   
-  // Atualizar timeline da OS
   const osId = solicitacao.osId;
   const os = getOrdemServicoById(osId);
   if (os) {
-    // Verificar se existem outras solicitações ativas para esta OS
     const outrasSolicitacoesAtivas = solicitacoes.filter(s => 
       s.osId === osId && 
       s.id !== id && 
@@ -653,7 +515,6 @@ export const cancelarSolicitacao = (id: string, observacao: string): Solicitacao
       }]
     };
     
-    // Só reverte status se não houver outras solicitações ativas
     if (outrasSolicitacoesAtivas.length === 0) {
       updates.status = 'Em serviço';
     }
@@ -671,7 +532,6 @@ export const calcularSLASolicitacao = (dataSolicitacao: string): number => {
   return Math.floor(diffTime / (1000 * 60 * 60 * 24));
 };
 
-// formatCurrency removido - usar import { formatCurrency } from '@/utils/formatUtils'
 export { formatCurrency } from '@/utils/formatUtils';
 
 // Marcar solicitações ativas de uma OS cancelada
@@ -712,7 +572,6 @@ export const tratarPecaOSCancelada = (
     };
   }
 
-  // Registrar na timeline da OS
   const os = getOrdemServicoById(sol.osId);
   if (os) {
     const descricaoTimeline = decisao === 'devolver'
@@ -735,12 +594,8 @@ export const tratarPecaOSCancelada = (
 // Verificar se peça já foi paga (nota concluída)
 export const isPecaPaga = (sol: SolicitacaoPeca): boolean => {
   if (sol.status === 'Recebida' || sol.status === 'Pagamento Finalizado') return true;
-  if (sol.loteId) {
-    const lote = getLoteById(sol.loteId);
-    if (lote && lote.notaId) {
-      const nota = notasAssistencia.find(n => n.id === lote.notaId);
-      if (nota && nota.status === 'Concluído') return true;
-    }
-  }
+  // Check if there's a concluded nota for this solicitation
+  const nota = notasAssistencia.find(n => n.solicitacaoId === sol.id && n.status === 'Concluído');
+  if (nota) return true;
   return false;
 };
