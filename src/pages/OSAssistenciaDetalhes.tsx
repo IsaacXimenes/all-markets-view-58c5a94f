@@ -709,6 +709,9 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                                   <SelectValue placeholder="Selecione a peça do estoque" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                {peca.peca && !pecasEstoque.some(p => p.descricao === peca.peca && p.status === 'Disponível' && p.quantidade > 0) && (
+                                  <SelectItem value={peca.peca}>{peca.peca} (salvo anteriormente)</SelectItem>
+                                )}
                                 {pecasEstoque
                                     .filter(p => p.status === 'Disponível' && p.quantidade > 0)
                                     .map(p => (
