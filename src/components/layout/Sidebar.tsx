@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Link, useLocation } from 'react-router-dom';
-import circuitBg from '@/assets/login_screen_v2_thiago_imports.png';
+import circuitBg from '@/assets/sidebar-circuit-bg.png';
 
 interface SidebarProps {
   isCollapsed: boolean;
