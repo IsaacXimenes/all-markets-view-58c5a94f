@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Download, TrendingUp, TrendingDown, DollarSign, Filter, Calendar, ArrowLeftRight } from 'lucide-react';
+import { Download, TrendingUp, TrendingDown, DollarSign, Filter, Calendar, ArrowLeftRight, X } from 'lucide-react';
 import { format, subDays, addDays, startOfDay, endOfDay, isWithinInterval, parseISO, eachDayOfInterval, subYears, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
@@ -323,7 +323,13 @@ export default function FinanceiroExtrato() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-end">
+              <div className="flex items-end gap-2">
+                {(filtroConta !== 'todas' || filtroTipo !== 'todos' || dataInicio !== format(subDays(new Date(), 30), 'yyyy-MM-dd') || dataFim !== format(new Date(), 'yyyy-MM-dd')) && (
+                  <Button variant="ghost" size="sm" onClick={() => { setFiltroConta('todas'); setFiltroTipo('todos'); setDataInicio(format(subDays(new Date(), 30), 'yyyy-MM-dd')); setDataFim(format(new Date(), 'yyyy-MM-dd')); }} className="gap-1">
+                    <X className="h-4 w-4" />
+                    Limpar
+                  </Button>
+                )}
                 <Button onClick={handleExportCSV} variant="outline" className="gap-2 w-full">
                   <Download className="h-4 w-4" />
                   Exportar CSV

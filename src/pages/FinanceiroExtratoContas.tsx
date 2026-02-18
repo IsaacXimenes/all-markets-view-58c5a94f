@@ -497,6 +497,12 @@ export default function FinanceiroExtratoContas() {
                 </SelectContent>
               </Select>
 
+              {(filtroLoja !== 'todas' || mesSelecionado !== new Date().getMonth() || anoSelecionado !== new Date().getFullYear()) && (
+                <Button variant="ghost" size="sm" onClick={() => { setFiltroLoja('todas'); setMesSelecionado(new Date().getMonth()); setAnoSelecionado(new Date().getFullYear()); }} className="gap-1">
+                  <X className="h-4 w-4" />
+                  Limpar filtros
+                </Button>
+              )}
               <div className="flex gap-2 ml-auto">
                 <Button variant="outline" onClick={() => {
                   // Exportar CSV com movimentações individuais

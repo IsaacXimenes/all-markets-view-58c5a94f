@@ -15,7 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Building2, Lock, AlertTriangle, AlertCircle, 
   DollarSign, TrendingUp, Calendar, Landmark, Banknote,
-  Eye, FileText, Receipt, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown
+  Eye, FileText, Receipt, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -651,8 +651,9 @@ export default function FinanceiroTetoBancario() {
                   </SelectContent>
                 </Select>
               </div>
-              {(filtroLoja || filtroConta) && (
-                <Button variant="ghost" size="sm" onClick={() => { setFiltroLoja(''); setFiltroConta(''); }}>
+              {(filtroLoja || filtroConta || mesSelecionado !== new Date().getMonth() || anoSelecionado !== new Date().getFullYear()) && (
+                <Button variant="ghost" size="sm" onClick={() => { setFiltroLoja(''); setFiltroConta(''); setMesSelecionado(new Date().getMonth()); setAnoSelecionado(new Date().getFullYear()); }} className="gap-1">
+                  <X className="h-4 w-4" />
                   Limpar filtros
                 </Button>
               )}
