@@ -421,7 +421,20 @@ const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque
     responsavel
   };
 
-  // Usar valor original, NÃO somar custo assistência
+  // Calcular custo composto: aquisição + reparo
+  const custoReparo = produto.custoAssistencia || 0;
+  const custoComposto = produto.valorCustoOriginal + custoReparo;
+
+  // Timeline entry para composição do custo (apenas quando houve reparo)
+  const timelineCusto: TimelineEntry | null = custoReparo > 0 ? {
+    id: `TL-CUSTO-${Date.now()}`,
+    tipo: 'parecer_estoque',
+    data: new Date().toISOString(),
+    titulo: 'Custo Composto Atualizado',
+    descricao: `Aquisição: R$ ${produto.valorCustoOriginal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} + Reparo: R$ ${custoReparo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} = Custo Final: R$ ${custoComposto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+    responsavel
+  } : null;
+
   // Produtos validados diretamente pelo estoque ficam com vendaRecomendada pendente (null) e statusNota: 'Pendente'
   const novoProduto: Produto = {
     id: produto.id, // ID PERSISTENTE - nunca muda
@@ -432,26 +445,32 @@ const migrarParaEstoque = (produto: ProdutoPendente, origemDeferimento: 'Estoque
     cor: produto.cor,
     tipo: produto.tipo,
     quantidade: 1,
-    valorCusto: produto.valorCustoOriginal, // VALOR ORIGINAL PRESERVADO
-    valorVendaSugerido: produto.valorCustoOriginal * 1.8, // Baseado no original
+    valorCusto: custoComposto, // CUSTO COMPOSTO: aquisição + reparo
+    valorVendaSugerido: custoComposto * 1.8, // Baseado no custo composto
     vendaRecomendada: null, // Pendente - habilita botão "Informar Valor" na tela de Estoque > Produtos
     saudeBateria: produto.saudeBateria,
     loja: produto.loja,
     estoqueConferido: true,
     assistenciaConferida: origemDeferimento === 'Assistência',
     condicao: produto.condicao === 'Semi-novo' ? 'Seminovo' : 'Lacrado',
+    custoAssistencia: custoReparo > 0 ? custoReparo : undefined,
     historicoCusto: [
       { 
         data: new Date().toISOString().split('T')[0], 
         fornecedor: produto.origemEntrada, 
         valor: produto.valorCustoOriginal 
-      }
+      },
+      ...(custoReparo > 0 ? [{
+        data: new Date().toISOString().split('T')[0],
+        fornecedor: 'Assistência Técnica',
+        valor: custoReparo
+      }] : [])
     ],
     historicoValorRecomendado: [],
     statusNota: 'Pendente', // Pendente para habilitar informar valor recomendado
     origemEntrada: produto.origemEntrada,
-    // PRESERVA A TIMELINE COMPLETA DO PRODUTO PENDENTE + LIBERAÇÃO
-    timeline: [...produto.timeline, timelineLiberacao]
+    // PRESERVA A TIMELINE COMPLETA DO PRODUTO PENDENTE + LIBERAÇÃO + CUSTO COMPOSTO
+    timeline: [...produto.timeline, timelineLiberacao, ...(timelineCusto ? [timelineCusto] : [])]
   };
 
   // Adiciona ao estoque PRINCIPAL via estoqueApi
