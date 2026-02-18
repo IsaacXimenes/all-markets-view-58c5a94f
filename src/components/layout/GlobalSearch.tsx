@@ -146,7 +146,7 @@ export function GlobalSearch() {
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="relative h-9 w-full justify-start rounded-md bg-white/5 border-[#333] text-[#E0E0E0] hover:bg-white/10 hover:text-white hover:border-[#F7BB05]/50 md:w-64 lg:w-80 transition-colors"
+          className="relative h-9 w-full justify-start rounded-md bg-white/5 border-[#333] text-[#E0E0E0] hover:bg-white/10 hover:text-white hover:border-[#F7BB05]/50 transition-colors"
         >
           <Search className="mr-2 h-4 w-4 text-[#F7BB05]" />
           <span className="hidden lg:inline-flex">Buscar no sistema...</span>
