@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Link, useLocation } from 'react-router-dom';
+import circuitBg from '@/assets/login_screen_v2_thiago_imports.png';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -38,6 +39,22 @@ const navItems: NavItem[] = [
   { title: 'Configurações', icon: Settings, href: '/settings' },
 ];
 
+/** Overlay sutil com padrão de circuitos */
+function CircuitOverlay() {
+  return (
+    <div
+      className="absolute inset-0 pointer-events-none"
+      style={{
+        backgroundImage: `url(${circuitBg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        opacity: 0.08,
+      }}
+    />
+  );
+}
+
 function SidebarContent({ 
   isCollapsed, 
   onToggle, 
@@ -52,32 +69,21 @@ function SidebarContent({
   const location = useLocation();
 
   const isActiveModule = (href: string) => {
-    if (href === '/') {
-      return location.pathname === '/';
-    }
-    if (href === '/financeiro/conferencia') {
-      return location.pathname.startsWith('/financeiro');
-    }
-    if (href === '/os/analise-garantia') {
-      return location.pathname.startsWith('/os');
-    }
-    if (href === '/garantias/nova') {
-      return location.pathname.startsWith('/garantias');
-    }
-    if (href === '/gestao-administrativa') {
-      return location.pathname.startsWith('/gestao-administrativa');
-    }
-    if (href === '/dados-sistema-antigo/clientes') {
-      return location.pathname.startsWith('/dados-sistema-antigo');
-    }
+    if (href === '/') return location.pathname === '/';
+    if (href === '/financeiro/conferencia') return location.pathname.startsWith('/financeiro');
+    if (href === '/os/analise-garantia') return location.pathname.startsWith('/os');
+    if (href === '/garantias/nova') return location.pathname.startsWith('/garantias');
+    if (href === '/gestao-administrativa') return location.pathname.startsWith('/gestao-administrativa');
+    if (href === '/dados-sistema-antigo/clientes') return location.pathname.startsWith('/dados-sistema-antigo');
     return location.pathname.startsWith(href);
   };
 
   return (
     <>
-      <div className="flex h-16 items-center justify-center border-b border-sidebar-border">
+      {/* Header */}
+      <div className="flex h-16 items-center justify-center border-b border-[#222222] relative z-10">
         <h2 className={cn(
-          "font-semibold tracking-tight transition-opacity duration-200",
+          "font-semibold tracking-tight transition-opacity duration-200 text-white",
           isCollapsed ? "opacity-0" : "opacity-100"
         )}>
           Navegação
@@ -89,7 +95,7 @@ function SidebarContent({
             size="icon"
             onClick={onToggle}
             className={cn(
-              "absolute right-2 text-sidebar-foreground h-8 w-8",
+              "absolute right-2 text-white hover:text-[#F7BB05] hover:bg-transparent h-8 w-8",
               isCollapsed ? "right-2" : "right-4"
             )}
           >
@@ -98,7 +104,8 @@ function SidebarContent({
         )}
       </div>
       
-      <ScrollArea className="flex-1 py-4">
+      {/* Nav items */}
+      <ScrollArea className="flex-1 py-4 relative z-10">
         <nav className={cn("grid px-2", isCollapsed ? "gap-1" : "gap-0.5")}>
           {navItems.map((item, index) => {
             const isActive = isActiveModule(item.href);
@@ -110,21 +117,15 @@ function SidebarContent({
                 className={cn(
                   "flex items-center rounded-md transition-all duration-200 relative",
                   isActive 
-                    ? "bg-primary text-primary-foreground font-semibold shadow-md" 
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    ? "bg-[#F7BB05]/10 text-[#F7BB05] font-semibold border-l-4 border-[#F7BB05]" 
+                    : "text-white hover:bg-[#212121] border-l-4 border-transparent",
                   isCollapsed 
-                    ? "justify-center px-0 py-2.5 mx-auto w-10 h-10" 
+                    ? "justify-center px-0 py-2.5 mx-auto w-10 h-10 border-l-0" 
                     : "gap-3 px-3 py-2"
                 )}
                 title={isCollapsed ? item.title : undefined}
               >
-                {isActive && !isCollapsed && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary-foreground rounded-r-full" />
-                )}
-                <item.icon className={cn(
-                  "h-5 w-5 shrink-0",
-                  isActive && "animate-pulse"
-                )} />
+                <item.icon className="h-5 w-5 shrink-0" />
                 {!isCollapsed && (
                   <span className={cn(
                     "text-sm",
@@ -139,9 +140,10 @@ function SidebarContent({
         </nav>
       </ScrollArea>
       
+      {/* Footer */}
       {!isCollapsed && (
-        <div className="p-4 border-t border-sidebar-border">
-          <div className="rounded-md bg-sidebar-accent/50 p-2 text-xs text-sidebar-accent-foreground">
+        <div className="p-4 border-t border-[#222222] relative z-10">
+          <div className="rounded-md bg-[#1a1a1a] p-2 text-xs text-[#E0E0E0]">
             <p className="font-medium">Status da Loja</p>
             <p>Loja aberta</p>
             <p className="text-[10px]">Pedidos: 47 hoje</p>
@@ -153,11 +155,11 @@ function SidebarContent({
 }
 
 export function Sidebar({ isCollapsed, onToggle, className, isMobile, isOpen, onClose }: SidebarProps) {
-  // Mobile: renderizar como Sheet/Drawer
   if (isMobile) {
     return (
       <Sheet open={isOpen} onOpenChange={(open) => !open && onClose?.()}>
-        <SheetContent side="left" className="p-0 w-64 bg-sidebar text-sidebar-foreground">
+        <SheetContent side="left" className="p-0 w-64 bg-[#111111] text-white border-r-0 overflow-hidden relative">
+          <CircuitOverlay />
           <SidebarContent 
             isCollapsed={false} 
             onToggle={onToggle}
@@ -169,13 +171,13 @@ export function Sidebar({ isCollapsed, onToggle, className, isMobile, isOpen, on
     );
   }
 
-  // Desktop: sidebar fixa normal
   return (
     <aside className={cn(
-      "bg-sidebar text-sidebar-foreground relative transition-all duration-300 ease-in-out flex flex-col border-r border-sidebar-border fixed top-0 left-0 h-screen z-50",
+      "bg-[#111111] text-white relative transition-all duration-300 ease-in-out flex flex-col border-r border-[#222222] fixed top-0 left-0 h-screen z-50 overflow-hidden",
       isCollapsed ? "w-16" : "w-64 xl:w-72",
       className
     )}>
+      <CircuitOverlay />
       <SidebarContent 
         isCollapsed={isCollapsed} 
         onToggle={onToggle}

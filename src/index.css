@@ -56,13 +56,13 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 7%;
-    --sidebar-foreground: 0 0% 96%;
-    --sidebar-primary: 217 91% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 14%;
-    --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 0 0% 14%;
-    --sidebar-ring: 217 91% 50%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 45 95% 49%;
+    --sidebar-primary-foreground: 0 0% 7%;
+    --sidebar-accent: 0 0% 13%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 13%;
+    --sidebar-ring: 45 95% 49%;
   }
 
   .dark {
