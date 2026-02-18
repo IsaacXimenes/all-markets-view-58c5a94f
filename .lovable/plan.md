@@ -1,57 +1,43 @@
 
 
-## Correcoes: Pecas, Loja e Campos Financeiros no Quadro de Aparelhos Pendentes
+## Renomear "Oficina" para "Laboratório" e Desbloquear Valor Recomendado
 
-### Problemas Identificados
+### 1. Renomear "Oficina" para "Laboratório"
 
-1. **Pecas nao aparecem na tabela**: O codigo usa `peca.descricao` e `peca.valorCusto`, mas a interface `PecaServico` define os campos como `peca.peca` (nome da peca) e `peca.valor` / `peca.valorTotal`. Resultado: colunas vazias ou "0".
+Todos os textos visíveis ao usuário que contenham "Oficina" serão substituídos por "Laboratório":
 
-2. **Loja exibindo ID**: O `obterNomeLoja` esta sendo chamado corretamente no codigo. O problema pode estar no campo "Loja" do card superior (Informacoes do Produto, linha 370) que ja usa `obterNomeLoja`. Vou garantir que todos os locais estejam consistentes e adicionar uma verificacao de fallback mais robusta.
+| Arquivo | Texto atual | Texto novo |
+|---------|-------------|------------|
+| `src/pages/EstoqueProdutoPendenteDetalhes.tsx` | "Retrabalho - Devolver para Oficina" (aparece em ~6 locais: SelectItem, validações, placeholders, toasts) | "Retrabalho - Devolver para Laboratório" |
+| `src/utils/osApi.ts` | "Serviço Concluído na Oficina" (timeline) | "Serviço Concluído no Laboratório" |
+| `src/utils/osApi.ts` | Comentário "validação pós-oficina" | "validação pós-laboratório" |
 
-3. **Busca da OS vinculada pode falhar**: A condicao atual busca por `origemOS === 'Estoque' && imeiAparelho === data.imei`. Se o IMEI no produto pendente e na OS nao baterem exatamente (por exemplo, espacos ou formatacao), a OS nao e encontrada, e consequentemente as pecas nao aparecem. Vou adicionar uma busca alternativa por `produtoId`.
+Os tabs de navegação já mostram "Serviços" (não "Oficina"), então não precisam de alteração.
 
----
+### 2. Desbloquear botão "Informar Valor Recomendado"
 
-### Alteracoes
+**Problema**: Na aba de Aparelhos (`EstoqueProdutos.tsx`, linha 418), o botão "Informar Valor" só aparece clicável quando `produto.statusNota === 'Pendente'`. Para os demais produtos, aparece apenas o texto estático "Pendente" sem ação.
 
-**Arquivo: `src/pages/EstoqueProdutoPendenteDetalhes.tsx`**
+**Correção**: Tornar o botão "Informar Valor" sempre clicável para todos os produtos que ainda não têm `vendaRecomendada` definida, independentemente do `statusNota`. Isso permite que o usuário atual (João Gestor) preencha o valor.
 
-#### 1. Corrigir mapeamento de campos na tabela de pecas (linhas 541-547)
+**Arquivo: `src/pages/EstoqueProdutos.tsx` (linhas 416-435)**
+
+Substituir a lógica condicional por um botão único que sempre permite informar o valor:
 
 ```text
 ANTES:
-  peca.descricao || peca.nome || '-'
-  peca.valorCusto || peca.valor || 0
+  if statusNota === 'Pendente' -> botão clicável
+  else -> texto estático "Pendente"
 
 DEPOIS:
-  peca.peca || peca.descricao || '-'
-  peca.valorTotal || peca.valor || 0
+  Botão sempre clicável para qualquer produto sem vendaRecomendada
 ```
 
-O campo correto na interface `PecaServico` e `peca` (nome/descricao da peca) e `valorTotal` (valor total calculado).
+### Arquivos alterados
 
-#### 2. Melhorar busca da OS vinculada (linhas 110-115)
-
-Adicionar busca alternativa por `produtoId` caso a busca por IMEI falhe:
-
-```typescript
-const os = ordensServico.find(o => 
-  o.origemOS === 'Estoque' && (
-    o.imeiAparelho === data.imei || 
-    o.produtoId === data.id
-  )
-);
-```
-
-#### 3. Adicionar coluna "Qtd" na tabela de pecas
-
-Incluir a quantidade da peca (quando disponivel) para melhor rastreabilidade.
-
----
-
-### Resumo de Arquivos
-
-| Arquivo | Alteracao |
+| Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/EstoqueProdutoPendenteDetalhes.tsx` | Corrigir campos da tabela de pecas (`peca.peca`, `peca.valorTotal`), melhorar busca da OS vinculada (fallback por `produtoId`) |
+| `src/pages/EstoqueProdutoPendenteDetalhes.tsx` | Renomear "Oficina" para "Laboratório" em todos os textos |
+| `src/utils/osApi.ts` | Renomear "Oficina" para "Laboratório" nas timelines e comentários |
+| `src/pages/EstoqueProdutos.tsx` | Remover condição de `statusNota` no botão "Informar Valor" |
 
