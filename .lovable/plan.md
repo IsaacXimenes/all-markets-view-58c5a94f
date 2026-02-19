@@ -1,91 +1,46 @@
 
 
-## Rastreabilidade de Custos por Origem e Integração Financeira
+## Rastreabilidade de Fornecedores na Aba de Acessorios
 
 ### Resumo
 
-Implementar 3 funcionalidades interligadas: (1) coluna "Origem de Entrada" nas tabelas de solicitações de peça, (2) dashboard de montantes estratégicos segregados por origem com separação Aprovado vs. Pago, e (3) filtro por meio de pagamento na Conferência do Gestor.
+Adicionar o campo `fornecedorId` na interface `Acessorio`, exibir a coluna "Fornecedor" na tabela, e criar um filtro de busca por fornecedor -- tudo sem alterar as colunas existentes.
 
 ---
 
-### 1. Coluna "Origem de Entrada" nas Solicitações de Peça
+### 1. Modelo de Dados - `src/utils/acessoriosApi.ts`
 
-**Arquivo: `src/utils/solicitacaoPecasApi.ts`**
-- Adicionar campo `origemEntrada` na interface `SolicitacaoPeca` (tipo: `'Balcao' | 'Garantia' | 'Estoque'`)
-- Na funcao `addSolicitacao`, buscar a OS vinculada via `getOrdemServicoById(data.osId)` e preencher automaticamente `origemEntrada` a partir de `os.origemOS`
-- Atualizar os mocks existentes para incluir `origemEntrada` baseado na `origemOS` das OS vinculadas
+- Adicionar campo opcional `fornecedorId?: string` na interface `Acessorio`
+- Atualizar os mocks existentes para incluir `fornecedorId` apontando para IDs de fornecedores do `cadastrosApi` (ex: `'FORN-001'`, `'FORN-002'`, etc.)
+- Atualizar `addAcessorio` e `getOrCreateAcessorio` para aceitar e propagar `fornecedorId`
+- Incluir "Fornecedor" no CSV de exportacao
 
-**Arquivo: `src/pages/OSSolicitacoesPecas.tsx`**
-- Adicionar coluna "Origem" no cabecalho da tabela (entre "Loja" e "OS")
-- Renderizar badges coloridos:
-  - Balcao: badge cinza/neutro
-  - Garantia: badge laranja
-  - Estoque: badge azul
-- Para solicitacoes existentes sem `origemEntrada`, fazer lookup em tempo real via `getOrdemServicoById(sol.osId)?.origemOS`
-- Atualizar `colSpan` da mensagem vazia de 12 para 13
+### 2. Tabela e Filtro - `src/pages/EstoqueAcessorios.tsx`
 
----
+**Coluna "Fornecedor":**
+- Inserir coluna "Fornecedor" entre "Categoria" e "ID" no cabecalho
+- No agrupamento (`acessoriosAgrupados`), incluir `fornecedorId` no objeto agrupado
+- Na renderizacao, buscar o nome do fornecedor via `getFornecedores()` pelo ID
+- Atualizar `colSpan` da mensagem vazia de 9 para 10
 
-### 2. Dashboard de Montantes Estrategicos por Origem
+**Filtro por Fornecedor:**
+- Adicionar estado `filtroFornecedor`
+- Adicionar componente `AutocompleteFornecedor` na area de filtros (apos Loja)
+- No `useMemo` de `acessoriosFiltrados`, filtrar por `fornecedorId` quando selecionado
+- Atualizar "Limpar filtros" para resetar `filtroFornecedor`
+- Atualizar `ResponsiveFilterGrid` de `cols={4}` para `cols={5}`
 
-**Arquivo: `src/pages/OSSolicitacoesPecas.tsx`**
+### 3. Colunas Existentes
 
-Substituir os 4 cards atuais (Pendentes, Aprovadas, Enviadas/Financeiro, Recebidas) por um dashboard mais completo:
-
-**Linha 1 - Cards de contagem (manter, compactar):**
-- Pendentes | Aprovadas | Financeiro | Recebidas (mantidos, mas em uma unica linha menor)
-
-**Linha 2 - Cards de montantes por origem (novos):**
-Tres cards lado a lado, cada um com dois valores:
-
-| Card | Aprovado (Compromisso) | Pago (Caixa Real) |
-|------|----------------------|-------------------|
-| Pecas - Balcao | Soma das aprovadas com origemEntrada='Balcao' | Soma das que `isPecaPaga()` retorna true |
-| Pecas - Garantia | Idem para 'Garantia' | Idem |
-| Pecas - Estoque | Idem para 'Estoque' | Idem |
-
-**Logica de calculo (useMemo):**
-- "Aprovado": status em ['Aprovada', 'Pagamento - Financeiro', 'Recebida', 'Devolvida ao Fornecedor', 'Retida para Estoque'] - qualquer solicitacao que passou pela aprovacao
-- "Pago": usar funcao `isPecaPaga(sol)` existente que verifica se ha nota concluida vinculada
-
-**Linha 3 - Cards de fluxo de caixa:**
-Dois cards maiores:
-
-- **Card "Aguardando Pagamento"**: Quantidade e valor total de solicitacoes aprovadas mas sem baixa financeira (status 'Aprovada' ou 'Pagamento - Financeiro')
-- **Card "Pagamento Realizado"**: Quantidade e valor total de solicitacoes com pagamento confirmado (`isPecaPaga` = true)
-
-A transicao entre esses estados ja e automatica: a funcao `finalizarNotaAssistencia` no financeiro atualiza o status da solicitacao para 'Recebida'. Nenhuma alteracao de logica e necessaria - apenas a visualizacao.
-
----
-
-### 3. Filtro por Meio de Pagamento na Conferencia do Gestor
-
-**Arquivo: `src/pages/OSConferenciaGestor.tsx`**
-
-- Adicionar estado `filtroMeioPagamento` (default: 'todos')
-- Adicionar um `Select` na area de filtros com opcoes:
-  - Todos
-  - Pix
-  - Cartao Credito
-  - Cartao Debito
-  - Dinheiro
-  - Boleto/Crediario
-- No `useMemo` de `osConferencia`, adicionar condicao: se `filtroMeioPagamento !== 'todos'`, filtrar apenas OS que contenham pelo menos um pagamento cujo `meio` inclua o texto selecionado
-- Atualizar `limparFiltros` para resetar tambem `filtroMeioPagamento`
+Todas as colunas atuais (Descricao, Loja, Categoria, ID, Estoque Disponivel, Valor Custo, Valor Recomendado, Lucro Unit., Acoes) permanecem intactas e na mesma posicao relativa. A nova coluna e inserida entre Categoria e ID.
 
 ---
 
 ### Detalhes Tecnicos
 
-**Arquivos modificados:**
-
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/utils/solicitacaoPecasApi.ts` | Campo `origemEntrada` na interface + preenchimento auto no `addSolicitacao` + mocks |
-| `src/pages/OSSolicitacoesPecas.tsx` | Coluna Origem + dashboard montantes + cards fluxo caixa |
-| `src/pages/OSConferenciaGestor.tsx` | Filtro por meio de pagamento |
+| `src/utils/acessoriosApi.ts` | Campo `fornecedorId` na interface + mocks + funcoes de criacao + CSV |
+| `src/pages/EstoqueAcessorios.tsx` | Coluna Fornecedor na tabela + filtro AutocompleteFornecedor + agrupamento |
 
-**Nenhum arquivo novo sera criado.**
-
-A integracao entre Assistencia e Financeiro para transicao automatica de status ja existe na funcao `finalizarNotaAssistencia` (que muda solicitacao para 'Recebida' quando o financeiro confirma pagamento). Os novos cards apenas visualizam essa logica existente.
-
+Nenhum arquivo novo sera criado. Usa o componente `AutocompleteFornecedor` ja existente e a funcao `getFornecedores` do `cadastrosApi`.
