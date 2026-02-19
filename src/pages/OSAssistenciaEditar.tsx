@@ -36,6 +36,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { applyIMEIMask } from '@/utils/imeiMask';
+import { moedaMask } from '@/utils/formatUtils';
 import { format } from 'date-fns';
 
 interface PecaForm {
@@ -165,7 +166,7 @@ export default function OSAssistenciaEditar() {
         peca: p.peca,
         pecaEstoqueId: p.pecaEstoqueId || '',
         imei: p.imei || '',
-        valor: p.valor > 0 ? p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
+        valor: p.valor > 0 ? moedaMask(p.valor) : '',
         percentual: p.percentual?.toString() || '',
         servicoTerceirizado: p.servicoTerceirizado || false,
         descricaoTerceirizado: p.descricaoTerceirizado || '',

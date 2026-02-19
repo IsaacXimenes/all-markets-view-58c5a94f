@@ -553,6 +553,7 @@ export default function OSOficina() {
                   <TableHead>Cliente</TableHead>
                   <TableHead>Modelo</TableHead>
                   <TableHead>Loja</TableHead>
+                  <TableHead>Técnico</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>SLA</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -587,6 +588,7 @@ export default function OSOficina() {
                         </div>
                       </TableCell>
                       <TableCell className="text-xs">{obterNomeLoja(os.lojaId)}</TableCell>
+                      <TableCell className="text-xs">{obterNomeColaborador(os.tecnicoId)}</TableCell>
                       <TableCell>{getStatusBadge(os)}</TableCell>
                       <TableCell>
                         <span className={cn(
@@ -616,7 +618,7 @@ export default function OSOficina() {
                 })}
                 {osTecnico.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                       Nenhuma OS aguardando ação do técnico
                     </TableCell>
                   </TableRow>
