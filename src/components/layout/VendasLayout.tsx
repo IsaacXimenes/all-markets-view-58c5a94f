@@ -1,10 +1,12 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
-import { History, Plus, Smartphone, ClipboardList, Headphones, ShieldCheck, FileCheck } from 'lucide-react';
+import { History, Plus, Smartphone, ClipboardList, Headphones, ShieldCheck, FileCheck, ShoppingCart } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 interface VendasLayoutProps {
   children: React.ReactNode;
   title: string;
+  icon?: LucideIcon;
 }
 
 // Mock: verificar permissões do usuário logado
@@ -37,9 +39,9 @@ const gestorTabs = temPermissaoGestor ? [
 
 const tabs = [...baseTabs, ...digitalTabs, ...finalizadorTabs, ...lancamentoTabs, ...gestorTabs];
 
-export function VendasLayout({ children, title }: VendasLayoutProps) {
+export function VendasLayout({ children, title, icon = ShoppingCart }: VendasLayoutProps) {
   return (
-    <PageLayout title={title}>
+    <PageLayout title={title} icon={icon}>
       <div className="mb-6">
         <CarouselTabsNavigation tabs={tabs} />
       </div>

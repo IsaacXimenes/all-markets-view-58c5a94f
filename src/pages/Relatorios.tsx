@@ -194,7 +194,7 @@ export default function Relatorios() {
   }, [vendas, ordensServico, feedbacks, dataInicio, dataFim, lojaFiltro, colaboradores]);
 
   return (
-    <PageLayout title="Relatórios">
+    <PageLayout title="Relatórios" icon={BarChart3}>
       <div className="space-y-6">
         {/* Dashboard Cards - Sticky */}
         <div className="sticky top-0 z-10 bg-background pb-4">

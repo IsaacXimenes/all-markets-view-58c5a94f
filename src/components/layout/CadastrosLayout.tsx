@@ -1,10 +1,12 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
-import { Store, Users, UserCog, Truck, ShoppingCart, Package, Percent, Briefcase, CreditCard, Building2, Wrench, Headphones, Shield, Palette, MapPinned, MessageSquare, ListChecks, History } from 'lucide-react';
+import { Store, Users, UserCog, Truck, ShoppingCart, Package, Percent, Briefcase, CreditCard, Building2, Wrench, Headphones, Shield, Palette, MapPinned, MessageSquare, ListChecks, History, Database } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 interface CadastrosLayoutProps {
   children: React.ReactNode;
   title: string;
+  icon?: LucideIcon;
 }
 
 const tabs = [
@@ -29,9 +31,9 @@ const tabs = [
   { name: 'Logs de Auditoria', href: '/cadastros/logs-auditoria', icon: History },
 ];
 
-export function CadastrosLayout({ children, title }: CadastrosLayoutProps) {
+export function CadastrosLayout({ children, title, icon = Database }: CadastrosLayoutProps) {
   return (
-    <PageLayout title={title}>
+    <PageLayout title={title} icon={icon}>
       <div className="mb-6">
         <CarouselTabsNavigation tabs={tabs} size="sm" />
       </div>

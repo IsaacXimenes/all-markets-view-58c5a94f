@@ -6,7 +6,7 @@ import { Bell, Globe, Lock, User, Settings as SettingsIcon } from 'lucide-react'
 
 const Settings = () => {
   return (
-    <PageLayout title="Configurações">
+    <PageLayout title="Configurações" icon={SettingsIcon}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
           <div className="bg-card rounded-lg p-6 shadow">

@@ -1,10 +1,12 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
 import { ClipboardCheck, History, Camera, BarChart3, ListChecks } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 interface GestaoAdministrativaLayoutProps {
   children: React.ReactNode;
   title: string;
+  icon?: LucideIcon;
 }
 
 const tabs = [
@@ -15,9 +17,9 @@ const tabs = [
   { name: 'Atividades Gestores', href: '/gestao-administrativa/atividades', icon: ListChecks },
 ];
 
-export function GestaoAdministrativaLayout({ children, title }: GestaoAdministrativaLayoutProps) {
+export function GestaoAdministrativaLayout({ children, title, icon = ClipboardCheck }: GestaoAdministrativaLayoutProps) {
   return (
-    <PageLayout title={title}>
+    <PageLayout title={title} icon={icon}>
       <div className="mb-6">
         <CarouselTabsNavigation tabs={tabs} />
       </div>

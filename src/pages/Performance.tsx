@@ -15,7 +15,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
 } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Clock } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Clock, BarChart3 } from 'lucide-react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export default function Performance() {
@@ -55,7 +55,7 @@ export default function Performance() {
   };
 
   return (
-    <PageLayout title="Desempenho">
+    <PageLayout title="Desempenho" icon={BarChart3}>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <div className="flex items-center gap-2">

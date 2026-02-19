@@ -1,10 +1,12 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
-import { FileCheck, MinusCircle, Wrench, Receipt, Wallet, ArrowDownCircle, Building2, ReceiptText, Clock } from 'lucide-react';
+import { FileCheck, MinusCircle, Wrench, Receipt, Wallet, ArrowDownCircle, Building2, ReceiptText, Clock, Banknote } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 interface FinanceiroLayoutProps {
   children: React.ReactNode;
   title: string;
+  icon?: LucideIcon;
 }
 
 const tabs = [
@@ -19,9 +21,9 @@ const tabs = [
   { name: 'Extrato Geral', href: '/financeiro/extrato', icon: Receipt }
 ];
 
-export function FinanceiroLayout({ children, title }: FinanceiroLayoutProps) {
+export function FinanceiroLayout({ children, title, icon = Banknote }: FinanceiroLayoutProps) {
   return (
-    <PageLayout title={title}>
+    <PageLayout title={title} icon={icon}>
       <div className="mb-6">
         <CarouselTabsNavigation tabs={tabs} />
       </div>

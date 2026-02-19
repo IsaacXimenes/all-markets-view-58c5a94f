@@ -388,3 +388,56 @@
     display: none;
   }
 }
+
+/* ============================================
+   8. GOLDEN GRADIENT & SHIMMER EFFECTS
+   - Gradiente dourado para títulos
+   - Shimmer animado na borda
+   ============================================ */
+
+.golden-gradient-text {
+  background: linear-gradient(90deg, #F7BB05, #FFD700, #F7BB05);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: golden-shift 3s ease-in-out infinite;
+}
+
+@keyframes golden-shift {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 100% center; }
+}
+
+.shimmer-border-container {
+  position: relative;
+}
+
+.shimmer-border-container::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(247, 187, 5, 0.6) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-border 3s ease-in-out infinite;
+  pointer-events: none;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  padding: 2px;
+  border-radius: 0.5rem;
+}
+
+@keyframes shimmer-border {
+  0%, 100% { background-position: 200% center; }
+  50% { background-position: -200% center; }
+}

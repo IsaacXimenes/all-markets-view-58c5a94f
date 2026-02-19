@@ -1,10 +1,12 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
 import { Wrench, Settings, ClipboardCheck, ShoppingCart, History, Scissors, Package, ArrowRightLeft, FileSearch } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 interface OSLayoutProps {
   children: React.ReactNode;
   title: string;
+  icon?: LucideIcon;
 }
 
 const tabs = [
@@ -19,9 +21,9 @@ const tabs = [
   { name: 'Histórico', href: '/os/historico-assistencia', icon: History },
 ];
 
-export function OSLayout({ children, title }: OSLayoutProps) {
+export function OSLayout({ children, title, icon = Wrench }: OSLayoutProps) {
   return (
-    <PageLayout title={title}>
+    <PageLayout title={title} icon={icon}>
       <div className="mb-6">
         <CarouselTabsNavigation tabs={tabs} />
       </div>
