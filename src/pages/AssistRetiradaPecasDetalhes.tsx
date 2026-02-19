@@ -61,6 +61,7 @@ export default function AssistRetiradaPecasDetalhes() {
     marca: '',
     nome: '',
     valor: '',
+    valorRecomendado: '',
     quantidade: '1'
   });
   
@@ -160,16 +161,19 @@ export default function AssistRetiradaPecasDetalhes() {
       return;
     }
 
+    const valorRecomendado = novaPeca.valorRecomendado ? parseMoeda(novaPeca.valorRecomendado) : undefined;
+
     const resultado = adicionarPecaRetirada(retirada.id, {
       marca: novaPeca.marca,
       nome: novaPeca.nome,
       valorCustoPeca: valor,
-      quantidade: parseInt(novaPeca.quantidade) || 1
+      quantidade: parseInt(novaPeca.quantidade) || 1,
+      valorRecomendado: valorRecomendado && valorRecomendado > 0 ? valorRecomendado : undefined
     });
 
     if (resultado.sucesso) {
       toast.success('Peça adicionada');
-      setNovaPeca({ marca: '', nome: '', valor: '', quantidade: '1' });
+      setNovaPeca({ marca: '', nome: '', valor: '', valorRecomendado: '', quantidade: '1' });
       setShowAddPecaModal(false);
       carregarDados();
     } else {
@@ -456,6 +460,7 @@ export default function AssistRetiradaPecasDetalhes() {
                   <TableHead>Marca</TableHead>
                   <TableHead>Nome da Peça</TableHead>
                   <TableHead>Valor Unitário</TableHead>
+                  <TableHead>Valor Recomendado</TableHead>
                   <TableHead>Quantidade</TableHead>
                   <TableHead>Valor Total</TableHead>
                   {podeEditar && <TableHead>Ações</TableHead>}
@@ -467,6 +472,7 @@ export default function AssistRetiradaPecasDetalhes() {
                     <TableCell>{peca.marca}</TableCell>
                     <TableCell className="font-medium">{peca.nome}</TableCell>
                     <TableCell>{formatCurrency(peca.valorCustoPeca)}</TableCell>
+                    <TableCell>{peca.valorRecomendado ? formatCurrency(peca.valorRecomendado) : '-'}</TableCell>
                     <TableCell>{peca.quantidade}</TableCell>
                     <TableCell className="font-semibold">{formatCurrency(peca.valorCustoPeca * peca.quantidade)}</TableCell>
                     {podeEditar && (
@@ -485,7 +491,7 @@ export default function AssistRetiradaPecasDetalhes() {
                 ))}
                 {retirada.pecasRetiradas.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={podeEditar ? 6 : 5} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={podeEditar ? 7 : 6} className="text-center py-8 text-muted-foreground">
                       Nenhuma peça adicionada
                     </TableCell>
                   </TableRow>
@@ -607,14 +613,24 @@ export default function AssistRetiradaPecasDetalhes() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Quantidade</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={novaPeca.quantidade}
-                  onChange={e => setNovaPeca({...novaPeca, quantidade: e.target.value})}
+                <Label>Valor Recomendado</Label>
+                <InputComMascara
+                  mascara="moeda"
+                  value={novaPeca.valorRecomendado}
+                  onChange={(formatted) => setNovaPeca({...novaPeca, valorRecomendado: formatted})}
+                  placeholder="R$ 0,00"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Quantidade</Label>
+              <Input
+                type="number"
+                min="1"
+                value={novaPeca.quantidade}
+                onChange={e => setNovaPeca({...novaPeca, quantidade: e.target.value})}
+              />
             </div>
           </div>
           <DialogFooter>

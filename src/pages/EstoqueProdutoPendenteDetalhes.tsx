@@ -182,6 +182,21 @@ export default function EstoqueProdutoPendenteDetalhes() {
       // Aprovar: somar custo assistência e deferir
       const resultado = salvarParecerEstoque(id, 'Produto revisado e deferido', parecerObservacoes, parecerResponsavel);
       if (resultado.produto) {
+        // Sincronizar status da OS vinculada
+        if (osVinculada) {
+          const ordensServico = getOrdensServico();
+          const os = ordensServico.find((o: any) => o.id === osVinculada.id);
+          if (os) {
+            os.status = 'Concluído';
+            os.proximaAtuacao = '-';
+            os.timeline.push({
+              data: new Date().toISOString(),
+              tipo: 'status',
+              descricao: `Aparelho validado pelo Estoque. Serviço concluído.`,
+              responsavel: parecerResponsavel
+            });
+          }
+        }
         toast({
           title: "Aparelho aprovado!",
           description: `Produto ${id} aprovado e retornado ao estoque. Custo composto atualizado.`,

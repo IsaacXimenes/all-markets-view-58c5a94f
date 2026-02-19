@@ -165,7 +165,7 @@ export default function OSAssistenciaEditar() {
         peca: p.peca,
         pecaEstoqueId: p.pecaEstoqueId || '',
         imei: p.imei || '',
-        valor: p.valor > 0 ? formatCurrencyInput(String(Math.round(p.valor * 100))) : '',
+        valor: p.valor > 0 ? p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '',
         percentual: p.percentual?.toString() || '',
         servicoTerceirizado: p.servicoTerceirizado || false,
         descricaoTerceirizado: p.descricaoTerceirizado || '',
@@ -644,7 +644,7 @@ export default function OSAssistenciaEditar() {
                                 ...newPecas[index],
                                 pecaEstoqueId: v,
                                 peca: pecaSelecionada?.descricao || newPecas[index].peca,
-                                valor: pecaSelecionada ? formatCurrencyInput(String(Math.round(pecaSelecionada.valorRecomendado * 100))) : newPecas[index].valor
+                                valor: pecaSelecionada ? pecaSelecionada.valorRecomendado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : newPecas[index].valor
                               };
                               setPecas(newPecas);
                             }}
@@ -713,10 +713,11 @@ export default function OSAssistenciaEditar() {
                     </div>
                     <div className="space-y-2">
                       <Label>Valor (R$)</Label>
-                      <Input
+                      <InputComMascara
+                        mascara="moeda"
                         value={peca.valor}
-                        onChange={e => updatePeca(index, 'valor', formatCurrencyInput(e.target.value))}
-                        placeholder="R$ 0,00"
+                        onChange={(formatted, raw) => updatePeca(index, 'valor', formatted)}
+                        placeholder="0,00"
                       />
                     </div>
                   </div>

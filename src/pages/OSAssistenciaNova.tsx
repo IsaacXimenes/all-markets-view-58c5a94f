@@ -1187,7 +1187,7 @@ export default function OSAssistenciaNova() {
                                 ...newPecas[index],
                                 pecaEstoqueId: v,
                                 peca: pecaSelecionada?.descricao || newPecas[index].peca,
-                                valor: pecaSelecionada ? formatCurrencyInput(String(pecaSelecionada.valorRecomendado * 100)) : newPecas[index].valor
+                                valor: pecaSelecionada ? pecaSelecionada.valorRecomendado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : newPecas[index].valor
                               };
                               setPecas(newPecas);
                             }}
@@ -1259,10 +1259,11 @@ export default function OSAssistenciaNova() {
                     </div>
                     <div className="space-y-2">
                       <Label>Valor (R$)</Label>
-                      <Input
+                      <InputComMascara
+                        mascara="moeda"
                         value={peca.valor}
-                        onChange={e => handlePecaChange(index, 'valor', formatCurrencyInput(e.target.value))}
-                        placeholder="R$ 0,00"
+                        onChange={(formatted, raw) => handlePecaChange(index, 'valor', formatted)}
+                        placeholder="0,00"
                       />
                     </div>
                   </div>

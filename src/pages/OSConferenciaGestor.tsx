@@ -93,17 +93,7 @@ export default function OSConferenciaGestor() {
       resultado = resultado.filter(os => os.status === filtroStatus);
     }
 
-    resultado.sort((a, b) => {
-      const ordem: Record<string, number> = {
-        'Conferência do Gestor': 0,
-        'Aguardando Financeiro': 1,
-        'Liquidado': 2,
-      };
-      const oA = ordem[a.status] ?? 3;
-      const oB = ordem[b.status] ?? 3;
-      if (oA !== oB) return oA - oB;
-      return new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime();
-    });
+    resultado.sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
 
     return resultado;
   }, [ordensServico, filtroDataInicio, filtroDataFim, filtroLoja, filtroTecnico, filtroStatus]);

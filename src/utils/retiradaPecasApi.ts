@@ -20,6 +20,7 @@ export interface PecaRetiradaItem {
   nome: string;
   valorCustoPeca: number;
   quantidade: number;
+  valorRecomendado?: number;
 }
 
 export interface RetiradaPecasTimeline {
@@ -420,7 +421,7 @@ export const finalizarDesmonte = (
       lojaId: lojaDestinoId,
       modelo: retirada.modeloOriginal,
       valorCusto: peca.valorCustoPeca,
-      valorRecomendado: peca.valorCustoPeca * 1.5, // Markup padrão de 50%
+      valorRecomendado: peca.valorRecomendado || peca.valorCustoPeca * 1.5, // Usa valor informado ou markup padrão de 50%
       quantidade: peca.quantidade,
       dataEntrada: agora,
       origem: 'Retirada de Peça',

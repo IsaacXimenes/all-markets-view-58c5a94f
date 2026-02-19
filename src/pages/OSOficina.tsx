@@ -318,7 +318,7 @@ export default function OSOficina() {
         valorRecomendado: solicitacaoSelecionada.valorPeca || 0,
         quantidade: solicitacaoSelecionada.quantidade,
         dataEntrada: new Date().toISOString(),
-        origem: 'Solicitação',
+        origem: 'Solicitação Cancelada',
         status: 'Disponível'
       });
 
@@ -329,7 +329,7 @@ export default function OSOficina() {
         quantidade: solicitacaoSelecionada.quantidade,
         data: new Date().toISOString(),
         osId: osParaGerenciarPeca.id,
-        descricao: `Peça não utilizada na OS ${osParaGerenciarPeca.id} - incorporada ao estoque`
+        descricao: `Peça de solicitação cancelada ${solicitacaoSelecionada.id} (OS ${osParaGerenciarPeca.id}) - Fornecedor: ${solicitacaoSelecionada.fornecedorId || 'N/A'} - Motivo: ${justificativaNaoUso}`
       });
 
       // Recalcular valores da OS

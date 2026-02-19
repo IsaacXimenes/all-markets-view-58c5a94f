@@ -22,7 +22,7 @@ export interface Peca {
   valorRecomendado: number;
   quantidade: number;
   dataEntrada: string;
-  origem: 'Nota de Compra' | 'Manual' | 'Produto Thiago' | 'Solicitação' | 'Retirada de Peça';
+  origem: 'Nota de Compra' | 'Manual' | 'Produto Thiago' | 'Solicitação' | 'Solicitação Cancelada' | 'Retirada de Peça';
   notaCompraId?: string;
   status: 'Disponível' | 'Reservada' | 'Utilizada';
 }
