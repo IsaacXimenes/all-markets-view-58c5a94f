@@ -48,6 +48,7 @@ export interface Acessorio {
   valorRecomendado?: number;
   historicoValorRecomendado?: HistoricoValorRecomendadoAcessorio[];
   loja: string;
+  fornecedorId?: string;
 }
 
 export interface VendaAcessorio {
@@ -71,7 +72,8 @@ let acessorios: Acessorio[] = [
     quantidade: 25,
     valorCusto: 45.00,
     valorRecomendado: 89.90,
-    loja: '3ac7e00c'
+    loja: '3ac7e00c',
+    fornecedorId: 'FORN-001'
   },
   {
     id: 'ACESS-0002',
@@ -80,7 +82,8 @@ let acessorios: Acessorio[] = [
     quantidade: 18,
     valorCusto: 89.00,
     valorRecomendado: 149.90,
-    loja: '3ac7e00c'
+    loja: '3ac7e00c',
+    fornecedorId: 'FORN-002'
   },
   {
     id: 'ACESS-0003',
@@ -89,7 +92,8 @@ let acessorios: Acessorio[] = [
     quantidade: 8,
     valorCusto: 120.00,
     valorRecomendado: 249.90,
-    loja: '0d06e7db'
+    loja: '0d06e7db',
+    fornecedorId: 'FORN-001'
   },
   {
     id: 'ACESS-0004',
@@ -98,7 +102,8 @@ let acessorios: Acessorio[] = [
     quantidade: 32,
     valorCusto: 25.00,
     valorRecomendado: 49.90,
-    loja: 'db894e7d'
+    loja: 'db894e7d',
+    fornecedorId: 'FORN-003'
   },
   {
     id: 'ACESS-0005',
@@ -107,7 +112,8 @@ let acessorios: Acessorio[] = [
     quantidade: 5,
     valorCusto: 35.00,
     valorRecomendado: 69.90,
-    loja: '5b9446d5'
+    loja: '5b9446d5',
+    fornecedorId: 'FORN-002'
   }
 ];
 
@@ -236,13 +242,14 @@ export const updateValorRecomendadoAcessorio = (
 export const exportAcessoriosToCSV = (data: Acessorio[], filename: string) => {
   if (data.length === 0) return;
   
-  const headers = ['ID', 'Descrição', 'Categoria', 'Quantidade', 'Valor Custo', 'Valor Recomendado', 'Loja'];
+  const headers = ['ID', 'Descrição', 'Categoria', 'Fornecedor', 'Quantidade', 'Valor Custo', 'Valor Recomendado', 'Loja'];
   const csvContent = [
     headers.join(','),
     ...data.map(row => [
       row.id,
       `"${row.descricao}"`,
       row.categoria,
+      `"${row.fornecedorId || ''}"`,
       row.quantidade,
       row.valorCusto.toFixed(2),
       row.valorRecomendado?.toFixed(2) || '',

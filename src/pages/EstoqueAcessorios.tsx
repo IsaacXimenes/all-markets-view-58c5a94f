@@ -22,12 +22,15 @@ import {
   Acessorio,
   HistoricoValorRecomendadoAcessorio
 } from '@/utils/acessoriosApi';
+import { getFornecedores } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 
 export default function EstoqueAcessorios() {
   const { obterLojasAtivas, obterColaboradoresAtivos, obterNomeLoja, obterEstoquistas } = useCadastroStore();
+  const fornecedores = getFornecedores();
   const [acessorios, setAcessorios] = useState<Acessorio[]>(getAcessorios());
   const [categorias] = useState<string[]>(getCategoriasAcessorios());
   const lojas = obterLojasAtivas();
@@ -38,6 +41,7 @@ export default function EstoqueAcessorios() {
   const [filtroCategoria, setFiltroCategoria] = useState('');
   const [filtroLoja, setFiltroLoja] = useState('');
   const [filtroDescricao, setFiltroDescricao] = useState('');
+  const [filtroFornecedor, setFiltroFornecedor] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [acessorioSelecionado, setAcessorioSelecionado] = useState<Acessorio | null>(null);
   const [novaQuantidade, setNovaQuantidade] = useState(0);
@@ -49,6 +53,11 @@ export default function EstoqueAcessorios() {
 
   // Helper para obter nome da loja
   const getLojaNome = (lojaId: string) => obterNomeLoja(lojaId);
+  const getFornecedorNome = (fornecedorId?: string) => {
+    if (!fornecedorId) return '-';
+    const f = fornecedores.find(f => f.id === fornecedorId);
+    return f?.nome || '-';
+  };
 
   // Agrupa acessórios por ID/Descrição
   const acessoriosAgrupados = useMemo(() => {
@@ -60,6 +69,7 @@ export default function EstoqueAcessorios() {
       valorCusto: number;
       valorRecomendado?: number;
       historicoValorRecomendado?: HistoricoValorRecomendadoAcessorio[];
+      fornecedorId?: string;
       lojas: string[];
       itens: Acessorio[];
     }> = {};
@@ -74,6 +84,7 @@ export default function EstoqueAcessorios() {
           valorCusto: a.valorCusto,
           valorRecomendado: a.valorRecomendado,
           historicoValorRecomendado: a.historicoValorRecomendado,
+          fornecedorId: a.fornecedorId,
           lojas: [],
           itens: []
         };
@@ -100,9 +111,13 @@ export default function EstoqueAcessorios() {
       if (filtroDescricao && !a.descricao.toLowerCase().includes(filtroDescricao.toLowerCase())) {
         return false;
       }
+      // Filtro de fornecedor
+      if (filtroFornecedor && a.fornecedorId !== filtroFornecedor) {
+        return false;
+      }
       return true;
     });
-  }, [acessoriosAgrupados, filtroCategoria, filtroLoja, filtroDescricao]);
+  }, [acessoriosAgrupados, filtroCategoria, filtroLoja, filtroDescricao, filtroFornecedor]);
 
   // Estatísticas dinâmicas baseadas nos filtros
   const estatisticas = useMemo(() => {
@@ -247,7 +262,7 @@ export default function EstoqueAcessorios() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveFilterGrid cols={4}>
+            <ResponsiveFilterGrid cols={5}>
               <div>
                 <Label>Descrição</Label>
                 <Input
@@ -278,6 +293,14 @@ export default function EstoqueAcessorios() {
                   placeholder="Todas as lojas"
                 />
               </div>
+              <div>
+                <Label>Fornecedor</Label>
+                <AutocompleteFornecedor
+                  value={filtroFornecedor}
+                  onChange={setFiltroFornecedor}
+                  placeholder="Todos os fornecedores"
+                />
+              </div>
               <div className="flex items-end gap-2">
                 <Button 
                   variant="ghost" 
@@ -285,6 +308,7 @@ export default function EstoqueAcessorios() {
                     setFiltroCategoria('');
                     setFiltroLoja('');
                     setFiltroDescricao('');
+                    setFiltroFornecedor('');
                   }}
                 >
                   <X className="h-4 w-4 mr-2" />
@@ -309,6 +333,7 @@ export default function EstoqueAcessorios() {
                     <TableHead className="sticky left-0 z-20 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Descrição</TableHead>
                     <TableHead>Loja</TableHead>
                     <TableHead>Categoria</TableHead>
+                    <TableHead>Fornecedor</TableHead>
                     <TableHead>ID</TableHead>
                     <TableHead className="text-right">Estoque Disponível</TableHead>
                     <TableHead className="text-right">Valor Custo</TableHead>
@@ -327,6 +352,7 @@ export default function EstoqueAcessorios() {
                       <TableCell>
                         <Badge variant="secondary">{acessorio.categoria}</Badge>
                       </TableCell>
+                      <TableCell className="text-sm">{getFornecedorNome(acessorio.fornecedorId)}</TableCell>
                       <TableCell className="font-mono font-medium">{acessorio.id}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -386,7 +412,7 @@ export default function EstoqueAcessorios() {
                   ))}
                   {acessoriosFiltrados.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                         Nenhum acessório encontrado.
                       </TableCell>
                     </TableRow>
