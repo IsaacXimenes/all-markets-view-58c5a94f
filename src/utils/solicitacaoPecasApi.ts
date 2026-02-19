@@ -30,6 +30,19 @@ export interface SolicitacaoPeca {
   origemEntrada?: 'Balcao' | 'Garantia' | 'Estoque';
 }
 
+export interface LotePagamento {
+  id: string;
+  fornecedorId: string;
+  solicitacaoIds: string[];
+  valorTotal: number;
+  dataCriacao: string;
+  status: 'Pendente' | 'Concluido';
+  responsavelFinanceiro?: string;
+  formaPagamento?: string;
+  contaPagamento?: string;
+  dataConferencia?: string;
+}
+
 export interface NotaAssistencia {
   id: string;
   solicitacaoId: string;
@@ -48,6 +61,8 @@ export interface NotaAssistencia {
   formaPagamento?: string;
   contaPagamento?: string;
   dataConferencia?: string;
+  loteId?: string;
+  solicitacaoIds?: string[];
 }
 
 // Helper to resolve origemEntrada from OS
@@ -278,8 +293,11 @@ let notasAssistencia: NotaAssistencia[] = [
   }
 ];
 
+let lotesPagamento: LotePagamento[] = [];
+
 let solicitacaoCounter = 21;
 let notaAssistenciaCounter = 9;
+let loteCounter = 1;
 
 // Getters
 export const getSolicitacoes = () => [...solicitacoes];
@@ -287,6 +305,8 @@ export const getSolicitacaoPendentes = () => solicitacoes.filter(s => s.status =
 export const getSolicitacoesByOS = (osId: string) => solicitacoes.filter(s => s.osId === osId);
 export const getNotasAssistencia = () => [...notasAssistencia];
 export const getNotasAssistenciaPendentes = () => notasAssistencia.filter(n => n.status === 'Pendente');
+export const getLotesPagamento = () => [...lotesPagamento];
+export const getSolicitacaoById = (id: string) => solicitacoes.find(s => s.id === id) || null;
 
 // Actions
 export const addSolicitacao = (data: Omit<SolicitacaoPeca, 'id' | 'dataSolicitacao' | 'status'>): SolicitacaoPeca => {
@@ -420,6 +440,77 @@ export const encaminharParaFinanceiro = (solicitacaoIds: string[], usuarioNome: 
   return notasCriadas;
 };
 
+// ========== Agrupar Solicitações para Pagamento (Lote) ==========
+
+export const agruparParaPagamento = (solicitacaoIds: string[], usuarioNome: string): { lote: LotePagamento; nota: NotaAssistencia } | null => {
+  const sols = solicitacaoIds.map(id => solicitacoes.find(s => s.id === id)).filter(Boolean) as SolicitacaoPeca[];
+  if (sols.length < 2) return null;
+  
+  // Validar mesmo fornecedor
+  const fornecedorId = sols[0].fornecedorId;
+  if (!fornecedorId || !sols.every(s => s.fornecedorId === fornecedorId)) return null;
+  
+  // Validar todas aprovadas
+  if (!sols.every(s => s.status === 'Aprovada')) return null;
+  
+  const valorTotal = sols.reduce((acc, s) => acc + (s.valorPeca || 0) * s.quantidade, 0);
+  
+  // Criar lote
+  const lote: LotePagamento = {
+    id: `LOTE-${String(loteCounter++).padStart(3, '0')}`,
+    fornecedorId,
+    solicitacaoIds: sols.map(s => s.id),
+    valorTotal,
+    dataCriacao: new Date().toISOString(),
+    status: 'Pendente'
+  };
+  lotesPagamento.push(lote);
+  
+  // Mudar status das solicitações
+  for (const sol of sols) {
+    const idx = solicitacoes.findIndex(s => s.id === sol.id);
+    if (idx !== -1) {
+      solicitacoes[idx] = { ...solicitacoes[idx], status: 'Pagamento - Financeiro' };
+    }
+  }
+  
+  // Criar nota única consolidada
+  const nota: NotaAssistencia = {
+    id: `NOTA-ASS-${String(notaAssistenciaCounter++).padStart(3, '0')}`,
+    solicitacaoId: sols[0].id,
+    solicitacaoIds: sols.map(s => s.id),
+    loteId: lote.id,
+    fornecedor: fornecedorId,
+    lojaSolicitante: sols[0].lojaSolicitante,
+    dataCriacao: new Date().toISOString(),
+    valorTotal,
+    status: 'Pendente',
+    itens: sols.map(s => ({
+      peca: s.peca,
+      quantidade: s.quantidade,
+      valorUnitario: s.valorPeca || 0
+    }))
+  };
+  notasAssistencia.push(nota);
+  
+  // Timeline de cada OS
+  for (const sol of sols) {
+    const os = getOrdemServicoById(sol.osId);
+    if (os) {
+      updateOrdemServico(sol.osId, {
+        timeline: [...os.timeline, {
+          data: new Date().toISOString(),
+          tipo: 'peca',
+          descricao: `Solicitação agrupada no Lote ${lote.id} e encaminhada para conferência financeira por ${usuarioNome}`,
+          responsavel: usuarioNome
+        }]
+      });
+    }
+  }
+  
+  return { lote, nota };
+};
+
 // ========== Finalizar Nota no Financeiro ==========
 
 export const finalizarNotaAssistencia = (notaId: string, dados: {
@@ -438,9 +529,15 @@ export const finalizarNotaAssistencia = (notaId: string, dados: {
     dataConferencia: new Date().toISOString().split('T')[0]
   };
   
-  // Atualizar solicitação vinculada
-  if (nota.solicitacaoId) {
-    const solIdx = solicitacoes.findIndex(s => s.id === nota.solicitacaoId);
+  // Determinar IDs de solicitações a processar (lote ou individual)
+  const solIdsParaProcessar = nota.solicitacaoIds && nota.solicitacaoIds.length > 0
+    ? nota.solicitacaoIds
+    : nota.solicitacaoId ? [nota.solicitacaoId] : [];
+  
+  const isLote = !!nota.loteId;
+  
+  for (const solId of solIdsParaProcessar) {
+    const solIdx = solicitacoes.findIndex(s => s.id === solId);
     if (solIdx !== -1) {
       solicitacoes[solIdx].status = 'Recebida';
       
@@ -453,7 +550,9 @@ export const finalizarNotaAssistencia = (notaId: string, dados: {
           timeline: [...os.timeline, {
             data: new Date().toISOString(),
             tipo: 'peca',
-            descricao: `Pagamento concluído via nota ${notaId} - ${solicitacoes[solIdx].peca}. Aguardando confirmação de recebimento pelo técnico.`,
+            descricao: isLote
+              ? `Pagamento confirmado via Lote ${nota.loteId} em ${new Date().toLocaleDateString('pt-BR')} - ${solicitacoes[solIdx].peca}`
+              : `Pagamento concluído via nota ${notaId} - ${solicitacoes[solIdx].peca}. Aguardando confirmação de recebimento pelo técnico.`,
             responsavel: dados.responsavelFinanceiro
           }]
         });
@@ -461,20 +560,16 @@ export const finalizarNotaAssistencia = (notaId: string, dados: {
     }
   }
 
-  // Também atualizar OS se a nota tiver osId diretamente
-  if (nota.osId) {
-    const os = getOrdemServicoById(nota.osId);
-    if (os && os.status !== 'Pagamento Concluído' && os.status !== 'Peça Recebida') {
-      updateOrdemServico(nota.osId, {
-        status: 'Pagamento Concluído',
-        proximaAtuacao: 'Técnico (Recebimento)',
-        timeline: [...os.timeline, {
-          data: new Date().toISOString(),
-          tipo: 'peca',
-          descricao: `Pagamento concluído via nota ${notaId}. Aguardando confirmação de recebimento pelo técnico.`,
-          responsavel: dados.responsavelFinanceiro
-        }]
-      });
+  // Atualizar lote se existir
+  if (nota.loteId) {
+    const loteIdx = lotesPagamento.findIndex(l => l.id === nota.loteId);
+    if (loteIdx !== -1) {
+      lotesPagamento[loteIdx] = {
+        ...lotesPagamento[loteIdx],
+        ...dados,
+        status: 'Concluido',
+        dataConferencia: new Date().toISOString().split('T')[0]
+      };
     }
   }
 
@@ -485,11 +580,15 @@ export const finalizarNotaAssistencia = (notaId: string, dados: {
   addDespesa({
     tipo: 'Variável',
     data: hoje,
-    descricao: `Pagamento Nota Assistência ${notaId}`,
+    descricao: isLote 
+      ? `Pagamento Lote ${nota.loteId} - Nota ${notaId}`
+      : `Pagamento Nota Assistência ${notaId}`,
     valor: nota.valorTotal,
     competencia: mesAtual,
     conta: dados.contaPagamento,
-    observacoes: `Fornecedor: ${nota.fornecedor} | Solicitação: ${nota.solicitacaoId}`,
+    observacoes: isLote
+      ? `Fornecedor: ${nota.fornecedor} | Lote: ${nota.loteId} | Solicitações: ${solIdsParaProcessar.join(', ')}`
+      : `Fornecedor: ${nota.fornecedor} | Solicitação: ${nota.solicitacaoId}`,
     lojaId: nota.lojaSolicitante,
     status: 'Pago',
     categoria: 'Assistência',

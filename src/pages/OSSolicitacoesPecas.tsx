@@ -18,6 +18,7 @@ import {
   rejeitarSolicitacao,
   cancelarSolicitacao,
   encaminharParaFinanceiro,
+  agruparParaPagamento,
   calcularSLASolicitacao,
   formatCurrency,
   SolicitacaoPeca,
@@ -73,8 +74,9 @@ export default function OSSolicitacoesPecas() {
   const [novoFornecedorOpen, setNovoFornecedorOpen] = useState(false);
   const [novoFornecedorNome, setNovoFornecedorNome] = useState('');
 
-  // Seleção para encaminhar em massa
+  // Seleção para encaminhar em massa com trava de fornecedor
   const [selecionadas, setSelecionadas] = useState<string[]>([]);
+  const [fornecedorTravado, setFornecedorTravado] = useState<string | null>(null);
 
   // Modal detalhamento solicitação
   const [detalheSolicitacaoOpen, setDetalheSolicitacaoOpen] = useState(false);
@@ -87,6 +89,9 @@ export default function OSSolicitacoesPecas() {
 
   // Modal confirmação encaminhar
   const [confirmEncaminharOpen, setConfirmEncaminharOpen] = useState(false);
+
+  // Modal confirmação agrupar
+  const [confirmAgruparOpen, setConfirmAgruparOpen] = useState(false);
 
   // Filtrar solicitações
   const solicitacoesFiltradas = useMemo(() => {
@@ -256,10 +261,26 @@ export default function OSSolicitacoesPecas() {
   };
 
   const handleSelecionarParaEncaminhar = (id: string, checked: boolean) => {
+    const sol = solicitacoes.find(s => s.id === id);
+    if (!sol || sol.status !== 'Aprovada') return;
+
     if (checked) {
-      setSelecionadas([...selecionadas, id]);
+      // Trava de fornecedor
+      if (fornecedorTravado && sol.fornecedorId !== fornecedorTravado) {
+        toast({ title: 'Atenção', description: 'Para agrupar pagamentos, selecione apenas solicitações do mesmo fornecedor.', variant: 'destructive' });
+        return;
+      }
+      const novasSelecionadas = [...selecionadas, id];
+      setSelecionadas(novasSelecionadas);
+      if (!fornecedorTravado && sol.fornecedorId) {
+        setFornecedorTravado(sol.fornecedorId);
+      }
     } else {
-      setSelecionadas(selecionadas.filter(s => s !== id));
+      const novasSelecionadas = selecionadas.filter(s => s !== id);
+      setSelecionadas(novasSelecionadas);
+      if (novasSelecionadas.length === 0) {
+        setFornecedorTravado(null);
+      }
     }
   };
 
@@ -268,7 +289,11 @@ export default function OSSolicitacoesPecas() {
       toast({ title: 'Erro', description: 'Selecione ao menos uma solicitação aprovada', variant: 'destructive' });
       return;
     }
-    setConfirmEncaminharOpen(true);
+    if (selecionadas.length >= 2) {
+      setConfirmAgruparOpen(true);
+    } else {
+      setConfirmEncaminharOpen(true);
+    }
   };
 
   const handleConfirmarEncaminhamento = () => {
@@ -277,11 +302,30 @@ export default function OSSolicitacoesPecas() {
     
     setSolicitacoes(getSolicitacoes());
     setSelecionadas([]);
+    setFornecedorTravado(null);
     setConfirmEncaminharOpen(false);
     toast({ 
       title: 'Sucesso', 
       description: `${notasCriadas.length} solicitação(ões) encaminhada(s) para o Financeiro!` 
     });
+  };
+
+  const handleConfirmarAgrupamento = () => {
+    const nomeUsuario = user?.colaborador?.nome || 'Gestor';
+    const resultado = agruparParaPagamento(selecionadas, nomeUsuario);
+    
+    if (resultado) {
+      setSolicitacoes(getSolicitacoes());
+      setSelecionadas([]);
+      setFornecedorTravado(null);
+      setConfirmAgruparOpen(false);
+      toast({ 
+        title: 'Lote Criado', 
+        description: `${resultado.lote.id} com ${selecionadas.length} solicitações agrupadas (${formatCurrency(resultado.lote.valorTotal)}) encaminhado ao Financeiro!` 
+      });
+    } else {
+      toast({ title: 'Erro', description: 'Falha ao agrupar. Verifique se todas são do mesmo fornecedor e estão aprovadas.', variant: 'destructive' });
+    }
   };
 
   const handleAdicionarFornecedor = () => {
@@ -538,7 +582,9 @@ export default function OSSolicitacoesPecas() {
                 className="w-full"
               >
                 <Send className="h-4 w-4 mr-2" />
-                Encaminhar Selecionados ({selecionadas.length})
+                {selecionadas.length >= 2 
+                  ? `Agrupar para Pagamento (${selecionadas.length})` 
+                  : `Encaminhar Selecionados (${selecionadas.length})`}
               </Button>
             </div>
           </div>
@@ -579,6 +625,7 @@ export default function OSSolicitacoesPecas() {
                   {sol.status === 'Aprovada' && (
                     <Checkbox 
                       checked={selecionadas.includes(sol.id)}
+                      disabled={!!fornecedorTravado && sol.fornecedorId !== fornecedorTravado}
                       onCheckedChange={(checked) => handleSelecionarParaEncaminhar(sol.id, checked as boolean)}
                     />
                   )}
@@ -734,7 +781,62 @@ export default function OSSolicitacoesPecas() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Aprovar - Com campos por peça */}
+      {/* Modal Confirmar Agrupamento */}
+      <Dialog open={confirmAgruparOpen} onOpenChange={setConfirmAgruparOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Agrupar para Pagamento
+            </DialogTitle>
+            <DialogDescription>
+              Você está agrupando {selecionadas.length} solicitações do mesmo fornecedor em um único lote de pagamento.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="p-3 bg-muted rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm">Fornecedor:</span>
+                <strong className="text-sm">{fornecedorTravado ? getFornecedorNome(fornecedorTravado) : '-'}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm">Total de solicitações:</span>
+                <strong className="text-sm">{selecionadas.length}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm">Valor total consolidado:</span>
+                <strong className="text-sm text-primary">{formatCurrency(valorSelecionadas)}</strong>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Detalhamento das peças:</p>
+              {solicitacoes.filter(s => selecionadas.includes(s.id)).map(sol => (
+                <div key={sol.id} className="flex justify-between items-center p-2 bg-muted/50 rounded text-sm">
+                  <div>
+                    <span className="font-medium">{sol.peca}</span>
+                    <span className="text-muted-foreground ml-2">({sol.osId})</span>
+                  </div>
+                  <span className="font-semibold">{formatCurrency((sol.valorPeca || 0) * sol.quantidade)}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Um único lote será criado e encaminhado ao Financeiro para pagamento consolidado.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmAgruparOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmarAgrupamento}>
+              <Package className="h-4 w-4 mr-2" />
+              Confirmar Agrupamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
       <Dialog open={aprovarOpen} onOpenChange={setAprovarOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>

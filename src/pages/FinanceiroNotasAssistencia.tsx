@@ -13,11 +13,12 @@ import {
   finalizarNotaAssistencia, 
   formatCurrency,
   NotaAssistencia,
-  getSolicitacoesByOS
+  getSolicitacoesByOS,
+  getSolicitacaoById
 } from '@/utils/solicitacaoPecasApi';
 import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
 import { getOrdemServicoById, updateOrdemServico } from '@/utils/assistenciaApi';
-import { Eye, Check, Download, Filter, X, FileText, Clock, CheckCircle, DollarSign } from 'lucide-react';
+import { Eye, Check, Download, Filter, X, FileText, Clock, CheckCircle, DollarSign, Package } from 'lucide-react';
 import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { toast } from 'sonner';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -316,7 +317,14 @@ export default function FinanceiroNotasAssistencia() {
                           <TableCell>{obterNomeLoja(nota.lojaSolicitante)}</TableCell>
                           <TableCell className="font-mono text-xs">{nota.osId || '-'}</TableCell>
                           <TableCell>
-                            <Badge variant="outline">Peças</Badge>
+                            {nota.loteId ? (
+                              <Badge className="bg-indigo-500/15 text-indigo-600 border border-indigo-300 dark:border-indigo-700 inline-flex items-center gap-1">
+                                <Package className="h-3 w-3" />
+                                Lote Agrupado
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">Peças</Badge>
+                            )}
                           </TableCell>
                           <TableCell className="font-semibold text-right">
                             {formatCurrency(nota.valorTotal)}
@@ -374,7 +382,15 @@ export default function FinanceiroNotasAssistencia() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Conferir Nota {notaSelecionada?.id}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                {notaSelecionada?.loteId && <Package className="h-5 w-5 text-indigo-600" />}
+                Conferir Nota {notaSelecionada?.id}
+                {notaSelecionada?.loteId && (
+                  <Badge className="bg-indigo-500/15 text-indigo-600 border border-indigo-300 ml-2">
+                    {notaSelecionada.loteId}
+                  </Badge>
+                )}
+              </DialogTitle>
             </DialogHeader>
             
             {notaSelecionada && (
@@ -393,14 +409,52 @@ export default function FinanceiroNotasAssistencia() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label>Solicitação</Label>
-                      <Input value={notaSelecionada.solicitacaoId} disabled />
+                      <Label>{notaSelecionada.loteId ? 'Lote' : 'Solicitação'}</Label>
+                      <Input value={notaSelecionada.loteId || notaSelecionada.solicitacaoId} disabled />
                     </div>
                     <div>
                       <Label>Fornecedor</Label>
                       <Input value={getFornecedorNome(notaSelecionada.fornecedor)} disabled />
                     </div>
                   </div>
+
+                  {/* Detalhamento do Lote - Tabela individual */}
+                  {notaSelecionada.loteId && notaSelecionada.solicitacaoIds && notaSelecionada.solicitacaoIds.length > 0 && (
+                    <div className="border-t pt-4">
+                      <h3 className="font-semibold mb-3 flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        Detalhamento do Lote ({notaSelecionada.solicitacaoIds.length} solicitações)
+                      </h3>
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-xs">Data Solicitação</TableHead>
+                              <TableHead className="text-xs">ID OS</TableHead>
+                              <TableHead className="text-xs">Peça</TableHead>
+                              <TableHead className="text-xs">Qtd</TableHead>
+                              <TableHead className="text-xs text-right">Valor</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {notaSelecionada.solicitacaoIds.map(solId => {
+                              const sol = getSolicitacaoById(solId);
+                              if (!sol) return null;
+                              return (
+                                <TableRow key={solId}>
+                                  <TableCell className="text-xs">{new Date(sol.dataSolicitacao).toLocaleDateString('pt-BR')}</TableCell>
+                                  <TableCell className="font-mono text-xs">{sol.osId}</TableCell>
+                                  <TableCell className="text-sm">{sol.peca}</TableCell>
+                                  <TableCell className="text-sm">{sol.quantidade}</TableCell>
+                                  <TableCell className="text-sm font-semibold text-right">{formatCurrency((sol.valorPeca || 0) * sol.quantidade)}</TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="border-t pt-4">
                     <h3 className="font-semibold mb-3">Itens (Somente Leitura)</h3>
