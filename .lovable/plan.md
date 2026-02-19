@@ -1,83 +1,57 @@
 
 
-## Agrupamento de Pagamentos por Fornecedor
+## Campos de Pagamento nos Modais de Encaminhamento e Agrupamento
 
 ### Resumo
 
-Implementar a funcionalidade de agrupar solicitacoes de pecas do mesmo fornecedor em um unico lote de pagamento, com trava de seguranca por fornecedor na selecao, visualizacao de lotes agrupados no Financeiro, e baixa automatica em cascata ao confirmar pagamento.
+Adicionar campos de pagamento (Forma de Pagamento, Conta Bancaria, Nome do Recebedor, Chave Pix, Observacao obrigatoria) nos modais de "Encaminhar para Financeiro" (1 item) e "Agrupar para Pagamento" (2+ itens). Os dados preenchidos serao salvos na nota e exibidos no quadro de conferencia do Financeiro.
 
 ---
 
-### 1. API - Novo conceito de Lote (`src/utils/solicitacaoPecasApi.ts`)
+### 1. Novos campos na `NotaAssistencia` (`src/utils/solicitacaoPecasApi.ts`)
 
-**Nova interface `LotePagamento`:**
-```
-- id: string (ex: 'LOTE-001')
-- fornecedorId: string
-- solicitacaoIds: string[]
-- valorTotal: number
-- dataCriacao: string
-- status: 'Pendente' | 'Concluido'
-- responsavelFinanceiro?: string
-- formaPagamento?: string
-- contaPagamento?: string
-- dataConferencia?: string
-```
+Adicionar campos opcionais na interface `NotaAssistencia`:
+- `formaPagamentoEncaminhamento?: string` (Pix ou Dinheiro)
+- `contaBancariaEncaminhamento?: string`
+- `nomeRecebedor?: string`
+- `chavePixEncaminhamento?: string`
+- `observacaoEncaminhamento?: string`
 
-**Nova funcao `agruparParaPagamento`:**
-- Recebe array de IDs de solicitacoes aprovadas (todas do mesmo fornecedor)
-- Valida que todas sao do mesmo fornecedor
-- Muda status de cada solicitacao para 'Pagamento - Financeiro'
-- Cria um unico `LotePagamento` contendo todos os IDs
-- Cria uma unica `NotaAssistencia` com tipo 'Lote', consolidando todos os itens e vinculando o `loteId`
-- Registra na timeline de cada OS vinculada
+Atualizar `encaminharParaFinanceiro` e `agruparParaPagamento` para aceitar e propagar um objeto `dadosPagamento` com esses campos para as notas criadas.
 
-**Atualizar `NotaAssistencia`:**
-- Adicionar campo opcional `loteId?: string`
-- Adicionar campo opcional `solicitacaoIds?: string[]` (para lotes com multiplas solicitacoes)
+### 2. Campos nos Modais (`src/pages/OSSolicitacoesPecas.tsx`)
 
-**Nova funcao `finalizarLotePagamento`:**
-- Reutiliza logica similar a `finalizarNotaAssistencia` mas iterando sobre todas as solicitacoes do lote
-- Marca todas as solicitacoes como 'Recebida'
-- Atualiza timeline de cada OS com referencia ao lote
-- Registra uma unica despesa consolidada no financeiro
+**Novos estados:**
+- `encFormaPagamento`, `encContaBancaria`, `encNomeRecebedor`, `encChavePix`, `encObservacao`
+- Reset ao abrir/fechar qualquer modal
 
----
+**Modal "Confirmar Encaminhamento" (1 item) - linhas 748-782:**
+Adicionar apos o resumo de valores:
+- Select: Forma de Pagamento (Pix / Dinheiro) - obrigatorio
+- Se Pix: Input Conta Bancaria, Input Nome do Recebedor, Input Chave Pix
+- Textarea: Observacao (obrigatoria)
+- Botao desabilitado ate preencher forma de pagamento + observacao
 
-### 2. Selecao Inteligente com Trava de Fornecedor (`src/pages/OSSolicitacoesPecas.tsx`)
+**Modal "Agrupar para Pagamento" (2+ itens) - linhas 784-837:**
+Mesmos campos adicionados apos o detalhamento das pecas:
+- Select Forma de Pagamento, campos condicionais Pix, Textarea Observacao
+- Botao desabilitado ate preencher forma de pagamento + observacao
 
-**Logica de selecao:**
-- Novo estado `fornecedorSelecionadoAgrupamento: string | null`
-- Ao selecionar a primeira solicitacao aprovada, capturar o `fornecedorId`
-- Checkboxes de solicitacoes com fornecedor diferente ficam `disabled`
-- Ao limpar todas as selecoes, resetar o fornecedor travado
-- Exibir toast de alerta se tentar selecionar fornecedor diferente
+**Handlers:**
+- `handleConfirmarEncaminhamento`: validar e passar `dadosPagamento`
+- `handleConfirmarAgrupamento`: validar e passar `dadosPagamento`
 
-**Botao "Agrupar para Pagamento":**
-- Substituir/complementar o botao "Encaminhar Selecionados" existente
-- Quando ha 2+ solicitacoes selecionadas do mesmo fornecedor: mostrar "Agrupar para Pagamento (X itens)"
-- Quando ha apenas 1 selecionada: manter comportamento atual "Encaminhar Selecionados (1)"
-- Modal de confirmacao exibindo fornecedor, lista de pecas e valor total consolidado
+### 3. Exibicao no Financeiro (`src/pages/FinanceiroNotasAssistencia.tsx`)
 
----
-
-### 3. Visualizacao de Lotes no Financeiro (`src/pages/FinanceiroNotasAssistencia.tsx`)
-
-**Coluna "Tipo" existente:**
-- Notas com `loteId` exibem badge "Lote Agrupado" (icone de pacote) em vez de "Pecas"
-- Notas normais continuam exibindo "Pecas"
-
-**Modal de Detalhamento do Lote:**
-- Quando o financeiro clica em "Conferir" em uma nota de lote, o modal exibe:
-  - Cabecalho: Fornecedor, valor total consolidado
-  - Tabela detalhada: Data Solicitacao | ID OS | Peca | Qtd | Valor Individual
-  - Secao de pagamento (campos existentes: conta, forma, comprovante)
-- Ao clicar "Finalizar Nota", executa a baixa em cascata de todas as solicitacoes do lote
-
-**Baixa em cascata:**
-- A funcao `finalizarNotaAssistencia` sera estendida para verificar se a nota possui `solicitacaoIds` (lote)
-- Se sim, itera sobre todos os IDs, marcando cada solicitacao como 'Recebida' e registrando na timeline: "Pagamento confirmado via Lote #[ID] em [Data]"
-- Registra uma unica despesa financeira com o valor total
+No modal de conferencia (linhas 396-605), adicionar um bloco de "Dados de Pagamento Informados" acima da secao de pagamento do financeiro:
+- Card informativo (estilo azul, similar ao existente para dados Pix) exibindo:
+  - Forma de Pagamento informada
+  - Conta Bancaria (se Pix)
+  - Nome do Recebedor (se Pix)
+  - Chave Pix (se Pix)
+  - Observacao
+- Visivel tanto para notas pendentes quanto concluidas
+- Esse bloco e somente leitura - sao os dados informados pela gestao no encaminhamento
 
 ---
 
@@ -85,9 +59,9 @@ Implementar a funcionalidade de agrupar solicitacoes de pecas do mesmo fornecedo
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/utils/solicitacaoPecasApi.ts` | Interface `LotePagamento`, campos `loteId` e `solicitacaoIds` em `NotaAssistencia`, funcao `agruparParaPagamento`, extensao de `finalizarNotaAssistencia` para lotes |
-| `src/pages/OSSolicitacoesPecas.tsx` | Trava de fornecedor nos checkboxes, botao "Agrupar para Pagamento", modal de confirmacao com detalhamento |
-| `src/pages/FinanceiroNotasAssistencia.tsx` | Badge "Lote Agrupado", modal expandido com tabela de detalhamento individual, baixa em cascata |
+| `src/utils/solicitacaoPecasApi.ts` | 5 novos campos opcionais em `NotaAssistencia`, parametro `dadosPagamento` em `encaminharParaFinanceiro` e `agruparParaPagamento` |
+| `src/pages/OSSolicitacoesPecas.tsx` | 5 novos estados, formulario de pagamento em ambos os modais, validacao nos handlers |
+| `src/pages/FinanceiroNotasAssistencia.tsx` | Bloco informativo "Dados de Pagamento" no modal de conferencia, exibindo os dados informados no encaminhamento |
 
-Nenhum arquivo novo sera criado. O fluxo de encaminhamento individual (1 solicitacao) permanece funcional e inalterado.
+Nenhum arquivo novo sera criado. O fluxo existente de conferencia do financeiro (conta, forma, comprovante) permanece inalterado - os novos dados sao informativos para o financeiro consultar durante a conferencia.
 
