@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { OSLayout } from '@/components/layout/OSLayout';
 import { Button } from '@/components/ui/button';
@@ -17,11 +17,16 @@ import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
 import { InputComMascara } from '@/components/ui/InputComMascara';
 import { formatIMEI } from '@/utils/imeiMask';
-import { Eye, Play, CheckCircle, Clock, Wrench, AlertTriangle, Package, Plus, ShoppingCart, MessageSquare, Undo2 } from 'lucide-react';
+import { Eye, Play, CheckCircle, Clock, Wrench, AlertTriangle, Package, Plus, ShoppingCart, MessageSquare, Undo2, Filter, X, CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { addNotification } from '@/utils/notificationsApi';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 export default function OSOficina() {
   const navigate = useNavigate();
@@ -60,6 +65,24 @@ export default function OSOficina() {
   const [justificativaNaoUso, setJustificativaNaoUso] = useState('');
   const [solicitacaoSelecionada, setSolicitacaoSelecionada] = useState<SolicitacaoPeca | null>(null);
 
+  // Filtros
+  const [filtroStatus, setFiltroStatus] = useState('todos');
+  const [filtroTecnico, setFiltroTecnico] = useState('');
+  const [filtroLoja, setFiltroLoja] = useState('');
+  const [filtroDataInicio, setFiltroDataInicio] = useState<Date | undefined>();
+  const [filtroDataFim, setFiltroDataFim] = useState<Date | undefined>();
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
+
+  const limparFiltros = useCallback(() => {
+    setFiltroStatus('todos');
+    setFiltroTecnico('');
+    setFiltroLoja('');
+    setFiltroDataInicio(undefined);
+    setFiltroDataFim(undefined);
+  }, []);
+
+  const temFiltroAtivo = filtroStatus !== 'todos' || filtroTecnico || filtroLoja || filtroDataInicio || filtroDataFim;
+
   // Filtrar OSs onde proximaAtuacao contém "Técnico" OU recém-finalizadas
   const osTecnico = useMemo(() => {
     const statusHistorico = ['Serviço concluído', 'Pendente de Pagamento', 'Aguardando Financeiro', 'Liquidado', 'Conferência do Gestor'];
@@ -74,9 +97,37 @@ export default function OSOficina() {
       const isPecaPendente = statusPecas.includes(os.status);
       const isRetrabalho = os.status === 'Retrabalho - Recusado pelo Estoque';
       const isValidarAparelho = os.status === 'Serviço Concluído - Validar Aparelho' && os.origemOS === 'Estoque';
-      return isTecnico || isRecentFinalizada || isHistorico || isPecaPendente || isRetrabalho || isValidarAparelho;
+      const pertenceAoTecnico = isTecnico || isRecentFinalizada || isHistorico || isPecaPendente || isRetrabalho || isValidarAparelho;
+      if (!pertenceAoTecnico) return false;
+
+      // Aplicar filtros do usuário
+      if (filtroStatus !== 'todos') {
+        if (filtroStatus === 'aguardando-checkin' && os.status !== 'Aguardando Análise' && os.status !== 'Em Aberto') return false;
+        if (filtroStatus === 'em-servico' && os.status !== 'Em serviço') return false;
+        if (filtroStatus === 'aguardando-peca' && !isPecaPendente && atuacao !== 'Técnico (Recebimento)') return false;
+        if (filtroStatus === 'concluido' && os.status !== 'Serviço concluído') return false;
+        if (filtroStatus === 'retrabalho' && os.status !== 'Retrabalho - Recusado pelo Estoque') return false;
+        if (filtroStatus === 'validar-aparelho' && os.status !== 'Serviço Concluído - Validar Aparelho') return false;
+      }
+      if (filtroTecnico && os.tecnicoId !== filtroTecnico) return false;
+      if (filtroLoja && os.lojaId !== filtroLoja) return false;
+      if (filtroDataInicio) {
+        const dataOS = new Date(os.dataHora);
+        dataOS.setHours(0, 0, 0, 0);
+        const inicio = new Date(filtroDataInicio);
+        inicio.setHours(0, 0, 0, 0);
+        if (dataOS < inicio) return false;
+      }
+      if (filtroDataFim) {
+        const dataOS = new Date(os.dataHora);
+        dataOS.setHours(23, 59, 59, 999);
+        const fim = new Date(filtroDataFim);
+        fim.setHours(23, 59, 59, 999);
+        if (dataOS > fim) return false;
+      }
+      return true;
     }).sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
-  }, [ordensServico, osFinalizadas]);
+  }, [ordensServico, osFinalizadas, filtroStatus, filtroTecnico, filtroLoja, filtroDataInicio, filtroDataFim]);
 
   // Stats
   const aguardandoCheckin = osTecnico.filter(os => os.status === 'Aguardando Análise' || os.status === 'Em Aberto').length;
@@ -540,6 +591,106 @@ export default function OSOficina() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Filtros */}
+      <div className="flex items-center gap-2 mb-4">
+        <Button
+          variant={mostrarFiltros ? "default" : "outline"}
+          size="sm"
+          onClick={() => setMostrarFiltros(!mostrarFiltros)}
+          className="gap-1.5"
+        >
+          <Filter className="h-4 w-4" />
+          Filtros
+          {temFiltroAtivo && (
+            <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">!</Badge>
+          )}
+        </Button>
+        {temFiltroAtivo && (
+          <Button variant="ghost" size="sm" onClick={limparFiltros} className="gap-1 text-muted-foreground">
+            <X className="h-3.5 w-3.5" />
+            Limpar filtros
+          </Button>
+        )}
+        <span className="text-sm text-muted-foreground ml-auto">{osTecnico.length} OS encontradas</span>
+      </div>
+
+      {mostrarFiltros && (
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Status */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Status</Label>
+                <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="aguardando-checkin">Aguardando Check-in</SelectItem>
+                    <SelectItem value="em-servico">Em Serviço</SelectItem>
+                    <SelectItem value="aguardando-peca">Aguardando Peça</SelectItem>
+                    <SelectItem value="concluido">Serviço Concluído</SelectItem>
+                    <SelectItem value="retrabalho">Retrabalho</SelectItem>
+                    <SelectItem value="validar-aparelho">Validar Aparelho</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Técnico */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Técnico</Label>
+                <AutocompleteColaborador
+                  value={filtroTecnico}
+                  onChange={setFiltroTecnico}
+                  placeholder="Todos os técnicos"
+                  filtrarPorTipo="tecnicos"
+                />
+              </div>
+
+              {/* Loja */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Loja</Label>
+                <AutocompleteLoja
+                  value={filtroLoja}
+                  onChange={setFiltroLoja}
+                  placeholder="Todas as lojas"
+                />
+              </div>
+
+              {/* Período */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Período</Label>
+                <div className="flex gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className={cn("flex-1 justify-start text-left font-normal h-9", !filtroDataInicio && "text-muted-foreground")}>
+                        <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+                        {filtroDataInicio ? format(filtroDataInicio, 'dd/MM/yy') : 'Início'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-popover z-50" align="start">
+                      <Calendar mode="single" selected={filtroDataInicio} onSelect={setFiltroDataInicio} initialFocus className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className={cn("flex-1 justify-start text-left font-normal h-9", !filtroDataFim && "text-muted-foreground")}>
+                        <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+                        {filtroDataFim ? format(filtroDataFim, 'dd/MM/yy') : 'Fim'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-popover z-50" align="start">
+                      <Calendar mode="single" selected={filtroDataFim} onSelect={setFiltroDataFim} initialFocus className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Tabela */}
       <Card>
