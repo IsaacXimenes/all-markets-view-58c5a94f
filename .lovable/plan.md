@@ -1,43 +1,43 @@
 
 
-## Correção: Status "Vendido" incorreto após Retirada de Peças
+## Duas Correções na Aba de Serviços (Assistência)
 
-### Problema Identificado
+### 1. Adicionar coluna "Técnico" na tabela da aba Serviços
 
-A função `getStatusAparelho` em `src/utils/estoqueApi.ts` determina o status exibido na aba de aparelhos. A ordem das verificações está errada:
+**Arquivo: `src/pages/OSOficina.tsx`**
 
+- Adicionar uma coluna "Técnico" no cabeçalho da tabela (entre "Loja" e "Status")
+- Renderizar o nome do técnico usando `obterNomeColaborador(os.tecnicoId)` que já está disponível no componente
+- Atualizar o `colSpan` da mensagem de "nenhuma OS" de 8 para 9
+
+### 2. Corrigir quebra de casas decimais no campo Valor do quadro Peças/Serviços (edição de OS)
+
+**Problema:** No arquivo `src/pages/OSAssistenciaEditar.tsx`, o valor da peça é carregado na linha 168 como string formatada via `toLocaleString('pt-BR')` (ex: "1.234,56"). Porém, a função `calcularValorTotalPeca` (linha 210-214) faz `parseFloat(peca.valor.replace(/\D/g, '')) / 100`, que remove pontos e vírgulas, tratando "1.234,56" como "123456" / 100 = 1234.56.
+
+O problema ocorre quando o `InputComMascara` com máscara `moeda` recebe essa string diretamente. O `getDisplayValue` retorna a string como está, mas ao interagir com o campo, a máscara reprocessa o valor, podendo gerar inconsistências nas casas decimais.
+
+**Arquivo: `src/pages/OSAssistenciaEditar.tsx`**
+
+- Na linha 168 (carregamento inicial das peças), converter o valor numérico usando `moedaMask` em vez de `toLocaleString`, garantindo formato consistente com o que o `InputComMascara` espera
+- Importar `moedaMask` de `@/utils/formatUtils` (já importado o `InputComMascara` que usa essas funções)
+
+Alteração na conversão:
 ```
-Linha 489: quantidade === 0 && statusNota === 'Concluído' -> "Vendido"    (executa primeiro)
-Linha 492: statusRetiradaPecas existente                  -> "Retirada de Peças" (nunca alcançado)
-```
+// De:
+valor: p.valor > 0 ? p.valor.toLocaleString('pt-BR', {...}) : ''
 
-Quando o desmonte finaliza, ele define `quantidade: 0`, `statusNota: 'Concluído'` e `statusRetiradaPecas: 'Concluída'`. A condição da linha 489 captura primeiro e retorna "Vendido".
-
-### Solucao
-
-Mover a verificacao de `statusRetiradaPecas` para **antes** da verificacao de "Vendido", garantindo que aparelhos desmontados sejam corretamente identificados.
-
-### Detalhes Tecnicos
-
-**Arquivo: `src/utils/estoqueApi.ts`** (unica alteracao)
-
-Reordenar a funcao `getStatusAparelho` (linhas 488-496):
-
-```
-Ordem atual (com bug):
-1. quantidade === 0 && statusNota === 'Concluído' -> "Vendido"
-2. statusMovimentacao === 'Em movimentação' -> "Em movimentação"
-3. statusEmprestimo -> "Empréstimo"
-4. statusRetiradaPecas -> "Retirada de Peças"     <-- nunca alcancado
-5. bloqueadoEmTrocaGarantiaId -> "Reservado para Troca"
-6. bloqueadoEmVendaId -> "Bloqueado"
-7. fallback -> "Disponível"
-
-Ordem corrigida:
-1. statusRetiradaPecas (ativa, nao cancelada) -> "Retirada de Peças"
-2. quantidade === 0 && statusNota === 'Concluído' -> "Vendido"
-3. (demais verificacoes permanecem iguais)
+// Para:
+valor: p.valor > 0 ? moedaMask(p.valor) : ''
 ```
 
-Nenhum outro arquivo precisa ser alterado.
+A função `moedaMask(number)` converte corretamente um número para a string formatada que o `InputComMascara` espera, mantendo consistência no ciclo de formatação/parsing.
+
+---
+
+### Resumo de Arquivos
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/OSOficina.tsx` | Adicionar coluna "Técnico" na tabela + colSpan |
+| `src/pages/OSAssistenciaEditar.tsx` | Importar `moedaMask` e usar no carregamento do valor da peça |
 
