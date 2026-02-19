@@ -158,7 +158,10 @@ export function Sidebar({ isCollapsed, onToggle, className, isMobile, isOpen, on
   if (isMobile) {
     return (
       <Sheet open={isOpen} onOpenChange={(open) => !open && onClose?.()}>
-        <SheetContent side="left" className="p-0 w-64 bg-[#111111] text-white border-r-0 overflow-hidden relative">
+        <SheetContent 
+          side="left" 
+          className="p-0 w-64 bg-[#111111] text-white border-r-0 overflow-hidden flex flex-col"
+        >
           <CircuitOverlay />
           <SidebarContent 
             isCollapsed={false} 
