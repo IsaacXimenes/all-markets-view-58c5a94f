@@ -294,28 +294,29 @@ export default function OSSolicitacoesPecas() {
     return amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
 
-  // Stats
-  const totalPendentes = solicitacoes.filter(s => s.status === 'Pendente').length;
-  const totalAprovadas = solicitacoes.filter(s => s.status === 'Aprovada').length;
-  const totalEnviadas = solicitacoes.filter(s => s.status === 'Enviada' || s.status === 'Pagamento - Financeiro').length;
-  const totalRecebidas = solicitacoes.filter(s => s.status === 'Recebida').length;
+  // Helper para resolver origem
+  const getOrigem = (sol: SolicitacaoPeca): string => {
+    if (sol.origemEntrada) return sol.origemEntrada;
+    const os = getOrdemServicoById(sol.osId);
+    if (!os?.origemOS) return 'Balcao';
+    if (os.origemOS === 'Garantia') return 'Garantia';
+    if (os.origemOS === 'Estoque') return 'Estoque';
+    return 'Balcao';
+  };
 
-  // Montantes por origem
+  // Stats - dinâmicos conforme filtro
+  const totalPendentes = solicitacoesFiltradas.filter(s => s.status === 'Pendente').length;
+  const totalAprovadas = solicitacoesFiltradas.filter(s => s.status === 'Aprovada').length;
+  const totalEnviadas = solicitacoesFiltradas.filter(s => s.status === 'Enviada' || s.status === 'Pagamento - Financeiro').length;
+  const totalRecebidas = solicitacoesFiltradas.filter(s => s.status === 'Recebida').length;
+
+  // Montantes por origem - dinâmicos conforme filtro
   const montantesPorOrigem = useMemo(() => {
-    const statusAprovados = ['Aprovada', 'Pagamento - Financeiro', 'Recebida', 'Devolvida ao Fornecedor', 'Retida para Estoque'];
+    const statusAprovados = ['Aprovada', 'Pagamento - Financeiro', 'Recebida', 'Pagamento Finalizado', 'Devolvida ao Fornecedor', 'Retida para Estoque'];
     const origens: ('Balcao' | 'Garantia' | 'Estoque')[] = ['Balcao', 'Garantia', 'Estoque'];
-    
-    const getOrigem = (sol: SolicitacaoPeca): string => {
-      if (sol.origemEntrada) return sol.origemEntrada;
-      const os = getOrdemServicoById(sol.osId);
-      if (!os?.origemOS) return 'Balcao';
-      if (os.origemOS === 'Garantia') return 'Garantia';
-      if (os.origemOS === 'Estoque') return 'Estoque';
-      return 'Balcao';
-    };
 
     const result = origens.map(origem => {
-      const solsOrigem = solicitacoes.filter(s => getOrigem(s) === origem);
+      const solsOrigem = solicitacoesFiltradas.filter(s => getOrigem(s) === origem);
       const aprovado = solsOrigem.filter(s => statusAprovados.includes(s.status))
         .reduce((acc, s) => acc + (s.valorPeca || 0) * s.quantidade, 0);
       const pago = solsOrigem.filter(s => isPecaPaga(s))
@@ -323,19 +324,19 @@ export default function OSSolicitacoesPecas() {
       return { origem, aprovado, pago };
     });
     return result;
-  }, [solicitacoes]);
+  }, [solicitacoesFiltradas]);
 
-  // Fluxo de caixa
+  // Fluxo de caixa - dinâmico conforme filtro
   const fluxoCaixa = useMemo(() => {
-    const aguardando = solicitacoes.filter(s => s.status === 'Aprovada' || s.status === 'Pagamento - Financeiro');
-    const pagos = solicitacoes.filter(s => isPecaPaga(s));
+    const aguardando = solicitacoesFiltradas.filter(s => s.status === 'Aprovada' || s.status === 'Pagamento - Financeiro');
+    const pagos = solicitacoesFiltradas.filter(s => isPecaPaga(s));
     return {
       aguardandoQtd: aguardando.length,
       aguardandoValor: aguardando.reduce((acc, s) => acc + (s.valorPeca || 0) * s.quantidade, 0),
       pagoQtd: pagos.length,
       pagoValor: pagos.reduce((acc, s) => acc + (s.valorPeca || 0) * s.quantidade, 0),
     };
-  }, [solicitacoes]);
+  }, [solicitacoesFiltradas]);
 
   // Valor total das selecionadas
   const valorSelecionadas = solicitacoes
