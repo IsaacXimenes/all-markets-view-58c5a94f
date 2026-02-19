@@ -49,6 +49,7 @@ export default function OSSolicitacoesPecas() {
   const [filtroPeca, setFiltroPeca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [filtroNumeroOS, setFiltroNumeroOS] = useState('');
+  const [filtroOrigem, setFiltroOrigem] = useState('todos');
 
   // Modal aprovar com campos por peça
   const [aprovarOpen, setAprovarOpen] = useState(false);
@@ -94,9 +95,19 @@ export default function OSSolicitacoesPecas() {
       if (filtroPeca && !s.peca.toLowerCase().includes(filtroPeca.toLowerCase())) return false;
       if (filtroStatus !== 'todos' && s.status !== filtroStatus) return false;
       if (filtroNumeroOS && !s.osId.toLowerCase().includes(filtroNumeroOS.toLowerCase())) return false;
+      if (filtroOrigem !== 'todos') {
+        const origem = s.origemEntrada || (() => {
+          const os = getOrdemServicoById(s.osId);
+          if (!os?.origemOS) return 'Balcao';
+          if (os.origemOS === 'Garantia') return 'Garantia';
+          if (os.origemOS === 'Estoque') return 'Estoque';
+          return 'Balcao';
+        })();
+        if (origem !== filtroOrigem) return false;
+      }
       return true;
     }).sort((a, b) => new Date(b.dataSolicitacao).getTime() - new Date(a.dataSolicitacao).getTime());
-  }, [solicitacoes, filtroLoja, filtroPeca, filtroStatus, filtroNumeroOS]);
+  }, [solicitacoes, filtroLoja, filtroPeca, filtroStatus, filtroNumeroOS, filtroOrigem]);
 
   const getLojaNome = (lojaId: string) => obterNomeLoja(lojaId);
   const getFornecedorNome = (fornId: string) => fornecedores.find(f => f.id === fornId)?.nome || fornId;
@@ -493,6 +504,18 @@ export default function OSSolicitacoesPecas() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>Origem</Label>
+              <Select value={filtroOrigem} onValueChange={setFiltroOrigem}>
+                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todas</SelectItem>
+                  <SelectItem value="Balcao">Balcão</SelectItem>
+                  <SelectItem value="Garantia">Garantia</SelectItem>
+                  <SelectItem value="Estoque">Estoque</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-end">
               <Button 
                 variant="outline" 
@@ -501,6 +524,7 @@ export default function OSSolicitacoesPecas() {
                   setFiltroNumeroOS('');
                   setFiltroPeca('');
                   setFiltroStatus('todos');
+                  setFiltroOrigem('todos');
                 }}
                 className="w-full"
               >
