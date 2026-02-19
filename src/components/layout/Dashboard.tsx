@@ -4,7 +4,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { StatsCard } from '@/components/ui/StatsCard';
 import { RankingVendedores } from '@/components/dashboard/RankingVendedores';
-import { Wallet2, Package, ShoppingCart, Users, Wrench, TrendingUp, Shield, ShieldAlert, Percent } from 'lucide-react';
+import { Wallet2, Package, ShoppingCart, Users, Wrench, TrendingUp, Shield, ShieldAlert, Percent, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getVendas } from '@/utils/vendasApi';
@@ -16,6 +16,7 @@ import { getGarantiasExpirandoEm7Dias, getGarantiasExpirandoEm30Dias } from '@/u
 import { getPercentualComissao, LOJA_ONLINE_ID } from '@/utils/calculoComissaoVenda';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { useIsMobile } from '@/hooks/use-mobile';
+import circuitBg from '@/assets/sidebar-circuit-bg.png';
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -79,8 +80,25 @@ export function Dashboard() {
         
         <main className="flex-1 transition-all duration-300 overflow-hidden">
           <div className="w-full max-w-full h-full p-3 sm:p-4 lg:p-6 xl:p-8 flex flex-col animate-fade-in">
-            <div className="bg-muted/30 rounded-lg p-3 sm:p-4 mb-4 text-center border border-border">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Painel de Gestão</h1>
+            <div 
+              className="rounded-lg p-3 sm:p-4 mb-4 text-center border-2 border-[#F7BB05] relative overflow-hidden shimmer-border-container"
+              style={{ backgroundColor: '#111111' }}
+            >
+              <div 
+                className="absolute inset-0 pointer-events-none"
+                style={{ 
+                  backgroundImage: `url(${circuitBg})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  opacity: 0.08
+                }}
+              />
+              <div className="relative z-10 flex items-center justify-center gap-3">
+                <LayoutDashboard className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 flex-shrink-0" style={{ color: '#F7BB05' }} />
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold golden-gradient-text">
+                  Painel de Gestão
+                </h1>
+              </div>
             </div>
             
             {/* Stats Row */}
