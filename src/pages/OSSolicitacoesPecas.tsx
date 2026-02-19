@@ -22,6 +22,7 @@ import {
   calcularSLASolicitacao,
   formatCurrency,
   SolicitacaoPeca,
+  DadosPagamentoEncaminhamento,
   tratarPecaOSCancelada,
   isPecaPaga
 } from '@/utils/solicitacaoPecasApi';
@@ -92,6 +93,13 @@ export default function OSSolicitacoesPecas() {
 
   // Modal confirmação agrupar
   const [confirmAgruparOpen, setConfirmAgruparOpen] = useState(false);
+
+  // Campos de pagamento para encaminhamento/agrupamento
+  const [encFormaPagamento, setEncFormaPagamento] = useState<'Pix' | 'Dinheiro' | ''>('');
+  const [encContaBancaria, setEncContaBancaria] = useState('');
+  const [encNomeRecebedor, setEncNomeRecebedor] = useState('');
+  const [encChavePix, setEncChavePix] = useState('');
+  const [encObservacao, setEncObservacao] = useState('');
 
   // Filtrar solicitações
   const solicitacoesFiltradas = useMemo(() => {
@@ -290,15 +298,36 @@ export default function OSSolicitacoesPecas() {
       return;
     }
     if (selecionadas.length >= 2) {
+      setEncFormaPagamento('');
+      setEncContaBancaria('');
+      setEncNomeRecebedor('');
+      setEncChavePix('');
+      setEncObservacao('');
       setConfirmAgruparOpen(true);
     } else {
+      setEncFormaPagamento('');
+      setEncContaBancaria('');
+      setEncNomeRecebedor('');
+      setEncChavePix('');
+      setEncObservacao('');
       setConfirmEncaminharOpen(true);
     }
   };
 
   const handleConfirmarEncaminhamento = () => {
+    if (!encFormaPagamento || !encObservacao.trim()) {
+      toast({ title: 'Erro', description: 'Preencha a forma de pagamento e a observação', variant: 'destructive' });
+      return;
+    }
     const nomeUsuario = user?.colaborador?.nome || 'Gestor';
-    const notasCriadas = encaminharParaFinanceiro(selecionadas, nomeUsuario);
+    const dadosPagamento: DadosPagamentoEncaminhamento = {
+      formaPagamento: encFormaPagamento as 'Pix' | 'Dinheiro',
+      contaBancaria: encContaBancaria,
+      nomeRecebedor: encNomeRecebedor,
+      chavePix: encChavePix,
+      observacao: encObservacao
+    };
+    const notasCriadas = encaminharParaFinanceiro(selecionadas, nomeUsuario, dadosPagamento);
     
     setSolicitacoes(getSolicitacoes());
     setSelecionadas([]);
@@ -311,8 +340,19 @@ export default function OSSolicitacoesPecas() {
   };
 
   const handleConfirmarAgrupamento = () => {
+    if (!encFormaPagamento || !encObservacao.trim()) {
+      toast({ title: 'Erro', description: 'Preencha a forma de pagamento e a observação', variant: 'destructive' });
+      return;
+    }
     const nomeUsuario = user?.colaborador?.nome || 'Gestor';
-    const resultado = agruparParaPagamento(selecionadas, nomeUsuario);
+    const dadosPagamento: DadosPagamentoEncaminhamento = {
+      formaPagamento: encFormaPagamento as 'Pix' | 'Dinheiro',
+      contaBancaria: encContaBancaria,
+      nomeRecebedor: encNomeRecebedor,
+      chavePix: encChavePix,
+      observacao: encObservacao
+    };
+    const resultado = agruparParaPagamento(selecionadas, nomeUsuario, dadosPagamento);
     
     if (resultado) {
       setSolicitacoes(getSolicitacoes());
@@ -754,7 +794,7 @@ export default function OSSolicitacoesPecas() {
               Você está prestes a encaminhar {selecionadas.length} solicitação(ões) aprovada(s) para conferência financeira.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-4 space-y-4">
             <div className="p-3 bg-muted rounded-lg space-y-2">
               <div className="flex justify-between">
                 <span>Total de solicitações:</span>
@@ -765,7 +805,43 @@ export default function OSSolicitacoesPecas() {
                 <strong className="text-primary">{formatCurrency(valorSelecionadas)}</strong>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">
+
+            <div className="space-y-3 border-t pt-3">
+              <div>
+                <Label>Forma de Pagamento *</Label>
+                <Select value={encFormaPagamento} onValueChange={(v) => setEncFormaPagamento(v as 'Pix' | 'Dinheiro')}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pix">Pix</SelectItem>
+                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {encFormaPagamento === 'Pix' && (
+                <>
+                  <div>
+                    <Label>Conta Bancária</Label>
+                    <Input value={encContaBancaria} onChange={(e) => setEncContaBancaria(e.target.value)} placeholder="Ex: Banco do Brasil" />
+                  </div>
+                  <div>
+                    <Label>Nome do Recebedor</Label>
+                    <Input value={encNomeRecebedor} onChange={(e) => setEncNomeRecebedor(e.target.value)} placeholder="Nome completo" />
+                  </div>
+                  <div>
+                    <Label>Chave Pix</Label>
+                    <Input value={encChavePix} onChange={(e) => setEncChavePix(e.target.value)} placeholder="CPF, email, telefone ou chave aleatória" />
+                  </div>
+                </>
+              )}
+              <div>
+                <Label>Observação *</Label>
+                <Textarea value={encObservacao} onChange={(e) => setEncObservacao(e.target.value)} placeholder="Informe detalhes sobre o pagamento" />
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
               Cada registro será processado individualmente e encaminhado para conferência no Financeiro.
             </p>
           </div>
@@ -773,7 +849,7 @@ export default function OSSolicitacoesPecas() {
             <Button variant="outline" onClick={() => setConfirmEncaminharOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleConfirmarEncaminhamento}>
+            <Button onClick={handleConfirmarEncaminhamento} disabled={!encFormaPagamento || !encObservacao.trim()}>
               <Send className="h-4 w-4 mr-2" />
               Confirmar Encaminhamento
             </Button>
@@ -820,6 +896,42 @@ export default function OSSolicitacoesPecas() {
                 </div>
               ))}
             </div>
+
+            <div className="space-y-3 border-t pt-3">
+              <div>
+                <Label>Forma de Pagamento *</Label>
+                <Select value={encFormaPagamento} onValueChange={(v) => setEncFormaPagamento(v as 'Pix' | 'Dinheiro')}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Pix">Pix</SelectItem>
+                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {encFormaPagamento === 'Pix' && (
+                <>
+                  <div>
+                    <Label>Conta Bancária</Label>
+                    <Input value={encContaBancaria} onChange={(e) => setEncContaBancaria(e.target.value)} placeholder="Ex: Banco do Brasil" />
+                  </div>
+                  <div>
+                    <Label>Nome do Recebedor</Label>
+                    <Input value={encNomeRecebedor} onChange={(e) => setEncNomeRecebedor(e.target.value)} placeholder="Nome completo" />
+                  </div>
+                  <div>
+                    <Label>Chave Pix</Label>
+                    <Input value={encChavePix} onChange={(e) => setEncChavePix(e.target.value)} placeholder="CPF, email, telefone ou chave aleatória" />
+                  </div>
+                </>
+              )}
+              <div>
+                <Label>Observação *</Label>
+                <Textarea value={encObservacao} onChange={(e) => setEncObservacao(e.target.value)} placeholder="Informe detalhes sobre o pagamento" />
+              </div>
+            </div>
+
             <p className="text-xs text-muted-foreground">
               Um único lote será criado e encaminhado ao Financeiro para pagamento consolidado.
             </p>
@@ -828,7 +940,7 @@ export default function OSSolicitacoesPecas() {
             <Button variant="outline" onClick={() => setConfirmAgruparOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleConfirmarAgrupamento}>
+            <Button onClick={handleConfirmarAgrupamento} disabled={!encFormaPagamento || !encObservacao.trim()}>
               <Package className="h-4 w-4 mr-2" />
               Confirmar Agrupamento
             </Button>

@@ -43,6 +43,14 @@ export interface LotePagamento {
   dataConferencia?: string;
 }
 
+export interface DadosPagamentoEncaminhamento {
+  formaPagamento: 'Pix' | 'Dinheiro';
+  contaBancaria?: string;
+  nomeRecebedor?: string;
+  chavePix?: string;
+  observacao: string;
+}
+
 export interface NotaAssistencia {
   id: string;
   solicitacaoId: string;
@@ -63,6 +71,12 @@ export interface NotaAssistencia {
   dataConferencia?: string;
   loteId?: string;
   solicitacaoIds?: string[];
+  // Dados de pagamento informados no encaminhamento
+  formaPagamentoEncaminhamento?: string;
+  contaBancariaEncaminhamento?: string;
+  nomeRecebedor?: string;
+  chavePixEncaminhamento?: string;
+  observacaoEncaminhamento?: string;
 }
 
 // Helper to resolve origemEntrada from OS
@@ -392,7 +406,7 @@ export const rejeitarSolicitacao = (id: string, motivoRejeicao?: string): Solici
 
 // ========== AÇÕES EM MASSA - Encaminhar para Financeiro ==========
 
-export const encaminharParaFinanceiro = (solicitacaoIds: string[], usuarioNome: string): NotaAssistencia[] => {
+export const encaminharParaFinanceiro = (solicitacaoIds: string[], usuarioNome: string, dadosPagamento?: DadosPagamentoEncaminhamento): NotaAssistencia[] => {
   const notasCriadas: NotaAssistencia[] = [];
   
   for (const solId of solicitacaoIds) {
@@ -418,7 +432,14 @@ export const encaminharParaFinanceiro = (solicitacaoIds: string[], usuarioNome: 
         peca: sol.peca,
         quantidade: sol.quantidade,
         valorUnitario: sol.valorPeca || 0
-      }]
+      }],
+      ...(dadosPagamento && {
+        formaPagamentoEncaminhamento: dadosPagamento.formaPagamento,
+        contaBancariaEncaminhamento: dadosPagamento.contaBancaria,
+        nomeRecebedor: dadosPagamento.nomeRecebedor,
+        chavePixEncaminhamento: dadosPagamento.chavePix,
+        observacaoEncaminhamento: dadosPagamento.observacao
+      })
     };
     notasAssistencia.push(novaNota);
     notasCriadas.push(novaNota);
@@ -442,7 +463,7 @@ export const encaminharParaFinanceiro = (solicitacaoIds: string[], usuarioNome: 
 
 // ========== Agrupar Solicitações para Pagamento (Lote) ==========
 
-export const agruparParaPagamento = (solicitacaoIds: string[], usuarioNome: string): { lote: LotePagamento; nota: NotaAssistencia } | null => {
+export const agruparParaPagamento = (solicitacaoIds: string[], usuarioNome: string, dadosPagamento?: DadosPagamentoEncaminhamento): { lote: LotePagamento; nota: NotaAssistencia } | null => {
   const sols = solicitacaoIds.map(id => solicitacoes.find(s => s.id === id)).filter(Boolean) as SolicitacaoPeca[];
   if (sols.length < 2) return null;
   
@@ -489,7 +510,14 @@ export const agruparParaPagamento = (solicitacaoIds: string[], usuarioNome: stri
       peca: s.peca,
       quantidade: s.quantidade,
       valorUnitario: s.valorPeca || 0
-    }))
+    })),
+    ...(dadosPagamento && {
+      formaPagamentoEncaminhamento: dadosPagamento.formaPagamento,
+      contaBancariaEncaminhamento: dadosPagamento.contaBancaria,
+      nomeRecebedor: dadosPagamento.nomeRecebedor,
+      chavePixEncaminhamento: dadosPagamento.chavePix,
+      observacaoEncaminhamento: dadosPagamento.observacao
+    })
   };
   notasAssistencia.push(nota);
   

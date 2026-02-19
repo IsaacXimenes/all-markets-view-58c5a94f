@@ -473,6 +473,46 @@ export default function FinanceiroNotasAssistencia() {
                     </div>
                   </div>
 
+                  {/* Dados de Pagamento Informados no Encaminhamento */}
+                  {(notaSelecionada.formaPagamentoEncaminhamento || notaSelecionada.observacaoEncaminhamento) && (
+                    <div className="border-t pt-4">
+                      <h3 className="font-semibold mb-3 flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                        <DollarSign className="h-4 w-4" />
+                        Dados de Pagamento Informados
+                      </h3>
+                      <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 space-y-2">
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div>
+                            <span className="text-xs text-muted-foreground">Forma de Pagamento</span>
+                            <p className="font-medium">{notaSelecionada.formaPagamentoEncaminhamento || '-'}</p>
+                          </div>
+                          {notaSelecionada.formaPagamentoEncaminhamento === 'Pix' && (
+                            <>
+                              <div>
+                                <span className="text-xs text-muted-foreground">Conta Bancária</span>
+                                <p className="font-medium">{notaSelecionada.contaBancariaEncaminhamento || '-'}</p>
+                              </div>
+                              <div>
+                                <span className="text-xs text-muted-foreground">Nome do Recebedor</span>
+                                <p className="font-medium">{notaSelecionada.nomeRecebedor || '-'}</p>
+                              </div>
+                              <div>
+                                <span className="text-xs text-muted-foreground">Chave Pix</span>
+                                <p className="font-medium font-mono text-xs">{notaSelecionada.chavePixEncaminhamento || '-'}</p>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        {notaSelecionada.observacaoEncaminhamento && (
+                          <div className="border-t border-blue-200 dark:border-blue-700 pt-2 mt-2">
+                            <span className="text-xs text-muted-foreground">Observação</span>
+                            <p className="text-sm">{notaSelecionada.observacaoEncaminhamento}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {notaSelecionada.status === 'Pendente' && (
                     <div className="border-t pt-4">
                       <h3 className="font-semibold mb-3 text-primary">Seção "Pagamento" (Habilitada)</h3>
@@ -570,23 +610,63 @@ export default function FinanceiroNotasAssistencia() {
                   )}
 
                   {notaSelecionada.status === 'Concluído' && (
-                    <div className="border-t pt-4">
-                      <h3 className="font-semibold mb-3">Informações de Pagamento</h3>
-                      <div className="grid grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <Label className="text-xs">Forma de Pagamento</Label>
-                          <p className="font-medium">{notaSelecionada.formaPagamento}</p>
+                    <>
+                      {(notaSelecionada.formaPagamentoEncaminhamento || notaSelecionada.observacaoEncaminhamento) && (
+                        <div className="border-t pt-4">
+                          <h3 className="font-semibold mb-3 flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                            <DollarSign className="h-4 w-4" />
+                            Dados de Pagamento Informados
+                          </h3>
+                          <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 space-y-2">
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <span className="text-xs text-muted-foreground">Forma de Pagamento</span>
+                                <p className="font-medium">{notaSelecionada.formaPagamentoEncaminhamento || '-'}</p>
+                              </div>
+                              {notaSelecionada.formaPagamentoEncaminhamento === 'Pix' && (
+                                <>
+                                  <div>
+                                    <span className="text-xs text-muted-foreground">Conta Bancária</span>
+                                    <p className="font-medium">{notaSelecionada.contaBancariaEncaminhamento || '-'}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-xs text-muted-foreground">Nome do Recebedor</span>
+                                    <p className="font-medium">{notaSelecionada.nomeRecebedor || '-'}</p>
+                                  </div>
+                                  <div>
+                                    <span className="text-xs text-muted-foreground">Chave Pix</span>
+                                    <p className="font-medium font-mono text-xs">{notaSelecionada.chavePixEncaminhamento || '-'}</p>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                            {notaSelecionada.observacaoEncaminhamento && (
+                              <div className="border-t border-blue-200 dark:border-blue-700 pt-2 mt-2">
+                                <span className="text-xs text-muted-foreground">Observação</span>
+                                <p className="text-sm">{notaSelecionada.observacaoEncaminhamento}</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <Label className="text-xs">Conta</Label>
-                          <p className="font-medium">{notaSelecionada.contaPagamento}</p>
-                        </div>
-                        <div>
-                          <Label className="text-xs">Responsável</Label>
-                          <p className="font-medium">{notaSelecionada.responsavelFinanceiro}</p>
+                      )}
+                      <div className="border-t pt-4">
+                        <h3 className="font-semibold mb-3">Informações de Pagamento</h3>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <Label className="text-xs">Forma de Pagamento</Label>
+                            <p className="font-medium">{notaSelecionada.formaPagamento}</p>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Conta</Label>
+                            <p className="font-medium">{notaSelecionada.contaPagamento}</p>
+                          </div>
+                          <div>
+                            <Label className="text-xs">Responsável</Label>
+                            <p className="font-medium">{notaSelecionada.responsavelFinanceiro}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
