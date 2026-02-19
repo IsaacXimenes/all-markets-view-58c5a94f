@@ -55,7 +55,7 @@ export default function OSConferenciaGestor() {
   const [filtroLoja, setFiltroLoja] = useState('todas');
   const [filtroTecnico, setFiltroTecnico] = useState('todos');
   const [filtroStatus, setFiltroStatus] = useState('todos');
-
+  const [filtroMeioPagamento, setFiltroMeioPagamento] = useState('todos');
   // Painel lateral
   const [osSelecionada, setOsSelecionada] = useState<OrdemServico | null>(null);
   const [validacoesPagamento, setValidacoesPagamento] = useState<ValidacaoPagamento[]>([]);
@@ -92,11 +92,16 @@ export default function OSConferenciaGestor() {
     if (filtroStatus !== 'todos') {
       resultado = resultado.filter(os => os.status === filtroStatus);
     }
+    if (filtroMeioPagamento !== 'todos') {
+      resultado = resultado.filter(os => 
+        os.pagamentos?.some(p => p.meio.toLowerCase().includes(filtroMeioPagamento.toLowerCase()))
+      );
+    }
 
     resultado.sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
 
     return resultado;
-  }, [ordensServico, filtroDataInicio, filtroDataFim, filtroLoja, filtroTecnico, filtroStatus]);
+  }, [ordensServico, filtroDataInicio, filtroDataFim, filtroLoja, filtroTecnico, filtroStatus, filtroMeioPagamento]);
 
   // Somatórios por método de pagamento
   const somatorioPagamentos = useMemo(() => {
@@ -139,6 +144,7 @@ export default function OSConferenciaGestor() {
     setFiltroLoja('todas');
     setFiltroTecnico('todos');
     setFiltroStatus('todos');
+    setFiltroMeioPagamento('todos');
   };
 
   const handleExportar = () => {
@@ -462,7 +468,7 @@ export default function OSConferenciaGestor() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
                 <div>
                   <label className="text-sm text-muted-foreground mb-1 block">Data Início</label>
                   <Input type="date" value={filtroDataInicio} onChange={e => setFiltroDataInicio(e.target.value)} />
@@ -500,6 +506,22 @@ export default function OSConferenciaGestor() {
                       <SelectItem value="Pendente de Pagamento">Pendente Conferência</SelectItem>
                       <SelectItem value="Aguardando Financeiro">Aguardando Financeiro</SelectItem>
                       <SelectItem value="Liquidado">Liquidado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1 block">Meio de Pagamento</label>
+                  <Select value={filtroMeioPagamento} onValueChange={setFiltroMeioPagamento}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="pix">Pix</SelectItem>
+                      <SelectItem value="crédito">Cartão Crédito</SelectItem>
+                      <SelectItem value="débito">Cartão Débito</SelectItem>
+                      <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                      <SelectItem value="boleto">Boleto/Crediário</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

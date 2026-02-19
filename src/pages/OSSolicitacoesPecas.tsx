@@ -30,7 +30,7 @@ import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { useAuthStore } from '@/store/authStore';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { getOrdemServicoById, updateOrdemServico } from '@/utils/assistenciaApi';
-import { Eye, Check, X, Package, Clock, AlertTriangle, Send, Plus, Edit, History } from 'lucide-react';
+import { Eye, Check, X, Package, Clock, AlertTriangle, Send, Plus, Edit, History, DollarSign, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -300,38 +300,147 @@ export default function OSSolicitacoesPecas() {
   const totalEnviadas = solicitacoes.filter(s => s.status === 'Enviada' || s.status === 'Pagamento - Financeiro').length;
   const totalRecebidas = solicitacoes.filter(s => s.status === 'Recebida').length;
 
+  // Montantes por origem
+  const montantesPorOrigem = useMemo(() => {
+    const statusAprovados = ['Aprovada', 'Pagamento - Financeiro', 'Recebida', 'Devolvida ao Fornecedor', 'Retida para Estoque'];
+    const origens: ('Balcao' | 'Garantia' | 'Estoque')[] = ['Balcao', 'Garantia', 'Estoque'];
+    
+    const getOrigem = (sol: SolicitacaoPeca): string => {
+      if (sol.origemEntrada) return sol.origemEntrada;
+      const os = getOrdemServicoById(sol.osId);
+      if (!os?.origemOS) return 'Balcao';
+      if (os.origemOS === 'Garantia') return 'Garantia';
+      if (os.origemOS === 'Estoque') return 'Estoque';
+      return 'Balcao';
+    };
+
+    const result = origens.map(origem => {
+      const solsOrigem = solicitacoes.filter(s => getOrigem(s) === origem);
+      const aprovado = solsOrigem.filter(s => statusAprovados.includes(s.status))
+        .reduce((acc, s) => acc + (s.valorPeca || 0) * s.quantidade, 0);
+      const pago = solsOrigem.filter(s => isPecaPaga(s))
+        .reduce((acc, s) => acc + (s.valorPeca || 0) * s.quantidade, 0);
+      return { origem, aprovado, pago };
+    });
+    return result;
+  }, [solicitacoes]);
+
+  // Fluxo de caixa
+  const fluxoCaixa = useMemo(() => {
+    const aguardando = solicitacoes.filter(s => s.status === 'Aprovada' || s.status === 'Pagamento - Financeiro');
+    const pagos = solicitacoes.filter(s => isPecaPaga(s));
+    return {
+      aguardandoQtd: aguardando.length,
+      aguardandoValor: aguardando.reduce((acc, s) => acc + (s.valorPeca || 0) * s.quantidade, 0),
+      pagoQtd: pagos.length,
+      pagoValor: pagos.reduce((acc, s) => acc + (s.valorPeca || 0) * s.quantidade, 0),
+    };
+  }, [solicitacoes]);
+
   // Valor total das selecionadas
   const valorSelecionadas = solicitacoes
     .filter(s => selecionadas.includes(s.id))
     .reduce((acc, s) => acc + (s.valorPeca || 0) * s.quantidade, 0);
 
+  const getOrigemBadge = (sol: SolicitacaoPeca) => {
+    const origem = sol.origemEntrada || (() => {
+      const os = getOrdemServicoById(sol.osId);
+      if (!os?.origemOS) return 'Balcao';
+      if (os.origemOS === 'Garantia') return 'Garantia';
+      if (os.origemOS === 'Estoque') return 'Estoque';
+      return 'Balcao';
+    })();
+    switch (origem) {
+      case 'Garantia': return <Badge className="bg-orange-500 hover:bg-orange-600 text-white text-[10px]">Garantia</Badge>;
+      case 'Estoque': return <Badge className="bg-blue-500 hover:bg-blue-600 text-white text-[10px]">Estoque</Badge>;
+      default: return <Badge className="bg-gray-500 hover:bg-gray-600 text-white text-[10px]">Balcão</Badge>;
+    }
+  };
+
+  const origemLabels: Record<string, string> = { 'Balcao': 'Balcão', 'Garantia': 'Garantia', 'Estoque': 'Estoque' };
+
   return (
     <OSLayout title="Aprovações - Gestor">
       {/* Dashboard Cards */}
       <div className="sticky top-0 z-10 bg-background pb-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {/* Linha 1 - Contadores */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-yellow-600">{totalPendentes}</div>
+            <CardContent className="p-3">
+              <div className="text-xl font-bold text-yellow-600">{totalPendentes}</div>
               <div className="text-xs text-muted-foreground">Pendentes</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">{totalAprovadas}</div>
+            <CardContent className="p-3">
+              <div className="text-xl font-bold text-blue-600">{totalAprovadas}</div>
               <div className="text-xs text-muted-foreground">Aprovadas</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">{totalEnviadas}</div>
-              <div className="text-xs text-muted-foreground">Enviadas/Financeiro</div>
+            <CardContent className="p-3">
+              <div className="text-xl font-bold text-purple-600">{totalEnviadas}</div>
+              <div className="text-xs text-muted-foreground">Financeiro</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">{totalRecebidas}</div>
+            <CardContent className="p-3">
+              <div className="text-xl font-bold text-green-600">{totalRecebidas}</div>
               <div className="text-xs text-muted-foreground">Recebidas</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Linha 2 - Montantes por Origem */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+          {montantesPorOrigem.map(m => (
+            <Card key={m.origem}>
+              <CardContent className="p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-semibold">Peças - {origemLabels[m.origem]}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase">Aprovado</p>
+                    <p className="text-sm font-bold text-blue-600">{formatCurrency(m.aprovado)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase">Pago</p>
+                    <p className="text-sm font-bold text-green-600">{formatCurrency(m.pago)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Linha 3 - Fluxo de Caixa */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Card className="border-orange-200 dark:border-orange-800">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Clock className="h-4 w-4 text-orange-500" />
+                <span className="text-sm font-semibold">Aguardando Pagamento</span>
+              </div>
+              <div className="flex items-baseline gap-3">
+                <span className="text-xl font-bold text-orange-600">{fluxoCaixa.aguardandoQtd}</span>
+                <span className="text-sm text-muted-foreground">solicitações</span>
+                <span className="text-sm font-semibold text-orange-600 ml-auto">{formatCurrency(fluxoCaixa.aguardandoValor)}</span>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-green-200 dark:border-green-800">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <DollarSign className="h-4 w-4 text-green-500" />
+                <span className="text-sm font-semibold">Pagamento Realizado</span>
+              </div>
+              <div className="flex items-baseline gap-3">
+                <span className="text-xl font-bold text-green-600">{fluxoCaixa.pagoQtd}</span>
+                <span className="text-sm text-muted-foreground">solicitações</span>
+                <span className="text-sm font-semibold text-green-600 ml-auto">{formatCurrency(fluxoCaixa.pagoValor)}</span>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -419,6 +528,7 @@ export default function OSSolicitacoesPecas() {
               <TableHead className="w-10"></TableHead>
               <TableHead>Data</TableHead>
               <TableHead>Loja</TableHead>
+              <TableHead>Origem</TableHead>
               <TableHead>OS</TableHead>
               <TableHead>Peça</TableHead>
               <TableHead>Qtd</TableHead>
@@ -452,6 +562,7 @@ export default function OSSolicitacoesPecas() {
                   {new Date(sol.dataSolicitacao).toLocaleDateString('pt-BR')}
                 </TableCell>
                 <TableCell className="text-xs">{getLojaNome(sol.lojaSolicitante)}</TableCell>
+                <TableCell>{getOrigemBadge(sol)}</TableCell>
                 <TableCell>
                   <Button 
                     variant="link" 
@@ -553,7 +664,7 @@ export default function OSSolicitacoesPecas() {
             ))}
             {solicitacoesFiltradas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={12} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={13} className="text-center py-8 text-muted-foreground">
                   Nenhuma solicitação encontrada
                 </TableCell>
               </TableRow>

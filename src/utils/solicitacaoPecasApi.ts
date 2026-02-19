@@ -27,6 +27,7 @@ export interface SolicitacaoPeca {
   osCancelada?: boolean;
   motivoTratamento?: string;
   tratadaPor?: string;
+  origemEntrada?: 'Balcao' | 'Garantia' | 'Estoque';
 }
 
 export interface NotaAssistencia {
@@ -49,6 +50,15 @@ export interface NotaAssistencia {
   dataConferencia?: string;
 }
 
+// Helper to resolve origemEntrada from OS
+const resolveOrigemEntrada = (osId: string): 'Balcao' | 'Garantia' | 'Estoque' | undefined => {
+  const os = getOrdemServicoById(osId);
+  if (!os?.origemOS) return undefined;
+  if (os.origemOS === 'Garantia') return 'Garantia';
+  if (os.origemOS === 'Estoque') return 'Estoque';
+  return 'Balcao'; // Venda, Balcão -> Balcao
+};
+
 // Mock data
 let solicitacoes: SolicitacaoPeca[] = [
   {
@@ -60,7 +70,8 @@ let solicitacoes: SolicitacaoPeca[] = [
     modeloImei: '999888777666001',
     lojaSolicitante: 'db894e7d',
     dataSolicitacao: '2025-01-18T10:00:00',
-    status: 'Pendente'
+    status: 'Pendente',
+    origemEntrada: 'Balcao'
   },
   {
     id: 'SOL-001',
@@ -71,7 +82,8 @@ let solicitacoes: SolicitacaoPeca[] = [
     modeloImei: '789012345678901',
     lojaSolicitante: '3ac7e00c',
     dataSolicitacao: '2025-01-11T10:00:00',
-    status: 'Pendente'
+    status: 'Pendente',
+    origemEntrada: 'Garantia'
   },
   {
     id: 'SOL-002',
@@ -82,7 +94,8 @@ let solicitacoes: SolicitacaoPeca[] = [
     modeloImei: '678901234567890',
     lojaSolicitante: 'db894e7d',
     dataSolicitacao: '2025-01-16T09:30:00',
-    status: 'Pendente'
+    status: 'Pendente',
+    origemEntrada: 'Balcao'
   },
   {
     id: 'SOL-003',
@@ -98,7 +111,8 @@ let solicitacoes: SolicitacaoPeca[] = [
     valorPeca: 180,
     responsavelCompra: 'COL-002',
     dataRecebimento: '2025-01-20',
-    dataEnvio: '2025-01-21'
+    dataEnvio: '2025-01-21',
+    origemEntrada: 'Estoque'
   },
   {
     id: 'SOL-004',
@@ -114,7 +128,8 @@ let solicitacoes: SolicitacaoPeca[] = [
     valorPeca: 45,
     responsavelCompra: 'COL-002',
     dataRecebimento: '2025-01-20',
-    dataEnvio: '2025-01-21'
+    dataEnvio: '2025-01-21',
+    origemEntrada: 'Balcao'
   },
   {
     id: 'SOL-005',
@@ -130,7 +145,8 @@ let solicitacoes: SolicitacaoPeca[] = [
     valorPeca: 320,
     responsavelCompra: 'COL-002',
     dataRecebimento: '2025-01-15',
-    dataEnvio: '2025-01-16'
+    dataEnvio: '2025-01-16',
+    origemEntrada: 'Garantia'
   }
 ];
 
@@ -274,11 +290,13 @@ export const getNotasAssistenciaPendentes = () => notasAssistencia.filter(n => n
 
 // Actions
 export const addSolicitacao = (data: Omit<SolicitacaoPeca, 'id' | 'dataSolicitacao' | 'status'>): SolicitacaoPeca => {
+  const origemEntrada = data.origemEntrada || resolveOrigemEntrada(data.osId);
   const novaSolicitacao: SolicitacaoPeca = {
     ...data,
     id: `SOL-${String(solicitacaoCounter++).padStart(3, '0')}`,
     dataSolicitacao: new Date().toISOString(),
-    status: 'Pendente'
+    status: 'Pendente',
+    origemEntrada
   };
   solicitacoes.push(novaSolicitacao);
   return novaSolicitacao;
