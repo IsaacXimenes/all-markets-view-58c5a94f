@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -19,19 +20,21 @@ import { getFornecedores } from '@/utils/cadastrosApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { setOnConsumoPecaConsignada } from '@/utils/pecasApi';
 import {
-  getLotesConsignacao, getLoteById, criarLoteConsignacao, iniciarAcertoContas,
-  confirmarDevolucaoItem, gerarLoteFinanceiro, getValorConsumido, finalizarAcerto,
+  getLotesConsignacao, getLoteById, criarLoteConsignacao,
+  confirmarDevolucaoItem, getValorConsumido,
   registrarConsumoPorPecaId, transferirItemConsignacao,
-  LoteConsignacao, ItemConsignacao, CriarLoteInput,
+  gerarPagamentoParcial, confirmarPagamentoParcial, finalizarLote,
+  LoteConsignacao, ItemConsignacao, CriarLoteInput, PagamentoParcial,
 } from '@/utils/consignacaoApi';
 import { getNotasAssistencia, __pushNotaConsignacao } from '@/utils/solicitacaoPecasApi';
 import { useToast } from '@/hooks/use-toast';
 import {
   Plus, Eye, Trash2, Package, PackageCheck, Clock, DollarSign, Pencil,
   FileText, ArrowRightLeft, CheckCircle, AlertTriangle, ArrowLeft, Undo2, Truck,
+  History, Lock,
 } from 'lucide-react';
 
-type ViewMode = 'lista' | 'novo' | 'dossie' | 'acerto';
+type ViewMode = 'lista' | 'novo' | 'dossie';
 
 export default function OSConsignacao() {
   const { toast } = useToast();
@@ -55,13 +58,20 @@ export default function OSConsignacao() {
     { descricao: '', modelo: '', quantidade: '1', valorCusto: '', lojaDestinoId: '' },
   ]);
 
-  // Acerto state
-  const [acertoFormaPagamento, setAcertoFormaPagamento] = useState('');
-  const [acertoContaBancaria, setAcertoContaBancaria] = useState('');
-  const [acertoNomeRecebedor, setAcertoNomeRecebedor] = useState('');
-  const [acertoChavePix, setAcertoChavePix] = useState('');
-  const [acertoObservacao, setAcertoObservacao] = useState('');
-  const [confirmacoesDevolucao, setConfirmacoesDevolucao] = useState<Record<string, { usuario: string; dataHora: string }>>({});
+  // Pagamento parcial state
+  const [itensSelecionadosPagamento, setItensSelecionadosPagamento] = useState<string[]>([]);
+  const [pagFormaPagamento, setPagFormaPagamento] = useState('');
+  const [pagContaBancaria, setPagContaBancaria] = useState('');
+  const [pagNomeRecebedor, setPagNomeRecebedor] = useState('');
+  const [pagChavePix, setPagChavePix] = useState('');
+  const [pagObservacao, setPagObservacao] = useState('');
+
+  // Finalizar lote state
+  const [finFormaPagamento, setFinFormaPagamento] = useState('');
+  const [finContaBancaria, setFinContaBancaria] = useState('');
+  const [finNomeRecebedor, setFinNomeRecebedor] = useState('');
+  const [finChavePix, setFinChavePix] = useState('');
+  const [finObservacao, setFinObservacao] = useState('');
 
   const refreshLotes = () => setLotes(getLotesConsignacao());
 
@@ -70,6 +80,7 @@ export default function OSConsignacao() {
   const voltar = () => {
     setViewMode('lista');
     setLoteSelecionado(null);
+    setItensSelecionadosPagamento([]);
     refreshLotes();
   };
 
@@ -78,18 +89,20 @@ export default function OSConsignacao() {
   const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroData, setFiltroData] = useState('');
 
-  // Stats (5 indicadores consolidados)
+  // Stats (5 novos indicadores)
   const stats = useMemo(() => {
     const valorTotal = lotes.reduce((acc, l) =>
       acc + l.itens.reduce((a, i) => a + i.valorCusto * i.quantidadeOriginal, 0), 0);
-    const valorUsado = lotes.reduce((acc, l) => acc + getValorConsumido(l), 0);
-    const totalProdutos = lotes.reduce((acc, l) =>
-      acc + l.itens.reduce((a, i) => a + i.quantidadeOriginal, 0), 0);
-    const totalConsumidos = lotes.reduce((acc, l) =>
-      acc + l.itens.filter(i => i.status === 'Consumido').reduce((a, i) => a + i.quantidadeOriginal, 0), 0);
-    const disponiveis = lotes.reduce((acc, l) =>
-      acc + l.itens.filter(i => i.status === 'Disponivel').reduce((a, i) => a + i.quantidade, 0), 0);
-    return { valorTotal, valorUsado, totalProdutos, totalConsumidos, disponiveis };
+    const totalPago = lotes.reduce((acc, l) =>
+      acc + (l.pagamentosParciais || []).filter(p => p.status === 'Pago').reduce((a, p) => a + p.valor, 0), 0);
+    const aPagar = lotes.reduce((acc, l) =>
+      acc + l.itens.filter(i => i.status === 'Consumido' || i.status === 'Em Pagamento')
+        .reduce((a, i) => a + (i.quantidadeOriginal - i.quantidade || i.quantidadeOriginal) * i.valorCusto, 0), 0);
+    const saldoDisponivel = lotes.reduce((acc, l) =>
+      acc + l.itens.filter(i => i.status === 'Disponivel').reduce((a, i) => a + i.quantidade * i.valorCusto, 0), 0);
+    const totalDevolucoes = lotes.reduce((acc, l) =>
+      acc + l.itens.filter(i => i.status === 'Devolvido').reduce((a, i) => a + i.quantidadeOriginal * i.valorCusto, 0), 0);
+    return { valorTotal, totalPago, aPagar, saldoDisponivel, totalDevolucoes };
   }, [lotes]);
 
   // Lotes filtrados
@@ -108,6 +121,7 @@ export default function OSConsignacao() {
       case 'Em Acerto': return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Em Acerto</Badge>;
       case 'Pago': return <Badge className="bg-green-500 hover:bg-green-600 text-white">Pago</Badge>;
       case 'Devolvido': return <Badge className="bg-gray-500 hover:bg-gray-600 text-white">Devolvido</Badge>;
+      case 'Concluido': return <Badge className="bg-purple-700 hover:bg-purple-800 text-white">Concluído</Badge>;
       default: return <Badge variant="secondary">{status}</Badge>;
     }
   };
@@ -118,6 +132,8 @@ export default function OSConsignacao() {
       case 'Consumido': return <Badge className="bg-red-500/15 text-red-600 border border-red-300">Consumido</Badge>;
       case 'Devolvido': return <Badge className="bg-gray-500/15 text-gray-600 border border-gray-300">Devolvido</Badge>;
       case 'Em Acerto': return <Badge className="bg-yellow-500/15 text-yellow-600 border border-yellow-300">Em Acerto</Badge>;
+      case 'Em Pagamento': return <Badge className="bg-amber-500/15 text-amber-600 border border-amber-300">Em Pagamento</Badge>;
+      case 'Pago': return <Badge className="bg-emerald-700/15 text-emerald-700 border border-emerald-400">Pago</Badge>;
       default: return <Badge variant="secondary">{status}</Badge>;
     }
   };
@@ -169,60 +185,72 @@ export default function OSConsignacao() {
 
   const handleVerDossie = (lote: LoteConsignacao) => {
     setLoteSelecionado(getLoteById(lote.id) || lote);
+    setItensSelecionadosPagamento([]);
     setViewMode('dossie');
   };
 
-  const handleIniciarAcerto = (lote: LoteConsignacao) => {
-    setLoteSelecionado(getLoteById(lote.id) || lote);
-    setAcertoFormaPagamento('');
-    setAcertoContaBancaria('');
-    setAcertoNomeRecebedor('');
-    setAcertoChavePix('');
-    setAcertoObservacao('');
-    setViewMode('acerto');
+  const handleGerarPagamentoParcial = () => {
+    if (!loteSelecionado || itensSelecionadosPagamento.length === 0 || !pagFormaPagamento) return;
+
+    const result = gerarPagamentoParcial(
+      loteSelecionado.id,
+      itensSelecionadosPagamento,
+      {
+        formaPagamento: pagFormaPagamento,
+        contaBancaria: pagContaBancaria,
+        nomeRecebedor: pagNomeRecebedor,
+        chavePix: pagChavePix,
+        observacao: pagObservacao,
+      },
+      __pushNotaConsignacao
+    );
+
+    if (result) {
+      toast({ title: 'Pagamento parcial gerado', description: `Nota ${result.notaFinanceiraId} criada - ${formatCurrency(result.valor)}` });
+      setItensSelecionadosPagamento([]);
+      setPagFormaPagamento('');
+      setPagContaBancaria('');
+      setPagNomeRecebedor('');
+      setPagChavePix('');
+      setPagObservacao('');
+      setLoteSelecionado(getLoteById(loteSelecionado.id) || null);
+      refreshLotes();
+    }
   };
 
-  const handleConfirmarAcerto = () => {
+  const handleConfirmarPagamento = (pagamentoId: string) => {
+    if (!loteSelecionado) return;
+    confirmarPagamentoParcial(loteSelecionado.id, pagamentoId, user?.colaborador?.nome || 'Sistema');
+    setLoteSelecionado(getLoteById(loteSelecionado.id) || null);
+    refreshLotes();
+    toast({ title: 'Pagamento confirmado', description: 'Status atualizado para Pago.' });
+  };
+
+  const handleFinalizarLote = () => {
     if (!loteSelecionado) return;
 
-    // Injetar timeline consolidada antes do acerto
-    const loteAtual = getLoteById(loteSelecionado.id);
-    if (loteAtual) {
-      const consumos = loteAtual.timeline.filter(t => t.tipo === 'consumo');
-      const transferencias = loteAtual.timeline.filter(t => t.tipo === 'transferencia');
-      const devolucoes = loteAtual.timeline.filter(t => t.tipo === 'devolucao');
+    const result = finalizarLote(
+      loteSelecionado.id,
+      user?.colaborador?.nome || 'Sistema',
+      {
+        formaPagamento: finFormaPagamento,
+        contaBancaria: finContaBancaria,
+        nomeRecebedor: finNomeRecebedor,
+        chavePix: finChavePix,
+        observacao: finObservacao,
+      },
+      __pushNotaConsignacao
+    );
 
-      const linhas: string[] = [];
-      if (consumos.length > 0) linhas.push(`${consumos.length} consumo(s) registrado(s)`);
-      if (transferencias.length > 0) linhas.push(`${transferencias.length} transferência(s) entre lojas`);
-      if (devolucoes.length > 0) linhas.push(`${devolucoes.length} devolução(ões)`);
-
-      if (linhas.length > 0) {
-        loteAtual.timeline.push({
-          data: new Date().toISOString(),
-          tipo: 'acerto',
-          descricao: `Resumo de fechamento: ${linhas.join(', ')}.`,
-          responsavel: user?.colaborador?.nome || 'Sistema',
-        });
-      }
+    if (result) {
+      toast({ title: 'Lote finalizado', description: `${loteSelecionado.id} concluído. Devoluções confirmadas.` });
+      setFinFormaPagamento('');
+      setFinContaBancaria('');
+      setFinNomeRecebedor('');
+      setFinChavePix('');
+      setFinObservacao('');
+      voltar();
     }
-
-    iniciarAcertoContas(loteSelecionado.id, user?.colaborador?.nome || 'Sistema');
-    
-    const nota = gerarLoteFinanceiro(loteSelecionado.id, {
-      formaPagamento: acertoFormaPagamento,
-      contaBancaria: acertoContaBancaria,
-      nomeRecebedor: acertoNomeRecebedor,
-      chavePix: acertoChavePix,
-      observacao: acertoObservacao,
-    });
-
-    if (nota) {
-      __pushNotaConsignacao(nota);
-    }
-
-    toast({ title: 'Acerto iniciado', description: `Lote ${loteSelecionado.id} em acerto. Nota financeira gerada.` });
-    voltar();
   };
 
   const handleConfirmarDevolucao = (loteId: string, itemId: string) => {
@@ -236,6 +264,12 @@ export default function OSConsignacao() {
     const numbers = value.replace(/\D/g, '');
     const amount = parseInt(numbers || '0') / 100;
     return amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  const toggleItemSelecionado = (itemId: string) => {
+    setItensSelecionadosPagamento(prev =>
+      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+    );
   };
 
   // ==================== VIEW: NOVO LOTE ====================
@@ -328,6 +362,19 @@ export default function OSConsignacao() {
 
   // ==================== VIEW: DOSSIÊ ====================
   if (viewMode === 'dossie' && loteSelecionado) {
+    const itensConsumidos = loteSelecionado.itens.filter(i => ['Consumido', 'Em Pagamento', 'Pago'].includes(i.status));
+    const sobras = loteSelecionado.itens.filter(i => i.status === 'Disponivel');
+    const consumidosRemanescentes = loteSelecionado.itens.filter(i => i.status === 'Consumido');
+    const temConsumidos = itensConsumidos.length > 0;
+    const loteAberto = loteSelecionado.status === 'Aberto';
+    const loteConcluido = loteSelecionado.status === 'Concluido';
+
+    const valorSobras = sobras.reduce((a, i) => a + i.quantidade * i.valorCusto, 0);
+    const valorConsumidosRemanescentes = consumidosRemanescentes.reduce((a, i) => {
+      const qtd = i.quantidadeOriginal - i.quantidade || i.quantidadeOriginal;
+      return a + i.valorCusto * qtd;
+    }, 0);
+
     return (
       <OSLayout title="Consignação" icon={PackageCheck}>
         <div className="space-y-6">
@@ -371,11 +418,13 @@ export default function OSConsignacao() {
           </Card>
 
           <Tabs defaultValue="inventario">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="inventario">Inventário</TabsTrigger>
-              <TabsTrigger value="devolucao">Devolução</TabsTrigger>
+              <TabsTrigger value="pecas-usadas">Peças Usadas</TabsTrigger>
+              <TabsTrigger value="historico-pagamentos">Histórico de Pagamentos</TabsTrigger>
             </TabsList>
 
+            {/* Inventário */}
             <TabsContent value="inventario">
               <Card>
                 <CardContent className="p-0">
@@ -415,34 +464,299 @@ export default function OSConsignacao() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="devolucao">
+            {/* Peças Usadas com seleção para pagamento parcial */}
+            <TabsContent value="pecas-usadas">
               <Card>
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    {loteSelecionado.itens.filter(i => i.status !== 'Consumido').map(item => (
-                      <div key={item.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <div>
-                          <p className="font-medium">{item.descricao}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {item.quantidade} un. restante(s) • {obterNomeLoja(item.lojaAtualId)}
-                          </p>
-                          {item.status === 'Devolvido' && (
-                            <p className="text-xs text-green-600 mt-1">
-                              ✓ Devolvido por {item.devolvidoPor} em {new Date(item.dataDevolucao!).toLocaleString('pt-BR')}
-                            </p>
-                          )}
-                        </div>
-                        {getItemStatusBadge(item.status)}
-                      </div>
-                    ))}
-                    {loteSelecionado.itens.filter(i => i.status !== 'Consumido').length === 0 && (
-                      <p className="text-center text-muted-foreground py-4">Todas as peças foram consumidas</p>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Peças Consumidas</CardTitle>
+                    {itensSelecionadosPagamento.length > 0 && !loteConcluido && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="sm">
+                            <DollarSign className="h-4 w-4 mr-1" />
+                            Gerar Pagamento Parcial ({itensSelecionadosPagamento.length})
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="max-w-lg">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Dados de Pagamento Parcial</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Informe os dados para gerar o pagamento parcial de {itensSelecionadosPagamento.length} item(ns).
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <div className="space-y-4 py-2">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Forma de Pagamento *</Label>
+                              <Select value={pagFormaPagamento} onValueChange={setPagFormaPagamento}>
+                                <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Pix">Pix</SelectItem>
+                                  <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            {pagFormaPagamento === 'Pix' && (
+                              <>
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-medium">Conta Bancária</Label>
+                                  <Input value={pagContaBancaria} onChange={e => setPagContaBancaria(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-medium">Nome do Recebedor</Label>
+                                  <Input value={pagNomeRecebedor} onChange={e => setPagNomeRecebedor(e.target.value)} />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="text-sm font-medium">Chave Pix</Label>
+                                  <Input value={pagChavePix} onChange={e => setPagChavePix(e.target.value)} />
+                                </div>
+                              </>
+                            )}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Observação</Label>
+                              <Textarea value={pagObservacao} onChange={e => setPagObservacao(e.target.value)} rows={2} />
+                            </div>
+                          </div>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleGerarPagamentoParcial} disabled={!pagFormaPagamento}>
+                              Confirmar Pagamento Parcial
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     )}
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          {!loteConcluido && <TableHead className="w-10"></TableHead>}
+                          <TableHead>Peça</TableHead>
+                          <TableHead>Qtd Consumida</TableHead>
+                          <TableHead>Valor de Custo</TableHead>
+                          <TableHead>Loja</TableHead>
+                          <TableHead>OS</TableHead>
+                          <TableHead>Técnico</TableHead>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {itensConsumidos.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={loteConcluido ? 8 : 9} className="text-center py-4 text-muted-foreground">
+                              Nenhuma peça consumida
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          <>
+                            {itensConsumidos.map(item => {
+                              const qtdConsumida = item.quantidadeOriginal - item.quantidade || item.quantidadeOriginal;
+                              return (
+                                <TableRow key={item.id}>
+                                  {!loteConcluido && (
+                                    <TableCell>
+                                      {item.status === 'Consumido' ? (
+                                        <Checkbox
+                                          checked={itensSelecionadosPagamento.includes(item.id)}
+                                          onCheckedChange={() => toggleItemSelecionado(item.id)}
+                                        />
+                                      ) : null}
+                                    </TableCell>
+                                  )}
+                                  <TableCell className="font-medium text-sm">{item.descricao}</TableCell>
+                                  <TableCell className="text-sm">{qtdConsumida}</TableCell>
+                                  <TableCell className="text-sm font-semibold">{formatCurrency(item.valorCusto * qtdConsumida)}</TableCell>
+                                  <TableCell className="text-sm">{obterNomeLoja(item.lojaAtualId)}</TableCell>
+                                  <TableCell className="font-mono text-sm">{item.osVinculada || '-'}</TableCell>
+                                  <TableCell className="text-sm">{item.tecnicoConsumo || '-'}</TableCell>
+                                  <TableCell className="text-sm">{item.dataConsumo ? new Date(item.dataConsumo).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                                  <TableCell>{getItemStatusBadge(item.status)}</TableCell>
+                                </TableRow>
+                              );
+                            })}
+                            <TableRow className="bg-muted/50 font-bold">
+                              {!loteConcluido && <TableCell />}
+                              <TableCell className="text-sm">Total</TableCell>
+                              <TableCell className="text-sm">-</TableCell>
+                              <TableCell className="text-sm font-bold text-destructive">
+                                {formatCurrency(itensConsumidos.reduce((a, i) => {
+                                  const qtd = i.quantidadeOriginal - i.quantidade || i.quantidadeOriginal;
+                                  return a + i.valorCusto * qtd;
+                                }, 0))}
+                              </TableCell>
+                              <TableCell colSpan={loteConcluido ? 5 : 6} className="text-sm">-</TableCell>
+                            </TableRow>
+                          </>
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* Histórico de Pagamentos */}
+            <TabsContent value="historico-pagamentos">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <History className="h-4 w-4" />
+                    Histórico de Pagamentos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {(loteSelecionado.pagamentosParciais || []).length === 0 ? (
+                    <p className="text-center text-muted-foreground py-4">Nenhum pagamento parcial gerado</p>
+                  ) : (
+                    loteSelecionado.pagamentosParciais.map(pag => (
+                      <div key={pag.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-sm font-medium">{pag.notaFinanceiraId}</span>
+                            {pag.status === 'Pendente' ? (
+                              <Badge className="bg-amber-500/15 text-amber-600 border border-amber-300">Pendente</Badge>
+                            ) : (
+                              <Badge className="bg-emerald-700/15 text-emerald-700 border border-emerald-400">Pago</Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(pag.data).toLocaleString('pt-BR')} • {pag.itensIds.length} item(ns)
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-lg">{formatCurrency(pag.valor)}</span>
+                          {pag.status === 'Pendente' && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  <CheckCircle className="h-3.5 w-3.5 mr-1" /> Confirmar
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmar Pagamento</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Confirmar o pagamento da nota <strong>{pag.notaFinanceiraId}</strong> no valor de <strong>{formatCurrency(pag.valor)}</strong>?
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleConfirmarPagamento(pag.id)}>
+                                    Confirmar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
+
+          {/* Botão Finalizar Lote */}
+          {loteAberto && temConsumidos && (
+            <Card className="border-amber-300 bg-amber-50/50 dark:bg-amber-950/10">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Lock className="h-4 w-4" />
+                      Finalizar Lote e Confirmar Devoluções
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {consumidosRemanescentes.length > 0 && `${consumidosRemanescentes.length} peça(s) consumida(s) remanescente(s) serão pagas (${formatCurrency(valorConsumidosRemanescentes)}). `}
+                      {sobras.length > 0 && `${sobras.length} sobra(s) serão devolvidas (${formatCurrency(valorSobras)}).`}
+                    </p>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive">
+                        <Lock className="h-4 w-4 mr-2" />
+                        Finalizar Lote
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="max-w-lg">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Finalizar Lote e Confirmar Devoluções</AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                          <div className="space-y-3">
+                            <p>Esta ação é irreversível. Ao confirmar:</p>
+                            {consumidosRemanescentes.length > 0 && (
+                              <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                                <p className="font-medium text-red-700 dark:text-red-400">Peças a pagar ({consumidosRemanescentes.length}):</p>
+                                <ul className="text-xs mt-1 space-y-0.5">
+                                  {consumidosRemanescentes.map(i => (
+                                    <li key={i.id}>• {i.descricao} - {formatCurrency(i.valorCusto * (i.quantidadeOriginal - i.quantidade || i.quantidadeOriginal))}</li>
+                                  ))}
+                                </ul>
+                                <p className="font-bold mt-1 text-red-700 dark:text-red-400">Total: {formatCurrency(valorConsumidosRemanescentes)}</p>
+                              </div>
+                            )}
+                            {sobras.length > 0 && (
+                              <div className="p-3 bg-gray-50 dark:bg-gray-950/20 rounded-lg">
+                                <p className="font-medium">Sobras a devolver ({sobras.length}):</p>
+                                <ul className="text-xs mt-1 space-y-0.5">
+                                  {sobras.map(i => (
+                                    <li key={i.id}>• {i.descricao} ({i.quantidade} un.)</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            <div className="space-y-3 pt-2 border-t">
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">Forma de Pagamento *</Label>
+                                <Select value={finFormaPagamento} onValueChange={setFinFormaPagamento}>
+                                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Pix">Pix</SelectItem>
+                                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              {finFormaPagamento === 'Pix' && (
+                                <>
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Conta Bancária</Label>
+                                    <Input value={finContaBancaria} onChange={e => setFinContaBancaria(e.target.value)} />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Nome do Recebedor</Label>
+                                    <Input value={finNomeRecebedor} onChange={e => setFinNomeRecebedor(e.target.value)} />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Chave Pix</Label>
+                                    <Input value={finChavePix} onChange={e => setFinChavePix(e.target.value)} />
+                                  </div>
+                                </>
+                              )}
+                              <div className="space-y-2">
+                                <Label className="text-sm font-medium">Observação</Label>
+                                <Textarea value={finObservacao} onChange={e => setFinObservacao(e.target.value)} rows={2} />
+                              </div>
+                            </div>
+                          </div>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleFinalizarLote} disabled={!finFormaPagamento}>
+                          Confirmar Finalização
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Timeline fixa */}
           <Card>
@@ -481,269 +795,6 @@ export default function OSConsignacao() {
     );
   }
 
-  // ==================== VIEW: ACERTO DE CONTAS ====================
-  if (viewMode === 'acerto' && loteSelecionado) {
-    return (
-      <OSLayout title="Consignação" icon={PackageCheck}>
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={voltar}>
-              <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
-            </Button>
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-yellow-600" />
-              Acerto de Contas - {loteSelecionado.id}
-            </h2>
-            {getStatusBadge(loteSelecionado.status)}
-          </div>
-
-          {/* Resumo Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <StatsCard
-              title="Itens Consumidos"
-              value={loteSelecionado.itens.filter(i => i.status === 'Consumido' || i.quantidade < i.quantidadeOriginal).length}
-              icon={<Package className="h-5 w-5" />}
-              valueClassName="text-destructive"
-            />
-            <StatsCard
-              title="Valor a Pagar"
-              value={formatCurrency(getValorConsumido(loteSelecionado))}
-              icon={<DollarSign className="h-5 w-5" />}
-            />
-            <StatsCard
-              title="Sobras"
-              value={loteSelecionado.itens.filter(i => i.status === 'Disponivel' && i.quantidade > 0).length}
-              icon={<Undo2 className="h-5 w-5" />}
-              valueClassName="text-success"
-            />
-            <StatsCard
-              title="Fornecedor"
-              value={getFornecedorNome(loteSelecionado.fornecedorId)}
-              icon={<Truck className="h-5 w-5" />}
-            />
-          </div>
-
-          {/* Peças Usadas */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Peças Usadas</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Peça</TableHead>
-                      <TableHead>Qtd Consumida</TableHead>
-                      <TableHead>Valor de Custo</TableHead>
-                      <TableHead>Loja</TableHead>
-                      <TableHead>OS</TableHead>
-                      <TableHead>Técnico</TableHead>
-                      <TableHead>Data</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(() => {
-                      const itensUsados = loteSelecionado.itens.filter(i => i.status === 'Consumido' || i.quantidade < i.quantidadeOriginal);
-                      if (itensUsados.length === 0) {
-                        return (
-                          <TableRow>
-                            <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">Nenhuma peça usada</TableCell>
-                          </TableRow>
-                        );
-                      }
-                      const totalCusto = itensUsados.reduce((acc, item) => {
-                        const qtdConsumida = item.quantidadeOriginal - item.quantidade || item.quantidadeOriginal;
-                        return acc + item.valorCusto * qtdConsumida;
-                      }, 0);
-                      return (
-                        <>
-                          {itensUsados.map(item => {
-                            const qtdConsumida = item.quantidadeOriginal - item.quantidade || item.quantidadeOriginal;
-                            return (
-                              <TableRow key={item.id}>
-                                <TableCell className="font-medium text-sm">{item.descricao}</TableCell>
-                                <TableCell className="text-sm">{qtdConsumida}</TableCell>
-                                <TableCell className="text-sm font-semibold">{formatCurrency(item.valorCusto * qtdConsumida)}</TableCell>
-                                <TableCell className="text-sm">{obterNomeLoja(item.lojaAtualId)}</TableCell>
-                                <TableCell className="font-mono text-sm">{item.osVinculada || '-'}</TableCell>
-                                <TableCell className="text-sm">{item.tecnicoConsumo || '-'}</TableCell>
-                                <TableCell className="text-sm">{item.dataConsumo ? new Date(item.dataConsumo).toLocaleDateString('pt-BR') : '-'}</TableCell>
-                              </TableRow>
-                            );
-                          })}
-                          <TableRow className="bg-muted/50 font-bold">
-                            <TableCell className="text-sm">Total</TableCell>
-                            <TableCell className="text-sm">-</TableCell>
-                            <TableCell className="text-sm font-bold text-destructive">{formatCurrency(totalCusto)}</TableCell>
-                            <TableCell colSpan={4} className="text-sm">-</TableCell>
-                          </TableRow>
-                        </>
-                      );
-                    })()}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Sobras para devolução */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Sobras para Devolução</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Peça</TableHead>
-                      <TableHead>Loja</TableHead>
-                      <TableHead>Qtd</TableHead>
-                      <TableHead>Valor de Custo</TableHead>
-                      <TableHead>Confirmação</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loteSelecionado.itens.filter(i => i.status === 'Disponivel' && i.quantidade > 0).map(item => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium text-sm">{item.descricao}</TableCell>
-                        <TableCell className="text-sm">{obterNomeLoja(item.lojaAtualId)}</TableCell>
-                        <TableCell className="text-sm">{item.quantidade}</TableCell>
-                        <TableCell className="text-sm">{formatCurrency(item.valorCusto * item.quantidade)}</TableCell>
-                        <TableCell>
-                          {confirmacoesDevolucao[item.id] ? (
-                            <div className="space-y-1">
-                              <Badge className="bg-green-500/15 text-green-600 border border-green-300">
-                                <CheckCircle className="h-3 w-3 mr-1" /> Confirmado
-                              </Badge>
-                              <p className="text-[10px] text-muted-foreground">
-                                {confirmacoesDevolucao[item.id].usuario} • {confirmacoesDevolucao[item.id].dataHora}
-                              </p>
-                            </div>
-                          ) : (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                  <PackageCheck className="h-3.5 w-3.5 mr-1" /> Confirmar Devolução
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Confirmar Devolução</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Você confirma a devolução física de <strong>{item.quantidade}x {item.descricao}</strong> ao fornecedor?
-                                    <br /><br />
-                                    <span className="text-xs text-muted-foreground">Responsável: {user?.colaborador?.nome || 'Sistema'} • {new Date().toLocaleString('pt-BR')}</span>
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => {
-                                    setConfirmacoesDevolucao(prev => ({
-                                      ...prev,
-                                      [item.id]: {
-                                        usuario: user?.colaborador?.nome || 'Sistema',
-                                        dataHora: new Date().toLocaleString('pt-BR'),
-                                      }
-                                    }));
-                                  }}>
-                                    Confirmar Devolução
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {loteSelecionado.itens.filter(i => i.status === 'Disponivel' && i.quantidade > 0).length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">Nenhuma sobra para devolução</TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Dados de pagamento */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Dados de Pagamento</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Forma de Pagamento *</Label>
-                  <Select value={acertoFormaPagamento} onValueChange={setAcertoFormaPagamento}>
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Pix">Pix</SelectItem>
-                      <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {acertoFormaPagamento === 'Pix' && (
-                  <>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Conta Bancária</Label>
-                      <Input value={acertoContaBancaria} onChange={e => setAcertoContaBancaria(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Nome do Recebedor</Label>
-                      <Input value={acertoNomeRecebedor} onChange={e => setAcertoNomeRecebedor(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Chave Pix</Label>
-                      <Input value={acertoChavePix} onChange={e => setAcertoChavePix(e.target.value)} />
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Observação *</Label>
-                <Textarea value={acertoObservacao} onChange={e => setAcertoObservacao(e.target.value)} placeholder="Observações sobre o acerto..." rows={3} />
-              </div>
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button variant="outline" onClick={voltar}>Cancelar</Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button disabled={!acertoFormaPagamento || !acertoObservacao}>
-                      <DollarSign className="h-4 w-4 mr-2" />
-                      Gerar Lote Financeiro
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirmar Acerto de Contas</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Deseja confirmar o acerto de contas do lote <strong>{loteSelecionado.id}</strong>?
-                        <br /><br />
-                        <strong>Valor a pagar:</strong> {formatCurrency(getValorConsumido(loteSelecionado))}
-                        <br />
-                        <strong>Forma de pagamento:</strong> {acertoFormaPagamento}
-                        <br /><br />
-                        <span className="text-xs text-muted-foreground">Esta ação não pode ser desfeita.</span>
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleConfirmarAcerto}>
-                        Confirmar Acerto
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </OSLayout>
-    );
-  }
-
   // ==================== VIEW: LISTA (padrão) ====================
   return (
     <OSLayout title="Consignação" icon={PackageCheck}>
@@ -755,26 +806,27 @@ export default function OSConsignacao() {
           icon={<DollarSign className="h-5 w-5" />}
         />
         <StatsCard
-          title="Valor Usado"
-          value={formatCurrency(stats.valorUsado)}
-          icon={<DollarSign className="h-5 w-5" />}
+          title="Total Já Pago"
+          value={formatCurrency(stats.totalPago)}
+          icon={<CheckCircle className="h-5 w-5" />}
+          valueClassName="text-green-600"
+        />
+        <StatsCard
+          title="A Pagar (Pendente)"
+          value={formatCurrency(stats.aPagar)}
+          icon={<Clock className="h-5 w-5" />}
           valueClassName="text-destructive"
         />
         <StatsCard
-          title="Total de Produtos"
-          value={stats.totalProdutos}
+          title="Saldo Disponível"
+          value={formatCurrency(stats.saldoDisponivel)}
           icon={<Package className="h-5 w-5" />}
+          valueClassName="text-blue-600"
         />
         <StatsCard
-          title="Total Consumidos"
-          value={stats.totalConsumidos}
-          icon={<CheckCircle className="h-5 w-5" />}
-        />
-        <StatsCard
-          title="Disponíveis"
-          value={stats.disponiveis}
-          icon={<PackageCheck className="h-5 w-5" />}
-          valueClassName="text-green-600"
+          title="Total Devoluções"
+          value={formatCurrency(stats.totalDevolucoes)}
+          icon={<Undo2 className="h-5 w-5" />}
         />
       </div>
 
@@ -791,7 +843,7 @@ export default function OSConsignacao() {
             <SelectContent>
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="Aberto">Aberto</SelectItem>
-              <SelectItem value="Em Acerto">Em Acerto</SelectItem>
+              <SelectItem value="Concluido">Concluído</SelectItem>
               <SelectItem value="Pago">Pago</SelectItem>
               <SelectItem value="Devolvido">Devolvido</SelectItem>
             </SelectContent>
@@ -835,7 +887,7 @@ export default function OSConsignacao() {
               </TableRow>
             ) : (
               lotesFiltrados.map(lote => {
-                const consumidos = lote.itens.filter(i => i.status === 'Consumido').length;
+                const consumidos = lote.itens.filter(i => ['Consumido', 'Em Pagamento', 'Pago'].includes(i.status)).length;
                 const disponiveis = lote.itens.filter(i => i.status === 'Disponivel').length;
                 const valorTotal = lote.itens.reduce((a, i) => a + i.valorCusto * i.quantidadeOriginal, 0);
                 const valorUsado = getValorConsumido(lote);
@@ -860,14 +912,9 @@ export default function OSConsignacao() {
                           <Eye className="h-4 w-4" />
                         </Button>
                         {lote.status === 'Aberto' && (
-                          <>
-                            <Button variant="ghost" size="sm" onClick={() => handleVerDossie(lote)} title="Editar Lote">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleIniciarAcerto(lote)} title="Iniciar Acerto">
-                              <DollarSign className="h-4 w-4 text-yellow-600" />
-                            </Button>
-                          </>
+                          <Button variant="ghost" size="sm" onClick={() => handleVerDossie(lote)} title="Editar Lote">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                         )}
                       </div>
                     </TableCell>
