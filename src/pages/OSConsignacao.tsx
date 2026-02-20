@@ -1,0 +1,658 @@
+import { useState, useMemo, useEffect } from 'react';
+import { OSLayout } from '@/components/layout/OSLayout';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
+import { AutocompleteLoja } from '@/components/AutocompleteLoja';
+import { useCadastroStore } from '@/store/cadastroStore';
+import { useAuthStore } from '@/store/authStore';
+import { getFornecedores } from '@/utils/cadastrosApi';
+import { formatCurrency } from '@/utils/formatUtils';
+import { setOnConsumoPecaConsignada } from '@/utils/pecasApi';
+import {
+  getLotesConsignacao, getLoteById, criarLoteConsignacao, iniciarAcertoContas,
+  confirmarDevolucaoItem, gerarLoteFinanceiro, getValorConsumido, finalizarAcerto,
+  registrarConsumoPorPecaId, transferirItemConsignacao,
+  LoteConsignacao, ItemConsignacao, CriarLoteInput,
+} from '@/utils/consignacaoApi';
+import { getNotasAssistencia, __pushNotaConsignacao } from '@/utils/solicitacaoPecasApi';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Plus, Eye, Trash2, Package, PackageCheck, Clock, DollarSign,
+  FileText, ArrowRightLeft, CheckCircle, AlertTriangle,
+} from 'lucide-react';
+
+export default function OSConsignacao() {
+  const { toast } = useToast();
+  const { obterNomeLoja, obterLojasTipoLoja } = useCadastroStore();
+  const user = useAuthStore(state => state.user);
+  const fornecedores = getFornecedores();
+  const lojas = obterLojasTipoLoja();
+
+  const [lotes, setLotes] = useState<LoteConsignacao[]>(getLotesConsignacao());
+  const [showNovoModal, setShowNovoModal] = useState(false);
+  const [showDossieModal, setShowDossieModal] = useState(false);
+  const [showAcertoModal, setShowAcertoModal] = useState(false);
+  const [loteSelecionado, setLoteSelecionado] = useState<LoteConsignacao | null>(null);
+
+  // Registrar callback de consumo
+  useEffect(() => {
+    setOnConsumoPecaConsignada(registrarConsumoPorPecaId);
+  }, []);
+
+  // Novo lote state
+  const [novoFornecedor, setNovoFornecedor] = useState('');
+  const [novoItens, setNovoItens] = useState<{ descricao: string; modelo: string; quantidade: string; valorCusto: string; lojaDestinoId: string }[]>([
+    { descricao: '', modelo: '', quantidade: '1', valorCusto: '', lojaDestinoId: '' },
+  ]);
+
+  // Acerto state
+  const [acertoFormaPagamento, setAcertoFormaPagamento] = useState('');
+  const [acertoContaBancaria, setAcertoContaBancaria] = useState('');
+  const [acertoNomeRecebedor, setAcertoNomeRecebedor] = useState('');
+  const [acertoChavePix, setAcertoChavePix] = useState('');
+  const [acertoObservacao, setAcertoObservacao] = useState('');
+
+  const refreshLotes = () => setLotes(getLotesConsignacao());
+
+  const getFornecedorNome = (id: string) => fornecedores.find(f => f.id === id)?.nome || id;
+
+  // Stats
+  const stats = useMemo(() => {
+    const abertos = lotes.filter(l => l.status === 'Aberto').length;
+    const emAcerto = lotes.filter(l => l.status === 'Em Acerto').length;
+    const pecasDisponiveis = lotes.filter(l => l.status === 'Aberto')
+      .reduce((acc, l) => acc + l.itens.filter(i => i.status === 'Disponivel').reduce((a, i) => a + i.quantidade, 0), 0);
+    const valorTotal = lotes.filter(l => l.status === 'Aberto' || l.status === 'Em Acerto')
+      .reduce((acc, l) => acc + l.itens.reduce((a, i) => a + i.valorCusto * i.quantidadeOriginal, 0), 0);
+    return { abertos, emAcerto, pecasDisponiveis, valorTotal };
+  }, [lotes]);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Aberto': return <Badge className="bg-blue-500 hover:bg-blue-600 text-white">Aberto</Badge>;
+      case 'Em Acerto': return <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white">Em Acerto</Badge>;
+      case 'Pago': return <Badge className="bg-green-500 hover:bg-green-600 text-white">Pago</Badge>;
+      case 'Devolvido': return <Badge className="bg-gray-500 hover:bg-gray-600 text-white">Devolvido</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const getItemStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Disponivel': return <Badge className="bg-green-500/15 text-green-600 border border-green-300">Disponível</Badge>;
+      case 'Consumido': return <Badge className="bg-red-500/15 text-red-600 border border-red-300">Consumido</Badge>;
+      case 'Devolvido': return <Badge className="bg-gray-500/15 text-gray-600 border border-gray-300">Devolvido</Badge>;
+      case 'Em Acerto': return <Badge className="bg-yellow-500/15 text-yellow-600 border border-yellow-300">Em Acerto</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  // Novo lote handlers
+  const addItemRow = () => setNovoItens([...novoItens, { descricao: '', modelo: '', quantidade: '1', valorCusto: '', lojaDestinoId: '' }]);
+  const removeItemRow = (idx: number) => setNovoItens(novoItens.filter((_, i) => i !== idx));
+  const updateItemRow = (idx: number, field: string, value: string) => {
+    const updated = [...novoItens];
+    (updated[idx] as any)[field] = value;
+    setNovoItens(updated);
+  };
+
+  const valorTotalNovo = novoItens.reduce((acc, item) => {
+    const val = parseFloat(item.valorCusto.replace(/\D/g, '')) / 100 || 0;
+    const qty = parseInt(item.quantidade) || 0;
+    return acc + val * qty;
+  }, 0);
+
+  const handleCriarLote = () => {
+    if (!novoFornecedor) {
+      toast({ title: 'Erro', description: 'Selecione um fornecedor', variant: 'destructive' });
+      return;
+    }
+    const itensValidos = novoItens.filter(i => i.descricao && i.lojaDestinoId && i.valorCusto);
+    if (itensValidos.length === 0) {
+      toast({ title: 'Erro', description: 'Adicione ao menos um item válido', variant: 'destructive' });
+      return;
+    }
+
+    const input: CriarLoteInput = {
+      fornecedorId: novoFornecedor,
+      responsavel: user?.colaborador?.nome || 'Sistema',
+      itens: itensValidos.map(i => ({
+        descricao: i.descricao,
+        modelo: i.modelo,
+        quantidade: parseInt(i.quantidade) || 1,
+        valorCusto: parseFloat(i.valorCusto.replace(/\D/g, '')) / 100,
+        lojaDestinoId: i.lojaDestinoId,
+      })),
+    };
+
+    const lote = criarLoteConsignacao(input);
+    refreshLotes();
+    setShowNovoModal(false);
+    setNovoFornecedor('');
+    setNovoItens([{ descricao: '', modelo: '', quantidade: '1', valorCusto: '', lojaDestinoId: '' }]);
+    toast({ title: 'Lote criado', description: `${lote.id} cadastrado com ${lote.itens.length} item(s)` });
+  };
+
+  const handleVerDossie = (lote: LoteConsignacao) => {
+    setLoteSelecionado(getLoteById(lote.id) || lote);
+    setShowDossieModal(true);
+  };
+
+  const handleIniciarAcerto = (lote: LoteConsignacao) => {
+    setLoteSelecionado(getLoteById(lote.id) || lote);
+    setAcertoFormaPagamento('');
+    setAcertoContaBancaria('');
+    setAcertoNomeRecebedor('');
+    setAcertoChavePix('');
+    setAcertoObservacao('');
+    setShowAcertoModal(true);
+  };
+
+  const handleConfirmarAcerto = () => {
+    if (!loteSelecionado) return;
+    iniciarAcertoContas(loteSelecionado.id, user?.colaborador?.nome || 'Sistema');
+    
+    const nota = gerarLoteFinanceiro(loteSelecionado.id, {
+      formaPagamento: acertoFormaPagamento,
+      contaBancaria: acertoContaBancaria,
+      nomeRecebedor: acertoNomeRecebedor,
+      chavePix: acertoChavePix,
+      observacao: acertoObservacao,
+    });
+
+    if (nota) {
+      __pushNotaConsignacao(nota);
+    }
+
+    refreshLotes();
+    setShowAcertoModal(false);
+    toast({ title: 'Acerto iniciado', description: `Lote ${loteSelecionado.id} em acerto. Nota financeira gerada.` });
+  };
+
+  const handleConfirmarDevolucao = (loteId: string, itemId: string) => {
+    confirmarDevolucaoItem(loteId, itemId, user?.colaborador?.nome || 'Sistema');
+    setLoteSelecionado(getLoteById(loteId) || null);
+    refreshLotes();
+    toast({ title: 'Devolvido', description: 'Item devolvido e removido do estoque' });
+  };
+
+  const formatCurrencyInput = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    const amount = parseInt(numbers || '0') / 100;
+    return amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  };
+
+  return (
+    <OSLayout title="Consignação" icon={PackageCheck}>
+      {/* Dashboard Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Lotes Abertos</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.abertos}</p>
+              </div>
+              <Package className="h-8 w-8 text-blue-600 opacity-40" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Peças Disponíveis</p>
+                <p className="text-2xl font-bold text-green-600">{stats.pecasDisponiveis}</p>
+              </div>
+              <PackageCheck className="h-8 w-8 text-green-600 opacity-40" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Valor em Consignação</p>
+                <p className="text-2xl font-bold">{formatCurrency(stats.valorTotal)}</p>
+              </div>
+              <DollarSign className="h-8 w-8 text-muted-foreground opacity-40" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">Em Acerto</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.emAcerto}</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-yellow-600 opacity-40" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Ações */}
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => setShowNovoModal(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Lote de Consignação
+        </Button>
+      </div>
+
+      {/* Tabela de Lotes */}
+      <div className="rounded-md border overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Fornecedor</TableHead>
+              <TableHead>Data Criação</TableHead>
+              <TableHead>Qtd Itens</TableHead>
+              <TableHead>Valor Total</TableHead>
+              <TableHead>Consumidos</TableHead>
+              <TableHead>Disponíveis</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {lotes.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  Nenhum lote de consignação cadastrado
+                </TableCell>
+              </TableRow>
+            ) : (
+              lotes.map(lote => {
+                const consumidos = lote.itens.filter(i => i.status === 'Consumido').length;
+                const disponiveis = lote.itens.filter(i => i.status === 'Disponivel').length;
+                const valorTotal = lote.itens.reduce((a, i) => a + i.valorCusto * i.quantidadeOriginal, 0);
+                return (
+                  <TableRow key={lote.id}>
+                    <TableCell className="font-mono text-xs font-medium">{lote.id}</TableCell>
+                    <TableCell>{getFornecedorNome(lote.fornecedorId)}</TableCell>
+                    <TableCell className="text-xs">{new Date(lote.dataCriacao).toLocaleDateString('pt-BR')}</TableCell>
+                    <TableCell>{lote.itens.length}</TableCell>
+                    <TableCell className="font-semibold">{formatCurrency(valorTotal)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-red-50 dark:bg-red-950/20 text-red-600">{consumidos}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-green-50 dark:bg-green-950/20 text-green-600">{disponiveis}</Badge>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(lote.status)}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => handleVerDossie(lote)} title="Ver Dossiê">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        {lote.status === 'Aberto' && (
+                          <Button variant="ghost" size="sm" onClick={() => handleIniciarAcerto(lote)} title="Iniciar Acerto">
+                            <DollarSign className="h-4 w-4 text-yellow-600" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Modal Novo Lote */}
+      <Dialog open={showNovoModal} onOpenChange={setShowNovoModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Novo Lote de Consignação
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Fornecedor *</Label>
+                <AutocompleteFornecedor value={novoFornecedor} onChange={setNovoFornecedor} placeholder="Selecione..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Responsável</Label>
+                <Input value={user?.colaborador?.nome || 'Sistema'} disabled className="bg-muted" />
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-semibold">Itens do Lote</h3>
+                <Button variant="outline" size="sm" onClick={addItemRow}>
+                  <Plus className="h-4 w-4 mr-1" /> Adicionar Item
+                </Button>
+              </div>
+              <div className="space-y-3">
+                {novoItens.map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-6 gap-2 items-end p-3 bg-muted/30 rounded-lg">
+                    <div className="col-span-2 space-y-1">
+                      <Label className="text-xs">Descrição *</Label>
+                      <Input value={item.descricao} onChange={e => updateItemRow(idx, 'descricao', e.target.value)} placeholder="Ex: Tela LCD iPhone 14" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Modelo</Label>
+                      <Input value={item.modelo} onChange={e => updateItemRow(idx, 'modelo', e.target.value)} placeholder="iPhone 14" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Qtd</Label>
+                      <Input type="number" min="1" value={item.quantidade} onChange={e => updateItemRow(idx, 'quantidade', e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Valor Custo *</Label>
+                      <Input value={item.valorCusto} onChange={e => updateItemRow(idx, 'valorCusto', formatCurrencyInput(e.target.value))} placeholder="R$ 0,00" />
+                    </div>
+                    <div className="flex items-end gap-1">
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-xs">Loja *</Label>
+                        <AutocompleteLoja value={item.lojaDestinoId} onChange={v => updateItemRow(idx, 'lojaDestinoId', v)} apenasLojasTipoLoja placeholder="Loja" />
+                      </div>
+                      {novoItens.length > 1 && (
+                        <Button variant="ghost" size="sm" onClick={() => removeItemRow(idx)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 p-3 bg-muted rounded-lg flex justify-between items-center">
+                <span className="font-medium">Valor Total do Lote:</span>
+                <span className="text-lg font-bold">{formatCurrency(valorTotalNovo)}</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNovoModal(false)}>Cancelar</Button>
+            <Button onClick={handleCriarLote}>
+              <PackageCheck className="h-4 w-4 mr-2" />
+              Cadastrar Lote
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Dossiê */}
+      <Dialog open={showDossieModal} onOpenChange={setShowDossieModal}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Dossiê do Lote {loteSelecionado?.id}
+              {loteSelecionado && <span className="ml-2">{getStatusBadge(loteSelecionado.status)}</span>}
+            </DialogTitle>
+          </DialogHeader>
+          {loteSelecionado && (
+            <div className="space-y-4">
+              {/* Cabeçalho */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-3 bg-muted rounded-lg text-sm">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Fornecedor</Label>
+                  <p className="font-medium">{getFornecedorNome(loteSelecionado.fornecedorId)}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Data Criação</Label>
+                  <p>{new Date(loteSelecionado.dataCriacao).toLocaleDateString('pt-BR')}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Responsável</Label>
+                  <p>{loteSelecionado.responsavelCadastro}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Valor Consumido</Label>
+                  <p className="font-bold text-red-600">{formatCurrency(getValorConsumido(loteSelecionado))}</p>
+                </div>
+              </div>
+
+              <Tabs defaultValue="inventario">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="inventario">Inventário</TabsTrigger>
+                  <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                  <TabsTrigger value="devolucao">Devolução</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="inventario">
+                  <div className="rounded-md border overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>ID</TableHead>
+                          <TableHead>Descrição</TableHead>
+                          <TableHead>Modelo</TableHead>
+                          <TableHead>Qtd Orig.</TableHead>
+                          <TableHead>Qtd Atual</TableHead>
+                          <TableHead>Valor</TableHead>
+                          <TableHead>Loja</TableHead>
+                          <TableHead>OS</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {loteSelecionado.itens.map(item => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-mono text-xs">{item.id}</TableCell>
+                            <TableCell className="font-medium">{item.descricao}</TableCell>
+                            <TableCell className="text-xs">{item.modelo}</TableCell>
+                            <TableCell>{item.quantidadeOriginal}</TableCell>
+                            <TableCell className="font-bold">{item.quantidade}</TableCell>
+                            <TableCell>{formatCurrency(item.valorCusto)}</TableCell>
+                            <TableCell className="text-xs">{obterNomeLoja(item.lojaAtualId)}</TableCell>
+                            <TableCell className="font-mono text-xs">{item.osVinculada || '-'}</TableCell>
+                            <TableCell>{getItemStatusBadge(item.status)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="timeline">
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {loteSelecionado.timeline.map((entry, idx) => (
+                      <div key={idx} className="flex gap-3 p-3 bg-muted/30 rounded-lg">
+                        <div className="flex-shrink-0 mt-1">
+                          {entry.tipo === 'entrada' && <Package className="h-4 w-4 text-blue-500" />}
+                          {entry.tipo === 'consumo' && <CheckCircle className="h-4 w-4 text-red-500" />}
+                          {entry.tipo === 'transferencia' && <ArrowRightLeft className="h-4 w-4 text-purple-500" />}
+                          {entry.tipo === 'acerto' && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                          {entry.tipo === 'devolucao' && <PackageCheck className="h-4 w-4 text-gray-500" />}
+                          {entry.tipo === 'pagamento' && <DollarSign className="h-4 w-4 text-green-500" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm">{entry.descricao}</p>
+                          <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                            <span>{new Date(entry.data).toLocaleString('pt-BR')}</span>
+                            <span>• {entry.responsavel}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="devolucao">
+                  <div className="space-y-3">
+                    {loteSelecionado.itens.filter(i => i.status !== 'Consumido').map(item => (
+                      <div key={item.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <div>
+                          <p className="font-medium">{item.descricao}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.quantidade} un. restante(s) • {obterNomeLoja(item.lojaAtualId)}
+                          </p>
+                          {item.status === 'Devolvido' && (
+                            <p className="text-xs text-green-600 mt-1">
+                              ✓ Devolvido por {item.devolvidoPor} em {new Date(item.dataDevolucao!).toLocaleString('pt-BR')}
+                            </p>
+                          )}
+                        </div>
+                        {item.status !== 'Devolvido' && item.quantidade > 0 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleConfirmarDevolucao(loteSelecionado.id, item.id)}
+                          >
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Confirmar Devolução
+                          </Button>
+                        )}
+                        {item.status === 'Devolvido' && (
+                          <Badge className="bg-gray-500/15 text-gray-600">Devolvido</Badge>
+                        )}
+                      </div>
+                    ))}
+                    {loteSelecionado.itens.filter(i => i.status !== 'Consumido').length === 0 && (
+                      <p className="text-center text-muted-foreground py-4">Todas as peças foram consumidas</p>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDossieModal(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Acerto de Contas */}
+      <Dialog open={showAcertoModal} onOpenChange={setShowAcertoModal}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-yellow-600" />
+              Iniciar Acerto de Contas - {loteSelecionado?.id}
+            </DialogTitle>
+          </DialogHeader>
+          {loteSelecionado && (
+            <div className="space-y-4">
+              {/* Resumo */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground">Itens Consumidos</p>
+                    <p className="text-2xl font-bold text-red-600">
+                      {loteSelecionado.itens.filter(i => i.status === 'Consumido' || i.quantidade < i.quantidadeOriginal).length}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <p className="text-xs text-muted-foreground">Valor a Pagar</p>
+                    <p className="text-2xl font-bold">{formatCurrency(getValorConsumido(loteSelecionado))}</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Itens consumidos */}
+              <div>
+                <h4 className="font-semibold mb-2">Itens Consumidos</h4>
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Peça</TableHead>
+                        <TableHead>Qtd Consumida</TableHead>
+                        <TableHead>Valor</TableHead>
+                        <TableHead>OS</TableHead>
+                        <TableHead>Técnico</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loteSelecionado.itens
+                        .filter(i => i.status === 'Consumido' || i.quantidade < i.quantidadeOriginal)
+                        .map(item => (
+                          <TableRow key={item.id}>
+                            <TableCell>{item.descricao}</TableCell>
+                            <TableCell>{item.quantidadeOriginal - item.quantidade || item.quantidadeOriginal}</TableCell>
+                            <TableCell>{formatCurrency(item.valorCusto * (item.quantidadeOriginal - item.quantidade || item.quantidadeOriginal))}</TableCell>
+                            <TableCell className="font-mono text-xs">{item.osVinculada || '-'}</TableCell>
+                            <TableCell className="text-xs">{item.tecnicoConsumo || '-'}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Itens para devolução */}
+              <div>
+                <h4 className="font-semibold mb-2">Sobras para Devolução</h4>
+                <div className="space-y-2">
+                  {loteSelecionado.itens.filter(i => i.status === 'Disponivel' && i.quantidade > 0).map(item => (
+                    <div key={item.id} className="p-2 bg-muted/30 rounded text-sm flex justify-between">
+                      <span>{item.descricao}</span>
+                      <span>{item.quantidade} un.</span>
+                    </div>
+                  ))}
+                  {loteSelecionado.itens.filter(i => i.status === 'Disponivel' && i.quantidade > 0).length === 0 && (
+                    <p className="text-xs text-muted-foreground">Nenhuma sobra para devolução</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Dados de pagamento */}
+              <div className="border-t pt-4 space-y-4">
+                <h4 className="font-semibold">Dados de Pagamento</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Forma de Pagamento *</Label>
+                    <Select value={acertoFormaPagamento} onValueChange={setAcertoFormaPagamento}>
+                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Pix">Pix</SelectItem>
+                        <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {acertoFormaPagamento === 'Pix' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Conta Bancária</Label>
+                        <Input value={acertoContaBancaria} onChange={e => setAcertoContaBancaria(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nome do Recebedor</Label>
+                        <Input value={acertoNomeRecebedor} onChange={e => setAcertoNomeRecebedor(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Chave Pix</Label>
+                        <Input value={acertoChavePix} onChange={e => setAcertoChavePix(e.target.value)} />
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Observação *</Label>
+                  <Textarea value={acertoObservacao} onChange={e => setAcertoObservacao(e.target.value)} placeholder="Observações sobre o acerto..." />
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAcertoModal(false)}>Cancelar</Button>
+            <Button onClick={handleConfirmarAcerto} disabled={!acertoFormaPagamento || !acertoObservacao}>
+              <DollarSign className="h-4 w-4 mr-2" />
+              Gerar Lote Financeiro
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </OSLayout>
+  );
+}

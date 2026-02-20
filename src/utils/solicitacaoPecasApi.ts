@@ -1,6 +1,7 @@
 // Solicitação de Peças API - Mock Data
 import { getOrdemServicoById, updateOrdemServico } from './assistenciaApi';
 import { addDespesa } from './financeApi';
+import { finalizarAcerto } from './consignacaoApi';
 export interface SolicitacaoPeca {
   id: string;
   osId: string;
@@ -77,6 +78,7 @@ export interface NotaAssistencia {
   nomeRecebedor?: string;
   chavePixEncaminhamento?: string;
   observacaoEncaminhamento?: string;
+  tipoConsignacao?: boolean;
 }
 
 // Helper to resolve origemEntrada from OS
@@ -321,6 +323,11 @@ export const getNotasAssistencia = () => [...notasAssistencia];
 export const getNotasAssistenciaPendentes = () => notasAssistencia.filter(n => n.status === 'Pendente');
 export const getLotesPagamento = () => [...lotesPagamento];
 export const getSolicitacaoById = (id: string) => solicitacoes.find(s => s.id === id) || null;
+
+// Helper para injetar nota de consignação (chamado pela consignacaoApi)
+export const __pushNotaConsignacao = (nota: NotaAssistencia) => {
+  notasAssistencia.push(nota);
+};
 
 // Actions
 export const addSolicitacao = (data: Omit<SolicitacaoPeca, 'id' | 'dataSolicitacao' | 'status'>): SolicitacaoPeca => {
@@ -626,6 +633,10 @@ export const finalizarNotaAssistencia = (notaId: string, dados: {
     periodicidade: null,
     pagoPor: dados.responsavelFinanceiro
   });
+  // Se nota de consignação, finalizar acerto do lote
+  if (nota.tipoConsignacao && nota.loteId) {
+    finalizarAcerto(nota.loteId);
+  }
   
   return notasAssistencia[notaIndex];
 };

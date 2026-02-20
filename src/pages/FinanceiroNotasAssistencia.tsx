@@ -18,7 +18,7 @@ import {
 } from '@/utils/solicitacaoPecasApi';
 import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
 import { getOrdemServicoById, updateOrdemServico } from '@/utils/assistenciaApi';
-import { Eye, Check, Download, Filter, X, FileText, Clock, CheckCircle, DollarSign, Package } from 'lucide-react';
+import { Eye, Check, Download, Filter, X, FileText, Clock, CheckCircle, DollarSign, Package, PackageCheck } from 'lucide-react';
 import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { toast } from 'sonner';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -317,7 +317,12 @@ export default function FinanceiroNotasAssistencia() {
                           <TableCell>{obterNomeLoja(nota.lojaSolicitante)}</TableCell>
                           <TableCell className="font-mono text-xs">{nota.osId || '-'}</TableCell>
                           <TableCell>
-                            {nota.loteId ? (
+                            {nota.tipoConsignacao ? (
+                              <Badge className="bg-violet-500/15 text-violet-600 border border-violet-300 dark:border-violet-700 inline-flex items-center gap-1">
+                                <PackageCheck className="h-3 w-3" />
+                                Consignação
+                              </Badge>
+                            ) : nota.loteId ? (
                               <Badge className="bg-indigo-500/15 text-indigo-600 border border-indigo-300 dark:border-indigo-700 inline-flex items-center gap-1">
                                 <Package className="h-3 w-3" />
                                 Lote Agrupado

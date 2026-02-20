@@ -22,8 +22,9 @@ export interface Peca {
   valorRecomendado: number;
   quantidade: number;
   dataEntrada: string;
-  origem: 'Nota de Compra' | 'Manual' | 'Produto Thiago' | 'Solicitação' | 'Solicitação Cancelada' | 'Retirada de Peça';
+  origem: 'Nota de Compra' | 'Manual' | 'Produto Thiago' | 'Solicitação' | 'Solicitação Cancelada' | 'Retirada de Peça' | 'Consignacao';
   notaCompraId?: string;
+  loteConsignacaoId?: string;
   status: 'Disponível' | 'Reservada' | 'Utilizada';
 }
 
@@ -255,8 +256,15 @@ export const deletePeca = (id: string): boolean => {
   return true;
 };
 
+// Callback para registrar consumo de consignação (set externamente para evitar import circular)
+let onConsumoPecaConsignada: ((pecaId: string, osId: string, tecnico: string, quantidade: number) => void) | null = null;
+
+export const setOnConsumoPecaConsignada = (cb: (pecaId: string, osId: string, tecnico: string, quantidade: number) => void) => {
+  onConsumoPecaConsignada = cb;
+};
+
 // Dar baixa em peça do estoque (decrementar quantidade ou marcar como utilizada)
-export const darBaixaPeca = (id: string, quantidade: number = 1, osId?: string): { sucesso: boolean; mensagem: string } => {
+export const darBaixaPeca = (id: string, quantidade: number = 1, osId?: string, tecnico?: string): { sucesso: boolean; mensagem: string } => {
   const peca = pecas.find(p => p.id === id);
   
   if (!peca) {
@@ -290,6 +298,11 @@ export const darBaixaPeca = (id: string, quantidade: number = 1, osId?: string):
     descricao: `Baixa para OS${osId ? ` ${osId}` : ''} - ${peca.descricao}`
   });
   
+  // Se peça consignada, registrar consumo no dossiê
+  if (peca.loteConsignacaoId && onConsumoPecaConsignada && osId) {
+    onConsumoPecaConsignada(id, osId, tecnico || 'Sistema', quantidade);
+  }
+
   return { sucesso: true, mensagem: `Baixa de ${quantidade} unidade(s) de ${peca.descricao} realizada com sucesso` };
 };
 

@@ -108,6 +108,8 @@ export default function OSPecas() {
         return <Badge variant="outline" className="border-green-500 text-green-600">Solicitação</Badge>;
       case 'Retirada de Peça':
         return <Badge variant="outline" className="border-orange-500 text-orange-600 bg-orange-50 dark:bg-orange-950/30">Retirada de Peça</Badge>;
+      case 'Consignacao':
+        return <Badge variant="outline" className="border-violet-500 text-violet-600 bg-violet-50 dark:bg-violet-950/30 font-bold">CONSIGNADO</Badge>;
       default:
         return <Badge variant="outline">{origem}</Badge>;
     }
@@ -262,6 +264,7 @@ export default function OSPecas() {
                   <SelectItem value="Produto Thiago">Produto Thiago</SelectItem>
                   <SelectItem value="Solicitação">Solicitação</SelectItem>
                   <SelectItem value="Retirada de Peça">Retirada de Peça</SelectItem>
+                  <SelectItem value="Consignacao">Consignação</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -307,7 +310,12 @@ export default function OSPecas() {
             {pecasFiltradas.map(peca => (
               <TableRow key={peca.id}>
                 <TableCell className="font-mono text-xs">{peca.id}</TableCell>
-                <TableCell className="font-medium">{peca.descricao}</TableCell>
+                <TableCell className="font-medium">
+                  {peca.descricao}
+                  {peca.origem === 'Consignacao' && (
+                    <Badge className="ml-2 bg-violet-500/15 text-violet-600 border border-violet-300 text-[10px] font-bold">CONSIGNADO</Badge>
+                  )}
+                </TableCell>
                 <TableCell className="text-xs">{getLojaNome(peca.lojaId)}</TableCell>
                 <TableCell className="text-xs">{peca.modelo}</TableCell>
                 <TableCell>{formatCurrency(peca.valorCusto)}</TableCell>
@@ -390,6 +398,12 @@ export default function OSPecas() {
                   <Label className="text-xs text-muted-foreground">Origem</Label>
                   <div className="mt-1">{getOrigemBadge(pecaSelecionada.origem)}</div>
                 </div>
+                {pecaSelecionada.loteConsignacaoId && (
+                  <div className="col-span-2">
+                    <Label className="text-xs text-muted-foreground">Lote Consignação</Label>
+                    <p className="font-mono font-medium text-violet-600">{pecaSelecionada.loteConsignacaoId}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
