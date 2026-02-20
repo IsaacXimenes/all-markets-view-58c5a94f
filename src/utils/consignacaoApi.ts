@@ -1,5 +1,5 @@
 // API para gestão de Peças em Consignação
-import { addPeca, getPecaById, darBaixaPeca, deletePeca } from './pecasApi';
+import { addPeca, getPecaById, darBaixaPeca, deletePeca, updatePeca } from './pecasApi';
 import { NotaAssistencia } from './solicitacaoPecasApi';
 
 export interface TimelineConsignacao {
@@ -203,6 +203,9 @@ export const iniciarAcertoContas = (loteId: string, responsavel: string): boolea
   lote.itens.forEach(item => {
     if (item.status === 'Disponivel') {
       item.status = 'Em Acerto';
+      if (item.pecaId) {
+        updatePeca(item.pecaId, { status: 'Reservada' });
+      }
     }
   });
 
@@ -238,9 +241,9 @@ export const confirmarDevolucaoItem = (loteId: string, itemId: string, responsav
   item.devolvidoPor = responsavel;
   item.dataDevolucao = new Date().toISOString();
 
-  // Remover do estoque
+  // Manter no estoque como histórico (indisponível)
   if (item.pecaId) {
-    deletePeca(item.pecaId);
+    updatePeca(item.pecaId, { status: 'Utilizada', quantidade: 0 });
   }
 
   lote.timeline.push({

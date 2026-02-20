@@ -264,7 +264,7 @@ export default function OSPecas() {
                   <SelectItem value="Produto Thiago">Produto Thiago</SelectItem>
                   <SelectItem value="Solicitação">Solicitação</SelectItem>
                   <SelectItem value="Retirada de Peça">Retirada de Peça</SelectItem>
-                  <SelectItem value="Consignacao">Consignação</SelectItem>
+                  <SelectItem value="Consignacao">Consignado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -312,9 +312,6 @@ export default function OSPecas() {
                 <TableCell className="font-mono text-xs">{peca.id}</TableCell>
                 <TableCell className="font-medium">
                   {peca.descricao}
-                  {peca.origem === 'Consignacao' && (
-                    <Badge className="ml-2 bg-violet-500/15 text-violet-600 border border-violet-300 text-[10px] font-bold">CONSIGNADO</Badge>
-                  )}
                 </TableCell>
                 <TableCell className="text-xs">{getLojaNome(peca.lojaId)}</TableCell>
                 <TableCell className="text-xs">{peca.modelo}</TableCell>

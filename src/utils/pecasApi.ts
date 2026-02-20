@@ -34,6 +34,7 @@ export interface Peca {
 // Os IDs de loja serão inicializados dinamicamente para corresponder aos UUIDs do CadastroStore
 // A função initializePecasWithLojaIds deve ser chamada após o CadastroStore ser inicializado
 let pecas: Peca[] = [];
+let pecasBaseInitialized = false;
 
 // Dados base das peças (sem lojaId definido)
 const pecasBase: Omit<Peca, 'lojaId'>[] = [
@@ -190,22 +191,26 @@ const pecasBase: Omit<Peca, 'lojaId'>[] = [
 
 // Função para inicializar peças com IDs de loja válidos do CadastroStore
 export const initializePecasWithLojaIds = (lojaIds: string[]): void => {
-  if (pecas.length > 0) return; // Já inicializado
+  if (pecasBaseInitialized) return;
+  pecasBaseInitialized = true;
   
-  pecas = pecasBase.map((peca, index) => ({
+  const pecasBase_mapped = pecasBase.map((peca, index) => ({
     ...peca,
     lojaId: lojaIds[index % lojaIds.length] || lojaIds[0] || ''
   }));
 
-  // Criar movimentações de entrada iniciais
-  movimentacoesPecas = pecas.map((peca) => ({
+  // Merge: manter peças consignadas já adicionadas + peças base
+  pecas = [...pecas, ...pecasBase_mapped];
+
+  // Criar movimentações de entrada iniciais para peças base
+  movimentacoesPecas = [...movimentacoesPecas, ...pecasBase_mapped.map((peca) => ({
     id: `MOV-${String(nextMovId++).padStart(4, '0')}`,
     pecaId: peca.id,
     tipo: 'Entrada' as const,
     quantidade: peca.quantidade,
     data: peca.dataEntrada,
     descricao: `Entrada inicial - ${peca.origem}${peca.notaCompraId ? ` (${peca.notaCompraId})` : ''}`
-  }));
+  }))];
 };
 
 let nextPecaId = 14;

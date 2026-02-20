@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -59,6 +60,7 @@ export default function OSConsignacao() {
   const [acertoNomeRecebedor, setAcertoNomeRecebedor] = useState('');
   const [acertoChavePix, setAcertoChavePix] = useState('');
   const [acertoObservacao, setAcertoObservacao] = useState('');
+  const [confirmacoesDevolucao, setConfirmacoesDevolucao] = useState<Record<string, { usuario: string; dataHora: string }>>({});
 
   const refreshLotes = () => setLotes(getLotesConsignacao());
 
@@ -185,7 +187,7 @@ export default function OSConsignacao() {
     confirmarDevolucaoItem(loteId, itemId, user?.colaborador?.nome || 'Sistema');
     setLoteSelecionado(getLoteById(loteId) || null);
     refreshLotes();
-    toast({ title: 'Devolvido', description: 'Item devolvido e removido do estoque' });
+    toast({ title: 'Devolvido', description: 'Item devolvido. Registro mantido no histórico do estoque.' });
   };
 
   const formatCurrencyInput = (value: string) => {
@@ -493,10 +495,10 @@ export default function OSConsignacao() {
             </Card>
           </div>
 
-          {/* Itens consumidos */}
+          {/* Peças Usadas */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Itens Consumidos</CardTitle>
+              <CardTitle className="text-base">Peças Usadas</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
@@ -505,30 +507,52 @@ export default function OSConsignacao() {
                     <TableRow>
                       <TableHead>Peça</TableHead>
                       <TableHead>Qtd Consumida</TableHead>
-                      <TableHead>Valor</TableHead>
+                      <TableHead>Valor de Custo</TableHead>
+                      <TableHead>Loja</TableHead>
                       <TableHead>OS</TableHead>
                       <TableHead>Técnico</TableHead>
                       <TableHead>Data</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {loteSelecionado.itens
-                      .filter(i => i.status === 'Consumido' || i.quantidade < i.quantidadeOriginal)
-                      .map(item => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.descricao}</TableCell>
-                          <TableCell>{item.quantidadeOriginal - item.quantidade || item.quantidadeOriginal}</TableCell>
-                          <TableCell className="font-semibold">{formatCurrency(item.valorCusto * (item.quantidadeOriginal - item.quantidade || item.quantidadeOriginal))}</TableCell>
-                          <TableCell className="font-mono text-xs">{item.osVinculada || '-'}</TableCell>
-                          <TableCell className="text-xs">{item.tecnicoConsumo || '-'}</TableCell>
-                          <TableCell className="text-xs">{item.dataConsumo ? new Date(item.dataConsumo).toLocaleDateString('pt-BR') : '-'}</TableCell>
-                        </TableRow>
-                      ))}
-                    {loteSelecionado.itens.filter(i => i.status === 'Consumido' || i.quantidade < i.quantidadeOriginal).length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-4 text-muted-foreground">Nenhum item consumido</TableCell>
-                      </TableRow>
-                    )}
+                    {(() => {
+                      const itensUsados = loteSelecionado.itens.filter(i => i.status === 'Consumido' || i.quantidade < i.quantidadeOriginal);
+                      if (itensUsados.length === 0) {
+                        return (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">Nenhuma peça usada</TableCell>
+                          </TableRow>
+                        );
+                      }
+                      const totalCusto = itensUsados.reduce((acc, item) => {
+                        const qtdConsumida = item.quantidadeOriginal - item.quantidade || item.quantidadeOriginal;
+                        return acc + item.valorCusto * qtdConsumida;
+                      }, 0);
+                      return (
+                        <>
+                          {itensUsados.map(item => {
+                            const qtdConsumida = item.quantidadeOriginal - item.quantidade || item.quantidadeOriginal;
+                            return (
+                              <TableRow key={item.id}>
+                                <TableCell className="font-medium">{item.descricao}</TableCell>
+                                <TableCell>{qtdConsumida}</TableCell>
+                                <TableCell className="font-semibold">{formatCurrency(item.valorCusto * qtdConsumida)}</TableCell>
+                                <TableCell className="text-xs">{obterNomeLoja(item.lojaAtualId)}</TableCell>
+                                <TableCell className="font-mono text-xs">{item.osVinculada || '-'}</TableCell>
+                                <TableCell className="text-xs">{item.tecnicoConsumo || '-'}</TableCell>
+                                <TableCell className="text-xs">{item.dataConsumo ? new Date(item.dataConsumo).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                          <TableRow className="bg-muted/50 font-bold">
+                            <TableCell>Total</TableCell>
+                            <TableCell>-</TableCell>
+                            <TableCell className="font-bold text-red-600">{formatCurrency(totalCusto)}</TableCell>
+                            <TableCell colSpan={4}>-</TableCell>
+                          </TableRow>
+                        </>
+                      );
+                    })()}
                   </TableBody>
                 </Table>
               </div>
@@ -540,20 +564,64 @@ export default function OSConsignacao() {
             <CardHeader>
               <CardTitle className="text-base">Sobras para Devolução</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {loteSelecionado.itens.filter(i => i.status === 'Disponivel' && i.quantidade > 0).map(item => (
-                  <div key={item.id} className="p-3 bg-muted/30 rounded-lg flex justify-between items-center">
-                    <div>
-                      <span className="font-medium">{item.descricao}</span>
-                      <span className="text-xs text-muted-foreground ml-2">• {obterNomeLoja(item.lojaAtualId)}</span>
-                    </div>
-                    <Badge variant="outline">{item.quantidade} un.</Badge>
-                  </div>
-                ))}
-                {loteSelecionado.itens.filter(i => i.status === 'Disponivel' && i.quantidade > 0).length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-2">Nenhuma sobra para devolução</p>
-                )}
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Peça</TableHead>
+                      <TableHead>Loja</TableHead>
+                      <TableHead>Qtd</TableHead>
+                      <TableHead>Valor de Custo</TableHead>
+                      <TableHead>Confirmação</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loteSelecionado.itens.filter(i => i.status === 'Disponivel' && i.quantidade > 0).map(item => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">{item.descricao}</TableCell>
+                        <TableCell className="text-xs">{obterNomeLoja(item.lojaAtualId)}</TableCell>
+                        <TableCell>{item.quantidade}</TableCell>
+                        <TableCell>{formatCurrency(item.valorCusto * item.quantidade)}</TableCell>
+                        <TableCell>
+                          {confirmacoesDevolucao[item.id] ? (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <Checkbox checked={true} onCheckedChange={() => {
+                                  const updated = { ...confirmacoesDevolucao };
+                                  delete updated[item.id];
+                                  setConfirmacoesDevolucao(updated);
+                                }} />
+                                <span className="text-xs text-green-600 font-medium">Confirmado</span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground">
+                                {confirmacoesDevolucao[item.id].usuario} • {confirmacoesDevolucao[item.id].dataHora}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <Checkbox checked={false} onCheckedChange={() => {
+                                setConfirmacoesDevolucao(prev => ({
+                                  ...prev,
+                                  [item.id]: {
+                                    usuario: user?.colaborador?.nome || 'Sistema',
+                                    dataHora: new Date().toLocaleString('pt-BR'),
+                                  }
+                                }));
+                              }} />
+                              <span className="text-xs text-muted-foreground">Confirmar devolução</span>
+                            </div>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {loteSelecionado.itens.filter(i => i.status === 'Disponivel' && i.quantidade > 0).length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">Nenhuma sobra para devolução</TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
