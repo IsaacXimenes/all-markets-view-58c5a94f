@@ -18,7 +18,7 @@ export interface ItemConsignacao {
   quantidadeOriginal: number;
   valorCusto: number;
   lojaAtualId: string;
-  status: 'Disponivel' | 'Consumido' | 'Devolvido' | 'Em Acerto';
+  status: 'Disponivel' | 'Consumido' | 'Devolvido' | 'Em Acerto' | 'Em Pagamento' | 'Pago';
   osVinculada?: string;
   dataConsumo?: string;
   tecnicoConsumo?: string;
@@ -26,19 +26,30 @@ export interface ItemConsignacao {
   dataDevolucao?: string;
 }
 
+export interface PagamentoParcial {
+  id: string;
+  data: string;
+  valor: number;
+  itensIds: string[];
+  notaFinanceiraId: string;
+  status: 'Pendente' | 'Pago';
+}
+
 export interface LoteConsignacao {
   id: string;
   fornecedorId: string;
   dataCriacao: string;
   responsavelCadastro: string;
-  status: 'Aberto' | 'Em Acerto' | 'Pago' | 'Devolvido';
+  status: 'Aberto' | 'Em Acerto' | 'Pago' | 'Devolvido' | 'Concluido';
   itens: ItemConsignacao[];
   timeline: TimelineConsignacao[];
+  pagamentosParciais: PagamentoParcial[];
 }
 
 let lotes: LoteConsignacao[] = [];
 let nextLoteId = 1;
 let nextItemId = 1;
+let nextPagamentoId = 1;
 
 // Referência para notas de assistência (importação circular evitada via callback)
 let notasAssistenciaRef: NotaAssistencia[] = [];
@@ -109,6 +120,7 @@ export const criarLoteConsignacao = (dados: CriarLoteInput): LoteConsignacao => 
     responsavelCadastro: dados.responsavel,
     status: 'Aberto',
     itens: itensConsignacao,
+    pagamentosParciais: [],
     timeline: [{
       data: new Date().toISOString(),
       tipo: 'entrada',
@@ -127,7 +139,7 @@ export const registrarConsumoConsignacao = (
   loteId: string, itemId: string, osId: string, tecnico: string, quantidade: number = 1
 ): boolean => {
   const lote = lotes.find(l => l.id === loteId);
-  if (!lote || lote.status === 'Em Acerto') return false;
+  if (!lote || lote.status === 'Concluido') return false;
 
   const item = lote.itens.find(i => i.id === itemId);
   if (!item || item.status !== 'Disponivel') return false;
@@ -154,7 +166,7 @@ export const registrarConsumoConsignacao = (
 // Busca consumo por pecaId (chamado pelo darBaixaPeca)
 export const registrarConsumoPorPecaId = (pecaId: string, osId: string, tecnico: string, quantidade: number = 1): void => {
   for (const lote of lotes) {
-    if (lote.status === 'Em Acerto') continue;
+    if (lote.status === 'Concluido') continue;
     const item = lote.itens.find(i => i.pecaId === pecaId && i.status === 'Disponivel');
     if (item) {
       registrarConsumoConsignacao(lote.id, item.id, osId, tecnico, quantidade);
@@ -193,26 +205,19 @@ export const transferirItemConsignacao = (
   return true;
 };
 
-// ========== ACERTO DE CONTAS ==========
+// ========== ACERTO DE CONTAS (LEGADO - simplificado) ==========
 
 export const iniciarAcertoContas = (loteId: string, responsavel: string): boolean => {
   const lote = lotes.find(l => l.id === loteId);
   if (!lote || lote.status !== 'Aberto') return false;
 
+  // Não congela mais as peças disponíveis
   lote.status = 'Em Acerto';
-  lote.itens.forEach(item => {
-    if (item.status === 'Disponivel') {
-      item.status = 'Em Acerto';
-      if (item.pecaId) {
-        updatePeca(item.pecaId, { status: 'Utilizada' });
-      }
-    }
-  });
 
   lote.timeline.push({
     data: new Date().toISOString(),
     tipo: 'acerto',
-    descricao: `Acerto de contas iniciado. Retiradas congeladas.`,
+    descricao: `Acerto de contas iniciado.`,
     responsavel,
   });
 
@@ -221,11 +226,170 @@ export const iniciarAcertoContas = (loteId: string, responsavel: string): boolea
 
 export const getValorConsumido = (lote: LoteConsignacao): number => {
   return lote.itens
-    .filter(i => i.status === 'Consumido')
+    .filter(i => ['Consumido', 'Em Pagamento', 'Pago'].includes(i.status))
     .reduce((acc, i) => acc + (i.quantidadeOriginal - i.quantidade) * i.valorCusto, 0)
     + lote.itens
     .filter(i => i.status === 'Em Acerto' && i.quantidade < i.quantidadeOriginal)
     .reduce((acc, i) => acc + (i.quantidadeOriginal - i.quantidade) * i.valorCusto, 0);
+};
+
+// ========== PAGAMENTO PARCIAL ==========
+
+export const gerarPagamentoParcial = (
+  loteId: string,
+  itemIds: string[],
+  dadosPagamento: {
+    formaPagamento: string;
+    contaBancaria?: string;
+    nomeRecebedor?: string;
+    chavePix?: string;
+    observacao?: string;
+  },
+  pushNota: (nota: NotaAssistencia) => void
+): PagamentoParcial | null => {
+  const lote = lotes.find(l => l.id === loteId);
+  if (!lote || lote.status === 'Concluido') return null;
+
+  const itensSelecionados = lote.itens.filter(i => itemIds.includes(i.id) && i.status === 'Consumido');
+  if (itensSelecionados.length === 0) return null;
+
+  // Mudar status dos itens para 'Em Pagamento'
+  itensSelecionados.forEach(item => {
+    item.status = 'Em Pagamento';
+  });
+
+  const valorTotal = itensSelecionados.reduce((acc, i) => {
+    const qtdConsumida = i.quantidadeOriginal - i.quantidade || i.quantidadeOriginal;
+    return acc + i.valorCusto * qtdConsumida;
+  }, 0);
+
+  const notaId = `NOTA-CONS-${String(notaCounterRef++).padStart(3, '0')}`;
+
+  const nota: NotaAssistencia = {
+    id: notaId,
+    solicitacaoId: loteId,
+    fornecedor: lote.fornecedorId,
+    lojaSolicitante: itensSelecionados[0]?.lojaAtualId || '',
+    dataCriacao: new Date().toISOString(),
+    valorTotal,
+    status: 'Pendente',
+    itens: itensSelecionados.map(i => ({
+      peca: i.descricao,
+      quantidade: i.quantidadeOriginal - i.quantidade || i.quantidadeOriginal,
+      valorUnitario: i.valorCusto,
+      osVinculada: i.osVinculada,
+    })),
+    loteId: loteId,
+    tipoConsignacao: true,
+    ...(dadosPagamento && {
+      formaPagamentoEncaminhamento: dadosPagamento.formaPagamento,
+      contaBancariaEncaminhamento: dadosPagamento.contaBancaria,
+      nomeRecebedor: dadosPagamento.nomeRecebedor,
+      chavePixEncaminhamento: dadosPagamento.chavePix,
+      observacaoEncaminhamento: dadosPagamento.observacao,
+    }),
+  };
+
+  pushNota(nota);
+
+  const pagamentoId = `PAG-${String(nextPagamentoId++).padStart(3, '0')}`;
+  const pagamento: PagamentoParcial = {
+    id: pagamentoId,
+    data: new Date().toISOString(),
+    valor: valorTotal,
+    itensIds: itemIds,
+    notaFinanceiraId: notaId,
+    status: 'Pendente',
+  };
+
+  lote.pagamentosParciais.push(pagamento);
+
+  lote.timeline.push({
+    data: new Date().toISOString(),
+    tipo: 'pagamento',
+    descricao: `Pagamento parcial gerado: ${notaId} - ${itensSelecionados.length} item(ns) - R$ ${valorTotal.toFixed(2)}`,
+    responsavel: lote.responsavelCadastro,
+  });
+
+  return pagamento;
+};
+
+export const confirmarPagamentoParcial = (loteId: string, pagamentoId: string, responsavel: string): boolean => {
+  const lote = lotes.find(l => l.id === loteId);
+  if (!lote) return false;
+
+  const pagamento = lote.pagamentosParciais.find(p => p.id === pagamentoId);
+  if (!pagamento || pagamento.status === 'Pago') return false;
+
+  pagamento.status = 'Pago';
+
+  // Mudar status dos itens vinculados para 'Pago'
+  lote.itens.forEach(item => {
+    if (pagamento.itensIds.includes(item.id) && item.status === 'Em Pagamento') {
+      item.status = 'Pago';
+    }
+  });
+
+  lote.timeline.push({
+    data: new Date().toISOString(),
+    tipo: 'pagamento',
+    descricao: `Pagamento ${pagamento.notaFinanceiraId} confirmado - R$ ${pagamento.valor.toFixed(2)}`,
+    responsavel,
+  });
+
+  return true;
+};
+
+// ========== FINALIZAR LOTE ==========
+
+export const finalizarLote = (
+  loteId: string,
+  responsavel: string,
+  dadosPagamento: {
+    formaPagamento: string;
+    contaBancaria?: string;
+    nomeRecebedor?: string;
+    chavePix?: string;
+    observacao?: string;
+  },
+  pushNota: (nota: NotaAssistencia) => void
+): boolean => {
+  const lote = lotes.find(l => l.id === loteId);
+  if (!lote || lote.status === 'Concluido') return false;
+
+  const agora = new Date().toISOString();
+
+  // Gerar pagamento parcial final para itens consumidos remanescentes
+  const consumidosRemanescentes = lote.itens.filter(i => i.status === 'Consumido');
+  if (consumidosRemanescentes.length > 0) {
+    gerarPagamentoParcial(loteId, consumidosRemanescentes.map(i => i.id), dadosPagamento, pushNota);
+  }
+
+  // Marcar sobras como Devolvido
+  lote.itens.filter(i => i.status === 'Disponivel').forEach(item => {
+    item.status = 'Devolvido';
+    item.dataDevolucao = agora;
+    item.devolvidoPor = responsavel;
+    if (item.pecaId) {
+      updatePeca(item.pecaId, { status: 'Devolvida', quantidade: 0 });
+    }
+    lote.timeline.push({
+      data: agora,
+      tipo: 'devolucao',
+      descricao: `${item.descricao} (${item.quantidade} un.) devolvido ao fornecedor no fechamento`,
+      responsavel,
+    });
+  });
+
+  lote.status = 'Concluido';
+  lote.timeline.push({
+    data: agora,
+    tipo: 'acerto',
+    descricao: 'Lote finalizado e devoluções confirmadas.',
+    responsavel,
+  });
+
+  return true;
 };
 
 // ========== DEVOLUÇÃO ==========
@@ -254,7 +418,7 @@ export const confirmarDevolucaoItem = (loteId: string, itemId: string, responsav
   });
 
   // Verificar se todos os itens foram devolvidos ou consumidos
-  const todosFinalizados = lote.itens.every(i => i.status === 'Consumido' || i.status === 'Devolvido');
+  const todosFinalizados = lote.itens.every(i => ['Consumido', 'Devolvido', 'Em Pagamento', 'Pago'].includes(i.status));
   if (todosFinalizados && lote.status === 'Aberto') {
     lote.status = 'Devolvido';
   }
@@ -262,7 +426,7 @@ export const confirmarDevolucaoItem = (loteId: string, itemId: string, responsav
   return true;
 };
 
-// ========== FINANCEIRO ==========
+// ========== FINANCEIRO (legado) ==========
 
 export const gerarLoteFinanceiro = (loteId: string, dadosPagamento?: {
   formaPagamento: string;
@@ -272,7 +436,7 @@ export const gerarLoteFinanceiro = (loteId: string, dadosPagamento?: {
   observacao?: string;
 }): NotaAssistencia | null => {
   const lote = lotes.find(l => l.id === loteId);
-  if (!lote || lote.status !== 'Em Acerto') return null;
+  if (!lote) return null;
 
   const valorTotal = getValorConsumido(lote);
   const itensConsumidos = lote.itens.filter(i =>
