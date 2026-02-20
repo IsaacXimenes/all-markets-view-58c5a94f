@@ -26,6 +26,8 @@ export interface Peca {
   notaCompraId?: string;
   loteConsignacaoId?: string;
   status: 'Disponível' | 'Reservada' | 'Utilizada';
+  statusMovimentacao?: 'Em movimentação' | null;
+  movimentacaoPecaId?: string;
 }
 
 // Mock de peças
