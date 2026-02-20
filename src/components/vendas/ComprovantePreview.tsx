@@ -17,19 +17,21 @@ export function ComprovantePreview({ comprovante, comprovanteNome, size = 'sm' }
     return <span className="text-muted-foreground">-</span>;
   }
 
-  const isImage = comprovante.startsWith('data:image/');
+  const isBase64Image = comprovante.startsWith('data:image/');
   const isPdf = comprovante.startsWith('data:application/pdf');
   const isUrl = comprovante.startsWith('http');
+  const isViewableImage = isBase64Image || isUrl;
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isPdf || isUrl) {
+    if (isPdf) {
       window.open(comprovante, '_blank');
     } else {
       setShowDialog(true);
     }
   };
 
+  const thumbSize = size === 'sm' ? 'h-10 w-10' : 'h-16 w-16';
   const iconSize = size === 'sm' ? 'h-4 w-4' : 'h-5 w-5';
 
   return (
@@ -40,15 +42,17 @@ export function ComprovantePreview({ comprovante, comprovanteNome, size = 'sm' }
         className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors cursor-pointer group"
         title={comprovanteNome || 'Ver comprovante'}
       >
-        {isImage ? (
-          <img src={comprovante} alt="Comprovante" className={cn(
-            "rounded object-cover border shadow-sm group-hover:shadow-md transition-shadow",
-            size === 'sm' ? 'h-8 w-8' : 'h-16 w-16'
-          )} />
+        {isViewableImage ? (
+          <img
+            src={comprovante}
+            alt="Comprovante"
+            className={cn(
+              "rounded object-cover border shadow-sm group-hover:shadow-md group-hover:ring-2 group-hover:ring-primary/40 transition-all",
+              thumbSize
+            )}
+          />
         ) : isPdf ? (
           <FileText className={`${iconSize} text-red-500`} />
-        ) : isUrl ? (
-          <ExternalLink className={iconSize} />
         ) : (
           <Paperclip className={iconSize} />
         )}
@@ -57,7 +61,7 @@ export function ComprovantePreview({ comprovante, comprovanteNome, size = 'sm' }
         </span>
       </button>
 
-      {isImage && (
+      {isViewableImage && (
         <Dialog open={showDialog} onOpenChange={setShowDialog}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
