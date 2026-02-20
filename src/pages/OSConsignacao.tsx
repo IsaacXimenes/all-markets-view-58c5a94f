@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { OSLayout } from '@/components/layout/OSLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { StatsCard } from '@/components/ui/StatsCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,7 +28,7 @@ import { getNotasAssistencia, __pushNotaConsignacao } from '@/utils/solicitacaoP
 import { useToast } from '@/hooks/use-toast';
 import {
   Plus, Eye, Trash2, Package, PackageCheck, Clock, DollarSign,
-  FileText, ArrowRightLeft, CheckCircle, AlertTriangle, ArrowLeft,
+  FileText, ArrowRightLeft, CheckCircle, AlertTriangle, ArrowLeft, Undo2, Truck,
 } from 'lucide-react';
 
 type ViewMode = 'lista' | 'novo' | 'dossie' | 'acerto';
@@ -480,34 +481,28 @@ export default function OSConsignacao() {
 
           {/* Resumo Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Itens Consumidos</p>
-                <p className="text-2xl font-bold text-red-600">
-                  {loteSelecionado.itens.filter(i => i.status === 'Consumido' || i.quantidade < i.quantidadeOriginal).length}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Valor a Pagar</p>
-                <p className="text-2xl font-bold">{formatCurrency(getValorConsumido(loteSelecionado))}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Sobras</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {loteSelecionado.itens.filter(i => i.status === 'Disponivel' && i.quantidade > 0).length}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground">Fornecedor</p>
-                <p className="text-sm font-medium truncate">{getFornecedorNome(loteSelecionado.fornecedorId)}</p>
-              </CardContent>
-            </Card>
+            <StatsCard
+              title="Itens Consumidos"
+              value={loteSelecionado.itens.filter(i => i.status === 'Consumido' || i.quantidade < i.quantidadeOriginal).length}
+              icon={<Package className="h-5 w-5" />}
+              valueClassName="text-destructive"
+            />
+            <StatsCard
+              title="Valor a Pagar"
+              value={formatCurrency(getValorConsumido(loteSelecionado))}
+              icon={<DollarSign className="h-5 w-5" />}
+            />
+            <StatsCard
+              title="Sobras"
+              value={loteSelecionado.itens.filter(i => i.status === 'Disponivel' && i.quantidade > 0).length}
+              icon={<Undo2 className="h-5 w-5" />}
+              valueClassName="text-success"
+            />
+            <StatsCard
+              title="Fornecedor"
+              value={getFornecedorNome(loteSelecionado.fornecedorId)}
+              icon={<Truck className="h-5 w-5" />}
+            />
           </div>
 
           {/* Peças Usadas */}
@@ -549,21 +544,21 @@ export default function OSConsignacao() {
                             const qtdConsumida = item.quantidadeOriginal - item.quantidade || item.quantidadeOriginal;
                             return (
                               <TableRow key={item.id}>
-                                <TableCell className="font-medium">{item.descricao}</TableCell>
-                                <TableCell>{qtdConsumida}</TableCell>
-                                <TableCell className="font-semibold">{formatCurrency(item.valorCusto * qtdConsumida)}</TableCell>
-                                <TableCell className="text-xs">{obterNomeLoja(item.lojaAtualId)}</TableCell>
-                                <TableCell className="font-mono text-xs">{item.osVinculada || '-'}</TableCell>
-                                <TableCell className="text-xs">{item.tecnicoConsumo || '-'}</TableCell>
-                                <TableCell className="text-xs">{item.dataConsumo ? new Date(item.dataConsumo).toLocaleDateString('pt-BR') : '-'}</TableCell>
+                                <TableCell className="font-medium text-sm">{item.descricao}</TableCell>
+                                <TableCell className="text-sm">{qtdConsumida}</TableCell>
+                                <TableCell className="text-sm font-semibold">{formatCurrency(item.valorCusto * qtdConsumida)}</TableCell>
+                                <TableCell className="text-sm">{obterNomeLoja(item.lojaAtualId)}</TableCell>
+                                <TableCell className="font-mono text-sm">{item.osVinculada || '-'}</TableCell>
+                                <TableCell className="text-sm">{item.tecnicoConsumo || '-'}</TableCell>
+                                <TableCell className="text-sm">{item.dataConsumo ? new Date(item.dataConsumo).toLocaleDateString('pt-BR') : '-'}</TableCell>
                               </TableRow>
                             );
                           })}
                           <TableRow className="bg-muted/50 font-bold">
-                            <TableCell>Total</TableCell>
-                            <TableCell>-</TableCell>
-                            <TableCell className="font-bold text-red-600">{formatCurrency(totalCusto)}</TableCell>
-                            <TableCell colSpan={4}>-</TableCell>
+                            <TableCell className="text-sm">Total</TableCell>
+                            <TableCell className="text-sm">-</TableCell>
+                            <TableCell className="text-sm font-bold text-destructive">{formatCurrency(totalCusto)}</TableCell>
+                            <TableCell colSpan={4} className="text-sm">-</TableCell>
                           </TableRow>
                         </>
                       );
@@ -594,10 +589,10 @@ export default function OSConsignacao() {
                   <TableBody>
                     {loteSelecionado.itens.filter(i => i.status === 'Disponivel' && i.quantidade > 0).map(item => (
                       <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.descricao}</TableCell>
-                        <TableCell className="text-xs">{obterNomeLoja(item.lojaAtualId)}</TableCell>
-                        <TableCell>{item.quantidade}</TableCell>
-                        <TableCell>{formatCurrency(item.valorCusto * item.quantidade)}</TableCell>
+                        <TableCell className="font-medium text-sm">{item.descricao}</TableCell>
+                        <TableCell className="text-sm">{obterNomeLoja(item.lojaAtualId)}</TableCell>
+                        <TableCell className="text-sm">{item.quantidade}</TableCell>
+                        <TableCell className="text-sm">{formatCurrency(item.valorCusto * item.quantidade)}</TableCell>
                         <TableCell>
                           {confirmacoesDevolucao[item.id] ? (
                             <div className="space-y-1">
@@ -649,7 +644,7 @@ export default function OSConsignacao() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Forma de Pagamento *</Label>
+                  <Label className="text-sm font-medium">Forma de Pagamento *</Label>
                   <Select value={acertoFormaPagamento} onValueChange={setAcertoFormaPagamento}>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
@@ -661,22 +656,22 @@ export default function OSConsignacao() {
                 {acertoFormaPagamento === 'Pix' && (
                   <>
                     <div className="space-y-2">
-                      <Label>Conta Bancária</Label>
+                      <Label className="text-sm font-medium">Conta Bancária</Label>
                       <Input value={acertoContaBancaria} onChange={e => setAcertoContaBancaria(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Nome do Recebedor</Label>
+                      <Label className="text-sm font-medium">Nome do Recebedor</Label>
                       <Input value={acertoNomeRecebedor} onChange={e => setAcertoNomeRecebedor(e.target.value)} />
                     </div>
                     <div className="space-y-2">
-                      <Label>Chave Pix</Label>
+                      <Label className="text-sm font-medium">Chave Pix</Label>
                       <Input value={acertoChavePix} onChange={e => setAcertoChavePix(e.target.value)} />
                     </div>
                   </>
                 )}
               </div>
               <div className="space-y-2">
-                <Label>Observação *</Label>
+                <Label className="text-sm font-medium">Observação *</Label>
                 <Textarea value={acertoObservacao} onChange={e => setAcertoObservacao(e.target.value)} placeholder="Observações sobre o acerto..." rows={3} />
               </div>
               <div className="flex justify-end gap-3 pt-4 border-t">
