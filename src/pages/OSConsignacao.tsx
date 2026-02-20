@@ -165,6 +165,29 @@ export default function OSConsignacao() {
 
   const handleConfirmarAcerto = () => {
     if (!loteSelecionado) return;
+
+    // Injetar timeline consolidada antes do acerto
+    const loteAtual = getLoteById(loteSelecionado.id);
+    if (loteAtual) {
+      const consumos = loteAtual.timeline.filter(t => t.tipo === 'consumo');
+      const transferencias = loteAtual.timeline.filter(t => t.tipo === 'transferencia');
+      const devolucoes = loteAtual.timeline.filter(t => t.tipo === 'devolucao');
+
+      const linhas: string[] = [];
+      if (consumos.length > 0) linhas.push(`${consumos.length} consumo(s) registrado(s)`);
+      if (transferencias.length > 0) linhas.push(`${transferencias.length} transferência(s) entre lojas`);
+      if (devolucoes.length > 0) linhas.push(`${devolucoes.length} devolução(ões)`);
+
+      if (linhas.length > 0) {
+        loteAtual.timeline.push({
+          data: new Date().toISOString(),
+          tipo: 'acerto',
+          descricao: `Resumo de fechamento: ${linhas.join(', ')}.`,
+          responsavel: user?.colaborador?.nome || 'Sistema',
+        });
+      }
+    }
+
     iniciarAcertoContas(loteSelecionado.id, user?.colaborador?.nome || 'Sistema');
     
     const nota = gerarLoteFinanceiro(loteSelecionado.id, {
@@ -253,7 +276,7 @@ export default function OSConsignacao() {
                       <div className="flex items-end gap-1">
                         <div className="flex-1 space-y-1">
                           <Label className="text-xs">Loja *</Label>
-                          <AutocompleteLoja value={item.lojaDestinoId} onChange={v => updateItemRow(idx, 'lojaDestinoId', v)} apenasLojasTipoLoja placeholder="Loja" />
+                          <AutocompleteLoja value={item.lojaDestinoId} onChange={v => updateItemRow(idx, 'lojaDestinoId', v)} filtrarPorTipo="Assistência" placeholder="Loja" />
                         </div>
                         {novoItens.length > 1 && (
                           <Button variant="ghost" size="sm" onClick={() => removeItemRow(idx)}>
