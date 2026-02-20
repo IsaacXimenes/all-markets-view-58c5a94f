@@ -764,7 +764,7 @@ export default function OSConsignacao() {
           <Input type="date" value={filtroData} onChange={e => setFiltroData(e.target.value)} />
         </div>
         <div className="flex items-end">
-          <Button variant="outline" size="sm" onClick={() => setViewMode('novo')} className="w-full">
+          <Button size="sm" onClick={() => setViewMode('novo')} className="w-full">
             <Plus className="h-4 w-4 mr-2" />
             Novo Lote
           </Button>
