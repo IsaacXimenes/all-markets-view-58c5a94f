@@ -2022,7 +2022,7 @@ export default function OSAssistenciaNova() {
                                   ...newPecas[modalBuscaPecaIndex],
                                   pecaEstoqueId: p.id,
                                   peca: p.descricao,
-                                  valor: p.valorRecomendado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                                  valor: p.valorCusto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
                                 };
                                 setPecas(newPecas);
                                 setModalBuscaPecaOpen(false);

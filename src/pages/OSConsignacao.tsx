@@ -73,16 +73,34 @@ export default function OSConsignacao() {
     refreshLotes();
   };
 
-  // Stats
+  // Filtros
+  const [filtroFornecedor, setFiltroFornecedor] = useState('');
+  const [filtroStatus, setFiltroStatus] = useState('');
+  const [filtroData, setFiltroData] = useState('');
+
+  // Stats (5 indicadores consolidados)
   const stats = useMemo(() => {
-    const abertos = lotes.filter(l => l.status === 'Aberto').length;
-    const emAcerto = lotes.filter(l => l.status === 'Em Acerto').length;
-    const pecasDisponiveis = lotes.filter(l => l.status === 'Aberto')
-      .reduce((acc, l) => acc + l.itens.filter(i => i.status === 'Disponivel').reduce((a, i) => a + i.quantidade, 0), 0);
-    const valorTotal = lotes.filter(l => l.status === 'Aberto' || l.status === 'Em Acerto')
-      .reduce((acc, l) => acc + l.itens.reduce((a, i) => a + i.valorCusto * i.quantidadeOriginal, 0), 0);
-    return { abertos, emAcerto, pecasDisponiveis, valorTotal };
+    const valorTotal = lotes.reduce((acc, l) =>
+      acc + l.itens.reduce((a, i) => a + i.valorCusto * i.quantidadeOriginal, 0), 0);
+    const valorUsado = lotes.reduce((acc, l) => acc + getValorConsumido(l), 0);
+    const totalProdutos = lotes.reduce((acc, l) =>
+      acc + l.itens.reduce((a, i) => a + i.quantidadeOriginal, 0), 0);
+    const totalConsumidos = lotes.reduce((acc, l) =>
+      acc + l.itens.filter(i => i.status === 'Consumido').reduce((a, i) => a + i.quantidadeOriginal, 0), 0);
+    const disponiveis = lotes.reduce((acc, l) =>
+      acc + l.itens.filter(i => i.status === 'Disponivel').reduce((a, i) => a + i.quantidade, 0), 0);
+    return { valorTotal, valorUsado, totalProdutos, totalConsumidos, disponiveis };
   }, [lotes]);
+
+  // Lotes filtrados
+  const lotesFiltrados = useMemo(() => {
+    return lotes.filter(l => {
+      if (filtroFornecedor && l.fornecedorId !== filtroFornecedor) return false;
+      if (filtroStatus && filtroStatus !== 'all' && l.status !== filtroStatus) return false;
+      if (filtroData && !l.dataCriacao.startsWith(filtroData)) return false;
+      return true;
+    });
+  }, [lotes, filtroFornecedor, filtroStatus, filtroData]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -691,60 +709,66 @@ export default function OSConsignacao() {
   // ==================== VIEW: LISTA (padrão) ====================
   return (
     <OSLayout title="Consignação" icon={PackageCheck}>
-      {/* Dashboard Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Lotes Abertos</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.abertos}</p>
-              </div>
-              <Package className="h-8 w-8 text-blue-600 opacity-40" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Peças Disponíveis</p>
-                <p className="text-2xl font-bold text-green-600">{stats.pecasDisponiveis}</p>
-              </div>
-              <PackageCheck className="h-8 w-8 text-green-600 opacity-40" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Valor em Consignação</p>
-                <p className="text-2xl font-bold">{formatCurrency(stats.valorTotal)}</p>
-              </div>
-              <DollarSign className="h-8 w-8 text-muted-foreground opacity-40" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Em Acerto</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.emAcerto}</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-yellow-600 opacity-40" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Dashboard Cards - 5 indicadores */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <StatsCard
+          title="Valor Total"
+          value={formatCurrency(stats.valorTotal)}
+          icon={<DollarSign className="h-5 w-5" />}
+        />
+        <StatsCard
+          title="Valor Usado"
+          value={formatCurrency(stats.valorUsado)}
+          icon={<DollarSign className="h-5 w-5" />}
+          valueClassName="text-destructive"
+        />
+        <StatsCard
+          title="Total de Produtos"
+          value={stats.totalProdutos}
+          icon={<Package className="h-5 w-5" />}
+        />
+        <StatsCard
+          title="Total Consumidos"
+          value={stats.totalConsumidos}
+          icon={<CheckCircle className="h-5 w-5" />}
+        />
+        <StatsCard
+          title="Disponíveis"
+          value={stats.disponiveis}
+          icon={<PackageCheck className="h-5 w-5" />}
+          valueClassName="text-green-600"
+        />
       </div>
 
-      {/* Ações */}
-      <div className="flex justify-end mb-4">
-        <Button onClick={() => setViewMode('novo')}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Lote de Consignação
-        </Button>
+      {/* Filtros */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Fornecedor</Label>
+          <AutocompleteFornecedor value={filtroFornecedor} onChange={setFiltroFornecedor} placeholder="Todos" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Status</Label>
+          <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+            <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="Aberto">Aberto</SelectItem>
+              <SelectItem value="Em Acerto">Em Acerto</SelectItem>
+              <SelectItem value="Pago">Pago</SelectItem>
+              <SelectItem value="Devolvido">Devolvido</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Data</Label>
+          <Input type="date" value={filtroData} onChange={e => setFiltroData(e.target.value)} />
+        </div>
+        <div className="flex items-end">
+          <Button variant="outline" size="sm" onClick={() => setViewMode('novo')} className="w-full">
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Lote
+          </Button>
+        </div>
       </div>
 
       {/* Tabela de Lotes */}
@@ -754,9 +778,10 @@ export default function OSConsignacao() {
             <TableRow>
               <TableHead>ID</TableHead>
               <TableHead>Fornecedor</TableHead>
-              <TableHead>Data Criação</TableHead>
-              <TableHead>Qtd Itens</TableHead>
+              <TableHead>Data Recebimento</TableHead>
+              <TableHead>Total Itens</TableHead>
               <TableHead>Valor Total</TableHead>
+              <TableHead>Valor Usado</TableHead>
               <TableHead>Consumidos</TableHead>
               <TableHead>Disponíveis</TableHead>
               <TableHead>Status</TableHead>
@@ -764,17 +789,18 @@ export default function OSConsignacao() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {lotes.length === 0 ? (
+            {lotesFiltrados.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                  Nenhum lote de consignação cadastrado
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                  Nenhum lote de consignação encontrado
                 </TableCell>
               </TableRow>
             ) : (
-              lotes.map(lote => {
+              lotesFiltrados.map(lote => {
                 const consumidos = lote.itens.filter(i => i.status === 'Consumido').length;
                 const disponiveis = lote.itens.filter(i => i.status === 'Disponivel').length;
                 const valorTotal = lote.itens.reduce((a, i) => a + i.valorCusto * i.quantidadeOriginal, 0);
+                const valorUsado = getValorConsumido(lote);
                 return (
                   <TableRow key={lote.id}>
                     <TableCell className="font-mono text-xs font-medium">{lote.id}</TableCell>
@@ -782,6 +808,7 @@ export default function OSConsignacao() {
                     <TableCell className="text-xs">{new Date(lote.dataCriacao).toLocaleDateString('pt-BR')}</TableCell>
                     <TableCell>{lote.itens.length}</TableCell>
                     <TableCell className="font-semibold">{formatCurrency(valorTotal)}</TableCell>
+                    <TableCell className="font-semibold text-destructive">{formatCurrency(valorUsado)}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className="bg-red-50 dark:bg-red-950/20 text-red-600">{consumidos}</Badge>
                     </TableCell>
