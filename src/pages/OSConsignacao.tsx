@@ -470,12 +470,12 @@ export default function OSConsignacao() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">Peças Consumidas</CardTitle>
-                    {itensSelecionadosPagamento.length > 0 && !loteConcluido && (
+                    {!loteConcluido && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button size="sm">
+                          <Button size="sm" disabled={itensSelecionadosPagamento.length === 0}>
                             <DollarSign className="h-4 w-4 mr-1" />
-                            Gerar Pagamento Parcial ({itensSelecionadosPagamento.length})
+                            Gerar Pagamento Parcial{itensSelecionadosPagamento.length > 0 ? ` (${itensSelecionadosPagamento.length})` : ''}
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent className="max-w-lg">
