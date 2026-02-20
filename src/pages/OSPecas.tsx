@@ -93,6 +93,8 @@ export default function OSPecas() {
         return <Badge className="bg-yellow-500 hover:bg-yellow-600">Reservada</Badge>;
       case 'Utilizada':
         return <Badge className="bg-gray-500 hover:bg-gray-600">Utilizada</Badge>;
+      case 'Devolvida':
+        return <Badge className="bg-slate-400 hover:bg-slate-500">Devolvida</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }

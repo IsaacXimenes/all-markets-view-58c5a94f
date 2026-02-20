@@ -25,7 +25,7 @@ export interface Peca {
   origem: 'Nota de Compra' | 'Manual' | 'Produto Thiago' | 'Solicitação' | 'Solicitação Cancelada' | 'Retirada de Peça' | 'Consignacao';
   notaCompraId?: string;
   loteConsignacaoId?: string;
-  status: 'Disponível' | 'Reservada' | 'Utilizada';
+  status: 'Disponível' | 'Reservada' | 'Utilizada' | 'Devolvida';
   statusMovimentacao?: 'Em movimentação' | null;
   movimentacaoPecaId?: string;
 }

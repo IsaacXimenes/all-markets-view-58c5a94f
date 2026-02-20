@@ -16,6 +16,7 @@ import {
   getSolicitacoesByOS,
   getSolicitacaoById
 } from '@/utils/solicitacaoPecasApi';
+import { getLoteById } from '@/utils/consignacaoApi';
 import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
 import { getOrdemServicoById, updateOrdemServico } from '@/utils/assistenciaApi';
 import { Eye, Check, Download, Filter, X, FileText, Clock, CheckCircle, DollarSign, Package, PackageCheck } from 'lucide-react';
@@ -464,17 +465,34 @@ export default function FinanceiroNotasAssistencia() {
                   <div className="border-t pt-4">
                     <h3 className="font-semibold mb-3">Itens (Somente Leitura)</h3>
                     <div className="space-y-2 text-sm">
-                      {notaSelecionada.itens.map((item, idx) => (
-                        <div key={idx} className="p-3 bg-muted/30 rounded">
-                          <div className="flex justify-between">
-                            <span className="font-medium">{item.peca}</span>
-                            <span>{formatCurrency(item.valorUnitario * item.quantidade)}</span>
+                      {notaSelecionada.itens.map((item, idx) => {
+                        // Resolver OS vinculada
+                        let osVinculada = item.osVinculada || '';
+                        if (!osVinculada && notaSelecionada.tipoConsignacao && notaSelecionada.solicitacaoId) {
+                          const lote = getLoteById(notaSelecionada.solicitacaoId);
+                          if (lote) {
+                            const itemLote = lote.itens.find(i => i.descricao === item.peca && i.osVinculada);
+                            osVinculada = itemLote?.osVinculada || '';
+                          }
+                        }
+                        if (!osVinculada && notaSelecionada.osId) {
+                          osVinculada = notaSelecionada.osId;
+                        }
+                        return (
+                          <div key={idx} className="p-3 bg-muted/30 rounded">
+                            <div className="flex justify-between">
+                              <span className="font-medium">{item.peca}</span>
+                              <span>{formatCurrency(item.valorUnitario * item.quantidade)}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Qtd: {item.quantidade} | Valor Unitário: {formatCurrency(item.valorUnitario)}
+                              {osVinculada && (
+                                <span className="ml-2 font-mono text-primary">| OS: {osVinculada}</span>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            Qtd: {item.quantidade} | Valor Unitário: {formatCurrency(item.valorUnitario)}
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 

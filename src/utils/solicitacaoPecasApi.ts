@@ -65,6 +65,7 @@ export interface NotaAssistencia {
     peca: string;
     quantidade: number;
     valorUnitario: number;
+    osVinculada?: string;
   }[];
   responsavelFinanceiro?: string;
   formaPagamento?: string;

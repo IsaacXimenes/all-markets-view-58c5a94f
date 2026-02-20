@@ -243,7 +243,7 @@ export const confirmarDevolucaoItem = (loteId: string, itemId: string, responsav
 
   // Manter no estoque como histórico (indisponível)
   if (item.pecaId) {
-    updatePeca(item.pecaId, { status: 'Utilizada', quantidade: 0 });
+    updatePeca(item.pecaId, { status: 'Devolvida', quantidade: 0 });
   }
 
   lote.timeline.push({
@@ -291,6 +291,7 @@ export const gerarLoteFinanceiro = (loteId: string, dadosPagamento?: {
       peca: i.descricao,
       quantidade: i.quantidadeOriginal - i.quantidade || i.quantidadeOriginal,
       valorUnitario: i.valorCusto,
+      osVinculada: i.osVinculada,
     })),
     loteId: loteId,
     tipoConsignacao: true,

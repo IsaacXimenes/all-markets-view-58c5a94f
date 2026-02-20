@@ -1249,16 +1249,6 @@ export default function OSAssistenciaNova() {
                                     />
                                   </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                  <div className="space-y-1">
-                                    <Label className="text-xs text-muted-foreground">Valor Recomendado</Label>
-                                    <Input disabled value={formatCurrency(pecaSel?.valorRecomendado || 0)} className="bg-muted h-8 text-xs" />
-                                  </div>
-                                  <div className="space-y-1">
-                                    <Label className="text-xs text-muted-foreground">Valor de Custo</Label>
-                                    <Input disabled value={formatCurrency(pecaSel?.valorCusto || 0)} className="bg-muted h-8 text-xs" />
-                                  </div>
-                                </div>
                               </div>
                             );
                           })()}
@@ -1271,15 +1261,32 @@ export default function OSAssistenciaNova() {
                         />
                       )}
                     </div>
-                    <div className="space-y-2">
-                      <Label>Valor (R$)</Label>
-                      <InputComMascara
-                        mascara="moeda"
-                        value={peca.valor}
-                        onChange={(formatted, raw) => handlePecaChange(index, 'valor', formatted)}
-                        placeholder="0,00"
-                      />
-                    </div>
+                    {!peca.pecaNoEstoque && (
+                      <div className="space-y-2">
+                        <Label>Valor (R$)</Label>
+                        <InputComMascara
+                          mascara="moeda"
+                          value={peca.valor}
+                          onChange={(formatted, raw) => handlePecaChange(index, 'valor', formatted)}
+                          placeholder="0,00"
+                        />
+                      </div>
+                    )}
+                    {peca.pecaNoEstoque && peca.pecaEstoqueId && (() => {
+                      const pecaSel = pecasEstoque.find(p => p.id === peca.pecaEstoqueId);
+                      return (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">V. Recomendado</Label>
+                            <Input disabled value={formatCurrency(pecaSel?.valorRecomendado || 0)} className="bg-muted h-9 text-xs" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">V. Custo</Label>
+                            <Input disabled value={formatCurrency(pecaSel?.valorCusto || 0)} className="bg-muted h-9 text-xs" />
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

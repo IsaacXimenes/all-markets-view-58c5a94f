@@ -352,9 +352,8 @@ export default function OSConsignacao() {
           </Card>
 
           <Tabs defaultValue="inventario">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="inventario">Inventário</TabsTrigger>
-              <TabsTrigger value="timeline">Timeline</TabsTrigger>
               <TabsTrigger value="devolucao">Devolução</TabsTrigger>
             </TabsList>
 
@@ -397,34 +396,6 @@ export default function OSConsignacao() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="timeline">
-              <Card>
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    {loteSelecionado.timeline.map((entry, idx) => (
-                      <div key={idx} className="flex gap-3 p-3 bg-muted/30 rounded-lg">
-                        <div className="flex-shrink-0 mt-1">
-                          {entry.tipo === 'entrada' && <Package className="h-4 w-4 text-blue-500" />}
-                          {entry.tipo === 'consumo' && <CheckCircle className="h-4 w-4 text-red-500" />}
-                          {entry.tipo === 'transferencia' && <ArrowRightLeft className="h-4 w-4 text-purple-500" />}
-                          {entry.tipo === 'acerto' && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
-                          {entry.tipo === 'devolucao' && <PackageCheck className="h-4 w-4 text-gray-500" />}
-                          {entry.tipo === 'pagamento' && <DollarSign className="h-4 w-4 text-green-500" />}
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm">{entry.descricao}</p>
-                          <div className="flex gap-3 text-xs text-muted-foreground mt-1">
-                            <span>{new Date(entry.data).toLocaleString('pt-BR')}</span>
-                            <span>• {entry.responsavel}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
             <TabsContent value="devolucao">
               <Card>
                 <CardContent className="p-4">
@@ -442,19 +413,7 @@ export default function OSConsignacao() {
                             </p>
                           )}
                         </div>
-                        {item.status !== 'Devolvido' && item.quantidade > 0 && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleConfirmarDevolucao(loteSelecionado.id, item.id)}
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Confirmar Devolução
-                          </Button>
-                        )}
-                        {item.status === 'Devolvido' && (
-                          <Badge className="bg-gray-500/15 text-gray-600">Devolvido</Badge>
-                        )}
+                        {getItemStatusBadge(item.status)}
                       </div>
                     ))}
                     {loteSelecionado.itens.filter(i => i.status !== 'Consumido').length === 0 && (
@@ -465,6 +424,39 @@ export default function OSConsignacao() {
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Timeline fixa */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Timeline
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="space-y-3">
+                {loteSelecionado.timeline.map((entry, idx) => (
+                  <div key={idx} className="flex gap-3 p-3 bg-muted/30 rounded-lg">
+                    <div className="flex-shrink-0 mt-1">
+                      {entry.tipo === 'entrada' && <Package className="h-4 w-4 text-blue-500" />}
+                      {entry.tipo === 'consumo' && <CheckCircle className="h-4 w-4 text-red-500" />}
+                      {entry.tipo === 'transferencia' && <ArrowRightLeft className="h-4 w-4 text-purple-500" />}
+                      {entry.tipo === 'acerto' && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                      {entry.tipo === 'devolucao' && <PackageCheck className="h-4 w-4 text-gray-500" />}
+                      {entry.tipo === 'pagamento' && <DollarSign className="h-4 w-4 text-green-500" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm">{entry.descricao}</p>
+                      <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                        <span>{new Date(entry.data).toLocaleString('pt-BR')}</span>
+                        <span>• {entry.responsavel}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </OSLayout>
     );
