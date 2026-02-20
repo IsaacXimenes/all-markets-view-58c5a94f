@@ -204,7 +204,7 @@ export const iniciarAcertoContas = (loteId: string, responsavel: string): boolea
     if (item.status === 'Disponivel') {
       item.status = 'Em Acerto';
       if (item.pecaId) {
-        updatePeca(item.pecaId, { status: 'Reservada' });
+        updatePeca(item.pecaId, { status: 'Utilizada' });
       }
     }
   });

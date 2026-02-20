@@ -89,8 +89,6 @@ export default function OSPecas() {
     switch (status) {
       case 'Disponível':
         return <Badge className="bg-green-500 hover:bg-green-600">Disponível</Badge>;
-      case 'Reservada':
-        return <Badge className="bg-yellow-500 hover:bg-yellow-600">Reservada</Badge>;
       case 'Utilizada':
         return <Badge className="bg-gray-500 hover:bg-gray-600">Utilizada</Badge>;
       case 'Devolvida':
