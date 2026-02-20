@@ -318,9 +318,27 @@ export const finalizarAcerto = (loteId: string): boolean => {
   const lote = lotes.find(l => l.id === loteId);
   if (!lote || lote.status !== 'Em Acerto') return false;
 
+  const agora = new Date().toISOString();
+
+  // Marcar sobras (Em Acerto) como Devolvido no lote e no estoque
+  lote.itens.filter(i => i.status === 'Em Acerto').forEach(item => {
+    item.status = 'Devolvido';
+    item.dataDevolucao = agora;
+    item.devolvidoPor = 'Financeiro';
+    if (item.pecaId) {
+      updatePeca(item.pecaId, { status: 'Devolvida', quantidade: 0 });
+    }
+    lote.timeline.push({
+      data: agora,
+      tipo: 'devolucao',
+      descricao: `${item.descricao} (${item.quantidade} un.) devolvido automaticamente ao fornecedor`,
+      responsavel: 'Financeiro',
+    });
+  });
+
   lote.status = 'Pago';
   lote.timeline.push({
-    data: new Date().toISOString(),
+    data: agora,
     tipo: 'pagamento',
     descricao: 'Acerto finalizado. Pagamento confirmado pelo financeiro.',
     responsavel: 'Financeiro',
