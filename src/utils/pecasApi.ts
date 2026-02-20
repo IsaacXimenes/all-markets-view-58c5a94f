@@ -25,7 +25,7 @@ export interface Peca {
   origem: 'Nota de Compra' | 'Manual' | 'Produto Thiago' | 'Solicitação' | 'Solicitação Cancelada' | 'Retirada de Peça' | 'Consignacao';
   notaCompraId?: string;
   loteConsignacaoId?: string;
-  status: 'Disponível' | 'Reservada' | 'Utilizada' | 'Devolvida';
+  status: 'Disponível' | 'Utilizada' | 'Devolvida';
   statusMovimentacao?: 'Em movimentação' | null;
   movimentacaoPecaId?: string;
 }
@@ -105,7 +105,7 @@ const pecasBase: Omit<Peca, 'lojaId'>[] = [
     quantidade: 1,
     dataEntrada: '2024-12-22T08:30:00',
     origem: 'Retirada de Peça',
-    status: 'Reservada'
+    status: 'Disponível'
   },
   {
     id: 'PEC-0007',
@@ -173,7 +173,7 @@ const pecasBase: Omit<Peca, 'lojaId'>[] = [
     quantidade: 1,
     dataEntrada: '2024-12-28T14:00:00',
     origem: 'Produto Thiago',
-    status: 'Reservada'
+    status: 'Disponível'
   },
   {
     id: 'PEC-0013',
@@ -330,21 +330,6 @@ export const addMovimentacaoPeca = (mov: Omit<MovimentacaoPeca, 'id'>): Moviment
   return newMov;
 };
 
-// Reservar peça (para uso futuro se necessário)
-export const reservarPeca = (id: string): boolean => {
-  const peca = pecas.find(p => p.id === id);
-  if (!peca || peca.status !== 'Disponível') return false;
-  peca.status = 'Reservada';
-  return true;
-};
-
-// Liberar reserva de peça
-export const liberarReservaPeca = (id: string): boolean => {
-  const peca = pecas.find(p => p.id === id);
-  if (!peca || peca.status !== 'Reservada') return false;
-  peca.status = 'Disponível';
-  return true;
-};
 
 export const exportPecasToCSV = (data: Peca[], filename: string): void => {
   const headers = ['ID', 'Descrição', 'Loja', 'Modelo', 'Valor Custo', 'Valor Recomendado', 'Quantidade', 'Data Entrada', 'Origem', 'Status'];

@@ -105,7 +105,7 @@ const statusColorMap: Record<string, StatusColor> = {
   'Pendente - Financeiro': 'yellow',
   'Retornado da Assistência': 'yellow',
   'Ajustes realizados': 'yellow',
-  'Reservada': 'yellow',
+  
   'À vencer': 'yellow',
   
   // Status negativos (vermelho)
