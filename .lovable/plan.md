@@ -1,57 +1,146 @@
 
-
-## Campos de Pagamento nos Modais de Encaminhamento e Agrupamento
+## Gestao de Pecas em Consignacao
 
 ### Resumo
 
-Adicionar campos de pagamento (Forma de Pagamento, Conta Bancaria, Nome do Recebedor, Chave Pix, Observacao obrigatoria) nos modais de "Encaminhar para Financeiro" (1 item) e "Agrupar para Pagamento" (2+ itens). Os dados preenchidos serao salvos na nota e exibidos no quadro de conferencia do Financeiro.
+Implementar o fluxo completo de consignacao: cadastro de lotes com rastreabilidade, injecao automatica no Estoque-Assistencia com tag [CONSIGNADO], baixa automatica por uso em OS, repasse entre unidades, acerto de contas manual com integracao financeira, guia de devolucao com auditoria, e dossie historico imutavel.
 
 ---
 
-### 1. Novos campos na `NotaAssistencia` (`src/utils/solicitacaoPecasApi.ts`)
+### 1. Nova API de Consignacao (`src/utils/consignacaoApi.ts`) - ARQUIVO NOVO
 
-Adicionar campos opcionais na interface `NotaAssistencia`:
-- `formaPagamentoEncaminhamento?: string` (Pix ou Dinheiro)
-- `contaBancariaEncaminhamento?: string`
-- `nomeRecebedor?: string`
-- `chavePixEncaminhamento?: string`
-- `observacaoEncaminhamento?: string`
+**Interface `LoteConsignacao`:**
+- `id`: string (CONS-001, CONS-002...)
+- `fornecedorId`: string
+- `dataCriacao`: string
+- `responsavelCadastro`: string
+- `status`: 'Aberto' | 'Em Acerto' | 'Pago' | 'Devolvido'
+- `itens`: `ItemConsignacao[]`
+- `timeline`: `TimelineConsignacao[]`
 
-Atualizar `encaminharParaFinanceiro` e `agruparParaPagamento` para aceitar e propagar um objeto `dadosPagamento` com esses campos para as notas criadas.
+**Interface `ItemConsignacao`:**
+- `id`: string (CONS-ITEM-001)
+- `pecaId`: string (referencia ao PEC-XXXX injetado no estoque)
+- `descricao`: string
+- `modelo`: string
+- `quantidade`: number
+- `quantidadeOriginal`: number
+- `valorCusto`: number
+- `lojaAtualId`: string
+- `status`: 'Disponivel' | 'Consumido' | 'Devolvido' | 'Em Acerto'
+- `osVinculada?`: string (OS que consumiu)
+- `dataConsumo?`: string
+- `tecnicoConsumo?`: string
+- `devolvidoPor?`: string
+- `dataDevolucao?`: string
 
-### 2. Campos nos Modais (`src/pages/OSSolicitacoesPecas.tsx`)
+**Interface `TimelineConsignacao`:**
+- `data`: string
+- `tipo`: 'entrada' | 'consumo' | 'transferencia' | 'acerto' | 'devolucao' | 'pagamento'
+- `descricao`: string
+- `responsavel`: string
 
-**Novos estados:**
-- `encFormaPagamento`, `encContaBancaria`, `encNomeRecebedor`, `encChavePix`, `encObservacao`
-- Reset ao abrir/fechar qualquer modal
+**Funcoes principais:**
+- `criarLoteConsignacao(dados)`: Cria o lote, injeta pecas no estoque (via `addPeca` com origem 'Consignacao') e registra na timeline
+- `getLotesConsignacao()`, `getLoteById(id)`
+- `registrarConsumoConsignacao(loteId, itemId, osId, tecnico)`: Baixa automatica, registra consumo no dossie
+- `transferirItemConsignacao(loteId, itemId, novaLojaId, responsavel)`: Transfere mantendo vinculo ao lote original
+- `iniciarAcertoContas(loteId, responsavel)`: Muda status para 'Em Acerto', congela retiradas, calcula valor total consumido
+- `confirmarDevolucaoItem(loteId, itemId, responsavel)`: Marca item como devolvido, remove do estoque
+- `gerarLoteFinanceiro(loteId)`: Cria NotaAssistencia consolidada com tipo consignacao para o Financeiro
+- `finalizarAcerto(loteId)`: Chamado apos confirmacao financeira, muda status para 'Pago'
 
-**Modal "Confirmar Encaminhamento" (1 item) - linhas 748-782:**
-Adicionar apos o resumo de valores:
-- Select: Forma de Pagamento (Pix / Dinheiro) - obrigatorio
-- Se Pix: Input Conta Bancaria, Input Nome do Recebedor, Input Chave Pix
-- Textarea: Observacao (obrigatoria)
-- Botao desabilitado ate preencher forma de pagamento + observacao
+**Integracao com `pecasApi.ts`:**
+- Adicionar nova origem 'Consignacao' na interface `Peca` (campo `origem`)
+- Adicionar campo opcional `loteConsignacaoId?: string` na interface `Peca`
+- Ao criar lote, chamar `addPeca()` com origem 'Consignacao' e `loteConsignacaoId`
+- Ao registrar consumo via OS, chamar `darBaixaPeca()` existente + registrar no dossie
 
-**Modal "Agrupar para Pagamento" (2+ itens) - linhas 784-837:**
-Mesmos campos adicionados apos o detalhamento das pecas:
-- Select Forma de Pagamento, campos condicionais Pix, Textarea Observacao
-- Botao desabilitado ate preencher forma de pagamento + observacao
+---
 
-**Handlers:**
-- `handleConfirmarEncaminhamento`: validar e passar `dadosPagamento`
-- `handleConfirmarAgrupamento`: validar e passar `dadosPagamento`
+### 2. Nova Pagina - Entrada de Consignacao (`src/pages/OSConsignacao.tsx`) - ARQUIVO NOVO
 
-### 3. Exibicao no Financeiro (`src/pages/FinanceiroNotasAssistencia.tsx`)
+**Tela principal com 3 secoes:**
 
-No modal de conferencia (linhas 396-605), adicionar um bloco de "Dados de Pagamento Informados" acima da secao de pagamento do financeiro:
-- Card informativo (estilo azul, similar ao existente para dados Pix) exibindo:
-  - Forma de Pagamento informada
-  - Conta Bancaria (se Pix)
-  - Nome do Recebedor (se Pix)
-  - Chave Pix (se Pix)
-  - Observacao
-- Visivel tanto para notas pendentes quanto concluidas
-- Esse bloco e somente leitura - sao os dados informados pela gestao no encaminhamento
+**2.1 Dashboard Cards:**
+- Total de Lotes Abertos
+- Pecas Consignadas Disponiveis
+- Valor em Consignacao
+- Lotes em Acerto
+
+**2.2 Tabela de Lotes:**
+- Colunas: ID | Fornecedor | Data Criacao | Qtd Itens | Valor Total | Consumidos | Disponiveis | Status | Acoes
+- Badges de status: Aberto (azul), Em Acerto (amarelo), Pago (verde), Devolvido (cinza)
+- Acoes: Ver Dossie, Iniciar Acerto (se Aberto)
+
+**2.3 Modal "Novo Lote de Consignacao":**
+- Fornecedor (AutocompleteFornecedor)
+- Responsavel (auto-preenchido, disabled)
+- Tabela de itens: Descricao | Modelo | Qtd | Valor Custo | Loja Destino
+- Botao "Adicionar Item" e "Remover Item"
+- Valor Total (soma automatica)
+- Botao "Cadastrar Lote"
+
+**2.4 Modal "Dossie do Lote" (Detalhamento):**
+- Cabecalho: ID, Fornecedor, Data, Status, Valor Total, Responsavel
+- 3 abas internas:
+  - **Inventario**: Tabela com todos os itens (status individual, loja atual, OS vinculada se consumido)
+  - **Timeline**: Historico imutavel cronologico de todas as acoes
+  - **Devolucao**: Lista de itens nao consumidos com botao "Confirmar Devolucao" por item (exige usuario logado + data/hora)
+
+**2.5 Modal "Iniciar Acerto de Contas":**
+- Resumo: Itens consumidos x valor
+- Lista detalhada dos itens consumidos (OS, tecnico, data)
+- Lista de itens para devolucao (sobras)
+- Botao "Gerar Lote Financeiro" -> cria nota no Financeiro
+- Campos de pagamento: Forma (Pix/Dinheiro), Conta, Nome Recebedor, Chave Pix, Observacao
+
+---
+
+### 3. Integracao com Estoque-Assistencia (`src/pages/OSPecas.tsx`)
+
+**Tag [CONSIGNADO]:**
+- Na coluna "Descricao", pecas com `origem === 'Consignacao'` exibem badge `[CONSIGNADO]` em destaque (cor roxa/violeta)
+- Adicionar 'Consignacao' como opcao no filtro de Origem
+- No modal de detalhes, exibir campo "Lote Consignacao" com o ID do lote vinculado
+
+**Integracao com darBaixaPeca:**
+- Ao dar baixa em peca consignada via OS (fluxo existente), alem da baixa normal, chamar `registrarConsumoConsignacao` para registrar no dossie do lote
+
+---
+
+### 4. Integracao com Selecao de Pecas na OS
+
+**Nos modais de criacao/edicao de OS** (OSAssistenciaNova, OSAssistenciaEditar, OSOficina):
+- Pecas consignadas aparecem na lista de "Peca no Estoque" normalmente (ja injetadas pelo cadastro)
+- Identificacao visual: badge [CONSIGNADO] ao lado do nome na lista de selecao
+- A baixa automatica no estoque ja dispara o registro no dossie via integracao do item 3
+
+---
+
+### 5. Integracao Financeira (`src/pages/FinanceiroNotasAssistencia.tsx`)
+
+- Notas geradas por acerto de consignacao exibem badge "Consignacao" (cor violeta) na coluna Tipo
+- Modal de conferencia exibe: Lote ID, Fornecedor, lista detalhada de itens consumidos (OS, peca, valor)
+- Ao finalizar nota de consignacao, chamar `finalizarAcerto` para atualizar status do lote para 'Pago'
+
+---
+
+### 6. Roteamento e Navegacao
+
+**Nova rota em `src/App.tsx`:**
+- `/os/consignacao` -> `OSConsignacao`
+
+**Nova aba no `OSLayout.tsx`:**
+- Adicionar tab "Consignacao" (icone PackageCheck) entre "Estoque - Assistencia" e "Retirada de Pecas"
+
+---
+
+### 7. Atualizacao de `pecasApi.ts`
+
+- Adicionar 'Consignacao' ao tipo `origem` da interface `Peca`
+- Adicionar campo `loteConsignacaoId?: string` na interface `Peca`
+- Atualizar `darBaixaPeca` para, se a peca tiver `loteConsignacaoId`, disparar callback de registro de consumo
 
 ---
 
@@ -59,9 +148,20 @@ No modal de conferencia (linhas 396-605), adicionar um bloco de "Dados de Pagame
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/utils/solicitacaoPecasApi.ts` | 5 novos campos opcionais em `NotaAssistencia`, parametro `dadosPagamento` em `encaminharParaFinanceiro` e `agruparParaPagamento` |
-| `src/pages/OSSolicitacoesPecas.tsx` | 5 novos estados, formulario de pagamento em ambos os modais, validacao nos handlers |
-| `src/pages/FinanceiroNotasAssistencia.tsx` | Bloco informativo "Dados de Pagamento" no modal de conferencia, exibindo os dados informados no encaminhamento |
+| `src/utils/consignacaoApi.ts` | **NOVO** - Interfaces e logica completa de consignacao |
+| `src/utils/pecasApi.ts` | Adicionar origem 'Consignacao', campo `loteConsignacaoId`, hook de consumo em `darBaixaPeca` |
+| `src/pages/OSConsignacao.tsx` | **NOVO** - Tela completa com dashboard, tabela de lotes, modais de cadastro/dossie/acerto |
+| `src/pages/OSPecas.tsx` | Badge [CONSIGNADO], filtro 'Consignacao', campo lote no modal de detalhes |
+| `src/pages/FinanceiroNotasAssistencia.tsx` | Badge "Consignacao", modal expandido para notas de acerto |
+| `src/components/layout/OSLayout.tsx` | Nova tab "Consignacao" |
+| `src/App.tsx` | Nova rota `/os/consignacao` |
+| `src/utils/solicitacaoPecasApi.ts` | Tipo 'Consignacao' em NotaAssistencia para integracao financeira |
 
-Nenhum arquivo novo sera criado. O fluxo existente de conferencia do financeiro (conta, forma, comprovante) permanece inalterado - os novos dados sao informativos para o financeiro consultar durante a conferencia.
+### Sequencia de Implementacao
 
+1. `consignacaoApi.ts` + atualizacoes em `pecasApi.ts` (modelo de dados)
+2. `OSConsignacao.tsx` (tela principal com todos os modais)
+3. Roteamento (`App.tsx`) e navegacao (`OSLayout.tsx`)
+4. Integracao `OSPecas.tsx` (tag visual + filtro)
+5. Integracao `FinanceiroNotasAssistencia.tsx` (conferencia de acerto)
+6. Integracao `solicitacaoPecasApi.ts` (tipo consignacao na nota)
