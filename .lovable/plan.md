@@ -1,33 +1,32 @@
 
 
-## Remover Status "Reservada" do Estoque de Assistencia
+## Marcar pecas nao usadas como "Devolvida" ao finalizar o Acerto
 
-### Resumo
+### Contexto
 
-Eliminar o status "Reservada" do sistema de pecas, mantendo apenas os 3 status validos: **Disponivel**, **Utilizada** e **Devolvida**. Ajustar todos os arquivos que referenciam esse status.
+Hoje, a funcao `confirmarDevolucaoItem` ja marca pecas individuais como "Devolvida" no estoque. Porem, ao finalizar o acerto (`finalizarAcerto`), os itens que ainda estao com status "Em Acerto" (sobras nao consumidas) nao sao atualizados -- ficam presos nesse status intermediario tanto no lote quanto no estoque.
 
----
+O comportamento correto e: ao finalizar o acerto, toda peca que sobrou (status "Em Acerto") deve ser automaticamente marcada como **Devolvida** no estoque (quantidade zero) e no registro do lote.
 
-### Alteracoes
+### Alteracao
 
-**1. `src/utils/pecasApi.ts`**
-- Linha 28: Remover `'Reservada'` do union type, ficando `status: 'Disponivel' | 'Utilizada' | 'Devolvida'`
-- Linhas 108 e 176: Trocar `status: 'Reservada'` dos mocks (PEC-0006 e PEC-0012) para `'Disponivel'`
-- Linhas 335-338: Remover a funcao `reservarPeca` (ou alterar para no-op)
-- Linhas 342-346: Remover a funcao `liberarReservaPeca` (ou alterar para no-op)
+**Arquivo: `src/utils/consignacaoApi.ts` -- funcao `finalizarAcerto`**
 
-**2. `src/utils/consignacaoApi.ts`**
-- Linha 207: No `iniciarAcertoContas`, trocar `updatePeca(item.pecaId, { status: 'Reservada' })` para `updatePeca(item.pecaId, { status: 'Utilizada' })` -- ao iniciar o acerto, as pecas consignadas disponiveis passam direto para "Utilizada" (congeladas para uso)
+Adicionar um loop antes de mudar o status do lote para "Pago", que percorre todos os itens com status "Em Acerto" e:
+1. Marca o item do lote como "Devolvido" (com data e responsavel)
+2. Atualiza a peca no estoque para `status: 'Devolvida'` e `quantidade: 0`
+3. Registra na timeline a devolucao automatica
 
-**3. `src/pages/OSPecas.tsx`**
-- Linhas 92-93: Remover o `case 'Reservada'` do switch de badges
+```text
+finalizarAcerto(loteId)
+  |
+  +-- Para cada item com status "Em Acerto":
+  |     - item.status = 'Devolvido'
+  |     - item.dataDevolucao = agora
+  |     - updatePeca(pecaId, { status: 'Devolvida', quantidade: 0 })
+  |
+  +-- lote.status = 'Pago'
+  +-- Timeline: "Acerto finalizado..."
+```
 
-**4. `src/utils/statusColors.ts`**
-- Linha 108: Remover a entrada `'Reservada': 'yellow'`
-
-### Sequencia
-
-1. `pecasApi.ts` - tipo + mocks + funcoes
-2. `consignacaoApi.ts` - acerto de contas
-3. `OSPecas.tsx` - badge
-4. `statusColors.ts` - cor
+Apenas 1 arquivo sera alterado.
