@@ -41,6 +41,7 @@ import EstoqueNovaMovimentacaoMatriz from "./pages/EstoqueNovaMovimentacaoMatriz
 import EstoqueMovimentacaoMatrizDetalhes from "./pages/EstoqueMovimentacaoMatrizDetalhes";
 import EstoqueNotasUrgenciaPendentes from "./pages/EstoqueNotasUrgenciaPendentes";
 import EstoqueNotasPendencias from "./pages/EstoqueNotasPendencias";
+import EstoqueEncaminharAssistencia from "./pages/EstoqueEncaminharAssistencia";
 import EstoqueNotaCadastrarProdutos from "./pages/EstoqueNotaCadastrarProdutos";
 import EstoqueNotaConferencia from "./pages/EstoqueNotaConferencia";
 import EstoquePendenciasBaseTrocas from "./pages/EstoquePendenciasBaseTrocas";
@@ -198,6 +199,7 @@ const App = () => (
               <Route path="/estoque/nota/:id/conferencia" element={<EstoqueNotaConferencia />} />
               <Route path="/estoque/acessorios" element={<EstoqueAcessorios />} />
               <Route path="/estoque/pendencias-base-trocas" element={<EstoquePendenciasBaseTrocas />} />
+              <Route path="/estoque/encaminhar-assistencia" element={<EstoqueEncaminharAssistencia />} />
               <Route path="/os/produtos-analise" element={<OSProdutosAnalise />} />
               <Route path="/os/historico-assistencia" element={<OSHistoricoAssistencia />} />
               <Route path="/os/produto/:id" element={<OSProdutoDetalhes />} />

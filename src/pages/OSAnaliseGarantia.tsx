@@ -349,7 +349,7 @@ export default function OSAnaliseGarantia() {
               <TableHead>ID</TableHead>
               <TableHead>IMEI</TableHead>
               <TableHead>Origem</TableHead>
-              <TableHead>Cliente/Descrição</TableHead>
+              <TableHead>Descrição</TableHead>
               <TableHead>Data Chegada</TableHead>
               <TableHead>SLA</TableHead>
               <TableHead>Status</TableHead>

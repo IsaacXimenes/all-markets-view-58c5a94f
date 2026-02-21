@@ -118,6 +118,9 @@ export interface OrdemServico {
   recusadaTecnico?: boolean;
   motivoRecusaTecnico?: string;
   conclusaoServico?: string;
+  // Campos para Lote de Revisão
+  loteRevisaoId?: string;
+  loteRevisaoItemId?: string;
 }
 
 // Mock data

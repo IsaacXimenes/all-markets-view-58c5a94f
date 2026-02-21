@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   getNotasParaFinanceiro, 
   registrarPagamento,
@@ -14,11 +16,13 @@ import {
   NotaEntrada,
   podeEditarNota
 } from '@/utils/notaEntradaFluxoApi';
+import { getLoteRevisaoByNotaId } from '@/utils/loteRevisaoApi';
 import { getFornecedores } from '@/utils/cadastrosApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { TabelaNotasPendencias } from '@/components/estoque/TabelaNotasPendencias';
 import { ModalFinalizarPagamento, DadosPagamento, PendenciaPagamentoData } from '@/components/estoque/ModalFinalizarPagamento';
 import { NotaDetalhesContent } from '@/components/estoque/NotaDetalhesContent';
+import { LoteRevisaoResumo } from '@/components/estoque/LoteRevisaoResumo';
 import { 
   Download, 
   Filter, 
@@ -29,7 +33,10 @@ import {
   DollarSign,
   Landmark,
   Archive,
-  ArrowLeft
+  ArrowLeft,
+  Wrench,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -39,6 +46,7 @@ export default function FinanceiroNotasPendencias() {
   
   const [dialogPagamento, setDialogPagamento] = useState(false);
   const [modoDetalhes, setModoDetalhes] = useState(false);
+  const [showAbatimentoDetalhes, setShowAbatimentoDetalhes] = useState(false);
   
   // Rejeição
   const [dialogRejeicao, setDialogRejeicao] = useState(false);
@@ -249,6 +257,79 @@ export default function FinanceiroNotasPendencias() {
               Voltar para Notas Pendências
             </Button>
           </div>
+
+          {/* Banner de Abatimento - Lote de Revisão */}
+          {(() => {
+            const lote = getLoteRevisaoByNotaId(notaSelecionada.id);
+            if (!lote) return null;
+            return (
+              <Card className="border-destructive/30 bg-destructive/5">
+                <CardContent className="py-4 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <Wrench className="h-5 w-5 text-destructive shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">
+                        Esta nota possui um abatimento de <strong>{formatCurrency(lote.custoTotalReparos)}</strong> referente ao Lote de Revisão <strong>{lote.id}</strong>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {lote.itens.length} aparelho(s) encaminhado(s) para assistência
+                      </p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setShowAbatimentoDetalhes(!showAbatimentoDetalhes)}
+                    >
+                      {showAbatimentoDetalhes ? <ChevronUp className="h-4 w-4 mr-1" /> : <ChevronDown className="h-4 w-4 mr-1" />}
+                      {showAbatimentoDetalhes ? 'Ocultar' : 'Ver Detalhes'}
+                    </Button>
+                  </div>
+
+                  {showAbatimentoDetalhes && (
+                    <div className="space-y-4">
+                      <LoteRevisaoResumo
+                        valorOriginalNota={lote.valorOriginalNota}
+                        custoTotalReparos={lote.custoTotalReparos}
+                        valorLiquidoSugerido={lote.valorLiquidoSugerido}
+                      />
+                      <div className="rounded-md border overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Modelo</TableHead>
+                              <TableHead>IMEI</TableHead>
+                              <TableHead>Motivo</TableHead>
+                              <TableHead>Status Reparo</TableHead>
+                              <TableHead>Custo Reparo</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {lote.itens.map(item => (
+                              <TableRow key={item.id}>
+                                <TableCell className="font-medium">{item.marca} {item.modelo}</TableCell>
+                                <TableCell className="font-mono text-xs">{item.imei || '-'}</TableCell>
+                                <TableCell className="max-w-[200px] truncate">{item.motivoAssistencia}</TableCell>
+                                <TableCell>
+                                  <Badge variant={
+                                    item.statusReparo === 'Concluido' ? 'default' :
+                                    item.statusReparo === 'Em Andamento' ? 'secondary' : 'outline'
+                                  }>
+                                    {item.statusReparo}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>{formatCurrency(item.custoReparo)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           <NotaDetalhesContent nota={notaSelecionada} showActions={false} />
         </div>
       ) : (

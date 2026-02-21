@@ -343,6 +343,10 @@ export default function EstoqueNotasPendencias() {
                   <Plus className="h-4 w-4 mr-2" />
                   Cadastrar Nova Nota
                 </Button>
+                <Button onClick={() => navigate('/estoque/encaminhar-assistencia')} variant="outline">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Encaminhar para Assistência
+                </Button>
                 <Button onClick={handleExport} variant="outline">
                   <Download className="h-4 w-4 mr-2" />
                   Exportar CSV

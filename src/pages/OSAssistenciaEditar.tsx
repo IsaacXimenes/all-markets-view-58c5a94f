@@ -31,7 +31,7 @@ import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { getPecas, Peca, darBaixaPeca, initializePecasWithLojaIds } from '@/utils/pecasApi';
 import { InputComMascara } from '@/components/ui/InputComMascara';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, Save, ArrowLeft, History, Package, CheckCircle, XCircle, AlertTriangle, Search, Wrench, Shield, PackageCheck } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowLeft, History, Package, CheckCircle, XCircle, AlertTriangle, Search, Wrench, Shield, PackageCheck, Info } from 'lucide-react';
 import { CustoPorOrigemCards } from '@/components/assistencia/CustoPorOrigemCards';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
@@ -567,6 +567,25 @@ export default function OSAssistenciaEditar() {
             </Button>
           </div>
         </div>
+
+        {/* Banner Lote de Revisão */}
+        {osOriginal?.loteRevisaoId && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <Info className="h-5 w-5 text-primary shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">
+                    Esta OS faz parte do Lote de Revisão <strong>{osOriginal.loteRevisaoId}</strong>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Origem: Nota de Entrada • Todas as peças serão contabilizadas como abatimento no valor da nota
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Info da OS */}
         <Card>

@@ -142,6 +142,10 @@ export interface NotaEntrada {
   // Flag de rejeição pelo Financeiro
   rejeitada?: boolean;
   motivoRejeicao?: string;
+  
+  // Lote de Revisão
+  loteRevisaoId?: string;
+  valorAbatimento?: number;
 }
 
 // ============= ARMAZENAMENTO =============
