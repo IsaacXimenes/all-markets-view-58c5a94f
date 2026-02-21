@@ -31,7 +31,8 @@ import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { useAuthStore } from '@/store/authStore';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
-import { getOrdemServicoById, updateOrdemServico } from '@/utils/assistenciaApi';
+import { getOrdemServicoById, updateOrdemServico, getOrdensServico } from '@/utils/assistenciaApi';
+import { CustoPorOrigemCards } from '@/components/assistencia/CustoPorOrigemCards';
 import { Eye, Check, X, Package, Clock, AlertTriangle, Send, Plus, Edit, History, DollarSign, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -543,6 +544,15 @@ export default function OSSolicitacoesPecas() {
           </Card>
         </div>
       </div>
+
+      {/* Cards de Custo por Origem */}
+      <CustoPorOrigemCards 
+        ordensServico={(() => {
+          const osIds = [...new Set(solicitacoesFiltradas.map(s => s.osId))];
+          return osIds.map(id => getOrdemServicoById(id)).filter(Boolean) as any[];
+        })()}
+        titulo="Custos por Origem do Serviço"
+      />
 
       {/* Filtros */}
       <Card className="mb-4">

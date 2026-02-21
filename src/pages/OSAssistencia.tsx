@@ -14,6 +14,7 @@ import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
 import { Plus, Eye, FileText, Download, AlertTriangle, Clock, Edit, RefreshCcw, Wrench, DollarSign, UserCheck, CreditCard, CheckCircle, Package, XCircle } from 'lucide-react';
+import { CustoPorOrigemCards } from '@/components/assistencia/CustoPorOrigemCards';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
@@ -386,6 +387,9 @@ export default function OSAssistencia() {
           </Card>
         )}
       </div>
+
+      {/* Cards de Custo por Origem */}
+      <CustoPorOrigemCards ordensServico={ordensFiltradas} titulo="Custos por Origem do Serviço" />
 
       {/* Filtros Rápidos de Atuação */}
       <div className="flex flex-wrap gap-2 mb-4">

@@ -43,7 +43,7 @@ import { getRegistrosAnaliseGarantia } from '@/utils/garantiasApi';
 import { getProdutoPendenteById } from '@/utils/osApi';
 import { getPecas, Peca, darBaixaPeca, initializePecasWithLojaIds } from '@/utils/pecasApi';
 import { Plus, Trash2, Search, AlertTriangle, Clock, User, History, ArrowLeft, Smartphone, Save, Package, Info, Camera, ImageIcon, X, Wrench, Shield, PackageCheck } from 'lucide-react';
-import { CustoPorOrigemCards } from '@/components/assistencia/CustoPorOrigemCards';
+
 import { CronometroOSComponent } from '@/components/assistencia/CronometroOS';
 import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
 import { Pagamento as PagamentoVenda } from '@/utils/vendasApi';
@@ -1203,26 +1203,6 @@ export default function OSAssistenciaNova() {
           </CardContent>
         </Card>
 
-        {/* Cards de Custo por Origem (Preview em tempo real) */}
-        <CustoPorOrigemCards
-          pecas={pecas.filter(p => p.peca || p.pecaEstoqueId).map((p, i) => {
-            const pecaEstoqueRef = p.pecaEstoqueId ? pecasEstoque.find(pe => pe.id === p.pecaEstoqueId) : null;
-            let origemPecaSelo: PecaServico['origemPeca'] = 'Manual';
-            if (p.pecaNoEstoque && pecaEstoqueRef) {
-              if (pecaEstoqueRef.loteConsignacaoId) origemPecaSelo = 'Consignado';
-              else if (pecaEstoqueRef.origem === 'Retirada de Peça') origemPecaSelo = 'Retirada de Pecas';
-              else origemPecaSelo = 'Estoque Thiago';
-            } else if (p.pecaDeFornecedor) origemPecaSelo = 'Fornecedor';
-            const origemServicoSelo: PecaServico['origemServico'] = origemOS === 'garantia' ? 'Garantia' : origemOS === 'estoque' ? 'Estoque' : 'Balcao';
-            return {
-              id: `preview-${i}`, peca: p.peca, valor: parseFloat(p.valor.replace(/\D/g, '')) / 100 || 0,
-              percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: '', pecaNoEstoque: p.pecaNoEstoque, pecaDeFornecedor: p.pecaDeFornecedor,
-              origemServico: origemServicoSelo, origemPeca: origemPecaSelo,
-              valorCustoReal: pecaEstoqueRef ? pecaEstoqueRef.valorCusto : (parseFloat(p.valor.replace(/\D/g, '')) / 100 || 0)
-            };
-          })}
-          titulo="Custos por Origem (Preview)"
-        />
 
         {/* Cronômetro de Produtividade */}
         <CronometroOSComponent

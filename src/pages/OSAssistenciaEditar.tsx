@@ -33,7 +33,7 @@ import { getPecas, Peca, darBaixaPeca, initializePecasWithLojaIds } from '@/util
 import { InputComMascara } from '@/components/ui/InputComMascara';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { Plus, Trash2, Save, ArrowLeft, History, Package, CheckCircle, XCircle, AlertTriangle, Search, Wrench, Shield, PackageCheck, Info } from 'lucide-react';
-import { CustoPorOrigemCards } from '@/components/assistencia/CustoPorOrigemCards';
+
 import { CronometroOSComponent } from '@/components/assistencia/CronometroOS';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
@@ -731,13 +731,6 @@ export default function OSAssistenciaEditar() {
           </Card>
         </div>
 
-        {/* Cards de Custo por Origem */}
-        {osOriginal && (
-          <CustoPorOrigemCards
-            pecas={osOriginal.pecas}
-            titulo="Custos por Origem"
-          />
-        )}
 
         {/* Cronômetro de Produtividade */}
         {osOriginal && (
