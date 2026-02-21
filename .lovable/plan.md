@@ -1,194 +1,183 @@
 
 
-## Fluxo de Encaminhamento de Lote de Nota de Entrada para Assistencia
+## Cronometro de Produtividade, Desvinculacao Financeira e Automacao de Custos
 
 ### Resumo
 
-Implementar um fluxo completo que permite ao Estoque selecionar uma Nota de Entrada, marcar aparelhos defeituosos individualmente, gerar um Lote de Revisao (REV-NOTA-XXX), encaminhar para a Assistencia como OS de origem 'Estoque', e ao finalizar o lote, calcular automaticamente o abatimento no valor da nota para o Financeiro.
+Tres funcionalidades independentes que se complementam: (1) cronometro de tempo liquido de bancada nas OS, (2) desvinculacao individual de notas de lotes no financeiro com retorno para assistencia, e (3) autopreenchimento de custo real ao selecionar pecas consignadas ou de retirada.
 
 ---
 
-### 1. Nova API: Lote de Revisao
+### 1. Cronometro de Produtividade (SLA Real)
 
-**Novo arquivo: `src/utils/loteRevisaoApi.ts`**
+**Objetivo**: Medir tempo liquido de bancada por OS, descontando pausas automaticamente.
 
-Interface e funcoes para gerenciar lotes de revisao:
+#### 1.1. Novos campos na interface `OrdemServico`
 
+**Arquivo: `src/utils/assistenciaApi.ts`**
+
+Adicionar na interface `OrdemServico`:
 ```text
-LoteRevisao {
-  id: string              // REV-NOTA-XXXXX
-  notaEntradaId: string   // ID da nota de entrada vinculada
-  numeroNota: string      // Numero da nota (exibicao)
-  fornecedor: string
-  valorOriginalNota: number
-  status: 'Em Revisao' | 'Encaminhado' | 'Em Andamento' | 'Finalizado'
-  itens: ItemRevisao[]
-  dataCriacao: string
-  responsavelCriacao: string
-  dataFinalizacao?: string
-  custoTotalReparos: number
-  valorLiquidoSugerido: number
-  osIds: string[]         // IDs das OS geradas
-}
-
-ItemRevisao {
-  id: string
-  produtoNotaId: string   // ID do produto na nota
-  produtoId?: string      // ID do produto no estoque (PROD-XXXX)
-  marca: string
-  modelo: string
-  imei?: string
-  motivoAssistencia: string
-  observacao?: string
-  responsavelRegistro: string
-  dataRegistro: string
-  osId?: string           // OS gerada para este item
-  custoReparo: number     // Custo acumulado das pecas usadas
-  statusReparo: 'Pendente' | 'Em Andamento' | 'Concluido'
+cronometro?: {
+  status: 'parado' | 'em_andamento' | 'pausado' | 'finalizado';
+  iniciadoEm?: string;        // ISO timestamp do inicio
+  pausas: { inicio: string; fim?: string }[];
+  finalizadoEm?: string;
+  tempoLiquidoMs: number;     // Tempo total descontando pausas (milissegundos)
+  editadoPor?: string;        // Se gestor editou manualmente
+  tempoManualMs?: number;     // Override manual do gestor
 }
 ```
 
-Funcoes:
-- `criarLoteRevisao(notaEntradaId, itens[], responsavel)`
-- `getLotesRevisao()`, `getLoteRevisaoById(id)`
-- `getLoteRevisaoByNotaId(notaId)`
-- `atualizarItemRevisao(loteId, itemId, updates)`
-- `finalizarLoteRevisao(loteId, responsavel)`
-- `calcularAbatimento(loteId)` -- retorna { valorNota, custoReparos, valorLiquido, percentualReparo }
+Funcoes auxiliares:
+- `iniciarCronometro(osId, responsavel)` - Registra inicio + timeline
+- `pausarCronometro(osId, responsavel)` - Abre periodo de pausa + timeline
+- `retomarCronometro(osId, responsavel)` - Fecha periodo de pausa + timeline
+- `finalizarCronometro(osId, responsavel)` - Calcula tempo liquido final + timeline
+- `editarTempoManual(osId, tempoMs, responsavel)` - Somente gestor
+- `calcularTempoLiquido(cronometro)` - Soma os periodos ativos descontando pausas
 
----
+#### 1.2. Componente de Cronometro
 
-### 2. Nova Pagina: Encaminhar Nota para Assistencia
+**Novo arquivo: `src/components/assistencia/CronometroOS.tsx`**
 
-**Novo arquivo: `src/pages/EstoqueEncaminharAssistencia.tsx`**
+Props:
+- `osId: string`
+- `cronometro: CronometroOS | undefined`
+- `onUpdate: (cronometro) => void`
+- `readOnly?: boolean` (para visualizacao em Analise de Tratativas)
+- `podeEditar?: boolean` (true somente para gestores)
 
-Tela acessivel via botao na aba "Notas de Entrada" do Estoque.
+Interface:
+- Display digital do tempo em formato HH:MM:SS
+- Botoes: "Iniciar Servico" (verde), "Pausar" (amarelo), "Retomar" (azul), "Finalizar" (vermelho)
+- Logica: Quando em andamento, atualiza o display a cada segundo via `setInterval`
+- Permissoes: O campo de tempo e somente leitura para tecnicos. Gestores veem um botao "Editar Tempo" que abre input manual
 
-#### Layout:
-1. **Seletor de Nota**: Dropdown com formato `[No Nota] - [Fornecedor] - [Data]`, filtrando apenas notas com produtos cadastrados e status de conferencia concluida ou em andamento
-2. **Quadro 1 -- Relacao Original da Nota**: Tabela com todos os produtos da nota selecionada (Marca, Modelo, IMEI, Cor, Categoria, Status). Cada linha tem um botao "Reportar Defeito" que abre modal
-3. **Modal de Registro de Defeito**:
-   - Motivo da Assistencia (campo texto obrigatorio)
-   - Data/Hora do Registro (automatico, read-only)
-   - Responsavel (automatico via useAuthStore, read-only)
-   - Confirmacao em duas etapas (checkbox + botao)
-   - Ao confirmar, move o item para o Quadro 2
-4. **Quadro 2 -- Relacao de Produtos para Assistencia**: Tabela com os itens marcados. Botao "Remover" para devolver ao Quadro 1
-5. **Finalizacao do Lote**: Botao "Encaminhar para Assistencia" com confirmacao em duas etapas. Gera o ID `REV-NOTA-XXXXX` e cria OS individuais na Assistencia
+#### 1.3. Integracao nas Paginas
 
-#### Rota: `/estoque/encaminhar-assistencia`
+**Arquivo: `src/pages/OSAssistenciaEditar.tsx`**
+- Inserir o componente `CronometroOS` logo acima do quadro de Pecas/Servicos
+- Ao salvar a OS, persistir o estado do cronometro
+- Permissao: Verificar `user?.colaborador?.cargo` para habilitar edicao manual (contem 'gestor' ou `eh_gestor`)
 
----
-
-### 3. Rota e Navegacao
-
-**Arquivo: `src/App.tsx`**
-- Adicionar rota `/estoque/encaminhar-assistencia` -> `EstoqueEncaminharAssistencia`
-
-**Arquivo: `src/pages/EstoqueNotasPendencias.tsx`**
-- Adicionar botao "Encaminhar para Assistencia" ao lado do botao "Cadastrar Nova Nota"
-
----
-
-### 4. Geracao de OS na Assistencia
-
-Ao finalizar o lote, para cada item do Quadro 2:
-- Criar OS via `addOrdemServico` com:
-  - `origemOS: 'Estoque'`
-  - `descricao: 'Nota de Entrada - [No Nota]'`
-  - `status: 'Aguardando Analise'`
-  - `proximaAtuacao: 'Tecnico: Avaliar/Executar'`
-  - `modeloAparelho`, `imeiAparelho` do produto
-  - Vincular ao `loteRevisaoId` (novo campo opcional na OS)
-
-**Arquivo: `src/utils/assistenciaApi.ts`**
-- Adicionar campo opcional `loteRevisaoId?: string` na interface `OrdemServico`
-- Adicionar campo opcional `loteRevisaoItemId?: string` na interface `OrdemServico`
-
----
-
-### 5. Modulo Assistencia: Identificacao na Analise de Tratativas
+**Arquivo: `src/pages/OSAssistenciaNova.tsx`**
+- Inserir o componente `CronometroOS` na secao de Pecas/Servicos (cronometro inicia como 'parado')
+- Ao registrar a OS, salvar cronometro no estado inicial
 
 **Arquivo: `src/pages/OSAnaliseGarantia.tsx`**
-- A coluna "Cliente/Descricao" sera renomeada para "Descricao"
-- OS com `origemOS === 'Estoque'` e `loteRevisaoId` exibirao `Nota de Entrada - [No Nota]` na coluna Descricao
-- Adicionar badge de origem "Estoque" (ja existe)
+- Adicionar coluna "Tempo" na tabela de tratativas
+- Exibir tempo formatado (HH:MM:SS) ou "-" se ainda nao iniciado
+- Somente leitura (sem botoes de controle)
+
+**Arquivo: `src/pages/OSAssistenciaDetalhes.tsx`**
+- Exibir tempo gasto no detalhamento da OS (somente leitura)
 
 ---
 
-### 6. Tela de Trabalho do Tecnico (Lote de Revisao)
+### 2. Fluxo de Desvinculacao e Estorno Financeiro
 
-**Arquivo: `src/pages/OSAssistenciaEditar.tsx`** (ja existente)
+**Objetivo**: Permitir remover uma nota individual de um lote de pagamento ainda nao pago, devolvendo-a para a assistencia.
 
-Quando a OS tem `loteRevisaoId`:
-- Exibir banner informativo: "Esta OS faz parte do Lote de Revisao REV-NOTA-XXXXX"
-- O quadro de pecas funciona normalmente (seletor avancado com origem de peca e custo real)
-- Campo de observacao individual por aparelho (ja existe na descricao da OS)
-- Rastreabilidade cruzada: `origemServico: 'Estoque'` preenchido automaticamente
+#### 2.1. Nova funcao na API
 
-O tecnico trabalha individualmente em cada OS, usando o mesmo fluxo existente.
+**Arquivo: `src/utils/solicitacaoPecasApi.ts`**
 
----
+Nova funcao `desvincularNotaDeLote`:
+```text
+desvincularNotaDeLote(notaId: string, motivo: string, responsavel: string):
+  1. Localizar a nota e seu lote associado
+  2. Validar que o lote ainda esta 'Pendente' (nao pago)
+  3. Remover a solicitacao do array solicitacaoIds do lote
+  4. Se lote ficou com 1 item, desmontar lote (remover LotePagamento)
+  5. Recalcular valorTotal do lote
+  6. Reverter status da solicitacao para 'Aprovada' (Pendente de Agrupamento)
+  7. Remover/atualizar a nota financeira correspondente
+  8. Registrar na timeline da OS: "Nota removida do Lote [ID] pelo Financeiro em [Data/Hora] - Motivo: [texto]"
+  9. Retornar solicitacao atualizada
+```
 
-### 7. Dashboard de Resumo do Lote (Alerta de Custo)
-
-**Novo componente: `src/components/estoque/LoteRevisaoResumo.tsx`**
-
-Exibido na pagina de encaminhamento e acessivel nos detalhes da nota:
-- Card "Valor Original da Nota": R$ X
-- Card "Custo Total de Reparos (Abatimento)": R$ Y (soma das pecas de todas as OS do lote)
-- Card "Valor Liquido Sugerido": R$ (X - Y)
-- Se custo > 15% do valor da nota: card em vermelho com icone de alerta
-
----
-
-### 8. Integracao Financeira
-
-**Arquivo: `src/utils/notaEntradaFluxoApi.ts`**
-- Adicionar campo opcional `loteRevisaoId?: string` na interface `NotaEntrada`
-- Adicionar campo opcional `valorAbatimento?: number` na interface `NotaEntrada`
-
-**Arquivo: `src/pages/FinanceiroNotasPendencias.tsx`** (Notas Pendentes de Entrada no Financeiro)
-- No dialog de conferencia, se a nota possui `loteRevisaoId`:
-  - Exibir banner de alerta: "Esta nota possui um abatimento de R$ Y referente ao Lote de Revisao REV-NOTA-XXXXX"
-  - Botao "Ver Detalhes do Abatimento" que expande a lista de pecas usadas com suas origens
-  - Atualizar o valor pendente para refletir o abatimento
+#### 2.2. Interface no Financeiro
 
 **Arquivo: `src/pages/FinanceiroNotasAssistencia.tsx`**
-- Notas de lote de revisao aparecerao aqui com tipo "Lote de Revisao" e link para o detalhamento
+
+No modal de conferencia de notas que possuem `loteId`:
+- Exibir lista de itens do lote com botao "Desvincular" por item
+- Ao clicar em "Desvincular", abrir sub-dialog:
+  - Campo obrigatorio "Motivo da Desvinculacao" (textarea)
+  - Confirmacao em duas etapas (checkbox + botao)
+- Apos desvincular, atualizar a lista de notas e exibir toast de sucesso
+
+#### 2.3. Reflexo na Assistencia
+
+**Arquivo: `src/pages/OSSolicitacoesPecas.tsx`**
+- Solicitacoes com status 'Aprovada' e que ja passaram pelo financeiro devem exibir badge "Pendente de Agrupamento" (amarelo)
+- Estas solicitacoes ficam disponiveis novamente para selecao em novos lotes ou encaminhamento individual
 
 ---
 
-### 9. Mock Data
+### 3. Automacao de Custos e Rastreabilidade
 
-**Arquivo: `src/utils/loteRevisaoApi.ts`**
-- Criar 1 lote de revisao mock vinculado a uma nota existente com 2-3 itens em diferentes estados de reparo
+**Objetivo**: Quando o tecnico seleciona uma peca consignada ou de retirada no seletor avancado, o sistema busca automaticamente o valor de custo registrado na origem, eliminando digitacao manual.
+
+#### 3.1. Autopreenchimento no Seletor Avancado
+
+**Arquivo: `src/pages/OSAssistenciaEditar.tsx`** (e `OSAssistenciaNova.tsx`)
+
+Na logica de selecao de peca no modal (quando o tecnico clica em uma peca do estoque):
+
+Logica atual:
+```text
+pecaForm.valor = pecaEstoque.valorCusto (formatado como moeda)
+```
+
+Logica adicional a implementar:
+- Se `pecaEstoque.loteConsignacaoId` (Consignado): buscar `pecaEstoque.valorCusto` automaticamente -> este e o valor atribuido na remessa de consignacao
+- Se `pecaEstoque.origem === 'Retirada de Peca'`: buscar `pecaEstoque.valorCusto` automaticamente -> este e o valor atribuido no desmonte
+- Marcar o campo de valor como somente leitura para estas origens (ja implementado para pecas de estoque)
+- Preencher `valorCustoReal` com o mesmo valor no momento do salvamento
+
+Isso ja esta parcialmente implementado (linhas 298-328 do OSAssistenciaEditar.tsx), mas o `valorCustoReal` e calculado no salvamento. A melhoria e:
+1. Garantir que o valor exibido no seletor ja reflete o custo real da origem
+2. Exibir label informativo: "Custo herdado de [Consignacao CONS-XXX / Retirada RET-XXX]"
+3. Impedir edicao manual do campo de valor para essas origens
+
+#### 3.2. Integracao com Cards Mestres
+
+Nao requer alteracao adicional: o componente `CustoPorOrigemCards` ja consome `valorCustoReal` das pecas e calcula os totais por origem de servico. A automacao garante que os valores serao sempre fieis ao custo real registrado na origem.
+
+#### 3.3. Label Informativo de Origem
+
+**Arquivo: `src/pages/OSAssistenciaEditar.tsx`** (e `OSAssistenciaNova.tsx`)
+
+No quadro de pecas adicionadas, abaixo dos badges de DNA, exibir texto informativo:
+- Para Consignado: "Custo herdado do Lote CONS-XXX"
+- Para Retirada: "Custo herdado do desmonte"
+- Para Estoque Thiago: "Custo do estoque interno"
 
 ---
 
 ### Sequencia de Implementacao
 
-1. Criar `src/utils/loteRevisaoApi.ts` (interfaces, funcoes, mock data)
-2. Atualizar `src/utils/assistenciaApi.ts` (campos loteRevisaoId na OS)
-3. Atualizar `src/utils/notaEntradaFluxoApi.ts` (campos loteRevisaoId e valorAbatimento na Nota)
-4. Criar `src/components/estoque/LoteRevisaoResumo.tsx` (cards de resumo)
-5. Criar `src/pages/EstoqueEncaminharAssistencia.tsx` (pagina principal)
-6. Atualizar `src/App.tsx` (nova rota)
-7. Atualizar `src/pages/EstoqueNotasPendencias.tsx` (botao de navegacao)
-8. Atualizar `src/pages/OSAnaliseGarantia.tsx` (renomear coluna, identificacao)
-9. Atualizar `src/pages/OSAssistenciaEditar.tsx` (banner de lote)
-10. Atualizar `src/pages/FinanceiroNotasPendencias.tsx` (banner de abatimento no dialog)
+1. Atualizar `src/utils/assistenciaApi.ts` (interface cronometro + funcoes)
+2. Criar `src/components/assistencia/CronometroOS.tsx`
+3. Atualizar `src/pages/OSAssistenciaEditar.tsx` (cronometro + automacao custo + label)
+4. Atualizar `src/pages/OSAssistenciaNova.tsx` (cronometro + automacao custo + label)
+5. Atualizar `src/pages/OSAnaliseGarantia.tsx` (coluna Tempo)
+6. Atualizar `src/pages/OSAssistenciaDetalhes.tsx` (exibir tempo)
+7. Atualizar `src/utils/solicitacaoPecasApi.ts` (funcao desvincularNotaDeLote)
+8. Atualizar `src/pages/FinanceiroNotasAssistencia.tsx` (botao desvincular + modal)
+9. Atualizar `src/pages/OSSolicitacoesPecas.tsx` (badge Pendente de Agrupamento)
 
 ### Arquivos Afetados
 
-- `src/utils/loteRevisaoApi.ts` (novo)
-- `src/utils/assistenciaApi.ts` (2 campos na interface OrdemServico)
-- `src/utils/notaEntradaFluxoApi.ts` (2 campos na interface NotaEntrada)
-- `src/components/estoque/LoteRevisaoResumo.tsx` (novo)
-- `src/pages/EstoqueEncaminharAssistencia.tsx` (novo)
-- `src/App.tsx` (rota)
-- `src/pages/EstoqueNotasPendencias.tsx` (botao)
-- `src/pages/OSAnaliseGarantia.tsx` (coluna renomeada + identificacao)
-- `src/pages/OSAssistenciaEditar.tsx` (banner informativo)
-- `src/pages/FinanceiroNotasPendencias.tsx` (banner de abatimento)
+- `src/utils/assistenciaApi.ts` (interface + funcoes cronometro)
+- `src/components/assistencia/CronometroOS.tsx` (novo)
+- `src/pages/OSAssistenciaEditar.tsx` (cronometro + automacao custo)
+- `src/pages/OSAssistenciaNova.tsx` (cronometro + automacao custo)
+- `src/pages/OSAnaliseGarantia.tsx` (coluna Tempo)
+- `src/pages/OSAssistenciaDetalhes.tsx` (exibir tempo)
+- `src/utils/solicitacaoPecasApi.ts` (desvinculacao)
+- `src/pages/FinanceiroNotasAssistencia.tsx` (UI desvinculacao)
+- `src/pages/OSSolicitacoesPecas.tsx` (badge)
 
