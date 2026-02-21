@@ -22,7 +22,8 @@ import {
   RegistroAnaliseGarantia, getGarantiaById
 } from '@/utils/garantiasApi';
 import { updateProdutoPendente, getProdutoPendenteById, ParecerAssistencia } from '@/utils/osApi';
-import { addOrdemServico } from '@/utils/assistenciaApi';
+import { addOrdemServico, getOrdensServico } from '@/utils/assistenciaApi';
+import { formatarTempo, calcularTempoLiquido } from '@/components/assistencia/CronometroOS';
 import { getClientes } from '@/utils/cadastrosApi';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 
@@ -352,6 +353,7 @@ export default function OSAnaliseGarantia() {
               <TableHead>Descrição</TableHead>
               <TableHead>Data Chegada</TableHead>
               <TableHead>SLA</TableHead>
+              <TableHead>Tempo</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Ações</TableHead>
             </TableRow>
@@ -369,6 +371,21 @@ export default function OSAnaliseGarantia() {
                   <TableCell className="font-medium">{registro.clienteDescricao}</TableCell>
                   <TableCell>{format(new Date(registro.dataChegada), 'dd/MM/yyyy HH:mm')}</TableCell>
                   <TableCell>{getSLABadge(registro.dataChegada)}</TableCell>
+                  <TableCell>
+                    {(() => {
+                      // Buscar OS vinculada para exibir tempo do cronômetro
+                      const ordensServico = getOrdensServico();
+                      const osVinculada = ordensServico.find(os => 
+                        os.descricao?.includes(registro.id) || 
+                        os.descricao?.includes(registro.clienteDescricao)
+                      );
+                      if (osVinculada?.cronometro?.iniciadoEm) {
+                        const tempo = calcularTempoLiquido(osVinculada.cronometro);
+                        return <span className="font-mono text-xs">{formatarTempo(tempo)}</span>;
+                      }
+                      return <span className="text-muted-foreground text-xs">-</span>;
+                    })()}
+                  </TableCell>
                   <TableCell>{getStatusBadge(registro.status)}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -408,7 +425,7 @@ export default function OSAnaliseGarantia() {
             })}
             {registrosFiltrados.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   Nenhum registro encontrado
                 </TableCell>
               </TableRow>

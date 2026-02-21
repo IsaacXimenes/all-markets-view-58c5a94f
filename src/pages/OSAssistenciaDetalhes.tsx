@@ -29,7 +29,8 @@ import { getPecas } from '@/utils/pecasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
-import { ArrowLeft, FileText, Clock, AlertTriangle, User, Wrench, MapPin, Calendar, CreditCard, Save, Edit, Package, Plus, Trash2, CheckCircle, ImageIcon, DollarSign, ShieldCheck, Smartphone } from 'lucide-react';
+import { ArrowLeft, FileText, Clock, AlertTriangle, User, Wrench, MapPin, Calendar, CreditCard, Save, Edit, Package, Plus, Trash2, CheckCircle, ImageIcon, DollarSign, ShieldCheck, Smartphone, Timer } from 'lucide-react';
+import { formatarTempo, calcularTempoLiquido } from '@/components/assistencia/CronometroOS';
 import { formatIMEI } from '@/utils/imeiMask';
 import { cn } from '@/lib/utils';
 import QRCode from 'qrcode';
@@ -591,6 +592,21 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                     <p className="font-medium font-mono">{formatIMEI(os.imeiAparelho || '')}</p>
                   </div>
                 </div>
+                {/* Tempo de Bancada */}
+                {os.cronometro?.iniciadoEm && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex items-center gap-3">
+                      <Timer className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Tempo de Bancada</p>
+                        <p className="text-2xl font-mono font-bold">{formatarTempo(calcularTempoLiquido(os.cronometro))}</p>
+                      </div>
+                      {os.cronometro.editadoPor && (
+                        <span className="text-[10px] text-muted-foreground italic">Editado por {os.cronometro.editadoPor}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

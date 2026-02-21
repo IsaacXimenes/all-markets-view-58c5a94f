@@ -121,6 +121,18 @@ export interface OrdemServico {
   // Campos para Lote de Revisão
   loteRevisaoId?: string;
   loteRevisaoItemId?: string;
+  // Cronômetro de Produtividade
+  cronometro?: CronometroOS;
+}
+
+export interface CronometroOS {
+  status: 'parado' | 'em_andamento' | 'pausado' | 'finalizado';
+  iniciadoEm?: string;
+  pausas: { inicio: string; fim?: string }[];
+  finalizadoEm?: string;
+  tempoLiquidoMs: number;
+  editadoPor?: string;
+  tempoManualMs?: number;
 }
 
 // Mock data

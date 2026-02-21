@@ -691,6 +691,93 @@ export const calcularSLASolicitacao = (dataSolicitacao: string): number => {
 
 export { formatCurrency } from '@/utils/formatUtils';
 
+// ========== Desvincular Nota de Lote ==========
+
+export const desvincularNotaDeLote = (solicitacaoId: string, motivo: string, responsavel: string): SolicitacaoPeca | null => {
+  // Encontrar a solicitação
+  const solIdx = solicitacoes.findIndex(s => s.id === solicitacaoId);
+  if (solIdx === -1) return null;
+  const sol = solicitacoes[solIdx];
+
+  // Encontrar a nota que contém esta solicitação em um lote
+  const notaIdx = notasAssistencia.findIndex(n => 
+    n.loteId && n.solicitacaoIds?.includes(solicitacaoId) && n.status === 'Pendente'
+  );
+  if (notaIdx === -1) return null;
+  const nota = notasAssistencia[notaIdx];
+  const loteId = nota.loteId!;
+
+  // Encontrar o lote
+  const loteIdx = lotesPagamento.findIndex(l => l.id === loteId);
+  if (loteIdx === -1) return null;
+  const lote = lotesPagamento[loteIdx];
+  if (lote.status !== 'Pendente') return null;
+
+  // Remover solicitação do lote
+  lote.solicitacaoIds = lote.solicitacaoIds.filter(id => id !== solicitacaoId);
+  
+  // Remover do array de solicitacaoIds da nota
+  const novosSolIds = (nota.solicitacaoIds || []).filter(id => id !== solicitacaoId);
+  
+  // Remover item correspondente da nota
+  const novaItens = nota.itens.filter(item => item.peca !== sol.peca);
+  
+  // Recalcular valor
+  const novoValor = novaItens.reduce((acc, item) => acc + item.valorUnitario * item.quantidade, 0);
+
+  if (novosSolIds.length <= 1) {
+    // Se restou 0 ou 1 item, desmontar o lote
+    if (novosSolIds.length === 1) {
+      // Converter lote em nota individual
+      notasAssistencia[notaIdx] = {
+        ...nota,
+        solicitacaoIds: novosSolIds,
+        solicitacaoId: novosSolIds[0],
+        loteId: undefined,
+        itens: novaItens,
+        valorTotal: novoValor
+      };
+    } else {
+      // Lote ficou vazio, remover nota
+      notasAssistencia.splice(notaIdx, 1);
+    }
+    // Remover lote
+    lotesPagamento.splice(loteIdx, 1);
+  } else {
+    // Atualizar lote e nota
+    lote.valorTotal = novoValor;
+    lotesPagamento[loteIdx] = lote;
+    notasAssistencia[notaIdx] = {
+      ...nota,
+      solicitacaoIds: novosSolIds,
+      itens: novaItens,
+      valorTotal: novoValor
+    };
+  }
+
+  // Reverter status da solicitação para 'Aprovada'
+  solicitacoes[solIdx] = { ...sol, status: 'Aprovada' };
+
+  // Registrar na timeline da OS
+  const os = getOrdemServicoById(sol.osId);
+  if (os) {
+    updateOrdemServico(sol.osId, {
+      timeline: [...os.timeline, {
+        data: new Date().toISOString(),
+        tipo: 'financeiro',
+        descricao: `Nota removida do Lote ${loteId} pelo Financeiro em ${new Date().toLocaleString('pt-BR')} - Motivo: ${motivo}`,
+        responsavel
+      }]
+    });
+  }
+
+  return solicitacoes[solIdx];
+};
+
+export const getLoteById = (loteId: string): LotePagamento | null => {
+  return lotesPagamento.find(l => l.id === loteId) || null;
+};
+
 // Marcar solicitações ativas de uma OS cancelada
 export const marcarSolicitacoesOSCancelada = (osId: string): void => {
   solicitacoes.forEach((sol, idx) => {

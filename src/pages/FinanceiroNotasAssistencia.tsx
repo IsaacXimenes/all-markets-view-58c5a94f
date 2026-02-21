@@ -14,13 +14,16 @@ import {
   formatCurrency,
   NotaAssistencia,
   getSolicitacoesByOS,
-  getSolicitacaoById
+  getSolicitacaoById,
+  desvincularNotaDeLote
 } from '@/utils/solicitacaoPecasApi';
 import { getLoteById } from '@/utils/consignacaoApi';
 import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
 import { getOrdemServicoById, updateOrdemServico, getOrdensServico } from '@/utils/assistenciaApi';
 import { CustoPorOrigemCards } from '@/components/assistencia/CustoPorOrigemCards';
-import { Eye, Check, Download, Filter, X, FileText, Clock, CheckCircle, DollarSign, Package, PackageCheck } from 'lucide-react';
+import { Eye, Check, Download, Filter, X, FileText, Clock, CheckCircle, DollarSign, Package, PackageCheck, Unlink } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { toast } from 'sonner';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -47,6 +50,12 @@ export default function FinanceiroNotasAssistencia() {
   const [responsavelFinanceiro, setResponsavelFinanceiro] = useState(user?.colaborador?.nome || '');
   const [comprovante, setComprovante] = useState('');
   const [comprovanteNome, setComprovanteNome] = useState('');
+
+  // Desvinculação
+  const [desvincularOpen, setDesvincularOpen] = useState(false);
+  const [solicitacaoDesvincular, setSolicitacaoDesvincular] = useState<string>('');
+  const [motivoDesvinculacao, setMotivoDesvinculacao] = useState('');
+  const [checkDesvinculacao, setCheckDesvinculacao] = useState(false);
 
   // Filtros
   const [filters, setFilters] = useState({
@@ -456,6 +465,7 @@ export default function FinanceiroNotasAssistencia() {
                               <TableHead className="text-xs">Peça</TableHead>
                               <TableHead className="text-xs">Qtd</TableHead>
                               <TableHead className="text-xs text-right">Valor</TableHead>
+                              {notaSelecionada.status === 'Pendente' && <TableHead className="text-xs">Ação</TableHead>}
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -469,6 +479,24 @@ export default function FinanceiroNotasAssistencia() {
                                   <TableCell className="text-sm">{sol.peca}</TableCell>
                                   <TableCell className="text-sm">{sol.quantidade}</TableCell>
                                   <TableCell className="text-sm font-semibold text-right">{formatCurrency((sol.valorPeca || 0) * sol.quantidade)}</TableCell>
+                                  {notaSelecionada.status === 'Pendente' && (
+                                    <TableCell>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                                        onClick={() => {
+                                          setSolicitacaoDesvincular(solId);
+                                          setMotivoDesvinculacao('');
+                                          setCheckDesvinculacao(false);
+                                          setDesvincularOpen(true);
+                                        }}
+                                      >
+                                        <Unlink className="h-3 w-3 mr-1" />
+                                        Desvincular
+                                      </Button>
+                                    </TableCell>
+                                  )}
                                 </TableRow>
                               );
                             })}
@@ -721,6 +749,66 @@ export default function FinanceiroNotasAssistencia() {
                   Finalizar Nota
                 </Button>
               )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog de Desvinculação */}
+        <Dialog open={desvincularOpen} onOpenChange={setDesvincularOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <Unlink className="h-5 w-5" />
+                Desvincular Nota do Lote
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <p className="text-sm text-muted-foreground">
+                A solicitação será removida do lote e retornará para a assistência com status "Pendente de Agrupamento".
+              </p>
+              <div className="space-y-2">
+                <Label>Motivo da Desvinculação *</Label>
+                <Textarea
+                  value={motivoDesvinculacao}
+                  onChange={e => setMotivoDesvinculacao(e.target.value)}
+                  placeholder="Descreva o motivo da desvinculação..."
+                  rows={3}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  checked={checkDesvinculacao}
+                  onCheckedChange={v => setCheckDesvinculacao(v === true)}
+                />
+                <label className="text-sm">Confirmo que desejo desvincular esta nota do lote</label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDesvincularOpen(false)}>Cancelar</Button>
+              <Button
+                variant="destructive"
+                disabled={!motivoDesvinculacao.trim() || !checkDesvinculacao}
+                onClick={() => {
+                  const nomeResponsavel = user?.colaborador?.nome || 'Financeiro';
+                  const resultado = desvincularNotaDeLote(solicitacaoDesvincular, motivoDesvinculacao, nomeResponsavel);
+                  if (resultado) {
+                    setNotas(getNotasAssistencia());
+                    setDesvincularOpen(false);
+                    // Reload nota selecionada
+                    const notaAtualizada = getNotasAssistencia().find(n => n.id === notaSelecionada?.id);
+                    if (notaAtualizada) {
+                      setNotaSelecionada(notaAtualizada);
+                    } else {
+                      setDialogOpen(false);
+                    }
+                    toast.success('Nota desvinculada com sucesso! A solicitação retornou para a assistência.');
+                  } else {
+                    toast.error('Não foi possível desvincular. Verifique se o lote ainda está pendente.');
+                  }
+                }}
+              >
+                Confirmar Desvinculação
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

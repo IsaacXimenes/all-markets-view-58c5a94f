@@ -20,7 +20,8 @@ import {
   formatCurrency,
   PecaServico,
   Pagamento,
-  TimelineOS
+  TimelineOS,
+  CronometroOS as CronometroOSType
 } from '@/utils/assistenciaApi';
 import { addSolicitacao } from '@/utils/solicitacaoPecasApi';
 import { 
@@ -43,6 +44,7 @@ import { getProdutoPendenteById } from '@/utils/osApi';
 import { getPecas, Peca, darBaixaPeca, initializePecasWithLojaIds } from '@/utils/pecasApi';
 import { Plus, Trash2, Search, AlertTriangle, Clock, User, History, ArrowLeft, Smartphone, Save, Package, Info, Camera, ImageIcon, X, Wrench, Shield, PackageCheck } from 'lucide-react';
 import { CustoPorOrigemCards } from '@/components/assistencia/CustoPorOrigemCards';
+import { CronometroOSComponent } from '@/components/assistencia/CronometroOS';
 import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
 import { Pagamento as PagamentoVenda } from '@/utils/vendasApi';
 import { useToast } from '@/hooks/use-toast';
@@ -194,6 +196,9 @@ export default function OSAssistenciaNova() {
   // Fotos de entrada (câmera)
   const [fotosEntrada, setFotosEntrada] = useState<string[]>([]);
   const fotoInputRef = useRef<HTMLInputElement>(null);
+
+  // Cronômetro
+  const [cronometroLocal, setCronometroLocal] = useState<CronometroOSType | undefined>(undefined);
 
   // Dialogs
   const [buscarClienteOpen, setBuscarClienteOpen] = useState(false);
@@ -759,7 +764,8 @@ export default function OSAssistenciaNova() {
       valorProdutoOrigem: dadosOrigem?.valorProduto || dadosOrigem?.valor || undefined,
       idVendaAntiga: idVendaAntiga || undefined,
       proximaAtuacao: 'Técnico',
-      fotosEntrada: fotosEntrada.length > 0 ? fotosEntrada : undefined
+      fotosEntrada: fotosEntrada.length > 0 ? fotosEntrada : undefined,
+      cronometro: cronometroLocal
     });
 
     // Dar baixa automática nas peças do estoque
@@ -1218,6 +1224,16 @@ export default function OSAssistenciaNova() {
           titulo="Custos por Origem (Preview)"
         />
 
+        {/* Cronômetro de Produtividade */}
+        <CronometroOSComponent
+          osId={osInfo.id}
+          cronometro={cronometroLocal}
+          onUpdate={setCronometroLocal}
+          readOnly={false}
+          podeEditar={false}
+          responsavel="Técnico"
+        />
+
         {/* Peças/Serviços */}
         <Card>
           <CardHeader>
@@ -1314,11 +1330,20 @@ export default function OSAssistenciaNova() {
                         else origemPecaBadge = 'Estoque Thiago';
                       }
                       return (
+                        <>
                         <div className="flex flex-wrap gap-1 mt-1">
                           <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700 text-[10px] px-1.5 py-0">{origemServBadge}</Badge>
                           {origemPecaBadge && <Badge className="bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-300 dark:border-violet-700 text-[10px] px-1.5 py-0">{origemPecaBadge}</Badge>}
                           <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-[10px] px-1.5 py-0">{formatCurrency(pecaSel?.valorCusto || 0)}</Badge>
                         </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 italic">
+                          {origemPecaBadge === 'Consignado' && pecaSel?.loteConsignacaoId 
+                            ? `Custo herdado do Lote ${pecaSel.loteConsignacaoId}`
+                            : origemPecaBadge === 'Retirada de Peças' 
+                            ? 'Custo herdado do desmonte'
+                            : 'Custo do estoque interno'}
+                        </p>
+                        </>
                       );
                     })()}
                   </div>

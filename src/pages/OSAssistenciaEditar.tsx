@@ -16,7 +16,8 @@ import {
   formatCurrency,
   PecaServico,
   TimelineOS,
-  OrdemServico
+  OrdemServico,
+  CronometroOS as CronometroOSType
 } from '@/utils/assistenciaApi';
 import { 
   getClientes, 
@@ -33,6 +34,7 @@ import { InputComMascara } from '@/components/ui/InputComMascara';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
 import { Plus, Trash2, Save, ArrowLeft, History, Package, CheckCircle, XCircle, AlertTriangle, Search, Wrench, Shield, PackageCheck, Info } from 'lucide-react';
 import { CustoPorOrigemCards } from '@/components/assistencia/CustoPorOrigemCards';
+import { CronometroOSComponent } from '@/components/assistencia/CronometroOS';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -131,6 +133,9 @@ export default function OSAssistenciaEditar() {
   const [valorCustoTecnicoLocal, setValorCustoTecnicoLocal] = useState<number>(0);
   const [valorVendaTecnicoLocal, setValorVendaTecnicoLocal] = useState<number>(0);
 
+  // Cronômetro
+  const [cronometroLocal, setCronometroLocal] = useState<CronometroOSType | undefined>(undefined);
+
   // Timeline
   const [timeline, setTimeline] = useState<TimelineOS[]>([]);
 
@@ -184,6 +189,7 @@ export default function OSAssistenciaEditar() {
     setValorCustoTecnicoLocal(os.valorCustoTecnico || 0);
     setValorVendaTecnicoLocal(os.valorVendaTecnico || 0);
     setTimeline(os.timeline || []);
+    setCronometroLocal(os.cronometro);
 
     // Carregar solicitações de peças vinculadas à OS
     const solicitacoes = getSolicitacoesByOS(id);
@@ -462,6 +468,7 @@ export default function OSAssistenciaEditar() {
       proximaAtuacao,
       valorCustoTecnico: valorCustoTecnicoLocal,
       valorVendaTecnico: valorVendaTecnicoLocal,
+      cronometro: cronometroLocal,
     };
 
     // Persistir solicitações pendentes locais
@@ -732,6 +739,18 @@ export default function OSAssistenciaEditar() {
           />
         )}
 
+        {/* Cronômetro de Produtividade */}
+        {osOriginal && (
+          <CronometroOSComponent
+            osId={id!}
+            cronometro={cronometroLocal}
+            onUpdate={setCronometroLocal}
+            readOnly={false}
+            podeEditar={!!(user?.colaborador?.cargo?.toLowerCase().includes('gestor'))}
+            responsavel={user?.colaborador?.nome || user?.username || 'Técnico'}
+          />
+        )}
+
         {/* Peças/Serviços */}
         <Card>
           <CardHeader className="pb-3">
@@ -837,11 +856,20 @@ export default function OSAssistenciaEditar() {
                       }
                       const custoReal = pecaOriginal?.valorCustoReal ?? pecaSel?.valorCusto ?? 0;
                       return (
-                        <div className="flex flex-wrap gap-1 mt-1">
+                        <>
+                         <div className="flex flex-wrap gap-1 mt-1">
                           <Badge className="bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700 text-[10px] px-1.5 py-0">{origemServBadge}</Badge>
                           {origemPecaBadge && <Badge className="bg-violet-500/15 text-violet-700 dark:text-violet-300 border border-violet-300 dark:border-violet-700 text-[10px] px-1.5 py-0">{origemPecaBadge}</Badge>}
                           <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-[10px] px-1.5 py-0">{formatCurrency(custoReal)}</Badge>
                         </div>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 italic">
+                          {origemPecaBadge === 'Consignado' && pecaSel?.loteConsignacaoId 
+                            ? `Custo herdado do Lote ${pecaSel.loteConsignacaoId}`
+                            : origemPecaBadge === 'Retirada de Pecas' 
+                            ? 'Custo herdado do desmonte'
+                            : 'Custo do estoque interno'}
+                        </p>
+                        </>
                       );
                     })()}
                   </div>
