@@ -9,10 +9,9 @@ interface DetalheOrigem {
   estoqueThiago: number;
   retirada: number;
   fornecedor: number;
-  manual: number;
 }
 
-const emptyDetalhe = (): DetalheOrigem => ({ consignado: 0, estoqueThiago: 0, retirada: 0, fornecedor: 0, manual: 0 });
+const emptyDetalhe = (): DetalheOrigem => ({ consignado: 0, estoqueThiago: 0, retirada: 0, fornecedor: 0 });
 
 export interface CustosPorOrigem {
   custoBalcao: number;
@@ -29,7 +28,6 @@ const acumularDetalhe = (detalhe: DetalheOrigem, origemPeca: string | undefined,
   else if (origemPeca === 'Estoque Thiago') detalhe.estoqueThiago += custo;
   else if (origemPeca === 'Retirada de Pecas') detalhe.retirada += custo;
   else if (origemPeca === 'Fornecedor') detalhe.fornecedor += custo;
-  else detalhe.manual += custo;
 };
 
 const calcularDePecas = (pecas: PecaServico[]): CustosPorOrigem => {
@@ -62,7 +60,6 @@ function DetalheOrigemList({ detalhe }: { detalhe: DetalheOrigem }) {
     { label: 'Est. Thiago', value: detalhe.estoqueThiago },
     { label: 'Retirada', value: detalhe.retirada },
     { label: 'Fornecedor', value: detalhe.fornecedor },
-    { label: 'Manual', value: detalhe.manual },
   ].filter(i => i.value > 0);
 
   if (items.length === 0) return null;
