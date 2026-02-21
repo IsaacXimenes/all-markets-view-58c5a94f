@@ -463,6 +463,7 @@ export default function FinanceiroNotasAssistencia() {
                               <TableHead className="text-xs">Data Solicitação</TableHead>
                               <TableHead className="text-xs">ID OS</TableHead>
                               <TableHead className="text-xs">Peça</TableHead>
+                              <TableHead className="text-xs">Origem</TableHead>
                               <TableHead className="text-xs">Qtd</TableHead>
                               <TableHead className="text-xs text-right">Valor</TableHead>
                               {notaSelecionada.status === 'Pendente' && <TableHead className="text-xs">Ação</TableHead>}
@@ -477,6 +478,20 @@ export default function FinanceiroNotasAssistencia() {
                                   <TableCell className="text-xs">{new Date(sol.dataSolicitacao).toLocaleDateString('pt-BR')}</TableCell>
                                   <TableCell className="font-mono text-xs">{sol.osId}</TableCell>
                                   <TableCell className="text-sm">{sol.peca}</TableCell>
+                                  <TableCell className="text-xs">
+                                    {(() => {
+                                      const os = getOrdemServicoById(sol.osId);
+                                      const pecaOS = os?.pecas.find(p => p.peca === sol.peca);
+                                      if (!pecaOS?.origemPeca) return '-';
+                                      const colorMap: Record<string, string> = {
+                                        'Consignado': 'bg-violet-500/15 text-violet-700 border-violet-500/30',
+                                        'Estoque Thiago': 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30',
+                                        'Retirada de Pecas': 'bg-amber-500/15 text-amber-700 border-amber-500/30',
+                                        'Fornecedor': 'bg-blue-500/15 text-blue-700 border-blue-500/30',
+                                      };
+                                      return <Badge variant="outline" className={colorMap[pecaOS.origemPeca] || 'bg-muted text-muted-foreground'}>{pecaOS.origemPeca}</Badge>;
+                                    })()}
+                                  </TableCell>
                                   <TableCell className="text-sm">{sol.quantidade}</TableCell>
                                   <TableCell className="text-sm font-semibold text-right">{formatCurrency((sol.valorPeca || 0) * sol.quantidade)}</TableCell>
                                   {notaSelecionada.status === 'Pendente' && (
