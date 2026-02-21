@@ -427,7 +427,7 @@ export default function FinanceiroNotasAssistencia() {
                 })()}
 
                 <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div>
                       <Label>ID da Nota</Label>
                       <Input value={notaSelecionada.id} disabled />
@@ -438,7 +438,7 @@ export default function FinanceiroNotasAssistencia() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     <div>
                       <Label>{notaSelecionada.loteId ? 'Lote' : 'Solicitação'}</Label>
                       <Input value={notaSelecionada.loteId || notaSelecionada.solicitacaoId} disabled />
@@ -764,7 +764,7 @@ export default function FinanceiroNotasAssistencia() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <p className="text-sm text-muted-foreground">
-                A solicitação será removida do lote e retornará para a assistência com status "Pendente de Agrupamento".
+                A solicitação será removida do lote e retornará para a assistência com status "Recusada pelo Financeiro".
               </p>
               <div className="space-y-2">
                 <Label>Motivo da Desvinculação *</Label>

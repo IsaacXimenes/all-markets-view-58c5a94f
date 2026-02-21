@@ -145,6 +145,8 @@ export default function OSSolicitacoesPecas() {
         return <Badge className="bg-purple-500 hover:bg-purple-600">Devolvida ao Fornecedor</Badge>;
       case 'Retida para Estoque':
         return <Badge className="bg-emerald-700 hover:bg-emerald-800">Retida para Estoque</Badge>;
+      case 'Recusada pelo Financeiro':
+        return <Badge className="bg-red-600 hover:bg-red-700">Recusada pelo Financeiro</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }

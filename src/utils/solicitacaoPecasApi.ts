@@ -11,7 +11,7 @@ export interface SolicitacaoPeca {
   modeloImei: string;
   lojaSolicitante: string;
   dataSolicitacao: string;
-  status: 'Pendente' | 'Aprovada' | 'Rejeitada' | 'Enviada' | 'Recebida' | 'Aguardando Aprovação' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Aguardando Chegada' | 'Em Estoque' | 'Cancelada' | 'Devolvida ao Fornecedor' | 'Retida para Estoque';
+  status: 'Pendente' | 'Aprovada' | 'Rejeitada' | 'Enviada' | 'Recebida' | 'Aguardando Aprovação' | 'Pagamento - Financeiro' | 'Pagamento Finalizado' | 'Aguardando Chegada' | 'Em Estoque' | 'Cancelada' | 'Devolvida ao Fornecedor' | 'Retida para Estoque' | 'Recusada pelo Financeiro';
   fornecedorId?: string;
   valorPeca?: number;
   responsavelCompra?: string;
@@ -756,7 +756,7 @@ export const desvincularNotaDeLote = (solicitacaoId: string, motivo: string, res
   }
 
   // Reverter status da solicitação para 'Aprovada'
-  solicitacoes[solIdx] = { ...sol, status: 'Aprovada' };
+  solicitacoes[solIdx] = { ...sol, status: 'Recusada pelo Financeiro' };
 
   // Registrar na timeline da OS
   const os = getOrdemServicoById(sol.osId);
