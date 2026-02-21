@@ -15,7 +15,7 @@ const tabs = [
   { name: 'Acessórios', href: '/estoque/acessorios', icon: Headphones },
   { name: 'Aparelhos Pendentes', href: '/estoque/produtos-pendentes', icon: Clock },
   { name: 'Pendências - Base de Trocas', href: '/estoque/pendencias-base-trocas', icon: RefreshCw },
-  { name: 'Notas - Pendências', href: '/estoque/notas-pendencias', icon: FileText },
+  { name: 'Notas de Entrada', href: '/estoque/notas-pendencias', icon: FileText },
   { name: 'Movimentações - Aparelhos', href: '/estoque/movimentacoes', icon: ArrowRightLeft },
   { name: 'Movimentações - Acessórios', href: '/estoque/movimentacoes-acessorios', icon: ArrowRightLeft },
   { name: 'Movimentações - Matriz', href: '/estoque/movimentacoes-matriz', icon: Building }
