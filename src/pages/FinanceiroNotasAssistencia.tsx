@@ -423,7 +423,7 @@ export default function FinanceiroNotasAssistencia() {
                   }
                   const osVinculadas = osIds.map(id => getOrdemServicoById(id)).filter(Boolean) as any[];
                   if (osVinculadas.length === 0) return null;
-                  return <CustoPorOrigemCards ordensServico={osVinculadas} titulo="Custos desta Nota" />;
+                  return <div className="[&_.grid]:grid-cols-1 [&_.grid]:lg:grid-cols-2"><CustoPorOrigemCards ordensServico={osVinculadas} titulo="Custos desta Nota" /></div>;
                 })()}
 
                 <div className="space-y-4">
