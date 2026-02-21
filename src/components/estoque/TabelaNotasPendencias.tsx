@@ -12,6 +12,7 @@ import {
   TipoPagamentoNota,
   podeEditarNota
 } from '@/utils/notaEntradaFluxoApi';
+import { getLoteRevisaoByNotaId } from '@/utils/loteRevisaoApi';
 import { getFornecedores } from '@/utils/cadastrosApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { 
@@ -24,7 +25,8 @@ import {
   CreditCard,
   Clock,
   Zap,
-  XCircle
+  XCircle,
+  Wrench
 } from 'lucide-react';
 
 interface TabelaNotasPendenciasProps {
@@ -221,6 +223,7 @@ export function TabelaNotasPendencias({
             <TableHead>Tipo Pag.</TableHead>
             <TableHead>Atuação Atual</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Revisão</TableHead>
             <TableHead className="text-center">Qtd Inf./Cad./Conf.</TableHead>
             <TableHead>% Conf.</TableHead>
             <TableHead>Valor Total</TableHead>
@@ -233,7 +236,7 @@ export function TabelaNotasPendencias({
         <TableBody>
           {notas.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={15} className="text-center py-8 text-muted-foreground">
                 Nenhuma nota pendente encontrada
               </TableCell>
             </TableRow>
@@ -284,6 +287,20 @@ export function TabelaNotasPendencias({
                         </TooltipProvider>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {(() => {
+                      const loteRevisao = getLoteRevisaoByNotaId(nota.id);
+                      if (loteRevisao) {
+                        return (
+                          <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30 gap-1 text-[10px]">
+                            <Wrench className="h-3 w-3" />
+                            Encaminhado - Lote #{loteRevisao.id}
+                          </Badge>
+                        );
+                      }
+                      return <span className="text-muted-foreground text-xs">Pendente</span>;
+                    })()}
                   </TableCell>
                   <TableCell className="text-center">
                     <span className="text-xs text-muted-foreground">

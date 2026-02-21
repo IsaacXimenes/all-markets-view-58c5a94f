@@ -38,10 +38,10 @@ type ViewMode = 'lista' | 'novo' | 'dossie';
 
 export default function OSConsignacao() {
   const { toast } = useToast();
-  const { obterNomeLoja, obterLojasTipoLoja } = useCadastroStore();
+  const { obterNomeLoja, obterLojasPorTipo } = useCadastroStore();
   const user = useAuthStore(state => state.user);
   const fornecedores = getFornecedores();
-  const lojas = obterLojasTipoLoja();
+  const lojas = obterLojasPorTipo('Assistência');
 
   const [lotes, setLotes] = useState<LoteConsignacao[]>(getLotesConsignacao());
   const [viewMode, setViewMode] = useState<ViewMode>('lista');

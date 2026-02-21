@@ -30,9 +30,9 @@ import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 export default function OSAnaliseGarantia() {
   const navigate = useNavigate();
   const [registros, setRegistros] = useState<RegistroAnaliseGarantia[]>(getRegistrosAnaliseGarantia());
-  const { obterTecnicos, obterLojasTipoLoja, obterNomeLoja, obterNomeColaborador, obterColaboradorById } = useCadastroStore();
+  const { obterTecnicos, obterLojasPorTipo, obterNomeLoja, obterNomeColaborador, obterColaboradorById } = useCadastroStore();
   const tecnicos = obterTecnicos();
-  const lojas = obterLojasTipoLoja();
+  const lojas = obterLojasPorTipo('Assistência');
   
   // Filtros
   const [filtroOrigem, setFiltroOrigem] = useState<string>('todos');

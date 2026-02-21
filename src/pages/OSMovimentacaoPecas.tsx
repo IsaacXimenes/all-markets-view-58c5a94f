@@ -42,9 +42,9 @@ let movPecaCounter = 1;
 
 export default function OSMovimentacaoPecas() {
   const { toast } = useToast();
-  const { obterLojasTipoLoja, obterNomeLoja, obterColaboradoresAtivos } = useCadastroStore();
+  const { obterLojasPorTipo, obterNomeLoja, obterColaboradoresAtivos } = useCadastroStore();
   const user = useAuthStore(state => state.user);
-  const lojas = obterLojasTipoLoja();
+  const lojas = obterLojasPorTipo('Assistência');
   const colaboradores = obterColaboradoresAtivos();
 
   useEffect(() => {

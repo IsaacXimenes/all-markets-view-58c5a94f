@@ -20,8 +20,8 @@ import { useEffect } from 'react';
 
 export default function OSPecas() {
   const { toast } = useToast();
-  const { obterLojasTipoLoja, obterNomeLoja } = useCadastroStore();
-  const lojas = obterLojasTipoLoja();
+  const { obterLojasPorTipo, obterNomeLoja } = useCadastroStore();
+  const lojas = obterLojasPorTipo('Assistência');
   
   // Inicializar peças com IDs válidos de loja
   useEffect(() => {

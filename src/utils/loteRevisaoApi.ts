@@ -132,43 +132,46 @@ export const encaminharLoteParaAssistencia = (
   const lote = lotesRevisao.find(l => l.id === loteId);
   if (!lote || lote.status !== 'Em Revisao') return null;
 
-  const osIds: string[] = [];
+  // Agrupar TODOS os aparelhos da nota em uma ÚNICA OS (Lote de Revisão)
+  const descricaoItens = lote.itens
+    .map(item => `• ${item.marca} ${item.modelo}${item.imei ? ` (IMEI: ${item.imei})` : ''} — ${item.motivoAssistencia}`)
+    .join('\n');
 
-  for (const item of lote.itens) {
-    const novaOS = addOrdemServico({
-      dataHora: new Date().toISOString(),
-      clienteId: '',
-      setor: 'ASSISTÊNCIA',
-      tecnicoId: '',
-      lojaId: 'db894e7d', // Default lab
-      status: 'Aguardando Análise',
-      proximaAtuacao: 'Técnico: Avaliar/Executar',
-      pecas: [],
-      pagamentos: [],
-      descricao: `Nota de Entrada - ${lote.numeroNota}`,
-      timeline: [{
-        data: new Date().toISOString(),
-        tipo: 'registro' as const,
-        descricao: `OS criada a partir do Lote de Revisão ${lote.id}. Motivo: ${item.motivoAssistencia}`,
-        responsavel
-      }],
-      origemOS: 'Estoque',
-      modeloAparelho: `${item.marca} ${item.modelo}`,
-      imeiAparelho: item.imei || '',
-      valorTotal: 0,
-      custoTotal: 0,
-      loteRevisaoId: lote.id,
-      loteRevisaoItemId: item.id,
-      observacaoOrigem: item.motivoAssistencia
-    } as any);
+  const novaOS = addOrdemServico({
+    dataHora: new Date().toISOString(),
+    clienteId: '',
+    setor: 'ASSISTÊNCIA',
+    tecnicoId: '',
+    lojaId: '3cfbf69f', // Assistência - SIA (default)
+    status: 'Aguardando Análise',
+    proximaAtuacao: 'Técnico: Avaliar/Executar',
+    pecas: [],
+    pagamentos: [],
+    descricao: `Lote de Revisão ${lote.id} — Nota ${lote.numeroNota} (${lote.itens.length} aparelhos)\n${descricaoItens}`,
+    timeline: [{
+      data: new Date().toISOString(),
+      tipo: 'registro' as const,
+      descricao: `OS criada a partir do Lote de Revisão ${lote.id}. ${lote.itens.length} aparelhos agrupados da Nota ${lote.numeroNota}.`,
+      responsavel
+    }],
+    origemOS: 'Estoque',
+    modeloAparelho: lote.itens.length === 1 
+      ? `${lote.itens[0].marca} ${lote.itens[0].modelo}` 
+      : `Lote ${lote.id} (${lote.itens.length} aparelhos)`,
+    imeiAparelho: lote.itens.length === 1 ? (lote.itens[0].imei || '') : '',
+    valorTotal: 0,
+    custoTotal: 0,
+    loteRevisaoId: lote.id,
+    observacaoOrigem: `Lote de Revisão com ${lote.itens.length} aparelhos da nota ${lote.numeroNota}`
+  } as any);
 
-    if (novaOS) {
+  if (novaOS) {
+    lote.itens.forEach(item => {
       item.osId = novaOS.id;
-      osIds.push(novaOS.id);
-    }
+    });
+    lote.osIds = [novaOS.id];
   }
 
-  lote.osIds = osIds;
   lote.status = 'Encaminhado';
 
   return lote;

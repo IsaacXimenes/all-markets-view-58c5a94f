@@ -144,7 +144,7 @@ let ordensServico: OrdemServico[] = [
     clienteId: 'CLI-001',
     setor: 'GARANTIA',
     tecnicoId: 'df31dae3',
-    lojaId: '3ac7e00c',
+    lojaId: '3cfbf69f',
     status: 'Aguardando Análise',
     proximaAtuacao: 'Técnico: Avaliar/Executar',
     pecas: [],
@@ -167,11 +167,11 @@ let ordensServico: OrdemServico[] = [
     clienteId: 'CLI-002',
     setor: 'ASSISTÊNCIA',
     tecnicoId: 'be61a9df',
-    lojaId: 'db894e7d',
+    lojaId: '94dbe2b1',
     status: 'Em serviço',
     proximaAtuacao: 'Técnico',
     pecas: [
-      { id: 'PC-002', peca: 'Troca de bateria', imei: '234567890123456', valor: 280, percentual: 0, valorTotal: 280, servicoTerceirizado: false, unidadeServico: 'db894e7d', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Estoque Thiago', valorCustoReal: 120 }
+      { id: 'PC-002', peca: 'Troca de bateria', imei: '234567890123456', valor: 280, percentual: 0, valorTotal: 280, servicoTerceirizado: false, unidadeServico: '94dbe2b1', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Estoque Thiago', valorCustoReal: 120 }
     ],
     pagamentos: [],
     descricao: 'Substituição de bateria degradada - saúde 62%',
@@ -192,11 +192,11 @@ let ordensServico: OrdemServico[] = [
     clienteId: 'CLI-003',
     setor: 'ASSISTÊNCIA',
     tecnicoId: '53a1a9ad',
-    lojaId: '3ac7e00c',
+    lojaId: '3cfbf69f',
     status: 'Solicitação de Peça',
     proximaAtuacao: 'Gestor (Suprimentos)',
     pecas: [
-      { id: 'PC-003', peca: 'Display OLED iPhone 15', imei: '345678901234567', valor: 1200, percentual: 0, valorTotal: 1200, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: false, pecaDeFornecedor: true, statusAprovacao: 'Aguardando Aprovação', origemServico: 'Garantia', origemPeca: 'Fornecedor', valorCustoReal: 650 }
+      { id: 'PC-003', peca: 'Display OLED iPhone 15', imei: '345678901234567', valor: 1200, percentual: 0, valorTotal: 1200, servicoTerceirizado: false, unidadeServico: '3cfbf69f', pecaNoEstoque: false, pecaDeFornecedor: true, statusAprovacao: 'Aguardando Aprovação', origemServico: 'Garantia', origemPeca: 'Fornecedor', valorCustoReal: 650 }
     ],
     pagamentos: [],
     descricao: 'Troca de display OLED com burn-in - peça solicitada à matriz',
@@ -218,11 +218,11 @@ let ordensServico: OrdemServico[] = [
     clienteId: 'CLI-004',
     setor: 'GARANTIA',
     tecnicoId: '3a4e96c7',
-    lojaId: '5b9446d5',
+    lojaId: 'ba1802b9',
     status: 'Aguardando Peça',
     proximaAtuacao: 'Logística: Enviar Peça',
     pecas: [
-      { id: 'PC-004', peca: 'Conector de carga USB-C', imei: '456789012345678', valor: 180, percentual: 0, valorTotal: 180, servicoTerceirizado: false, unidadeServico: '5b9446d5', pecaNoEstoque: false, pecaDeFornecedor: true, statusAprovacao: 'Aprovado', origemServico: 'Garantia', origemPeca: 'Fornecedor', valorCustoReal: 60 }
+      { id: 'PC-004', peca: 'Conector de carga USB-C', imei: '456789012345678', valor: 180, percentual: 0, valorTotal: 180, servicoTerceirizado: false, unidadeServico: 'ba1802b9', pecaNoEstoque: false, pecaDeFornecedor: true, statusAprovacao: 'Aprovado', origemServico: 'Garantia', origemPeca: 'Fornecedor', valorCustoReal: 60 }
     ],
     pagamentos: [],
     descricao: 'Troca de conector de carga - peça aprovada, aguardando entrega',
@@ -245,11 +245,11 @@ let ordensServico: OrdemServico[] = [
     clienteId: 'CLI-001',
     setor: 'ASSISTÊNCIA',
     tecnicoId: 'df31dae3',
-    lojaId: '0d06e7db',
+    lojaId: 'be961085',
     status: 'Peça Recebida',
     proximaAtuacao: 'Técnico (Recebimento)',
     pecas: [
-      { id: 'PC-005', peca: 'Câmera traseira iPhone 14', imei: '567890123456789', valor: 350, percentual: 0, valorTotal: 350, servicoTerceirizado: false, unidadeServico: '0d06e7db', pecaNoEstoque: false, pecaDeFornecedor: true, statusAprovacao: 'Pagamento Finalizado', origemServico: 'Balcao', origemPeca: 'Fornecedor', valorCustoReal: 180 }
+      { id: 'PC-005', peca: 'Câmera traseira iPhone 14', imei: '567890123456789', valor: 350, percentual: 0, valorTotal: 350, servicoTerceirizado: false, unidadeServico: 'be961085', pecaNoEstoque: false, pecaDeFornecedor: true, statusAprovacao: 'Pagamento Finalizado', origemServico: 'Balcao', origemPeca: 'Fornecedor', valorCustoReal: 180 }
     ],
     pagamentos: [],
     descricao: 'Câmera com defeito de foco - peça recebida, aguardando confirmação do técnico',
@@ -272,15 +272,15 @@ let ordensServico: OrdemServico[] = [
     clienteId: 'CLI-002',
     setor: 'ASSISTÊNCIA',
     tecnicoId: 'be61a9df',
-    lojaId: '3ac7e00c',
+    lojaId: '3cfbf69f',
     status: 'Serviço concluído',
     proximaAtuacao: 'Atendente',
     resumoConclusao: 'Reparo concluído com sucesso. Placa lógica restaurada via micro solda.',
     valorCustoTecnico: 450,
     valorVendaTecnico: 880,
     pecas: [
-      { id: 'PC-006', peca: 'Reparo placa lógica', imei: '678901234567890', valor: 800, percentual: 0, valorTotal: 800, servicoTerceirizado: true, descricaoTerceirizado: 'Micro solda especializada', fornecedorId: 'FORN-005', unidadeServico: '3ac7e00c', pecaNoEstoque: false, pecaDeFornecedor: true, origemServico: 'Balcao', origemPeca: 'Fornecedor', valorCustoReal: 380 },
-      { id: 'PC-007', peca: 'Limpeza interna', valor: 80, percentual: 0, valorTotal: 80, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Estoque Thiago', valorCustoReal: 20 }
+      { id: 'PC-006', peca: 'Reparo placa lógica', imei: '678901234567890', valor: 800, percentual: 0, valorTotal: 800, servicoTerceirizado: true, descricaoTerceirizado: 'Micro solda especializada', fornecedorId: 'FORN-005', unidadeServico: '3cfbf69f', pecaNoEstoque: false, pecaDeFornecedor: true, origemServico: 'Balcao', origemPeca: 'Fornecedor', valorCustoReal: 380 },
+      { id: 'PC-007', peca: 'Limpeza interna', valor: 80, percentual: 0, valorTotal: 80, servicoTerceirizado: false, unidadeServico: '3cfbf69f', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Estoque Thiago', valorCustoReal: 20 }
     ],
     pagamentos: [],
     descricao: 'Reparo em placa lógica após queda com água',
@@ -304,15 +304,15 @@ let ordensServico: OrdemServico[] = [
     clienteId: 'CLI-004',
     setor: 'GARANTIA',
     tecnicoId: '53a1a9ad',
-    lojaId: 'db894e7d',
+    lojaId: '94dbe2b1',
     status: 'Conferência do Gestor',
     proximaAtuacao: 'Gestor',
     resumoConclusao: 'Alto-falante e microfone substituídos com sucesso.',
     valorCustoTecnico: 80,
     valorVendaTecnico: 200,
     pecas: [
-      { id: 'PC-008', peca: 'Alto-falante', imei: '789012345678901', valor: 150, percentual: 0, valorTotal: 150, servicoTerceirizado: false, unidadeServico: 'db894e7d', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Garantia', origemPeca: 'Consignado', valorCustoReal: 45 },
-      { id: 'PC-009', peca: 'Microfone', valor: 50, percentual: 0, valorTotal: 50, servicoTerceirizado: false, unidadeServico: 'db894e7d', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Garantia', origemPeca: 'Estoque Thiago', valorCustoReal: 15 }
+      { id: 'PC-008', peca: 'Alto-falante', imei: '789012345678901', valor: 150, percentual: 0, valorTotal: 150, servicoTerceirizado: false, unidadeServico: '94dbe2b1', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Garantia', origemPeca: 'Consignado', valorCustoReal: 45 },
+      { id: 'PC-009', peca: 'Microfone', valor: 50, percentual: 0, valorTotal: 50, servicoTerceirizado: false, unidadeServico: '94dbe2b1', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Garantia', origemPeca: 'Estoque Thiago', valorCustoReal: 15 }
     ],
     pagamentos: [
       { id: 'PAG-007', meio: 'Pix', valor: 200 }
@@ -337,14 +337,14 @@ let ordensServico: OrdemServico[] = [
     clienteId: 'CLI-003',
     setor: 'ASSISTÊNCIA',
     tecnicoId: '3a4e96c7',
-    lojaId: '5b9446d5',
+    lojaId: 'ba1802b9',
     status: 'Liquidado',
     proximaAtuacao: '-',
     resumoConclusao: 'Troca de tela realizada com sucesso. Aparelho testado e funcionando.',
     valorCustoTecnico: 200,
     valorVendaTecnico: 450,
     pecas: [
-      { id: 'PC-010', peca: 'Troca de tela', imei: '890123456789012', valor: 450, percentual: 0, valorTotal: 450, servicoTerceirizado: false, unidadeServico: '5b9446d5', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Retirada de Pecas', valorCustoReal: 200 }
+      { id: 'PC-010', peca: 'Troca de tela', imei: '890123456789012', valor: 450, percentual: 0, valorTotal: 450, servicoTerceirizado: false, unidadeServico: 'ba1802b9', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Retirada de Pecas', valorCustoReal: 200 }
     ],
     pagamentos: [
       { id: 'PAG-008', meio: 'Cartão Crédito', valor: 450, parcelas: 2 }
@@ -370,11 +370,11 @@ let ordensServico: OrdemServico[] = [
     clienteId: 'CLI-001',
     setor: 'ASSISTÊNCIA',
     tecnicoId: 'be61a9df',
-    lojaId: 'db894e7d',
+    lojaId: '94dbe2b1',
     status: 'Serviço Concluído - Validar Aparelho' as any,
     proximaAtuacao: 'Gestor (Estoque)',
     pecas: [
-      { id: 'PC-009', peca: 'Troca de tela OLED', imei: '999888777666555', valor: 450, percentual: 0, valorTotal: 450, servicoTerceirizado: false, unidadeServico: 'db894e7d', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Estoque', origemPeca: 'Estoque Thiago', valorCustoReal: 450 }
+      { id: 'PC-009', peca: 'Troca de tela OLED', imei: '999888777666555', valor: 450, percentual: 0, valorTotal: 450, servicoTerceirizado: false, unidadeServico: '94dbe2b1', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Estoque', origemPeca: 'Estoque Thiago', valorCustoReal: 450 }
     ],
     pagamentos: [],
     descricao: 'Aparelho do estoque com tela danificada - reparo concluído pelo técnico',
@@ -398,15 +398,15 @@ let ordensServico: OrdemServico[] = [
     clienteId: 'CLI-002',
     setor: 'ASSISTÊNCIA',
     tecnicoId: 'df31dae3',
-    lojaId: '3ac7e00c',
+    lojaId: '3cfbf69f',
     status: 'Liquidado',
     proximaAtuacao: '-',
     resumoConclusao: 'Tela LCD substituída e película aplicada com sucesso.',
     valorCustoTecnico: 295,
     valorVendaTecnico: 550,
     pecas: [
-      { id: 'PC-010a', peca: 'Tela LCD iPhone 12', imei: '101010101010101', valor: 500, percentual: 0, valorTotal: 500, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Consignado', valorCustoReal: 280 },
-      { id: 'PC-010b', peca: 'Película Especial', valor: 50, percentual: 0, valorTotal: 50, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: false, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Manual', valorCustoReal: 15 }
+      { id: 'PC-010a', peca: 'Tela LCD iPhone 12', imei: '101010101010101', valor: 500, percentual: 0, valorTotal: 500, servicoTerceirizado: false, unidadeServico: '3cfbf69f', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Consignado', valorCustoReal: 280 },
+      { id: 'PC-010b', peca: 'Película Especial', valor: 50, percentual: 0, valorTotal: 50, servicoTerceirizado: false, unidadeServico: '3cfbf69f', pecaNoEstoque: false, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Manual', valorCustoReal: 15 }
     ],
     pagamentos: [
       { id: 'PAG-010', meio: 'Pix', valor: 550 }
@@ -432,15 +432,15 @@ let ordensServico: OrdemServico[] = [
     clienteId: 'CLI-004',
     setor: 'GARANTIA',
     tecnicoId: '53a1a9ad',
-    lojaId: 'db894e7d',
+    lojaId: '94dbe2b1',
     status: 'Serviço concluído',
     proximaAtuacao: 'Atendente',
     resumoConclusao: 'Bateria e flex power substituídos. Aparelho carregando normalmente.',
     valorCustoTecnico: 120,
     valorVendaTecnico: 0,
     pecas: [
-      { id: 'PC-011a', peca: 'Bateria iPhone 14 Pro', imei: '111111111111111', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: 'db894e7d', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Garantia', origemPeca: 'Retirada de Pecas', valorCustoReal: 95 },
-      { id: 'PC-011b', peca: 'Flex Power iPhone 14 Pro', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: 'db894e7d', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Garantia', origemPeca: 'Estoque Thiago', valorCustoReal: 25 }
+      { id: 'PC-011a', peca: 'Bateria iPhone 14 Pro', imei: '111111111111111', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: '94dbe2b1', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Garantia', origemPeca: 'Retirada de Pecas', valorCustoReal: 95 },
+      { id: 'PC-011b', peca: 'Flex Power iPhone 14 Pro', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: '94dbe2b1', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Garantia', origemPeca: 'Estoque Thiago', valorCustoReal: 25 }
     ],
     pagamentos: [],
     descricao: 'Garantia - iPhone 14 Pro não carrega. Bateria retirada de aparelho desmontado.',
@@ -462,13 +462,13 @@ let ordensServico: OrdemServico[] = [
     clienteId: 'CLI-001',
     setor: 'ASSISTÊNCIA',
     tecnicoId: 'be61a9df',
-    lojaId: '3ac7e00c',
+    lojaId: '3cfbf69f',
     status: 'Em serviço',
     proximaAtuacao: 'Técnico',
     pecas: [
-      { id: 'PC-012a', peca: 'Display AMOLED Samsung S23', imei: '121212121212121', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Estoque', origemPeca: 'Consignado', valorCustoReal: 520 },
-      { id: 'PC-012b', peca: 'Aro lateral Samsung S23', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Estoque', origemPeca: 'Retirada de Pecas', valorCustoReal: 45 },
-      { id: 'PC-012c', peca: 'Tampa traseira Samsung S23', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Estoque', origemPeca: 'Estoque Thiago', valorCustoReal: 80 }
+      { id: 'PC-012a', peca: 'Display AMOLED Samsung S23', imei: '121212121212121', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: '3cfbf69f', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Estoque', origemPeca: 'Consignado', valorCustoReal: 520 },
+      { id: 'PC-012b', peca: 'Aro lateral Samsung S23', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: '3cfbf69f', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Estoque', origemPeca: 'Retirada de Pecas', valorCustoReal: 45 },
+      { id: 'PC-012c', peca: 'Tampa traseira Samsung S23', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: '3cfbf69f', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Estoque', origemPeca: 'Estoque Thiago', valorCustoReal: 80 }
     ],
     pagamentos: [],
     descricao: 'Aparelho do estoque Samsung S23 com display, aro e tampa danificados - reparo completo',
@@ -489,16 +489,16 @@ let ordensServico: OrdemServico[] = [
     clienteId: 'CLI-003',
     setor: 'ASSISTÊNCIA',
     tecnicoId: '3a4e96c7',
-    lojaId: '5b9446d5',
+    lojaId: 'ba1802b9',
     status: 'Conferência do Gestor',
     proximaAtuacao: 'Gestor (Conferência)',
     resumoConclusao: 'Placa auxiliar, sensor e botão substituídos. Todas as funções testadas.',
     valorCustoTecnico: 405,
     valorVendaTecnico: 750,
     pecas: [
-      { id: 'PC-013a', peca: 'Placa auxiliar iPhone 15', imei: '131313131313131', valor: 450, percentual: 0, valorTotal: 450, servicoTerceirizado: false, unidadeServico: '5b9446d5', pecaNoEstoque: false, pecaDeFornecedor: true, statusAprovacao: 'Pagamento Finalizado', origemServico: 'Balcao', origemPeca: 'Fornecedor', valorCustoReal: 320 },
-      { id: 'PC-013b', peca: 'Sensor proximidade iPhone 15', valor: 200, percentual: 0, valorTotal: 200, servicoTerceirizado: false, unidadeServico: '5b9446d5', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Consignado', valorCustoReal: 55 },
-      { id: 'PC-013c', peca: 'Botão Home iPhone 15', valor: 100, percentual: 0, valorTotal: 100, servicoTerceirizado: false, unidadeServico: '5b9446d5', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Retirada de Pecas', valorCustoReal: 30 }
+      { id: 'PC-013a', peca: 'Placa auxiliar iPhone 15', imei: '131313131313131', valor: 450, percentual: 0, valorTotal: 450, servicoTerceirizado: false, unidadeServico: 'ba1802b9', pecaNoEstoque: false, pecaDeFornecedor: true, statusAprovacao: 'Pagamento Finalizado', origemServico: 'Balcao', origemPeca: 'Fornecedor', valorCustoReal: 320 },
+      { id: 'PC-013b', peca: 'Sensor proximidade iPhone 15', valor: 200, percentual: 0, valorTotal: 200, servicoTerceirizado: false, unidadeServico: 'ba1802b9', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Consignado', valorCustoReal: 55 },
+      { id: 'PC-013c', peca: 'Botão Home iPhone 15', valor: 100, percentual: 0, valorTotal: 100, servicoTerceirizado: false, unidadeServico: 'ba1802b9', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Retirada de Pecas', valorCustoReal: 30 }
     ],
     pagamentos: [
       { id: 'PAG-013', meio: 'Cartão Débito', valor: 750 }

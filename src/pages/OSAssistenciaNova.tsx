@@ -104,8 +104,8 @@ export default function OSAssistenciaNova() {
   const [dataHora] = useState(new Date().toISOString());
   
   const clientes = getClientes();
-  const { obterLojasTipoLoja, obterNomeLoja, obterTecnicos, obterNomeColaborador } = useCadastroStore();
-  const lojas = obterLojasTipoLoja();
+  const { obterLojasPorTipo, obterNomeLoja, obterTecnicos, obterNomeColaborador } = useCadastroStore();
+  const lojas = obterLojasPorTipo('Assistência');
   const tecnicos = obterTecnicos();
   const fornecedores = getFornecedores().filter(f => f.status === 'Ativo');
   const produtosCadastro = getProdutosCadastro();

@@ -40,9 +40,9 @@ export default function OSSolicitacoesPecas() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [solicitacoes, setSolicitacoes] = useState(getSolicitacoes());
-  const { obterLojasTipoLoja, obterNomeLoja, obterColaboradoresAtivos } = useCadastroStore();
+  const { obterLojasPorTipo, obterNomeLoja, obterColaboradoresAtivos } = useCadastroStore();
   const user = useAuthStore(state => state.user);
-  const lojas = obterLojasTipoLoja();
+  const lojas = obterLojasPorTipo('Assistência');
   const fornecedores = getFornecedores().filter(f => f.status === 'Ativo');
   const colaboradores = obterColaboradoresAtivos();
 

@@ -75,8 +75,8 @@ export default function OSAssistenciaEditar() {
   const { user } = useAuthStore();
   
   const clientes = getClientes();
-  const { obterLojasTipoLoja, obterTecnicos, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
-  const lojas = obterLojasTipoLoja();
+  const { obterLojasPorTipo, obterTecnicos, obterNomeLoja, obterNomeColaborador } = useCadastroStore();
+  const lojas = obterLojasPorTipo('Assistência');
   const tecnicos = obterTecnicos();
   const fornecedores = getFornecedores().filter(f => f.status === 'Ativo');
 

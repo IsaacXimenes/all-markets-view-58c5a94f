@@ -22,8 +22,8 @@ export default function OSAssistencia() {
   const navigate = useNavigate();
   const [ordensServico, setOrdensServico] = useState(getOrdensServico());
   const clientes = getClientes();
-  const { obterLojasTipoLoja, obterNomeLoja, obterTecnicos, obterNomeColaborador } = useCadastroStore();
-  const lojas = obterLojasTipoLoja();
+  const { obterLojasPorTipo, obterNomeLoja, obterTecnicos, obterNomeColaborador } = useCadastroStore();
+  const lojas = obterLojasPorTipo('Assistência');
   const tecnicos = obterTecnicos();
 
   // Filtros
