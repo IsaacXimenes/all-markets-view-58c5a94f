@@ -375,6 +375,134 @@ let ordensServico: OrdemServico[] = [
     modeloAparelho: 'iPhone 15 Pro Max',
     imeiAparelho: '999888777666555',
     origemOS: 'Estoque'
+  },
+  // 10. Balcão + Consignado + Manual (Liquidado)
+  {
+    id: 'OS-2025-0010',
+    dataHora: '2025-01-25T09:00:00',
+    clienteId: 'CLI-002',
+    setor: 'ASSISTÊNCIA',
+    tecnicoId: 'df31dae3',
+    lojaId: '3ac7e00c',
+    status: 'Liquidado',
+    proximaAtuacao: '-',
+    resumoConclusao: 'Tela LCD substituída e película aplicada com sucesso.',
+    valorCustoTecnico: 295,
+    valorVendaTecnico: 550,
+    pecas: [
+      { id: 'PC-010a', peca: 'Tela LCD iPhone 12', imei: '101010101010101', valor: 500, percentual: 0, valorTotal: 500, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Consignado', valorCustoReal: 280 },
+      { id: 'PC-010b', peca: 'Película Especial', valor: 50, percentual: 0, valorTotal: 50, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: false, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Manual', valorCustoReal: 15 }
+    ],
+    pagamentos: [
+      { id: 'PAG-010', meio: 'Pix', valor: 550 }
+    ],
+    descricao: 'Troca de tela LCD iPhone 12 + película especial',
+    timeline: [
+      { data: '2025-01-25T09:00:00', tipo: 'registro', descricao: 'OS registrada via balcão', responsavel: 'Fernando Lima' },
+      { data: '2025-01-25T10:00:00', tipo: 'status', descricao: 'Em serviço', responsavel: 'Gabriel Soares Lima' },
+      { data: '2025-01-25T15:00:00', tipo: 'conclusao_servico', descricao: 'Serviço concluído pelo técnico', responsavel: 'Gabriel Soares Lima' },
+      { data: '2025-01-25T16:00:00', tipo: 'pagamento', descricao: 'Pagamento de R$ 550,00 via Pix', responsavel: 'Fernando Lima' },
+      { data: '2025-01-25T17:00:00', tipo: 'validacao_financeiro', descricao: 'Conferência aprovada', responsavel: 'João Gestor' }
+    ],
+    valorTotal: 550,
+    custoTotal: 295,
+    modeloAparelho: 'iPhone 12',
+    imeiAparelho: '101010101010101',
+    origemOS: 'Balcão'
+  },
+  // 11. Garantia + Retirada de Peças (Serviço concluído)
+  {
+    id: 'OS-2025-0011',
+    dataHora: '2025-01-26T08:30:00',
+    clienteId: 'CLI-004',
+    setor: 'GARANTIA',
+    tecnicoId: '53a1a9ad',
+    lojaId: 'db894e7d',
+    status: 'Serviço concluído',
+    proximaAtuacao: 'Atendente',
+    resumoConclusao: 'Bateria e flex power substituídos. Aparelho carregando normalmente.',
+    valorCustoTecnico: 120,
+    valorVendaTecnico: 0,
+    pecas: [
+      { id: 'PC-011a', peca: 'Bateria iPhone 14 Pro', imei: '111111111111111', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: 'db894e7d', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Garantia', origemPeca: 'Retirada de Pecas', valorCustoReal: 95 },
+      { id: 'PC-011b', peca: 'Flex Power iPhone 14 Pro', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: 'db894e7d', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Garantia', origemPeca: 'Estoque Thiago', valorCustoReal: 25 }
+    ],
+    pagamentos: [],
+    descricao: 'Garantia - iPhone 14 Pro não carrega. Bateria retirada de aparelho desmontado.',
+    timeline: [
+      { data: '2025-01-26T08:30:00', tipo: 'registro', descricao: 'OS registrada via garantia', responsavel: 'Julio Cesar da Silva' },
+      { data: '2025-01-26T09:30:00', tipo: 'status', descricao: 'Em serviço', responsavel: 'Julio Cesar da Silva' },
+      { data: '2025-01-26T14:00:00', tipo: 'conclusao_servico', descricao: 'Serviço concluído - bateria e flex power trocados', responsavel: 'Julio Cesar da Silva' }
+    ],
+    valorTotal: 0,
+    custoTotal: 120,
+    modeloAparelho: 'iPhone 14 Pro',
+    imeiAparelho: '111111111111111',
+    origemOS: 'Garantia'
+  },
+  // 12. Estoque + Consignado + Retirada + Estoque Thiago (Em serviço)
+  {
+    id: 'OS-2025-0012',
+    dataHora: '2025-01-27T10:00:00',
+    clienteId: 'CLI-001',
+    setor: 'ASSISTÊNCIA',
+    tecnicoId: 'be61a9df',
+    lojaId: '3ac7e00c',
+    status: 'Em serviço',
+    proximaAtuacao: 'Técnico',
+    pecas: [
+      { id: 'PC-012a', peca: 'Display AMOLED Samsung S23', imei: '121212121212121', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Estoque', origemPeca: 'Consignado', valorCustoReal: 520 },
+      { id: 'PC-012b', peca: 'Aro lateral Samsung S23', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Estoque', origemPeca: 'Retirada de Pecas', valorCustoReal: 45 },
+      { id: 'PC-012c', peca: 'Tampa traseira Samsung S23', valor: 0, percentual: 0, valorTotal: 0, servicoTerceirizado: false, unidadeServico: '3ac7e00c', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Estoque', origemPeca: 'Estoque Thiago', valorCustoReal: 80 }
+    ],
+    pagamentos: [],
+    descricao: 'Aparelho do estoque Samsung S23 com display, aro e tampa danificados - reparo completo',
+    timeline: [
+      { data: '2025-01-27T10:00:00', tipo: 'registro', descricao: 'OS registrada - Aparelho do estoque para reparo completo', responsavel: 'João Gestor' },
+      { data: '2025-01-27T11:00:00', tipo: 'status', descricao: 'Técnico assumiu o reparo', responsavel: 'Jeferson Sousa Cabral' }
+    ],
+    valorTotal: 0,
+    custoTotal: 645,
+    modeloAparelho: 'Samsung S23',
+    imeiAparelho: '121212121212121',
+    origemOS: 'Estoque'
+  },
+  // 13. Balcão + Mix completo: Fornecedor + Consignado + Retirada (Conferência do Gestor)
+  {
+    id: 'OS-2025-0013',
+    dataHora: '2025-01-28T09:00:00',
+    clienteId: 'CLI-003',
+    setor: 'ASSISTÊNCIA',
+    tecnicoId: '3a4e96c7',
+    lojaId: '5b9446d5',
+    status: 'Conferência do Gestor',
+    proximaAtuacao: 'Gestor (Conferência)',
+    resumoConclusao: 'Placa auxiliar, sensor e botão substituídos. Todas as funções testadas.',
+    valorCustoTecnico: 405,
+    valorVendaTecnico: 750,
+    pecas: [
+      { id: 'PC-013a', peca: 'Placa auxiliar iPhone 15', imei: '131313131313131', valor: 450, percentual: 0, valorTotal: 450, servicoTerceirizado: false, unidadeServico: '5b9446d5', pecaNoEstoque: false, pecaDeFornecedor: true, statusAprovacao: 'Pagamento Finalizado', origemServico: 'Balcao', origemPeca: 'Fornecedor', valorCustoReal: 320 },
+      { id: 'PC-013b', peca: 'Sensor proximidade iPhone 15', valor: 200, percentual: 0, valorTotal: 200, servicoTerceirizado: false, unidadeServico: '5b9446d5', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Consignado', valorCustoReal: 55 },
+      { id: 'PC-013c', peca: 'Botão Home iPhone 15', valor: 100, percentual: 0, valorTotal: 100, servicoTerceirizado: false, unidadeServico: '5b9446d5', pecaNoEstoque: true, pecaDeFornecedor: false, origemServico: 'Balcao', origemPeca: 'Retirada de Pecas', valorCustoReal: 30 }
+    ],
+    pagamentos: [
+      { id: 'PAG-013', meio: 'Cartão Débito', valor: 750 }
+    ],
+    descricao: 'iPhone 15 com múltiplos defeitos - placa auxiliar, sensor e botão home',
+    timeline: [
+      { data: '2025-01-28T09:00:00', tipo: 'registro', descricao: 'OS registrada via balcão', responsavel: 'Marcos Serra de Sousa' },
+      { data: '2025-01-28T10:00:00', tipo: 'status', descricao: 'Em serviço', responsavel: 'Marcos Serra de Sousa' },
+      { data: '2025-01-28T12:00:00', tipo: 'peca', descricao: 'Solicitação de placa auxiliar ao fornecedor', responsavel: 'Marcos Serra de Sousa' },
+      { data: '2025-01-29T09:00:00', tipo: 'aprovacao', descricao: 'Peça aprovada pelo gestor', responsavel: 'João Gestor' },
+      { data: '2025-01-30T10:00:00', tipo: 'peca', descricao: 'Placa auxiliar recebida', responsavel: 'Logística' },
+      { data: '2025-01-30T16:00:00', tipo: 'conclusao_servico', descricao: 'Serviço concluído - todos os componentes substituídos', responsavel: 'Marcos Serra de Sousa' },
+      { data: '2025-01-31T09:00:00', tipo: 'pagamento', descricao: 'Pagamento de R$ 750,00 via Cartão Débito', responsavel: 'Fernando Lima' }
+    ],
+    valorTotal: 750,
+    custoTotal: 405,
+    modeloAparelho: 'iPhone 15',
+    imeiAparelho: '131313131313131',
+    origemOS: 'Balcão'
   }
 ];
 
