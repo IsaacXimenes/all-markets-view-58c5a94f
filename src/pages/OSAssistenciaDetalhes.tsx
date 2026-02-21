@@ -909,6 +909,7 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                             <TableHead>Desconto</TableHead>
                             <TableHead>Valor Total</TableHead>
                             <TableHead>Origem</TableHead>
+                            <TableHead>Origem da Peça</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -927,6 +928,22 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                                   <Badge variant="outline">{fornecedores.find(f => f.id === peca.fornecedorId)?.nome || 'Fornecedor'}</Badge>
                                 )}
                                 {peca.servicoTerceirizado && <Badge variant="secondary">Terceirizado</Badge>}
+                              </TableCell>
+                              <TableCell>
+                                {peca.origemPeca && (
+                                  <Badge className={
+                                    peca.origemPeca === 'Consignado' ? 'bg-violet-500/15 text-violet-700 border-violet-500/30 hover:bg-violet-500/20' :
+                                    peca.origemPeca === 'Estoque Thiago' ? 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20' :
+                                    peca.origemPeca === 'Retirada de Pecas' ? 'bg-amber-500/15 text-amber-700 border-amber-500/30 hover:bg-amber-500/20' :
+                                    peca.origemPeca === 'Fornecedor' ? 'bg-blue-500/15 text-blue-700 border-blue-500/30 hover:bg-blue-500/20' :
+                                    'bg-muted text-muted-foreground border-muted'
+                                  } variant="outline">
+                                    {peca.origemPeca}
+                                  </Badge>
+                                )}
+                                {peca.origemServico && (
+                                  <Badge variant="secondary" className="ml-1 text-[10px]">{peca.origemServico}</Badge>
+                                )}
                               </TableCell>
                             </TableRow>
                           ))}
