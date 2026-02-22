@@ -1,80 +1,149 @@
 
 
-## Explosao de Origem nos Cards + Rastreabilidade nas Tabelas + Unificacao de Interface
+## Reestruturacao Profunda: Unificacao Estoque-Assistencia-Financeiro
 
-### 1. Cards de Custo com Detalhamento por Origem da Peca
+### Analise do Estado Atual vs. Solicitado
 
-**Arquivo: `src/components/assistencia/CustoPorOrigemCards.tsx`**
+Apos analise detalhada do codigo, grande parte das funcionalidades ja esta implementada. Este plano foca exclusivamente no que falta ou precisa ser ajustado.
 
-Expandir a interface `CustosPorOrigem` para incluir sub-totais por `origemPeca` dentro de cada `origemServico`:
+---
+
+### Funcionalidades JA IMPLEMENTADAS (nenhuma acao necessaria)
+
+- Cards de custo com "explosao de origem" (Consignado, Estoque Thiago, Retirada, Fornecedor)
+- Coluna "Origem da Peca" com badges coloridos em OSAssistenciaDetalhes
+- Dois botoes de acao por linha (Encaminhar Assistencia / Enviar Direto Financeiro) na tabela de Notas
+- Coluna "Status de Revisao" (Pendente, Em Revisao - Lote #ID, Enviado Direto)
+- Lote de Revisao agrupando aparelhos em uma unica OS
+- Cronometro de produtividade (Iniciar, Pausar, Finalizar) com tempo liquido
+- Unificacao da interface de selecao de pecas (Nova OS = Edicao OS)
+- Dashboard com 4 cards mestres e grafico de composicao por origem
+- Desvinculacao individual de nota no Financeiro
+- OS Vinculada no detalhamento do Financeiro
+- Consignacao com pagamentos parciais e fechamento flexivel
+- DNA da Peca com 3 selos de rastreabilidade
+
+---
+
+### O QUE PRECISA SER IMPLEMENTADO
+
+#### 1. Central de Decisao da Nota (Pos-Conferencia)
+
+**Arquivo: `src/pages/EstoqueNotaConferencia.tsx`**
+
+Apos 100% de conferencia, antes de finalizar, apresentar um "painel de decisao" com:
+- Verificacao de IMEI obrigatorio: bloquear finalizacao se algum aparelho nao tiver IMEI preenchido
+- Botao "Caminho Verde - Lote OK" (envia ao Financeiro, aparelhos ficam Disponivel)
+- Botao "Caminho Amarelo - Lote com Defeito" (redireciona para a pagina de encaminhar assistencia)
+
+Atualmente a conferencia finaliza sem essa tela de decisao.
+
+#### 2. Status "Em Revisao Tecnica" nos Produtos
+
+**Arquivo: `src/utils/estoqueApi.ts`**
+
+Adicionar status `Em Revisao Tecnica` aos produtos quando encaminhados via Lote de Revisao. Esses produtos devem ficar invisiveis para venda (filtrados nas telas de venda e estoque disponivel).
+
+**Arquivo: `src/pages/EstoqueEncaminharAssistencia.tsx`**
+
+Apos criar o lote de revisao, atualizar o status de cada produto cadastrado na nota para "Em Revisao Tecnica".
+
+#### 3. Icone de "Credito de Fornecedor" na Tabela de Notas
+
+**Arquivo: `src/utils/notaEntradaFluxoApi.ts`**
+
+Adicionar interface `CreditoFornecedor` e funcoes para:
+- Gerar credito automaticamente quando nota com pagamento antecipado tem reparos (Vale-Credito)
+- Consultar extrato de creditos por fornecedor
+
+**Arquivo: `src/components/estoque/TabelaNotasPendencias.tsx`**
+
+Adicionar icone de moeda ao lado do nome do fornecedor. Ao clicar, abrir modal com extrato de creditos do fornecedor.
+
+#### 4. Matriz de Abatimento no Financeiro
+
+**Arquivo: `src/pages/FinanceiroNotasAssistencia.tsx`**
+
+No modal de conferencia de notas vinculadas a Lotes de Revisao:
+- Exibir o custo total de reparos como abatimento automatico no saldo devedor (Pagamento Pos/Parcial)
+- Para notas com Pagamento 100% Antecipado, exibir card de "Vale-Credito de Fornecedor" gerado
+- Card vermelho de alerta se custo de reparo > 15% do valor da nota
+
+#### 5. Retorno de Assistencia para Estoque (Logistica Reversa)
+
+**Arquivo: `src/utils/loteRevisaoApi.ts`**
+
+Ao finalizar um lote de revisao (todos os reparos concluidos):
+- Aparelhos consertados: retornar para Conferencia de Estoque com tag `[Retorno de Assistencia]` - ficam Disponivel apenas apos OK do estoquista
+- Aparelhos para devolucao: gerar abatimento integral no valor de compra, status `Devolvido ao Fornecedor`
+
+**Arquivo: `src/pages/EstoqueProdutosPendentes.tsx`**
+
+Adicionar filtro/badge para produtos com tag `[Retorno de Assistencia]` aguardando validacao do estoquista.
+
+#### 6. Padronizacao de Unidades Tecnicas no Estoque de Assistencia
+
+**Arquivo: `src/utils/pecasApi.ts`** (dados mockados)
+
+Substituir referencias a lojas genericas (ex: "Loja SIA", "Loja Taguatinga") por unidades reais do tipo "Assistencia" cadastradas no sistema, utilizando `obterLojasPorTipo('Assistência')` para consistencia.
+
+---
+
+### Detalhes Tecnicos
+
+#### Central de Decisao (EstoqueNotaConferencia.tsx)
 
 ```text
-Estrutura atual:
-  custoBalcao: number
-  custoGarantia: number
-  custoEstoque: number
-  investimentoConsignados: number
-
-Nova estrutura (adicionar):
-  detalheBalcao: { consignado: number, estoqueThiago: number, retirada: number, fornecedor: number, manual: number }
-  detalheGarantia: { consignado: number, estoqueThiago: number, retirada: number, fornecedor: number, manual: number }
-  detalheEstoque: { consignado: number, estoqueThiago: number, retirada: number, fornecedor: number, manual: number }
+Fluxo apos 100% conferencia:
+  1. Verificar se todos os aparelhos tem IMEI -> Se nao, bloquear com alerta
+  2. Exibir painel com dois caminhos:
+     - Verde: enviarDiretoAoFinanceiro() + migrar produtos
+     - Amarelo: navigate('/estoque/encaminhar-assistencia?nota={id}')
 ```
 
-Atualizar as funcoes `calcularCustosPorOrigem` e `calcularCustosDePecas` para popular os sub-totais usando `p.origemPeca`.
+#### Credito de Fornecedor (notaEntradaFluxoApi.ts)
 
-No componente visual, abaixo de cada valor principal do `StatsCard`, renderizar uma lista compacta mostrando apenas as origens com valor > 0:
-- Texto pequeno (text-xs text-muted-foreground)
-- Formato: "Consignado: R$ X | Estoque Thiago: R$ Y | Retirada: R$ Z"
+```text
+Interface CreditoFornecedor {
+  id: string
+  fornecedor: string
+  valor: number
+  origem: string (ID da nota)
+  dataGeracao: string
+  utilizado: boolean
+  dataUtilizacao?: string
+  notaUtilizacao?: string
+}
 
-O StatsCard ja possui a prop `description` que pode ser usada, ou alternativamente adicionar um slot de children. A abordagem mais limpa sera substituir o `StatsCard` por cards customizados inline dentro do `CustoPorOrigemCards`, mantendo o mesmo visual mas adicionando a lista de sub-totais abaixo do valor.
+Funcoes:
+  - gerarCreditoFornecedor(fornecedor, valor, notaOrigem)
+  - getCreditosByFornecedor(fornecedor): CreditoFornecedor[]
+  - utilizarCredito(creditoId, notaDestino)
+```
 
-**Impacto**: Automaticamente reflete em todos os locais que usam `CustoPorOrigemCards` (Dashboard, OSAssistencia, OSSolicitacoesPecas, FinanceiroNotasAssistencia).
+#### Abatimento Automatico (FinanceiroNotasAssistencia.tsx)
 
-### 2. Coluna "Origem da Peca" nas Tabelas de Pecas
-
-**Arquivo: `src/pages/OSAssistenciaDetalhes.tsx`** (tabela de pecas da OS, linhas ~904-934)
-- Adicionar nova coluna `TableHead` "Origem da Peca" apos a coluna "Origem" existente
-- Exibir badges coloridos baseados em `peca.origemPeca`:
-  - Consignado: badge violeta
-  - Estoque Thiago: badge emerald
-  - Retirada de Pecas: badge amber
-  - Fornecedor: badge blue
-  - Manual: badge gray
-- Exibir tambem `peca.origemServico` como selo adicional se disponivel
-
-**Arquivo: `src/pages/FinanceiroNotasAssistencia.tsx`** (tabela de detalhamento do lote, linhas ~460-500)
-- Adicionar coluna "Origem" na tabela de solicitacoes dentro do modal de conferencia
-- Buscar a OS vinculada via `getOrdemServicoById(sol.osId)` e extrair `origemPeca` das pecas correspondentes
-
-**Arquivo: `src/pages/OSAnaliseGarantia.tsx`** (tabela principal, linhas ~348-434)
-- Esta tabela lista registros de analise (nao pecas individuais), entao a coluna "Origem da Peca" nao se aplica diretamente aqui. Os registros ja possuem coluna "Origem" (Garantia/Estoque).
-
-### 3. Unificacao da Interface de Selecao de Pecas
-
-Apos comparacao detalhada dos modais de busca de peca:
-- **OSAssistenciaNova.tsx** (linhas 2018-2145): Modal com filtro por descricao/modelo, filtro por loja, separacao minha loja vs outras lojas, badges de estoque coloridos, tags [CONSIGNADO]
-- **OSAssistenciaEditar.tsx** (linhas 1282-1409): Modal identico ao da Nova OS
-
-Os modais ja estao 100% unificados em termos de estrutura e funcionalidade. Ambos possuem:
-- Mesmo layout de Dialog (max-w-4xl)
-- Mesmos filtros (busca + loja)
-- Mesma separacao minha loja / outras lojas
-- Mesmos badges DNA da Peca (origemServico, origemPeca, valorCusto)
-- Mesmo calculo baseado em valorCusto
-
-Nenhuma alteracao necessaria neste item - apenas confirmacao de que a unificacao ja esta implementada.
+```text
+No modal de conferencia:
+  - Se nota tem loteRevisaoId:
+    - Buscar lote e calcular custoTotalReparos
+    - Se tipoPagamento = 'Pos' ou 'Parcial':
+      -> valorFinal = valorNota - custoReparos (abatimento)
+    - Se tipoPagamento = '100% Antecipado':
+      -> Exibir card "Vale-Credito gerado: R$ {custoReparos}"
+    - Se custoReparos/valorNota > 0.15:
+      -> Card vermelho de alerta critico
+```
 
 ### Arquivos Afetados
 
-1. `src/components/assistencia/CustoPorOrigemCards.tsx` - explosao de origem nos cards
-2. `src/pages/OSAssistenciaDetalhes.tsx` - nova coluna "Origem da Peca" na tabela de pecas
-3. `src/pages/FinanceiroNotasAssistencia.tsx` - nova coluna "Origem" na tabela do lote no modal
-
-### Resultado Esperado
-
-- Cada card de custo (Balcao, Garantia, Estoque) tera uma lista compacta abaixo do valor total mostrando a composicao por origem da peca (Consignado, Estoque Thiago, Retirada, Fornecedor)
-- Na pagina de Detalhes da OS, cada peca tera uma coluna adicional com badge identificando sua origem especifica
-- No modal de conferencia do Financeiro, a tabela do lote incluira a origem de cada solicitacao
-- A interface de selecao de pecas permanece unificada entre Nova e Edicao (ja implementada)
+1. `src/pages/EstoqueNotaConferencia.tsx` - Central de Decisao pos-conferencia
+2. `src/utils/estoqueApi.ts` - Status "Em Revisao Tecnica"
+3. `src/pages/EstoqueEncaminharAssistencia.tsx` - Atualizar status produtos ao encaminhar
+4. `src/utils/notaEntradaFluxoApi.ts` - Sistema de Credito de Fornecedor
+5. `src/components/estoque/TabelaNotasPendencias.tsx` - Icone de credito
+6. `src/pages/FinanceiroNotasAssistencia.tsx` - Matriz de abatimento e vale-credito
+7. `src/utils/loteRevisaoApi.ts` - Logistica reversa (retorno/devolucao)
+8. `src/pages/EstoqueProdutosPendentes.tsx` - Badge "Retorno de Assistencia"
+9. `src/utils/pecasApi.ts` - Padronizacao de unidades tecnicas nos dados mockados
 
