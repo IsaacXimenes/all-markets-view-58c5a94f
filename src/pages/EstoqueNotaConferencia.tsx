@@ -4,6 +4,8 @@ import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,7 +25,8 @@ import {
   Send,
   Wrench,
   AlertTriangle,
-  ShieldCheck
+  ShieldCheck,
+  Coins
 } from 'lucide-react';
 import { 
   getNotaEntradaById, 
@@ -33,6 +36,8 @@ import {
   migrarProdutosConferidosPorCategoria,
   enviarDiretoAoFinanceiro,
   verificarImeiUnicoSistema,
+  processarTriagemIndividualizada,
+  TriagemProduto,
   NotaEntrada,
   ProdutoNotaEntrada,
   podeRealizarAcao,
@@ -52,6 +57,12 @@ export default function EstoqueNotaConferencia() {
   const [isLoading, setIsLoading] = useState(true);
   const [timelineOpen, setTimelineOpen] = useState(true);
   const [showCentralDecisao, setShowCentralDecisao] = useState(false);
+  
+  // Estado para triagem individualizada (caminho por produto)
+  const [triagemProdutos, setTriagemProdutos] = useState<Record<string, 'verde' | 'amarelo' | null>>({});
+  const [motivosDefeito, setMotivosDefeito] = useState<Record<string, string>>({});
+  const [modalMotivoOpen, setModalMotivoOpen] = useState(false);
+  const [produtoMotivoId, setProdutoMotivoId] = useState<string | null>(null);
   
   // Estado local para rastrear produtos marcados como conferidos (antes de salvar)
   const [produtosConferidos, setProdutosConferidos] = useState<Set<string>>(new Set());
@@ -314,38 +325,86 @@ export default function EstoqueNotaConferencia() {
     }
   };
 
-  // Caminho Verde: Enviar direto ao Financeiro
-  const handleCaminhoVerde = () => {
-    if (!nota) return;
-    
-    // Verificar se todos os aparelhos têm IMEI
-    if (!todosIMEIsPreenchidos) {
-      toast.error('Todos os aparelhos devem ter o IMEI preenchido antes de enviar ao Financeiro');
-      return;
-    }
-    
-    const resultado = enviarDiretoAoFinanceiro(nota.id, 'Carlos Estoque');
-    if (resultado) {
-      toast.success('Nota enviada ao Financeiro pelo valor integral!', {
-        description: 'Aparelhos disponíveis para venda'
-      });
-      navigate('/estoque/notas-pendencias');
+  // Helpers para triagem individualizada
+  const todosTriados = useMemo(() => {
+    if (!nota) return false;
+    return nota.produtos.every(p => triagemProdutos[p.id] === 'verde' || triagemProdutos[p.id] === 'amarelo');
+  }, [nota, triagemProdutos]);
+
+  const qtdVerdes = useMemo(() => Object.values(triagemProdutos).filter(v => v === 'verde').length, [triagemProdutos]);
+  const qtdAmarelos = useMemo(() => Object.values(triagemProdutos).filter(v => v === 'amarelo').length, [triagemProdutos]);
+
+  const handleAtribuirCaminho = (produtoId: string, caminho: 'verde' | 'amarelo') => {
+    if (caminho === 'amarelo') {
+      // Abrir modal para motivo do defeito
+      setProdutoMotivoId(produtoId);
+      setModalMotivoOpen(true);
     } else {
-      toast.error('Erro ao enviar nota ao Financeiro');
+      setTriagemProdutos(prev => ({ ...prev, [produtoId]: 'verde' }));
+      setMotivosDefeito(prev => { const n = { ...prev }; delete n[produtoId]; return n; });
     }
   };
 
-  // Caminho Amarelo: Encaminhar para Assistência
-  const handleCaminhoAmarelo = () => {
-    if (!nota) return;
-    
-    // Verificar se todos os aparelhos têm IMEI
-    if (!todosIMEIsPreenchidos) {
-      toast.error('Todos os aparelhos devem ter o IMEI preenchido antes de encaminhar para Assistência');
+  const handleConfirmarMotivo = () => {
+    if (!produtoMotivoId) return;
+    const motivo = motivosDefeito[produtoMotivoId];
+    if (!motivo?.trim()) {
+      toast.error('Informe o motivo do defeito');
       return;
     }
-    
-    navigate(`/estoque/encaminhar-assistencia?nota=${nota.id}`);
+    setTriagemProdutos(prev => ({ ...prev, [produtoMotivoId]: 'amarelo' }));
+    setModalMotivoOpen(false);
+    setProdutoMotivoId(null);
+  };
+
+  const handleRemoverTriagem = (produtoId: string) => {
+    setTriagemProdutos(prev => { const n = { ...prev }; delete n[produtoId]; return n; });
+    setMotivosDefeito(prev => { const n = { ...prev }; delete n[produtoId]; return n; });
+  };
+
+  const handleMarcarTodosVerde = () => {
+    if (!nota) return;
+    const novaTriagem: Record<string, 'verde'> = {};
+    nota.produtos.forEach(p => { novaTriagem[p.id] = 'verde'; });
+    setTriagemProdutos(novaTriagem);
+    setMotivosDefeito({});
+  };
+
+  // Finalizar triagem individualizada
+  const handleFinalizarTriagem = () => {
+    if (!nota || !todosTriados) return;
+    if (!todosIMEIsPreenchidos) {
+      toast.error('Todos os aparelhos devem ter o IMEI preenchido');
+      return;
+    }
+
+    const triagens: TriagemProduto[] = Object.entries(triagemProdutos).map(([produtoId, caminho]) => ({
+      produtoId,
+      caminho: caminho!,
+      motivoDefeito: motivosDefeito[produtoId]
+    }));
+
+    const resultado = processarTriagemIndividualizada(nota.id, triagens, 'Carlos Estoque');
+    if (!resultado) {
+      toast.error('Erro ao processar triagem');
+      return;
+    }
+
+    // Feedback
+    if (resultado.produtosVerdes.length > 0) {
+      toast.success(`${resultado.produtosVerdes.length} produto(s) → Financeiro (disponíveis para venda)`);
+    }
+    if (resultado.produtosAmarelos.length > 0) {
+      toast.success(`${resultado.produtosAmarelos.length} produto(s) → Assistência (Lote ${resultado.loteRevisaoId})`);
+    }
+    if (resultado.creditoGerado) {
+      toast.success(`Vale-Crédito gerado: ${formatCurrency(resultado.creditoGerado.valor)} para ${nota.fornecedor}`, {
+        icon: <Coins className="h-4 w-4" />,
+        duration: 6000
+      });
+    }
+
+    navigate('/estoque/notas-pendencias');
   };
 
   const formatDateTime = (dateStr: string) => {
@@ -669,21 +728,21 @@ export default function EstoqueNotaConferencia() {
           </CardContent>
         </Card>
 
-        {/* Central de Decisão - aparece após 100% conferência */}
+        {/* Central de Decisão - Triagem Individualizada */}
         {showCentralDecisao && nota && (
           <Card className="border-2 border-primary/50 bg-primary/5">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
                 <ShieldCheck className="h-6 w-6 text-primary" />
-                Central de Decisão — Conferência 100% Concluída
+                Central de Decisão — Triagem Individualizada
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Todos os {nota.qtdCadastrada} produto(s) foram conferidos. Escolha o próximo passo:
+                Conferência 100% concluída. Atribua o caminho de cada produto individualmente.
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               {!todosIMEIsPreenchidos && (
-                <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/30 mb-4">
+                <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/30">
                   <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
                   <p className="text-sm text-destructive font-medium">
                     Existem aparelhos sem IMEI preenchido. Preencha todos os IMEIs antes de prosseguir.
@@ -691,51 +750,150 @@ export default function EstoqueNotaConferencia() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="border-green-500/30 hover:border-green-500/60 transition-colors">
-                  <CardContent className="p-6 text-center space-y-3">
-                    <div className="mx-auto w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                      <Send className="h-6 w-6 text-green-600" />
-                    </div>
-                    <h3 className="font-semibold text-green-700 dark:text-green-400">Caminho Verde — Lote OK</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Todos os aparelhos estão em perfeitas condições. Enviar nota diretamente ao Financeiro pelo valor integral.
-                    </p>
-                    <Button 
-                      className="w-full bg-green-600 hover:bg-green-700 text-white"
-                      disabled={!todosIMEIsPreenchidos || temImeiDuplicado}
-                      onClick={handleCaminhoVerde}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Finalizar e Enviar ao Financeiro
-                    </Button>
-                  </CardContent>
-                </Card>
+              {/* Ação rápida: marcar todos como verde */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-green-500/50 text-green-700 hover:bg-green-500/10"
+                  onClick={handleMarcarTodosVerde}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Marcar Todos como OK (Verde)
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {qtdVerdes > 0 || qtdAmarelos > 0 ? (
+                    <>
+                      <span className="text-green-600 font-medium">{qtdVerdes} verde(s)</span>
+                      {qtdAmarelos > 0 && <> · <span className="text-yellow-600 font-medium">{qtdAmarelos} amarelo(s)</span></>}
+                    </>
+                  ) : 'Nenhum produto triado'}
+                </span>
+              </div>
 
-                <Card className="border-yellow-500/30 hover:border-yellow-500/60 transition-colors">
-                  <CardContent className="p-6 text-center space-y-3">
-                    <div className="mx-auto w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                      <Wrench className="h-6 w-6 text-yellow-600" />
-                    </div>
-                    <h3 className="font-semibold text-yellow-700 dark:text-yellow-400">Caminho Amarelo — Lote com Defeito</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Há aparelhos com defeito. Selecionar IMEIs defeituosos e gerar Lote de Revisão na Assistência.
-                    </p>
-                    <Button 
-                      variant="outline"
-                      className="w-full border-yellow-500/50 text-yellow-700 hover:bg-yellow-500/10"
-                      disabled={!todosIMEIsPreenchidos || temImeiDuplicado}
-                      onClick={handleCaminhoAmarelo}
-                    >
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      Encaminhar para Assistência
-                    </Button>
-                  </CardContent>
-                </Card>
+              {/* Tabela de triagem */}
+              <div className="rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produto</TableHead>
+                      <TableHead>IMEI</TableHead>
+                      <TableHead>Custo</TableHead>
+                      <TableHead className="text-center">Caminho</TableHead>
+                      <TableHead>Motivo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {nota.produtos.map(produto => {
+                      const caminho = triagemProdutos[produto.id];
+                      return (
+                        <TableRow key={produto.id} className={
+                          caminho === 'verde' ? 'bg-green-500/5' :
+                          caminho === 'amarelo' ? 'bg-yellow-500/5' : ''
+                        }>
+                          <TableCell className="font-medium">
+                            {produto.marca} {produto.modelo}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {produto.imei ? formatIMEI(produto.imei) : '-'}
+                          </TableCell>
+                          <TableCell>{formatCurrency(produto.custoTotal)}</TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                size="sm"
+                                variant={caminho === 'verde' ? 'default' : 'outline'}
+                                className={caminho === 'verde' ? 'bg-green-600 hover:bg-green-700 text-white h-7 px-2' : 'border-green-500/40 text-green-700 h-7 px-2 hover:bg-green-500/10'}
+                                onClick={() => handleAtribuirCaminho(produto.id, 'verde')}
+                              >
+                                <Send className="h-3 w-3 mr-1" />
+                                OK
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={caminho === 'amarelo' ? 'default' : 'outline'}
+                                className={caminho === 'amarelo' ? 'bg-yellow-600 hover:bg-yellow-700 text-white h-7 px-2' : 'border-yellow-500/40 text-yellow-700 h-7 px-2 hover:bg-yellow-500/10'}
+                                onClick={() => handleAtribuirCaminho(produto.id, 'amarelo')}
+                              >
+                                <Wrench className="h-3 w-3 mr-1" />
+                                Defeito
+                              </Button>
+                              {caminho && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-7 w-7"
+                                  onClick={() => handleRemoverTriagem(produto.id)}
+                                >
+                                  <Undo2 className="h-3 w-3 text-muted-foreground" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                            {caminho === 'amarelo' ? motivosDefeito[produto.id] || '' : caminho === 'verde' ? 'Lote OK' : '-'}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Resumo e botão finalizar */}
+              <div className="flex items-center justify-between pt-4 border-t">
+                <div className="text-sm text-muted-foreground">
+                  {todosTriados ? (
+                    <span className="text-primary font-medium">✓ Todos os produtos triados</span>
+                  ) : (
+                    <span>{nota.produtos.length - qtdVerdes - qtdAmarelos} produto(s) ainda sem caminho</span>
+                  )}
+                </div>
+                <Button
+                  size="lg"
+                  disabled={!todosTriados || !todosIMEIsPreenchidos || temImeiDuplicado}
+                  onClick={handleFinalizarTriagem}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Finalizar Triagem ({qtdVerdes}V / {qtdAmarelos}A)
+                </Button>
               </div>
             </CardContent>
           </Card>
         )}
+
+        {/* Modal de motivo do defeito */}
+        <Dialog open={modalMotivoOpen} onOpenChange={setModalMotivoOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-yellow-600" />
+                Motivo do Defeito
+              </DialogTitle>
+            </DialogHeader>
+            {produtoMotivoId && (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Descreva o defeito do produto: <strong>{nota?.produtos.find(p => p.id === produtoMotivoId)?.marca} {nota?.produtos.find(p => p.id === produtoMotivoId)?.modelo}</strong>
+                </p>
+                <Textarea
+                  value={motivosDefeito[produtoMotivoId] || ''}
+                  onChange={(e) => setMotivosDefeito(prev => ({ ...prev, [produtoMotivoId]: e.target.value }))}
+                  placeholder="Ex: Display com manchas, bateria inflada, câmera com defeito..."
+                  rows={3}
+                />
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setModalMotivoOpen(false); setProdutoMotivoId(null); }}>
+                Cancelar
+              </Button>
+              <Button onClick={handleConfirmarMotivo} className="bg-yellow-600 hover:bg-yellow-700 text-white">
+                Confirmar Defeito
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Timeline */}
         <Collapsible open={timelineOpen} onOpenChange={setTimelineOpen}>
