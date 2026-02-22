@@ -56,7 +56,8 @@ type StatusAparelhosPendentes =
   | 'Retornado da Assistência' 
   | 'Devolvido para Fornecedor'
   | 'Serviço Concluído - Validar Aparelho'
-  | 'Retrabalho - Recusado pelo Estoque';
+  | 'Retrabalho - Recusado pelo Estoque'
+  | 'Retorno de Assistência';
 
 export default function EstoqueProdutosPendentes() {
   const navigate = useNavigate();
@@ -186,6 +187,10 @@ export default function EstoqueProdutosPendentes() {
       case 'Devolvido para Fornecedor':
         return <Badge variant="outline" className="bg-muted text-muted-foreground">Devolvido p/ Fornecedor</Badge>;
       default:
+        // Inclui "Retorno de Assistência" e outros status futuros
+        if ((produto.statusGeral as string) === 'Retorno de Assistência' || (produto as any).tagRetornoAssistencia) {
+          return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30">🔙 Retorno de Assistência</Badge>;
+        }
         return <Badge variant="outline" className="bg-muted text-muted-foreground">{produto.statusGeral}</Badge>;
     }
   };

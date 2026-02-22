@@ -1701,6 +1701,61 @@ const criarNotaEntradaComDataHora = (dados: {
   return novaNota;
 };
 
+// ============= CRÉDITO DE FORNECEDOR =============
+
+export interface CreditoFornecedor {
+  id: string;
+  fornecedor: string;
+  valor: number;
+  origem: string; // ID da nota
+  dataGeracao: string;
+  utilizado: boolean;
+  dataUtilizacao?: string;
+  notaUtilizacao?: string;
+  descricao: string;
+}
+
+let creditosFornecedor: CreditoFornecedor[] = [];
+let proximoCreditoId = 1;
+
+export const gerarCreditoFornecedor = (
+  fornecedor: string,
+  valor: number,
+  notaOrigem: string,
+  descricao?: string
+): CreditoFornecedor => {
+  const credito: CreditoFornecedor = {
+    id: `CRED-${String(proximoCreditoId++).padStart(5, '0')}`,
+    fornecedor,
+    valor,
+    origem: notaOrigem,
+    dataGeracao: new Date().toISOString(),
+    utilizado: false,
+    descricao: descricao || `Vale-Crédito originado da nota ${notaOrigem}`
+  };
+  creditosFornecedor.push(credito);
+  return credito;
+};
+
+export const getCreditosByFornecedor = (fornecedor: string): CreditoFornecedor[] => {
+  return creditosFornecedor.filter(c => c.fornecedor === fornecedor);
+};
+
+export const utilizarCredito = (creditoId: string, notaDestino: string): CreditoFornecedor | null => {
+  const credito = creditosFornecedor.find(c => c.id === creditoId);
+  if (!credito || credito.utilizado) return null;
+  credito.utilizado = true;
+  credito.dataUtilizacao = new Date().toISOString();
+  credito.notaUtilizacao = notaDestino;
+  return credito;
+};
+
+export const getTotalCreditosDisponiveis = (fornecedor: string): number => {
+  return creditosFornecedor
+    .filter(c => c.fornecedor === fornecedor && !c.utilizado)
+    .reduce((acc, c) => acc + c.valor, 0);
+};
+
 // ============= ENVIO DIRETO AO FINANCEIRO =============
 
 export const enviarDiretoAoFinanceiro = (

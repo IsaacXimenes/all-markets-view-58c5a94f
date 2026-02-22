@@ -17,11 +17,13 @@ import {
   getSolicitacaoById,
   desvincularNotaDeLote
 } from '@/utils/solicitacaoPecasApi';
+import { getLoteRevisaoByNotaId, calcularAbatimento } from '@/utils/loteRevisaoApi';
+import { getNotaEntradaById, gerarCreditoFornecedor, getCreditosByFornecedor } from '@/utils/notaEntradaFluxoApi';
 import { getLoteById } from '@/utils/consignacaoApi';
 import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
 import { getOrdemServicoById, updateOrdemServico, getOrdensServico } from '@/utils/assistenciaApi';
 import { CustoPorOrigemCards } from '@/components/assistencia/CustoPorOrigemCards';
-import { Eye, Check, Download, Filter, X, FileText, Clock, CheckCircle, DollarSign, Package, PackageCheck, Unlink } from 'lucide-react';
+import { Eye, Check, Download, Filter, X, FileText, Clock, CheckCircle, DollarSign, Package, PackageCheck, Unlink, AlertTriangle, Coins } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
@@ -424,6 +426,108 @@ export default function FinanceiroNotasAssistencia() {
                   const osVinculadas = osIds.map(id => getOrdemServicoById(id)).filter(Boolean) as any[];
                   if (osVinculadas.length === 0) return null;
                   return <div className="[&_.grid]:grid-cols-1 [&_.grid]:lg:grid-cols-2"><CustoPorOrigemCards ordensServico={osVinculadas} titulo="Custos desta Nota" /></div>;
+                 })()}
+
+                {/* Matriz de Abatimento - Lote de Revisão */}
+                {(() => {
+                  // Verificar se esta nota tem relação com um lote de revisão via a nota de entrada
+                  const notaEntrada = notaSelecionada?.osId ? (() => {
+                    const os = getOrdemServicoById(notaSelecionada.osId);
+                    if (os && (os as any).loteRevisaoId) {
+                      const loteId = (os as any).loteRevisaoId;
+                      const abatimento = calcularAbatimento(loteId);
+                      if (abatimento) {
+                        return { abatimento, loteId, os };
+                      }
+                    }
+                    return null;
+                  })() : null;
+
+                  if (!notaEntrada) return null;
+                  const { abatimento, loteId } = notaEntrada;
+
+                  return (
+                    <div className="space-y-3">
+                      {/* Alerta Crítico - Custo > 15% */}
+                      {abatimento.alertaCritico && (
+                        <Card className="border-destructive bg-destructive/5">
+                          <CardContent className="p-4 flex items-center gap-3">
+                            <AlertTriangle className="h-6 w-6 text-destructive shrink-0" />
+                            <div>
+                              <p className="font-semibold text-destructive">Alerta de Risco — Custo de Reparo Alto</p>
+                              <p className="text-sm text-destructive/80">
+                                O custo de reparo representa {abatimento.percentualReparo.toFixed(1)}% do valor da nota (limite: 15%).
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      <Card className="border-primary/30">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <DollarSign className="h-4 w-4" />
+                            Matriz de Abatimento — Lote {loteId}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <div className="grid grid-cols-3 gap-3 text-sm">
+                            <div className="p-2 rounded bg-muted/50 text-center">
+                              <p className="text-xs text-muted-foreground">Valor da Nota</p>
+                              <p className="font-bold">{formatCurrency(abatimento.valorNota)}</p>
+                            </div>
+                            <div className="p-2 rounded bg-destructive/10 text-center">
+                              <p className="text-xs text-muted-foreground">Custo Reparos</p>
+                              <p className="font-bold text-destructive">- {formatCurrency(abatimento.custoReparos)}</p>
+                            </div>
+                            <div className="p-2 rounded bg-primary/10 text-center">
+                              <p className="text-xs text-muted-foreground">Valor Líquido</p>
+                              <p className="font-bold text-primary">{formatCurrency(abatimento.valorLiquido)}</p>
+                            </div>
+                          </div>
+
+                          {/* Vale-Crédito para pagamento antecipado */}
+                          {(() => {
+                            // Verificar nota de entrada para tipo de pagamento
+                            const loteData = getLoteRevisaoByNotaId(loteId);
+                            if (!loteData) return null;
+                            const notaEntradaObj = getNotaEntradaById(loteData.notaEntradaId);
+                            if (!notaEntradaObj) return null;
+
+                            if (notaEntradaObj.tipoPagamento === 'Pagamento 100% Antecipado' && abatimento.custoReparos > 0) {
+                              return (
+                                <Card className="bg-yellow-500/5 border-yellow-500/30">
+                                  <CardContent className="p-3 flex items-center gap-3">
+                                    <Coins className="h-5 w-5 text-yellow-600 shrink-0" />
+                                    <div>
+                                      <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-400">
+                                        Vale-Crédito de Fornecedor Gerado
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Valor de {formatCurrency(abatimento.custoReparos)} disponível para abater em futuras compras de {notaEntradaObj.fornecedor}
+                                      </p>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              );
+                            }
+
+                            if (notaEntradaObj.tipoPagamento === 'Pagamento Pos' || notaEntradaObj.tipoPagamento === 'Pagamento Parcial') {
+                              return (
+                                <div className="p-2 rounded bg-green-500/10 text-center text-sm">
+                                  <p className="text-green-700 dark:text-green-400 font-medium">
+                                    ✓ Abatimento automático de {formatCurrency(abatimento.custoReparos)} aplicado no saldo devedor
+                                  </p>
+                                </div>
+                              );
+                            }
+
+                            return null;
+                          })()}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
                 })()}
 
                 <div className="space-y-4">

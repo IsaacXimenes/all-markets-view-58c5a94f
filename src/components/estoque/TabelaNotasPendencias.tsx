@@ -1,16 +1,19 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   NotaEntrada,
   NotaEntradaStatus,
   AtuacaoAtual,
   TipoPagamentoNota,
-  podeEditarNota
+  podeEditarNota,
+  getCreditosByFornecedor,
+  CreditoFornecedor
 } from '@/utils/notaEntradaFluxoApi';
 import { getLoteRevisaoByNotaId } from '@/utils/loteRevisaoApi';
 import { getFornecedores } from '@/utils/cadastrosApi';
@@ -28,7 +31,8 @@ import {
   XCircle,
   Wrench,
   Send,
-  CheckCircle
+  CheckCircle,
+  Coins
 } from 'lucide-react';
 
 interface TabelaNotasPendenciasProps {
@@ -87,6 +91,16 @@ export function TabelaNotasPendencias({
   onEnviarDiretoFinanceiro
 }: TabelaNotasPendenciasProps) {
   const navigate = useNavigate();
+  const [creditoModalOpen, setCreditoModalOpen] = useState(false);
+  const [creditosFornecedorSelecionado, setCreditosFornecedorSelecionado] = useState<CreditoFornecedor[]>([]);
+  const [fornecedorCreditoNome, setFornecedorCreditoNome] = useState('');
+
+  const handleVerCreditos = (fornecedor: string, fornecedorNome: string) => {
+    const creditos = getCreditosByFornecedor(fornecedor);
+    setCreditosFornecedorSelecionado(creditos);
+    setFornecedorCreditoNome(fornecedorNome);
+    setCreditoModalOpen(true);
+  };
 
   // Memoizar lookup de fornecedores para performance
   const fornecedoresMap = useMemo(() => {
@@ -218,6 +232,7 @@ export function TabelaNotasPendencias({
   };
 
   return (
+    <>
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
@@ -261,7 +276,40 @@ export function TabelaNotasPendencias({
                     </div>
                   </TableCell>
                   <TableCell className="font-mono text-xs">{nota.numeroNota}</TableCell>
-                  <TableCell>{getNomeFornecedor(nota.fornecedor)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <span>{getNomeFornecedor(nota.fornecedor)}</span>
+                      {(() => {
+                        const creditos = getCreditosByFornecedor(nota.fornecedor);
+                        const creditosDisponiveis = creditos.filter(c => !c.utilizado);
+                        if (creditosDisponiveis.length > 0) {
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-6 w-6 p-0 text-yellow-600"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleVerCreditos(nota.fornecedor, getNomeFornecedor(nota.fornecedor));
+                                    }}
+                                  >
+                                    <Coins className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  {creditosDisponiveis.length} crédito(s) disponível(is) — {formatCurrency(creditosDisponiveis.reduce((acc, c) => acc + c.valor, 0))}
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     {nota.urgente ? (
                       <Badge variant="destructive" className="gap-1">
@@ -525,5 +573,64 @@ export function TabelaNotasPendencias({
         </TableBody>
       </Table>
     </div>
+
+    {/* Modal de Créditos do Fornecedor */}
+    <Dialog open={creditoModalOpen} onOpenChange={setCreditoModalOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Coins className="h-5 w-5 text-yellow-600" />
+            Créditos — {fornecedorCreditoNome}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          {creditosFornecedorSelecionado.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhum crédito registrado</p>
+          ) : (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Origem</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {creditosFornecedorSelecionado.map(cred => (
+                      <TableRow key={cred.id}>
+                        <TableCell className="font-mono text-xs">{cred.id}</TableCell>
+                        <TableCell className="text-xs">{cred.origem}</TableCell>
+                        <TableCell className="font-semibold">{formatCurrency(cred.valor)}</TableCell>
+                        <TableCell className="text-xs">
+                          {new Date(cred.dataGeracao).toLocaleDateString('pt-BR')}
+                        </TableCell>
+                        <TableCell>
+                          {cred.utilizado ? (
+                            <Badge variant="secondary">Utilizado</Badge>
+                          ) : (
+                            <Badge className="bg-green-500/10 text-green-600 border-green-500/30">Disponível</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t">
+                <span className="text-sm text-muted-foreground">Total disponível:</span>
+                <span className="text-lg font-bold text-green-600">
+                  {formatCurrency(creditosFornecedorSelecionado.filter(c => !c.utilizado).reduce((acc, c) => acc + c.valor, 0))}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
