@@ -1862,5 +1862,13 @@ export const enviarDiretoAoFinanceiro = (
   return nota;
 };
 
+// ============= NOTAS CAMINHO VERDE PARA FINANCEIRO =============
+
+export const getNotasEntradaParaFinanceiro = (): NotaEntrada[] => {
+  return notasEntrada.filter(n => 
+    n.enviadoDiretoFinanceiro === true && n.atuacaoAtual === 'Financeiro'
+  );
+};
+
 // Inicializar ao carregar módulo
 inicializarNotasEntradaMock();

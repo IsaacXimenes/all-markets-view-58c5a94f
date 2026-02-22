@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { getNotasCompra, finalizarNota, NotaCompra, migrarAparelhoNovoParaEstoque, ESTOQUE_SIA_LOJA_ID } from '@/utils/estoqueApi';
+import { getNotasEntradaParaFinanceiro } from '@/utils/notaEntradaFluxoApi';
 import { getContasFinanceiras, getFornecedores } from '@/utils/cadastrosApi';
 import { Eye, CheckCircle, Download, Filter, X, Check, FileText, Clock, CheckCircle2, FileSearch } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,15 +30,46 @@ interface NotaEstendida extends NotaCompra {
 export default function FinanceiroConferenciaNotas() {
   const [notasBase] = useState(getNotasCompra());
   
-  // Mesclar status do localStorage com notas
+  // Mesclar status do localStorage com notas + incluir notas do Caminho Verde
   const notas: NotaEstendida[] = useMemo(() => {
-    return notasBase.map(nota => {
+    // Notas tradicionais do estoqueApi
+    const notasTradicionais: NotaEstendida[] = notasBase.map(nota => {
       const storedStatus = localStorage.getItem(`nota_status_${nota.id}`);
       return {
         ...nota,
         statusExtendido: (storedStatus as NotaEstendida['statusExtendido']) || nota.status as NotaEstendida['statusExtendido']
       };
     });
+    
+    // Notas do Caminho Verde (notaEntradaFluxoApi)
+    const notasVerdes = getNotasEntradaParaFinanceiro();
+    const notasVerdesConvertidas: NotaEstendida[] = notasVerdes
+      .filter(ne => !notasTradicionais.some(nt => nt.id === ne.id)) // evitar duplicatas
+      .map(ne => ({
+        id: ne.id,
+        data: ne.dataCriacao,
+        numeroNota: ne.numeroNota,
+        fornecedor: ne.fornecedor,
+        valorTotal: ne.valorTotal,
+        status: 'Pendente' as const,
+        origem: 'Normal' as const,
+        produtos: ne.produtos.map(p => ({
+          id: p.id,
+          marca: p.marca,
+          modelo: p.modelo,
+          cor: p.cor || '',
+          imei: p.imei || '',
+          tipo: (p.categoria === 'Novo' ? 'Novo' : 'Seminovo') as 'Novo' | 'Seminovo',
+          tipoProduto: (p.tipoProduto === 'Aparelho' ? 'Aparelho' : 'Acessório') as 'Aparelho' | 'Acessório',
+          quantidade: p.quantidade,
+          valorUnitario: p.custoUnitario,
+          valorTotal: p.custoTotal,
+          saudeBateria: p.percentualBateria || 100,
+        })),
+        statusExtendido: 'Enviado para Financeiro' as const,
+      }));
+    
+    return [...notasTradicionais, ...notasVerdesConvertidas];
   }, [notasBase]);
   const [notaSelecionada, setNotaSelecionada] = useState<NotaEstendida | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
