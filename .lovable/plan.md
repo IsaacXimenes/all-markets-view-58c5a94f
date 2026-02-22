@@ -1,149 +1,134 @@
 
 
-## Reestruturacao Profunda: Unificacao Estoque-Assistencia-Financeiro
+## Validacao IMEI, Integracao Estoque-Financeiro e Padronizacao de Status
 
-### Analise do Estado Atual vs. Solicitado
+### Analise do Estado Atual
 
-Apos analise detalhada do codigo, grande parte das funcionalidades ja esta implementada. Este plano foca exclusivamente no que falta ou precisa ser ajustado.
+Apos exploracao detalhada do codigo, varias funcionalidades ja existem parcialmente. Este plano foca nas lacunas reais:
 
----
+**JA IMPLEMENTADO:**
+- Central de Decisao com Caminho Verde e Amarelo (EstoqueNotaConferencia.tsx)
+- Status "Em Revisao Tecnica" no modelo de dados (estoqueApi.ts)
+- Funcao getStatusAparelho reconhece "Em Revisao Tecnica"
+- Sistema de Credito de Fornecedor (notaEntradaFluxoApi.ts)
+- Icone de credito na tabela de notas (TabelaNotasPendencias.tsx)
+- Matriz de abatimento no Financeiro (FinanceiroNotasAssistencia.tsx)
+- Logistica reversa no loteRevisaoApi.ts
+- Tag "Retorno de Assistencia" em EstoqueProdutosPendentes.tsx
+- DNA da Peca com origens (Consignado, Estoque Thiago, Retirada, Fornecedor)
+- Explosao de origem nos cards de custo
 
-### Funcionalidades JA IMPLEMENTADAS (nenhuma acao necessaria)
-
-- Cards de custo com "explosao de origem" (Consignado, Estoque Thiago, Retirada, Fornecedor)
-- Coluna "Origem da Peca" com badges coloridos em OSAssistenciaDetalhes
-- Dois botoes de acao por linha (Encaminhar Assistencia / Enviar Direto Financeiro) na tabela de Notas
-- Coluna "Status de Revisao" (Pendente, Em Revisao - Lote #ID, Enviado Direto)
-- Lote de Revisao agrupando aparelhos em uma unica OS
-- Cronometro de produtividade (Iniciar, Pausar, Finalizar) com tempo liquido
-- Unificacao da interface de selecao de pecas (Nova OS = Edicao OS)
-- Dashboard com 4 cards mestres e grafico de composicao por origem
-- Desvinculacao individual de nota no Financeiro
-- OS Vinculada no detalhamento do Financeiro
-- Consignacao com pagamentos parciais e fechamento flexivel
-- DNA da Peca com 3 selos de rastreabilidade
+**O QUE PRECISA SER IMPLEMENTADO:**
 
 ---
 
-### O QUE PRECISA SER IMPLEMENTADO
-
-#### 1. Central de Decisao da Nota (Pos-Conferencia)
-
-**Arquivo: `src/pages/EstoqueNotaConferencia.tsx`**
-
-Apos 100% de conferencia, antes de finalizar, apresentar um "painel de decisao" com:
-- Verificacao de IMEI obrigatorio: bloquear finalizacao se algum aparelho nao tiver IMEI preenchido
-- Botao "Caminho Verde - Lote OK" (envia ao Financeiro, aparelhos ficam Disponivel)
-- Botao "Caminho Amarelo - Lote com Defeito" (redireciona para a pagina de encaminhar assistencia)
-
-Atualmente a conferencia finaliza sem essa tela de decisao.
-
-#### 2. Status "Em Revisao Tecnica" nos Produtos
-
-**Arquivo: `src/utils/estoqueApi.ts`**
-
-Adicionar status `Em Revisao Tecnica` aos produtos quando encaminhados via Lote de Revisao. Esses produtos devem ficar invisiveis para venda (filtrados nas telas de venda e estoque disponivel).
-
-**Arquivo: `src/pages/EstoqueEncaminharAssistencia.tsx`**
-
-Apos criar o lote de revisao, atualizar o status de cada produto cadastrado na nota para "Em Revisao Tecnica".
-
-#### 3. Icone de "Credito de Fornecedor" na Tabela de Notas
+### 1. Validacao de Unicidade de IMEI
 
 **Arquivo: `src/utils/notaEntradaFluxoApi.ts`**
+- Criar funcao `verificarImeiUnicoSistema(imei: string): { duplicado: boolean; localExistente?: string }` que verifica:
+  - Produtos ativos no estoque (estoqueApi - produtos com status != Vendido)
+  - Produtos pendentes (osApi - produtosPendentes)
+  - Outras notas de entrada (notaEntradaFluxoApi - produtos com IMEI)
+- Retornar informacao sobre onde o IMEI ja existe
 
-Adicionar interface `CreditoFornecedor` e funcoes para:
-- Gerar credito automaticamente quando nota com pagamento antecipado tem reparos (Vale-Credito)
-- Consultar extrato de creditos por fornecedor
+**Arquivo: `src/pages/EstoqueNotaConferencia.tsx`**
+- No campo de IMEI editavel (InputComMascara, linha ~466-472), adicionar validacao ao onChange:
+  - Apos debounce de 500ms, chamar `verificarImeiUnicoSistema`
+  - Se duplicado: borda vermelha no campo + tooltip com mensagem "IMEI ja cadastrado em [local]"
+  - Bloquear botao de conferir para este item enquanto IMEI duplicado
+- No handleSalvarConferencia: verificar novamente todos os IMEIs antes de salvar
 
-**Arquivo: `src/components/estoque/TabelaNotasPendencias.tsx`**
-
-Adicionar icone de moeda ao lado do nome do fornecedor. Ao clicar, abrir modal com extrato de creditos do fornecedor.
-
-#### 4. Matriz de Abatimento no Financeiro
-
-**Arquivo: `src/pages/FinanceiroNotasAssistencia.tsx`**
-
-No modal de conferencia de notas vinculadas a Lotes de Revisao:
-- Exibir o custo total de reparos como abatimento automatico no saldo devedor (Pagamento Pos/Parcial)
-- Para notas com Pagamento 100% Antecipado, exibir card de "Vale-Credito de Fornecedor" gerado
-- Card vermelho de alerta se custo de reparo > 15% do valor da nota
-
-#### 5. Retorno de Assistencia para Estoque (Logistica Reversa)
-
-**Arquivo: `src/utils/loteRevisaoApi.ts`**
-
-Ao finalizar um lote de revisao (todos os reparos concluidos):
-- Aparelhos consertados: retornar para Conferencia de Estoque com tag `[Retorno de Assistencia]` - ficam Disponivel apenas apos OK do estoquista
-- Aparelhos para devolucao: gerar abatimento integral no valor de compra, status `Devolvido ao Fornecedor`
-
-**Arquivo: `src/pages/EstoqueProdutosPendentes.tsx`**
-
-Adicionar filtro/badge para produtos com tag `[Retorno de Assistencia]` aguardando validacao do estoquista.
-
-#### 6. Padronizacao de Unidades Tecnicas no Estoque de Assistencia
-
-**Arquivo: `src/utils/pecasApi.ts`** (dados mockados)
-
-Substituir referencias a lojas genericas (ex: "Loja SIA", "Loja Taguatinga") por unidades reais do tipo "Assistencia" cadastradas no sistema, utilizando `obterLojasPorTipo('Assistência')` para consistencia.
+**Arquivo: `src/pages/EstoqueNotaCadastrar.tsx`**
+- Na tabela de produtos (campo IMEI), aplicar a mesma validacao com debounce
+- Bloquear botao "Salvar Nota" se houver IMEIs duplicados
 
 ---
 
-### Detalhes Tecnicos
+### 2. Integracao Estoque-Financeiro (Caminho Verde Completo)
 
-#### Central de Decisao (EstoqueNotaConferencia.tsx)
+**Arquivo: `src/utils/notaEntradaFluxoApi.ts`**
+- Expandir `enviarDiretoAoFinanceiro`:
+  - Atualizar status para "Conferencia Concluida" (se ainda nao estiver)
+  - Para cada produto da nota, chamar uma funcao que atualiza status no estoque para "Disponivel"
+  - Importar e utilizar `getProdutos` do estoqueApi para localizar produtos migrados e garantir status correto
 
-```text
-Fluxo apos 100% conferencia:
-  1. Verificar se todos os aparelhos tem IMEI -> Se nao, bloquear com alerta
-  2. Exibir painel com dois caminhos:
-     - Verde: enviarDiretoAoFinanceiro() + migrar produtos
-     - Amarelo: navigate('/estoque/encaminhar-assistencia?nota={id}')
-```
+**Arquivo: `src/utils/estoqueApi.ts`**
+- Criar funcao `marcarProdutosComoDisponiveis(imeis: string[])` que localiza produtos por IMEI e garante que estejam com status disponivel (estoqueConferido = true, assistenciaConferida = true)
 
-#### Credito de Fornecedor (notaEntradaFluxoApi.ts)
+**Arquivo: `src/pages/FinanceiroConferenciaNotas.tsx`**
+- Verificar se notas enviadas via "Caminho Verde" ja aparecem na lista. Se nao, adicionar filtro para incluir notas com `enviadoDiretoFinanceiro = true` e `atuacaoAtual === 'Financeiro'`
 
-```text
-Interface CreditoFornecedor {
-  id: string
-  fornecedor: string
-  valor: number
-  origem: string (ID da nota)
-  dataGeracao: string
-  utilizado: boolean
-  dataUtilizacao?: string
-  notaUtilizacao?: string
-}
+---
 
-Funcoes:
-  - gerarCreditoFornecedor(fornecedor, valor, notaOrigem)
-  - getCreditosByFornecedor(fornecedor): CreditoFornecedor[]
-  - utilizarCredito(creditoId, notaDestino)
-```
+### 3. Geracao Automatica de Credito (Caminho Amarelo + Antecipado)
 
-#### Abatimento Automatico (FinanceiroNotasAssistencia.tsx)
+**Arquivo: `src/pages/EstoqueEncaminharAssistencia.tsx`**
+- No handleConfirmarEncaminhamento (linha ~133):
+  - Apos criar lote e encaminhar, verificar `notaSelecionada.tipoPagamento`
+  - Se "Pagamento 100% Antecipado": chamar `gerarCreditoFornecedor` automaticamente com o valor total dos itens defeituosos
+  - Exibir toast informando "Vale-Credito gerado: R$ X para fornecedor Y"
+- Apos encaminhar, atualizar status dos produtos para "Em Revisao Tecnica" (chamar estoqueApi)
 
-```text
-No modal de conferencia:
-  - Se nota tem loteRevisaoId:
-    - Buscar lote e calcular custoTotalReparos
-    - Se tipoPagamento = 'Pos' ou 'Parcial':
-      -> valorFinal = valorNota - custoReparos (abatimento)
-    - Se tipoPagamento = '100% Antecipado':
-      -> Exibir card "Vale-Credito gerado: R$ {custoReparos}"
-    - Se custoReparos/valorNota > 0.15:
-      -> Card vermelho de alerta critico
-```
+**Arquivo: `src/utils/estoqueApi.ts`**
+- Criar funcao `marcarProdutosEmRevisaoTecnica(imeis: string[], loteRevisaoId: string)` que localiza produtos migrados no estoque por IMEI e seta `statusRevisaoTecnica = 'Em Revisao Tecnica'` e `loteRevisaoId`
+
+---
+
+### 4. Status "Em Revisao Tecnica" nos Badges de OS
+
+**Arquivo: `src/pages/OSAssistencia.tsx`**
+- No getStatusBadge (linha 101-142): adicionar case para "Aguardando Analise" com visual violeta/roxo para diferenciar OS de Lote de Revisao
+- No filtro de status: adicionar opcao "Aguardando Analise" ao dropdown
+
+**Arquivo: `src/pages/EstoqueEncaminharAssistencia.tsx`**
+- No handleConfirmarEncaminhamento: chamar `marcarProdutosEmRevisaoTecnica` para cada IMEI encaminhado
+
+---
+
+### 5. Logistica Reversa - Conexao com Estoque
+
+**Arquivo: `src/utils/loteRevisaoApi.ts`**
+- Expandir `finalizarLoteComLogisticaReversa`:
+  - Para itens "Consertado": importar estoqueApi e setar `tagRetornoAssistencia = true`, `statusRevisaoTecnica = null` no produto correspondente
+  - Para itens "Devolucao ao Fornecedor": setar `statusRevisaoTecnica = null`, `quantidade = 0` ou status "Devolvido"
+  - Chamar `gerarCreditoFornecedor` para devolucoes em notas antecipadas
+
+**Arquivo: `src/pages/EstoqueProdutosPendentes.tsx`**
+- Garantir que o filtro/badge "Retorno de Assistencia" funcione corretamente com produtos do estoque principal (nao apenas pendentes)
+- Adicionar botao "Validar Retorno" que remove a tag e seta produto como Disponivel
+
+---
+
+### 6. Credito de Fornecedor - Visualizacao Contextual
+
+**Arquivo: `src/components/estoque/TabelaNotasPendencias.tsx`**
+- O icone de credito ja existe. Verificar se o modal abre corretamente com extrato completo
+- Garantir que o icone apareca apenas quando `getTotalCreditosDisponiveis(fornecedor) > 0`
+
+**Arquivo: `src/pages/FinanceiroNotasAssistencia.tsx`**
+- No modal de conferencia, quando nota tem fornecedor com creditos disponiveis, exibir card informativo "Credito disponivel: R$ X" com opcao de aplicar ao pagamento
+
+---
 
 ### Arquivos Afetados
 
-1. `src/pages/EstoqueNotaConferencia.tsx` - Central de Decisao pos-conferencia
-2. `src/utils/estoqueApi.ts` - Status "Em Revisao Tecnica"
-3. `src/pages/EstoqueEncaminharAssistencia.tsx` - Atualizar status produtos ao encaminhar
-4. `src/utils/notaEntradaFluxoApi.ts` - Sistema de Credito de Fornecedor
-5. `src/components/estoque/TabelaNotasPendencias.tsx` - Icone de credito
-6. `src/pages/FinanceiroNotasAssistencia.tsx` - Matriz de abatimento e vale-credito
-7. `src/utils/loteRevisaoApi.ts` - Logistica reversa (retorno/devolucao)
-8. `src/pages/EstoqueProdutosPendentes.tsx` - Badge "Retorno de Assistencia"
-9. `src/utils/pecasApi.ts` - Padronizacao de unidades tecnicas nos dados mockados
+1. `src/utils/notaEntradaFluxoApi.ts` - Funcao verificarImeiUnicoSistema + expansao enviarDiretoAoFinanceiro
+2. `src/pages/EstoqueNotaConferencia.tsx` - Validacao IMEI em tempo real com debounce
+3. `src/pages/EstoqueNotaCadastrar.tsx` - Validacao IMEI no cadastro
+4. `src/utils/estoqueApi.ts` - Funcoes marcarProdutosComoDisponiveis e marcarProdutosEmRevisaoTecnica
+5. `src/pages/EstoqueEncaminharAssistencia.tsx` - Credito automatico + status Em Revisao Tecnica
+6. `src/pages/OSAssistencia.tsx` - Badge "Aguardando Analise" no getStatusBadge
+7. `src/utils/loteRevisaoApi.ts` - Logistica reversa com integracao real no estoqueApi
+8. `src/pages/EstoqueProdutosPendentes.tsx` - Botao "Validar Retorno"
+9. `src/pages/FinanceiroNotasAssistencia.tsx` - Card de credito disponivel no modal
+10. `src/pages/FinanceiroConferenciaNotas.tsx` - Verificar exibicao de notas "Caminho Verde"
+
+### Resultado Esperado
+
+- IMEIs duplicados sao detectados em tempo real no cadastro e na conferencia, bloqueando a operacao
+- O Caminho Verde atualiza produtos para "Disponivel" e cria registro financeiro completo
+- O Caminho Amarelo para notas antecipadas gera Vale-Credito automaticamente
+- O status "Em Revisao Tecnica" e visivel e filtravel na Assistencia e no Estoque
+- A logistica reversa atualiza fisicamente os produtos no estoque (retorno ou devolucao)
+- Creditos de fornecedor sao exibidos contextualmente no Financeiro e no Estoque
 
