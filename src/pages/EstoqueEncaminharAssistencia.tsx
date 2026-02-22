@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,13 +13,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { 
   getNotasParaEstoque, 
   NotaEntrada,
-  ProdutoNotaEntrada
+  ProdutoNotaEntrada,
+  gerarCreditoFornecedor
 } from '@/utils/notaEntradaFluxoApi';
 import { 
   criarLoteRevisao, 
   encaminharLoteParaAssistencia,
   ItemRevisao
 } from '@/utils/loteRevisaoApi';
+import { marcarProdutosEmRevisaoTecnica } from '@/utils/estoqueApi';
 import { LoteRevisaoResumo } from '@/components/estoque/LoteRevisaoResumo';
 import { useAuthStore } from '@/store/authStore';
 import { formatCurrency } from '@/utils/formatUtils';
@@ -32,7 +34,8 @@ import {
   Package, 
   Send, 
   Trash2, 
-  Wrench
+  Wrench,
+  Coins
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -50,11 +53,15 @@ interface ItemDefeitoTemp {
 
 export default function EstoqueEncaminharAssistencia() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuthStore();
   const responsavel = user?.colaborador?.nome || user?.username || 'Usuário Sistema';
 
+  // Pre-select nota from URL param
+  const notaIdFromUrl = searchParams.get('nota') || '';
+
   // State
-  const [notaSelecionadaId, setNotaSelecionadaId] = useState<string>('');
+  const [notaSelecionadaId, setNotaSelecionadaId] = useState<string>(notaIdFromUrl);
   const [itensDefeituosos, setItensDefeituosos] = useState<ItemDefeitoTemp[]>([]);
   
   // Modal de defeito
@@ -169,6 +176,35 @@ export default function EstoqueEncaminharAssistencia() {
     if (!loteEncaminhado) {
       toast.error('Erro ao encaminhar lote para assistência');
       return;
+    }
+
+    // Marcar produtos como Em Revisão Técnica no estoque
+    const imeisEncaminhados = itensDefeituosos
+      .filter(item => item.imei)
+      .map(item => item.imei!);
+    if (imeisEncaminhados.length > 0) {
+      marcarProdutosEmRevisaoTecnica(imeisEncaminhados, lote.id);
+    }
+
+    // Geração automática de Vale-Crédito para notas antecipadas
+    if (notaSelecionada?.tipoPagamento === 'Pagamento 100% Antecipado') {
+      const valorTotalDefeituosos = itensDefeituosos.reduce((acc, item) => {
+        const produtoOriginal = notaSelecionada.produtos.find(p => p.id === item.produtoNotaId);
+        return acc + (produtoOriginal?.custoTotal || 0);
+      }, 0);
+      
+      if (valorTotalDefeituosos > 0) {
+        const credito = gerarCreditoFornecedor(
+          notaSelecionada.fornecedor,
+          valorTotalDefeituosos,
+          notaSelecionada.id,
+          `Vale-Crédito por ${itensDefeituosos.length} aparelho(s) defeituoso(s) da nota ${notaSelecionada.numeroNota}`
+        );
+        toast.success(`Vale-Crédito gerado: ${formatCurrency(credito.valor)} para ${notaSelecionada.fornecedor}`, {
+          icon: <Coins className="h-4 w-4" />,
+          duration: 6000
+        });
+      }
     }
 
     toast.success(

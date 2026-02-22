@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   ArrowLeft, 
   Check, 
@@ -31,6 +32,7 @@ import {
   recolherProdutoNota,
   migrarProdutosConferidosPorCategoria,
   enviarDiretoAoFinanceiro,
+  verificarImeiUnicoSistema,
   NotaEntrada,
   ProdutoNotaEntrada,
   podeRealizarAcao,
@@ -56,6 +58,10 @@ export default function EstoqueNotaConferencia() {
   
   // Estado para campos editáveis inline (IMEI, Cor, Categoria) dos itens explodidos
   const [camposEditaveis, setCamposEditaveis] = useState<Record<string, { imei: string; cor: string; categoria: string }>>({});
+  
+  // Estado para validação de IMEI duplicado
+  const [imeiDuplicado, setImeiDuplicado] = useState<Record<string, string | null>>({});
+  const [imeiDebounceTimers, setImeiDebounceTimers] = useState<Record<string, NodeJS.Timeout>>({});
   
   const coresCadastradas = useMemo(() => getCores(), []);
   const coresAtivas = useMemo(() => coresCadastradas.filter(c => c.status === 'Ativo'), [coresCadastradas]);
@@ -129,7 +135,31 @@ export default function EstoqueNotaConferencia() {
         [campo]: valor
       }
     }));
+    
+    // Validação assíncrona de IMEI com debounce
+    if (campo === 'imei' && valor && valor.replace(/[^0-9]/g, '').length >= 10) {
+      // Limpar timer anterior
+      if (imeiDebounceTimers[produtoId]) {
+        clearTimeout(imeiDebounceTimers[produtoId]);
+      }
+      const timer = setTimeout(() => {
+        const resultado = verificarImeiUnicoSistema(valor, nota?.id);
+        if (resultado.duplicado) {
+          setImeiDuplicado(prev => ({ ...prev, [produtoId]: resultado.localExistente || 'Outro local' }));
+        } else {
+          setImeiDuplicado(prev => ({ ...prev, [produtoId]: null }));
+        }
+      }, 500);
+      setImeiDebounceTimers(prev => ({ ...prev, [produtoId]: timer }));
+    } else if (campo === 'imei') {
+      setImeiDuplicado(prev => ({ ...prev, [produtoId]: null }));
+    }
   };
+  
+  // Verificar se algum IMEI está duplicado
+  const temImeiDuplicado = useMemo(() => {
+    return Object.values(imeiDuplicado).some(v => v !== null && v !== undefined);
+  }, [imeiDuplicado]);
 
   // Toggle local de conferência (não salva ainda)
   const handleToggleConferido = (produtoId: string) => {
@@ -228,6 +258,12 @@ export default function EstoqueNotaConferencia() {
     
     if (produtosConferidos.size === 0) {
       toast.error('Marque pelo menos um produto como conferido');
+      return;
+    }
+    
+    // Bloquear se houver IMEI duplicado
+    if (temImeiDuplicado) {
+      toast.error('Existem IMEIs duplicados. Corrija antes de salvar a conferência.');
       return;
     }
 
@@ -463,13 +499,26 @@ export default function EstoqueNotaConferencia() {
                           {produto.statusConferencia === 'Conferido' ? (
                             produto.imei ? formatIMEI(produto.imei) : '-'
                           ) : precisaCampos && campos ? (
-                            <InputComMascara
-                              mascara="imei"
-                              value={campos.imei}
-                              onChange={(formatted, raw) => atualizarCampoEditavel(produto.id, 'imei', String(raw))}
-                              className="w-40"
-                              placeholder="00-000000-000000-0"
-                            />
+                            <TooltipProvider>
+                              <Tooltip open={!!imeiDuplicado[produto.id]}>
+                                <TooltipTrigger asChild>
+                                  <div>
+                                    <InputComMascara
+                                      mascara="imei"
+                                      value={campos.imei}
+                                      onChange={(formatted, raw) => atualizarCampoEditavel(produto.id, 'imei', String(raw))}
+                                      className={`w-40 ${imeiDuplicado[produto.id] ? 'border-destructive ring-destructive/30 ring-2' : ''}`}
+                                      placeholder="00-000000-000000-0"
+                                    />
+                                  </div>
+                                </TooltipTrigger>
+                                {imeiDuplicado[produto.id] && (
+                                  <TooltipContent className="bg-destructive text-destructive-foreground">
+                                    IMEI já cadastrado em: {imeiDuplicado[produto.id]}
+                                  </TooltipContent>
+                                )}
+                              </Tooltip>
+                            </TooltipProvider>
                           ) : (
                             produto.imei ? formatIMEI(produto.imei) : '-'
                           )}
@@ -591,8 +640,8 @@ export default function EstoqueNotaConferencia() {
                                 variant="ghost"
                                 className="h-8 w-8 hover:bg-primary/20"
                                 onClick={() => handleToggleConferido(produto.id)}
-                                disabled={precisaCampos && !camposOk}
-                                title={precisaCampos && !camposOk ? 'Preencha IMEI, Cor e Categoria primeiro' : 'Marcar como conferido'}
+                                disabled={(precisaCampos && !camposOk) || !!imeiDuplicado[produto.id]}
+                                title={imeiDuplicado[produto.id] ? 'IMEI duplicado - corrija antes de conferir' : precisaCampos && !camposOk ? 'Preencha IMEI, Cor e Categoria primeiro' : 'Marcar como conferido'}
                               >
                                 <Check className="h-5 w-5 text-primary" />
                               </Button>
@@ -654,7 +703,7 @@ export default function EstoqueNotaConferencia() {
                     </p>
                     <Button 
                       className="w-full bg-green-600 hover:bg-green-700 text-white"
-                      disabled={!todosIMEIsPreenchidos}
+                      disabled={!todosIMEIsPreenchidos || temImeiDuplicado}
                       onClick={handleCaminhoVerde}
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
@@ -675,7 +724,7 @@ export default function EstoqueNotaConferencia() {
                     <Button 
                       variant="outline"
                       className="w-full border-yellow-500/50 text-yellow-700 hover:bg-yellow-500/10"
-                      disabled={!todosIMEIsPreenchidos}
+                      disabled={!todosIMEIsPreenchidos || temImeiDuplicado}
                       onClick={handleCaminhoAmarelo}
                     >
                       <AlertTriangle className="h-4 w-4 mr-2" />

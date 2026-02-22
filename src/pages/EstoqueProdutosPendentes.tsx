@@ -42,9 +42,10 @@ import { toast } from 'sonner';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
 import { InputComMascara } from '@/components/ui/InputComMascara';
 import { getPendenciaPorNota } from '@/utils/pendenciasFinanceiraApi';
-import { validarAparelhosEmLote, Produto } from '@/utils/estoqueApi';
+import { validarAparelhosEmLote, Produto, validarRetornoAssistencia } from '@/utils/estoqueApi';
 import { ModalRetiradaPecas } from '@/components/estoque/ModalRetiradaPecas';
 import { formatCurrency, exportToCSV } from '@/utils/formatUtils';
+import { getProdutos } from '@/utils/estoqueApi';
 import { useAuthStore } from '@/store/authStore';
 
 // Tipos de status disponíveis
@@ -528,6 +529,7 @@ export default function EstoqueProdutosPendentes() {
                   <SelectItem value="Retornado da Assistência">Revisão Final</SelectItem>
                   <SelectItem value="Serviço Concluído - Validar Aparelho">Validar Aparelho</SelectItem>
                   <SelectItem value="Retrabalho - Recusado pelo Estoque">Retrabalho</SelectItem>
+                  <SelectItem value="Retorno de Assistência">Retorno de Assistência</SelectItem>
                   <SelectItem value="Devolvido para Fornecedor">Devolvido p/ Fornecedor</SelectItem>
                 </SelectContent>
               </Select>
@@ -730,6 +732,27 @@ export default function EstoqueProdutosPendentes() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-1 justify-end">
+                          {/* Botão Validar Retorno de Assistência */}
+                          {((produto.statusGeral as string) === 'Retorno de Assistência' || (produto as any).tagRetornoAssistencia) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const sucesso = validarRetornoAssistencia(produto.imei, user?.colaborador?.nome || 'Estoquista');
+                                if (sucesso) {
+                                  toast.success(`${produto.modelo} validado e disponível para venda!`);
+                                  setProdutosPendentes(getProdutosPendentes());
+                                } else {
+                                  toast.error('Erro ao validar retorno');
+                                }
+                              }}
+                              title="Validar Retorno e disponibilizar"
+                              className="text-green-600 hover:text-green-700 hover:bg-green-500/10"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                          )}
                           {/* Botão Retirada de Peças */}
                           <Button
                             variant="ghost"

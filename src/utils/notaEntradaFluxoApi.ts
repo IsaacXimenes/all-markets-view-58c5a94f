@@ -1756,6 +1756,58 @@ export const getTotalCreditosDisponiveis = (fornecedor: string): number => {
     .reduce((acc, c) => acc + c.valor, 0);
 };
 
+// ============= VALIDAÇÃO DE UNICIDADE DE IMEI =============
+
+export const verificarImeiUnicoSistema = (
+  imei: string,
+  excluirNotaId?: string
+): { duplicado: boolean; localExistente?: string } => {
+  if (!imei || imei.trim().length < 10) return { duplicado: false };
+  
+  const imeiLimpo = imei.replace(/[^0-9]/g, '');
+  if (imeiLimpo.length < 10) return { duplicado: false };
+  
+  // 1. Verificar em produtos ativos no estoque (importar getProdutos)
+  try {
+    const { getProdutos } = require('./estoqueApi');
+    const produtosEstoque = getProdutos();
+    const encontrado = produtosEstoque.find((p: any) => 
+      p.imei && p.imei.replace(/[^0-9]/g, '') === imeiLimpo && 
+      p.quantidade > 0
+    );
+    if (encontrado) {
+      return { duplicado: true, localExistente: `Estoque (${encontrado.modelo} - ${encontrado.loja})` };
+    }
+  } catch {}
+  
+  // 2. Verificar em produtos pendentes (osApi)
+  try {
+    const { getProdutosPendentes } = require('./osApi');
+    const pendentes = getProdutosPendentes();
+    const encontrado = pendentes.find((p: any) => 
+      p.imei && p.imei.replace(/[^0-9]/g, '') === imeiLimpo
+    );
+    if (encontrado) {
+      return { duplicado: true, localExistente: `Produtos Pendentes (${encontrado.modelo})` };
+    }
+  } catch {}
+  
+  // 3. Verificar em outras notas de entrada
+  for (const nota of notasEntrada) {
+    if (excluirNotaId && nota.id === excluirNotaId) continue;
+    if (nota.status === 'Finalizada') continue;
+    
+    const encontrado = nota.produtos.find(p => 
+      p.imei && p.imei.replace(/[^0-9]/g, '') === imeiLimpo
+    );
+    if (encontrado) {
+      return { duplicado: true, localExistente: `Nota ${nota.numeroNota} (${encontrado.modelo})` };
+    }
+  }
+  
+  return { duplicado: false };
+};
+
 // ============= ENVIO DIRETO AO FINANCEIRO =============
 
 export const enviarDiretoAoFinanceiro = (
@@ -1769,8 +1821,24 @@ export const enviarDiretoAoFinanceiro = (
   nota.enviadoDiretoFinanceiro = true;
   nota.dataEnvioDiretoFinanceiro = new Date().toISOString();
   
+  // Atualizar status para Conferencia Concluida se ainda não estiver
+  if (nota.status !== 'Conferencia Concluida' && nota.status !== 'Finalizada') {
+    nota.status = 'Conferencia Concluida';
+  }
+  
   // Mudar atuação para financeiro
   nota.atuacaoAtual = 'Financeiro';
+  
+  // Marcar todos os produtos como Disponível no estoque
+  try {
+    const { marcarProdutosComoDisponiveis } = require('./estoqueApi');
+    const imeis = nota.produtos
+      .filter(p => p.imei && p.tipoProduto === 'Aparelho')
+      .map(p => p.imei!);
+    if (imeis.length > 0) {
+      marcarProdutosComoDisponiveis(imeis);
+    }
+  } catch {}
   
   // Registrar na timeline
   registrarTimeline(
@@ -1780,7 +1848,7 @@ export const enviarDiretoAoFinanceiro = (
     'Nota enviada diretamente ao Financeiro (sem assistência)',
     nota.status,
     nota.valorTotal,
-    'Lote aprovado sem necessidade de revisão técnica'
+    'Lote aprovado sem necessidade de revisão técnica. Produtos marcados como disponíveis.'
   );
   
   // Notificar financeiro

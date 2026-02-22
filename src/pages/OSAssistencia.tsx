@@ -113,6 +113,8 @@ export default function OSAssistencia() {
         return <Badge className="bg-orange-500 hover:bg-orange-600">Solicitação Enviada</Badge>;
       case 'Em Análise':
         return <Badge className="bg-blue-500 hover:bg-blue-600">Em Análise</Badge>;
+      case 'Aguardando Análise':
+        return <Badge className="bg-violet-500 hover:bg-violet-600">Aguardando Análise</Badge>;
       case 'Peça Recebida':
         return <Badge className="bg-teal-500 hover:bg-teal-600">Peça Recebida</Badge>;
       case 'Pagamento Concluído':
@@ -506,6 +508,7 @@ export default function OSAssistencia() {
                   <SelectItem value="Conferência do Gestor">Conferência do Gestor</SelectItem>
                   <SelectItem value="Aguardando Financeiro">Aguardando Financeiro</SelectItem>
                   <SelectItem value="Liquidado">Liquidado</SelectItem>
+                  <SelectItem value="Aguardando Análise">Aguardando Análise</SelectItem>
                   <SelectItem value="Recusada pelo Técnico">Recusada pelo Técnico</SelectItem>
                 </SelectContent>
               </Select>

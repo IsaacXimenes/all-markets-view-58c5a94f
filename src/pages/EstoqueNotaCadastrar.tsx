@@ -17,7 +17,8 @@ import {
   criarNotaEntrada, 
   TipoPagamentoNota, 
   definirAtuacaoInicial,
-  AtuacaoAtual 
+  AtuacaoAtual,
+  verificarImeiUnicoSistema
 } from '@/utils/notaEntradaFluxoApi';
 import { toast } from 'sonner';
 import { InputComMascara } from '@/components/ui/InputComMascara';
@@ -98,6 +99,10 @@ export default function EstoqueNotaCadastrar() {
 
   // Produtos
   const [produtos, setProdutos] = useState<ProdutoLinha[]>(draft?.produtos?.length ? draft.produtos : [produtoLinhaVazia()]);
+  
+  // IMEI duplicado por índice
+  const [imeiDuplicados, setImeiDuplicados] = useState<Record<number, string | null>>({});
+  const [imeiTimers, setImeiTimers] = useState<Record<number, NodeJS.Timeout>>({});
 
   // Indicador de draft carregado
   const [hasDraft, setHasDraft] = useState(!!draft);
@@ -177,6 +182,7 @@ export default function EstoqueNotaCadastrar() {
       novosProdutos[index].imei = '';
       novosProdutos[index].cor = '';
       novosProdutos[index].categoria = '';
+      setImeiDuplicados(prev => ({ ...prev, [index]: null }));
     }
 
     if (campo === 'marca') {
@@ -185,6 +191,22 @@ export default function EstoqueNotaCadastrar() {
 
     if (campo === 'quantidade' || campo === 'custoUnitario') {
       novosProdutos[index].custoTotal = novosProdutos[index].quantidade * novosProdutos[index].custoUnitario;
+    }
+
+    // Validação assíncrona de IMEI
+    if (campo === 'imei' && valor && String(valor).replace(/[^0-9]/g, '').length >= 10) {
+      if (imeiTimers[index]) clearTimeout(imeiTimers[index]);
+      const timer = setTimeout(() => {
+        const resultado = verificarImeiUnicoSistema(valor);
+        if (resultado.duplicado) {
+          setImeiDuplicados(prev => ({ ...prev, [index]: resultado.localExistente || 'Outro local' }));
+        } else {
+          setImeiDuplicados(prev => ({ ...prev, [index]: null }));
+        }
+      }, 500);
+      setImeiTimers(prev => ({ ...prev, [index]: timer }));
+    } else if (campo === 'imei') {
+      setImeiDuplicados(prev => ({ ...prev, [index]: null }));
     }
 
     setProdutos(novosProdutos);
@@ -206,7 +228,17 @@ export default function EstoqueNotaCadastrar() {
     return camposFaltando;
   };
 
+  const temImeiDuplicadoCadastro = useMemo(() => {
+    return Object.values(imeiDuplicados).some(v => v !== null && v !== undefined);
+  }, [imeiDuplicados]);
+
   const validarProdutos = (): boolean => {
+    // Bloquear se houver IMEI duplicado
+    if (temImeiDuplicadoCadastro) {
+      toast.error('Existem IMEIs duplicados. Corrija antes de salvar.');
+      return false;
+    }
+    
     // Pelo menos verificar campos obrigatórios simplificados
     for (const p of produtos) {
       if (!p.modelo) {
@@ -625,13 +657,20 @@ export default function EstoqueNotaCadastrar() {
                       {!camposSimplificados && (
                         <TableCell>
                           {produto.tipoProduto === 'Aparelho' ? (
-                            <InputComMascara
-                              mascara="imei"
-                              value={produto.imei}
-                              onChange={(formatted, raw) => atualizarProduto(index, 'imei', String(raw))}
-                              className="w-40"
-                              placeholder="00-000000-000000-0"
-                            />
+                            <div className="relative">
+                              <InputComMascara
+                                mascara="imei"
+                                value={produto.imei}
+                                onChange={(formatted, raw) => atualizarProduto(index, 'imei', String(raw))}
+                                className={`w-40 ${imeiDuplicados[index] ? 'border-destructive ring-destructive/30 ring-2' : ''}`}
+                                placeholder="00-000000-000000-0"
+                              />
+                              {imeiDuplicados[index] && (
+                                <p className="text-[10px] text-destructive mt-0.5 truncate max-w-[160px]">
+                                  Duplicado: {imeiDuplicados[index]}
+                                </p>
+                              )}
+                            </div>
                           ) : (
                             <Input disabled placeholder="N/A" className="w-40 bg-muted" />
                           )}

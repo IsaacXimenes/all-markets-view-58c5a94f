@@ -501,6 +501,79 @@ export const getStatusAparelho = (produto: Produto): string => {
   return 'Disponível';
 };
 
+// Marcar produtos como disponíveis (usado pelo Caminho Verde)
+export const marcarProdutosComoDisponiveis = (imeis: string[]): void => {
+  for (const imei of imeis) {
+    const imeiLimpo = imei.replace(/[^0-9]/g, '');
+    const produto = produtos.find(p => p.imei.replace(/[^0-9]/g, '') === imeiLimpo);
+    if (produto) {
+      produto.estoqueConferido = true;
+      produto.assistenciaConferida = true;
+      produto.statusRevisaoTecnica = null;
+      produto.tagRetornoAssistencia = false;
+    }
+  }
+};
+
+// Marcar produtos como Em Revisão Técnica (usado pelo Caminho Amarelo)
+export const marcarProdutosEmRevisaoTecnica = (imeis: string[], loteRevisaoId: string): void => {
+  for (const imei of imeis) {
+    const imeiLimpo = imei.replace(/[^0-9]/g, '');
+    const produto = produtos.find(p => p.imei.replace(/[^0-9]/g, '') === imeiLimpo);
+    if (produto) {
+      produto.statusRevisaoTecnica = 'Em Revisao Tecnica';
+      produto.loteRevisaoId = loteRevisaoId;
+    }
+  }
+};
+
+// Marcar produto como retornado da assistência
+export const marcarProdutoRetornoAssistencia = (imei: string): void => {
+  const imeiLimpo = imei.replace(/[^0-9]/g, '');
+  const produto = produtos.find(p => p.imei.replace(/[^0-9]/g, '') === imeiLimpo);
+  if (produto) {
+    produto.tagRetornoAssistencia = true;
+    produto.statusRevisaoTecnica = null;
+    produto.loteRevisaoId = undefined;
+  }
+};
+
+// Marcar produto como devolvido ao fornecedor
+export const marcarProdutoDevolvido = (imei: string): void => {
+  const imeiLimpo = imei.replace(/[^0-9]/g, '');
+  const produto = produtos.find(p => p.imei.replace(/[^0-9]/g, '') === imeiLimpo);
+  if (produto) {
+    produto.quantidade = 0;
+    produto.statusRevisaoTecnica = null;
+    produto.loteRevisaoId = undefined;
+    produto.statusNota = 'Concluído';
+  }
+};
+
+// Validar retorno de assistência (remover tag e tornar disponível)
+export const validarRetornoAssistencia = (imei: string, responsavel: string): boolean => {
+  const imeiLimpo = imei.replace(/[^0-9]/g, '');
+  const produto = produtos.find(p => p.imei.replace(/[^0-9]/g, '') === imeiLimpo);
+  if (!produto || !produto.tagRetornoAssistencia) return false;
+  
+  produto.tagRetornoAssistencia = false;
+  produto.estoqueConferido = true;
+  produto.assistenciaConferida = true;
+  
+  // Registrar na timeline
+  if (!produto.timeline) produto.timeline = [];
+  produto.timeline.push({
+    id: `TL-${produto.id}-RET-${Date.now()}`,
+    data: new Date().toISOString(),
+    tipo: 'validacao',
+    titulo: 'Retorno de Assistência Validado',
+    descricao: `Aparelho validado pelo estoquista após retorno da assistência`,
+    responsavel
+  });
+  
+  return true;
+};
+
 // Inicializa IDs existentes no sistema
 const initializeExistingIds = () => {
   const allIds = produtos.map(p => p.id);

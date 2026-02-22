@@ -2,7 +2,8 @@
 // Gerencia o encaminhamento em lote de aparelhos defeituosos para assistência
 
 import { addOrdemServico, OrdemServico } from './assistenciaApi';
-import { getNotaEntradaById, NotaEntrada } from './notaEntradaFluxoApi';
+import { getNotaEntradaById, NotaEntrada, gerarCreditoFornecedor } from './notaEntradaFluxoApi';
+import { marcarProdutoRetornoAssistencia, marcarProdutoDevolvido } from './estoqueApi';
 
 // ============= TIPOS E INTERFACES =============
 
@@ -224,12 +225,31 @@ export const finalizarLoteComLogisticaReversa = (
 
     if (res.resultado === 'Consertado') {
       item.statusReparo = 'Concluido';
-      // Produto será marcado com tagRetornoAssistencia no estoqueApi
+      // Marcar produto com tagRetornoAssistencia no estoqueApi
+      if (item.imei) {
+        marcarProdutoRetornoAssistencia(item.imei);
+      }
     } else if (res.resultado === 'Devolucao ao Fornecedor') {
       item.statusReparo = 'Concluido';
       // Valor integral do aparelho abatido na nota
       const custoAparelho = lote.valorOriginalNota / lote.itens.length;
       valorAbatimentoDevolucao += custoAparelho;
+      
+      // Marcar produto como devolvido no estoque
+      if (item.imei) {
+        marcarProdutoDevolvido(item.imei);
+      }
+      
+      // Gerar crédito para notas antecipadas
+      const notaEntrada = getNotaEntradaById(lote.notaEntradaId);
+      if (notaEntrada && notaEntrada.tipoPagamento === 'Pagamento 100% Antecipado') {
+        gerarCreditoFornecedor(
+          lote.fornecedor,
+          custoAparelho,
+          lote.notaEntradaId,
+          `Devolução ao fornecedor - ${item.marca} ${item.modelo} (Lote ${lote.id})`
+        );
+      }
     }
   });
 

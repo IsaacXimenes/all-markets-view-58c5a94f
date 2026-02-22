@@ -699,6 +699,28 @@ export default function FinanceiroNotasAssistencia() {
                     </div>
                   )}
 
+                  {/* Crédito de Fornecedor Contextual */}
+                  {(() => {
+                    const creditosDisp = getCreditosByFornecedor(notaSelecionada.fornecedor).filter(c => !c.utilizado);
+                    const totalCreditos = creditosDisp.reduce((acc, c) => acc + c.valor, 0);
+                    if (creditosDisp.length === 0) return null;
+                    return (
+                      <Card className="border-yellow-500/30 bg-yellow-500/5">
+                        <CardContent className="p-4 flex items-center gap-3">
+                          <Coins className="h-5 w-5 text-yellow-600 shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-sm font-semibold text-yellow-700 dark:text-yellow-400">
+                              Crédito de Fornecedor Disponível: {formatCurrency(totalCreditos)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {creditosDisp.length} crédito(s) disponível(is) para {getFornecedorNome(notaSelecionada.fornecedor)}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
+
                   {notaSelecionada.status === 'Pendente' && (
                     <div className="border-t pt-4">
                       <h3 className="font-semibold mb-3 text-primary">Seção "Pagamento" (Habilitada)</h3>
