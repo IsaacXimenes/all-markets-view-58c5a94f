@@ -1870,5 +1870,159 @@ export const getNotasEntradaParaFinanceiro = (): NotaEntrada[] => {
   );
 };
 
+// ============= TRIAGEM INDIVIDUALIZADA (CAMINHO MISTO) =============
+
+export interface TriagemProduto {
+  produtoId: string;
+  caminho: 'verde' | 'amarelo';
+  motivoDefeito?: string; // Obrigatório se caminho = 'amarelo'
+}
+
+export interface ResultadoTriagem {
+  nota: NotaEntrada;
+  produtosVerdes: ProdutoNotaEntrada[];
+  produtosAmarelos: ProdutoNotaEntrada[];
+  loteRevisaoId?: string;
+  creditoGerado?: CreditoFornecedor;
+  osIds?: string[];
+}
+
+/**
+ * Processa a triagem individualizada de produtos na Central de Decisão.
+ * Produtos marcados como "verde" seguem para o Financeiro.
+ * Produtos marcados como "amarelo" seguem para Assistência (lote de revisão).
+ */
+export const processarTriagemIndividualizada = (
+  notaId: string,
+  triagens: TriagemProduto[],
+  usuario: string
+): ResultadoTriagem | null => {
+  const nota = notasEntrada.find(n => n.id === notaId);
+  if (!nota) return null;
+
+  const produtosVerdes: ProdutoNotaEntrada[] = [];
+  const produtosAmarelos: ProdutoNotaEntrada[] = [];
+
+  triagens.forEach(t => {
+    const produto = nota.produtos.find(p => p.id === t.produtoId);
+    if (!produto) return;
+    if (t.caminho === 'verde') {
+      produtosVerdes.push(produto);
+    } else {
+      produtosAmarelos.push(produto);
+    }
+  });
+
+  const resultado: ResultadoTriagem = { nota, produtosVerdes, produtosAmarelos };
+
+  // ---- Processar itens VERDES ----
+  if (produtosVerdes.length > 0) {
+    try {
+      const { marcarProdutosComoDisponiveis } = require('./estoqueApi');
+      const imeisVerdes = produtosVerdes
+        .filter(p => p.imei && p.tipoProduto === 'Aparelho')
+        .map(p => p.imei!);
+      if (imeisVerdes.length > 0) {
+        marcarProdutosComoDisponiveis(imeisVerdes);
+      }
+    } catch {}
+  }
+
+  // ---- Processar itens AMARELOS ----
+  if (produtosAmarelos.length > 0) {
+    // Marcar produtos como Em Revisão Técnica no estoque
+    try {
+      const { marcarProdutosEmRevisaoTecnica } = require('./estoqueApi');
+      const imeisAmarelos = produtosAmarelos
+        .filter(p => p.imei && p.tipoProduto === 'Aparelho')
+        .map(p => p.imei!);
+      if (imeisAmarelos.length > 0) {
+        // Criar lote de revisão
+        const { criarLoteRevisao, encaminharLoteParaAssistencia } = require('./loteRevisaoApi');
+        const itensLote = produtosAmarelos.map(p => {
+          const triagem = triagens.find(t => t.produtoId === p.id);
+          return {
+            produtoNotaId: p.id,
+            marca: p.marca,
+            modelo: p.modelo,
+            imei: p.imei,
+            motivoAssistencia: triagem?.motivoDefeito || 'Defeito identificado na conferência',
+            responsavelRegistro: usuario,
+            dataRegistro: new Date().toISOString()
+          };
+        });
+        
+        const lote = criarLoteRevisao(notaId, itensLote, usuario);
+        if (lote) {
+          const loteEncaminhado = encaminharLoteParaAssistencia(lote.id, usuario);
+          marcarProdutosEmRevisaoTecnica(imeisAmarelos, lote.id);
+          resultado.loteRevisaoId = lote.id;
+          resultado.osIds = loteEncaminhado?.osIds;
+          
+          // Gerar crédito automático para notas antecipadas
+          if (nota.tipoPagamento === 'Pagamento 100% Antecipado') {
+            const valorDefeituosos = produtosAmarelos.reduce((acc, p) => acc + p.custoTotal, 0);
+            if (valorDefeituosos > 0) {
+              const credito = gerarCreditoFornecedor(
+                nota.fornecedor,
+                valorDefeituosos,
+                nota.id,
+                `Vale-Crédito por ${produtosAmarelos.length} aparelho(s) defeituoso(s) da nota ${nota.numeroNota}`
+              );
+              resultado.creditoGerado = credito;
+            }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // ---- Atualizar status da nota ----
+  if (produtosAmarelos.length === 0) {
+    // Tudo verde: envio direto ao financeiro
+    nota.enviadoDiretoFinanceiro = true;
+    nota.dataEnvioDiretoFinanceiro = new Date().toISOString();
+    nota.atuacaoAtual = 'Financeiro';
+    registrarTimeline(nota, usuario, 'Estoque',
+      'Nota enviada ao Financeiro (todos os itens aprovados)',
+      nota.status, nota.valorTotal,
+      `${produtosVerdes.length} produto(s) disponibilizado(s) para venda.`
+    );
+  } else if (produtosVerdes.length === 0) {
+    // Tudo amarelo: encaminhado para assistência
+    nota.loteRevisaoId = resultado.loteRevisaoId;
+    registrarTimeline(nota, usuario, 'Estoque',
+      'Nota encaminhada para Assistência (todos os itens com defeito)',
+      nota.status, undefined,
+      `${produtosAmarelos.length} produto(s) encaminhado(s) para revisão técnica. Lote: ${resultado.loteRevisaoId}`
+    );
+  } else {
+    // Misto: parte verde, parte amarelo
+    nota.enviadoDiretoFinanceiro = true;
+    nota.dataEnvioDiretoFinanceiro = new Date().toISOString();
+    nota.atuacaoAtual = 'Financeiro';
+    nota.loteRevisaoId = resultado.loteRevisaoId;
+    
+    const valorVerdes = produtosVerdes.reduce((acc, p) => acc + p.custoTotal, 0);
+    registrarTimeline(nota, usuario, 'Estoque',
+      'Triagem individualizada concluída (Caminho Misto)',
+      nota.status, valorVerdes,
+      `${produtosVerdes.length} item(ns) → Financeiro (R$ ${valorVerdes.toFixed(2)}) | ${produtosAmarelos.length} item(ns) → Assistência (Lote ${resultado.loteRevisaoId})`
+    );
+  }
+
+  // Notificar
+  if (produtosVerdes.length > 0) {
+    addNotification({
+      type: 'pagamento_pendente',
+      title: 'Nota com itens para pagamento',
+      description: `Nota ${notaId} - ${produtosVerdes.length} item(ns) aprovado(s)`,
+      targetUsers: ['financeiro']
+    });
+  }
+
+  return resultado;
+};
+
 // Inicializar ao carregar módulo
 inicializarNotasEntradaMock();
