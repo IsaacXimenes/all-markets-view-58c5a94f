@@ -60,6 +60,10 @@ export interface Produto {
   emprestimoDataHora?: string; // Data/hora do empréstimo
   // Campo para controle de reserva para troca via Garantia
   bloqueadoEmTrocaGarantiaId?: string; // ID da garantia quando reservado para troca
+  // Status de revisão técnica (invisível para venda)
+  statusRevisaoTecnica?: 'Em Revisao Tecnica' | null;
+  loteRevisaoId?: string; // ID do lote de revisão vinculado
+  tagRetornoAssistencia?: boolean; // Tag para produtos retornados da assistência
 }
 
 // ============= INTERFACES MOVIMENTAÇÃO MATRIZ =============
@@ -486,12 +490,14 @@ export const ESTOQUE_LOJAS_IDS = LOJAS_IDS;
 
 // Helper para derivar o status atual do aparelho
 export const getStatusAparelho = (produto: Produto): string => {
+  if (produto.statusRevisaoTecnica === 'Em Revisao Tecnica') return 'Em Revisão Técnica';
   if (produto.statusRetiradaPecas && produto.statusRetiradaPecas !== 'Cancelada') return 'Retirada de Peças';
   if (produto.quantidade === 0 && produto.statusNota === 'Concluído') return 'Vendido';
   if (produto.statusMovimentacao === 'Em movimentação') return 'Em movimentação';
   if (produto.statusEmprestimo === 'Empréstimo - Assistência') return 'Empréstimo';
   if (produto.bloqueadoEmTrocaGarantiaId) return 'Reservado para Troca';
   if (produto.bloqueadoEmVendaId) return 'Bloqueado';
+  if (produto.tagRetornoAssistencia) return 'Retorno de Assistência';
   return 'Disponível';
 };
 

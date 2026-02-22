@@ -18,7 +18,11 @@ import {
   CheckCircle,
   Save,
   Layers,
-  Undo2
+  Undo2,
+  Send,
+  Wrench,
+  AlertTriangle,
+  ShieldCheck
 } from 'lucide-react';
 import { 
   getNotaEntradaById, 
@@ -26,6 +30,7 @@ import {
   explodirProdutoNota,
   recolherProdutoNota,
   migrarProdutosConferidosPorCategoria,
+  enviarDiretoAoFinanceiro,
   NotaEntrada,
   ProdutoNotaEntrada,
   podeRealizarAcao,
@@ -44,6 +49,7 @@ export default function EstoqueNotaConferencia() {
   const [nota, setNota] = useState<NotaEntrada | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [timelineOpen, setTimelineOpen] = useState(true);
+  const [showCentralDecisao, setShowCentralDecisao] = useState(false);
   
   // Estado local para rastrear produtos marcados como conferidos (antes de salvar)
   const [produtosConferidos, setProdutosConferidos] = useState<Set<string>>(new Set());
@@ -208,6 +214,14 @@ export default function EstoqueNotaConferencia() {
   const isItemExplodido = (produtoId: string): boolean => {
     return /-U\d{3}$/.test(produtoId);
   };
+  // Verificar se todos os aparelhos têm IMEI preenchido
+  const todosIMEIsPreenchidos = useMemo(() => {
+    if (!nota) return false;
+    return nota.produtos
+      .filter(p => p.tipoProduto === 'Aparelho')
+      .every(p => p.imei && p.imei.trim() !== '');
+  }, [nota]);
+
   // Salvar conferência - só aqui que confirma tudo
   const handleSalvarConferencia = () => {
     if (!nota) return;
@@ -218,7 +232,6 @@ export default function EstoqueNotaConferencia() {
     }
 
     // Antes de salvar, atualizar os campos editáveis nos produtos da nota
-    // (isso é feito in-memory antes de chamar finalizarConferencia)
     const notaAtual = getNotaEntradaById(nota.id);
     if (notaAtual) {
       for (const [produtoId, campos] of Object.entries(camposEditaveis)) {
@@ -238,9 +251,9 @@ export default function EstoqueNotaConferencia() {
       setNota(resultado);
       toast.success(`${produtosIds.length} produto(s) conferido(s) com sucesso!`);
       
-      // Verificar se finalizou 100% - migrar produtos automaticamente
+      // Verificar se finalizou 100% - mostrar Central de Decisão
       if (resultado.qtdConferida === resultado.qtdCadastrada && resultado.qtdCadastrada > 0) {
-        // Buscar nota original (não a cópia) para a migração registrar timeline
+        // Buscar nota original para a migração
         const notaOriginal = getNotaEntradaById(resultado.id);
         if (notaOriginal) {
           const migracaoResult = migrarProdutosConferidosPorCategoria(notaOriginal, 'Carlos Estoque');
@@ -256,18 +269,47 @@ export default function EstoqueNotaConferencia() {
           }
         }
         
-        toast.success('Conferência 100% concluída!', {
-          description: resultado.tipoPagamento === 'Pagamento Pos' 
-            ? 'Nota enviada para pagamento no Financeiro' 
-            : resultado.tipoPagamento === 'Pagamento 100% Antecipado'
-              ? 'Nota finalizada automaticamente'
-              : 'Status da nota atualizado'
-        });
-        navigate('/estoque/notas-pendencias');
+        toast.success('Conferência 100% concluída!');
+        // Mostrar Central de Decisão em vez de navegar diretamente
+        setShowCentralDecisao(true);
       }
     } else {
       toast.error('Erro ao salvar conferência');
     }
+  };
+
+  // Caminho Verde: Enviar direto ao Financeiro
+  const handleCaminhoVerde = () => {
+    if (!nota) return;
+    
+    // Verificar se todos os aparelhos têm IMEI
+    if (!todosIMEIsPreenchidos) {
+      toast.error('Todos os aparelhos devem ter o IMEI preenchido antes de enviar ao Financeiro');
+      return;
+    }
+    
+    const resultado = enviarDiretoAoFinanceiro(nota.id, 'Carlos Estoque');
+    if (resultado) {
+      toast.success('Nota enviada ao Financeiro pelo valor integral!', {
+        description: 'Aparelhos disponíveis para venda'
+      });
+      navigate('/estoque/notas-pendencias');
+    } else {
+      toast.error('Erro ao enviar nota ao Financeiro');
+    }
+  };
+
+  // Caminho Amarelo: Encaminhar para Assistência
+  const handleCaminhoAmarelo = () => {
+    if (!nota) return;
+    
+    // Verificar se todos os aparelhos têm IMEI
+    if (!todosIMEIsPreenchidos) {
+      toast.error('Todos os aparelhos devem ter o IMEI preenchido antes de encaminhar para Assistência');
+      return;
+    }
+    
+    navigate(`/estoque/encaminhar-assistencia?nota=${nota.id}`);
   };
 
   const formatDateTime = (dateStr: string) => {
@@ -577,6 +619,74 @@ export default function EstoqueNotaConferencia() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Central de Decisão - aparece após 100% conferência */}
+        {showCentralDecisao && nota && (
+          <Card className="border-2 border-primary/50 bg-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <ShieldCheck className="h-6 w-6 text-primary" />
+                Central de Decisão — Conferência 100% Concluída
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Todos os {nota.qtdCadastrada} produto(s) foram conferidos. Escolha o próximo passo:
+              </p>
+            </CardHeader>
+            <CardContent>
+              {!todosIMEIsPreenchidos && (
+                <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/30 mb-4">
+                  <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+                  <p className="text-sm text-destructive font-medium">
+                    Existem aparelhos sem IMEI preenchido. Preencha todos os IMEIs antes de prosseguir.
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="border-green-500/30 hover:border-green-500/60 transition-colors">
+                  <CardContent className="p-6 text-center space-y-3">
+                    <div className="mx-auto w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
+                      <Send className="h-6 w-6 text-green-600" />
+                    </div>
+                    <h3 className="font-semibold text-green-700 dark:text-green-400">Caminho Verde — Lote OK</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Todos os aparelhos estão em perfeitas condições. Enviar nota diretamente ao Financeiro pelo valor integral.
+                    </p>
+                    <Button 
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                      disabled={!todosIMEIsPreenchidos}
+                      onClick={handleCaminhoVerde}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Finalizar e Enviar ao Financeiro
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-yellow-500/30 hover:border-yellow-500/60 transition-colors">
+                  <CardContent className="p-6 text-center space-y-3">
+                    <div className="mx-auto w-12 h-12 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                      <Wrench className="h-6 w-6 text-yellow-600" />
+                    </div>
+                    <h3 className="font-semibold text-yellow-700 dark:text-yellow-400">Caminho Amarelo — Lote com Defeito</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Há aparelhos com defeito. Selecionar IMEIs defeituosos e gerar Lote de Revisão na Assistência.
+                    </p>
+                    <Button 
+                      variant="outline"
+                      className="w-full border-yellow-500/50 text-yellow-700 hover:bg-yellow-500/10"
+                      disabled={!todosIMEIsPreenchidos}
+                      onClick={handleCaminhoAmarelo}
+                    >
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Encaminhar para Assistência
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Timeline */}
         <Collapsible open={timelineOpen} onOpenChange={setTimelineOpen}>

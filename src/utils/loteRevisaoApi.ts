@@ -188,11 +188,64 @@ export const finalizarLoteRevisao = (
   lote.dataFinalizacao = new Date().toISOString();
 
   // Recalcular custos com base nas OS vinculadas
-  // (Em produção, buscaria os custos reais das OS)
   lote.custoTotalReparos = lote.itens.reduce((acc, i) => acc + i.custoReparo, 0);
   lote.valorLiquidoSugerido = lote.valorOriginalNota - lote.custoTotalReparos;
 
   return lote;
+};
+
+// ============= LOGÍSTICA REVERSA =============
+
+export type ResultadoReparo = 'Consertado' | 'Devolucao ao Fornecedor';
+
+export interface ResultadoItemRevisao {
+  itemId: string;
+  resultado: ResultadoReparo;
+}
+
+export const finalizarLoteComLogisticaReversa = (
+  loteId: string,
+  resultados: ResultadoItemRevisao[],
+  responsavel: string
+): LoteRevisao | null => {
+  const lote = lotesRevisao.find(l => l.id === loteId);
+  if (!lote) return null;
+
+  lote.status = 'Finalizado';
+  lote.dataFinalizacao = new Date().toISOString();
+  lote.custoTotalReparos = lote.itens.reduce((acc, i) => acc + i.custoReparo, 0);
+  lote.valorLiquidoSugerido = lote.valorOriginalNota - lote.custoTotalReparos;
+
+  // Processar cada item conforme resultado
+  let valorAbatimentoDevolucao = 0;
+  resultados.forEach(res => {
+    const item = lote.itens.find(i => i.id === res.itemId);
+    if (!item) return;
+
+    if (res.resultado === 'Consertado') {
+      item.statusReparo = 'Concluido';
+      // Produto será marcado com tagRetornoAssistencia no estoqueApi
+    } else if (res.resultado === 'Devolucao ao Fornecedor') {
+      item.statusReparo = 'Concluido';
+      // Valor integral do aparelho abatido na nota
+      const custoAparelho = lote.valorOriginalNota / lote.itens.length;
+      valorAbatimentoDevolucao += custoAparelho;
+    }
+  });
+
+  // Aplicar abatimento de devoluções
+  if (valorAbatimentoDevolucao > 0) {
+    lote.valorLiquidoSugerido -= valorAbatimentoDevolucao;
+  }
+
+  return lote;
+};
+
+// Obter itens consertados (para retorno ao estoque com tag)
+export const getItensConsertados = (loteId: string): ItemRevisao[] => {
+  const lote = lotesRevisao.find(l => l.id === loteId);
+  if (!lote || lote.status !== 'Finalizado') return [];
+  return lote.itens.filter(i => i.statusReparo === 'Concluido');
 };
 
 export const calcularAbatimento = (loteId: string): AbatimentoInfo | null => {
