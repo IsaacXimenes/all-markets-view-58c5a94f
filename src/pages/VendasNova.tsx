@@ -2951,8 +2951,8 @@ export default function VendasNova() {
             <div className="border-b pb-4">
               <p className="text-sm font-medium mb-2">📊 Valores Recomendados para Troca</p>
               <ValoresRecomendadosTroca
-                onUsarValor={(valor, modelo, condicao) => {
-                  setNovoTradeIn({ ...novoTradeIn, valorCompraUsado: valor, modelo, condicao });
+                onUsarValor={(valor, modelo) => {
+                  setNovoTradeIn({ ...novoTradeIn, valorCompraUsado: valor, modelo, condicao: 'Semi-novo' });
                 }}
               />
             </div>

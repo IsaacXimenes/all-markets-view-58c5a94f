@@ -8,7 +8,7 @@ import { buscarValoresRecomendados, ValorRecomendadoTroca } from '@/utils/valore
 import { formatCurrency } from '@/utils/formatUtils';
 
 interface ValoresRecomendadosTrocaProps {
-  onUsarValor?: (valor: number, modelo: string, condicao: 'Novo' | 'Semi-novo') => void;
+  onUsarValor?: (valor: number, modelo: string) => void;
 }
 
 export function ValoresRecomendadosTroca({ onUsarValor }: ValoresRecomendadosTrocaProps) {
@@ -33,17 +33,14 @@ export function ValoresRecomendadosTroca({ onUsarValor }: ValoresRecomendadosTro
           <TableHeader>
             <TableRow>
               <TableHead>Modelo</TableHead>
-              <TableHead>Condição</TableHead>
-              <TableHead className="text-right">Mín</TableHead>
-              <TableHead className="text-right">Máx</TableHead>
-              <TableHead className="text-right">Sugerido</TableHead>
+              <TableHead className="text-right">Valor Sugerido</TableHead>
               {onUsarValor && <TableHead className="text-center w-[80px]"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {resultados.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={onUsarValor ? 6 : 5} className="text-center py-6 text-muted-foreground">
+                <TableCell colSpan={onUsarValor ? 3 : 2} className="text-center py-6 text-muted-foreground">
                   Nenhum modelo encontrado.
                 </TableCell>
               </TableRow>
@@ -51,13 +48,6 @@ export function ValoresRecomendadosTroca({ onUsarValor }: ValoresRecomendadosTro
               resultados.map(item => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium text-sm">{item.modelo}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={item.condicao === 'Novo' ? 'bg-green-50 text-green-700 border-green-300 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-50 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400'}>
-                      {item.condicao}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right text-sm text-muted-foreground">{formatCurrency(item.valorMin)}</TableCell>
-                  <TableCell className="text-right text-sm text-muted-foreground">{formatCurrency(item.valorMax)}</TableCell>
                   <TableCell className="text-right text-sm font-semibold">{formatCurrency(item.valorSugerido)}</TableCell>
                   {onUsarValor && (
                     <TableCell className="text-center">
@@ -65,7 +55,7 @@ export function ValoresRecomendadosTroca({ onUsarValor }: ValoresRecomendadosTro
                         size="sm"
                         variant="ghost"
                         className="h-7 text-xs"
-                        onClick={() => onUsarValor(item.valorSugerido, item.modelo, item.condicao as 'Novo' | 'Semi-novo')}
+                        onClick={() => onUsarValor(item.valorSugerido, item.modelo)}
                       >
                         <Check className="h-3 w-3 mr-1" />
                         Usar

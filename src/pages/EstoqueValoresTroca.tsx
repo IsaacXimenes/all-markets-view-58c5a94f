@@ -25,7 +25,7 @@ import {
   type LogValorTroca,
 } from '@/utils/valoresRecomendadosTrocaApi';
 
-const formVazio = { modelo: '', marca: '', condicao: 'Semi-novo' as 'Novo' | 'Semi-novo', valorMin: 0, valorMax: 0, valorSugerido: 0 };
+const formVazio = { modelo: '', marca: '', condicao: 'Semi-novo' as const, valorSugerido: 0 };
 
 export default function EstoqueValoresTroca() {
   const [busca, setBusca] = useState('');
@@ -44,7 +44,7 @@ export default function EstoqueValoresTroca() {
   const produtos = useMemo(() => getProdutosCadastro(), []);
   const modelosExistentes = useMemo(() => {
     const atuais = getValoresRecomendadosTroca();
-    return new Set(atuais.map(v => `${v.modelo}__${v.condicao}`));
+    return new Set(atuais.map(v => v.modelo));
   }, [dados]);
 
   const produtosFiltrados = useMemo(() => {
@@ -71,7 +71,7 @@ export default function EstoqueValoresTroca() {
 
   const abrirEditar = (item: ValorRecomendadoTroca) => {
     setEditandoId(item.id);
-    setForm({ modelo: item.modelo, marca: item.marca, condicao: item.condicao, valorMin: item.valorMin, valorMax: item.valorMax, valorSugerido: item.valorSugerido });
+    setForm({ modelo: item.modelo, marca: item.marca, condicao: 'Semi-novo', valorSugerido: item.valorSugerido });
     setFiltroModelo(item.modelo);
     setModalAberto(true);
   };
@@ -92,14 +92,13 @@ export default function EstoqueValoresTroca() {
       toast.error('Preencha modelo e marca');
       return;
     }
-    if (form.valorMin <= 0 || form.valorMax <= 0 || form.valorSugerido <= 0) {
-      toast.error('Valores devem ser maiores que zero');
+    if (form.valorSugerido <= 0) {
+      toast.error('Valor deve ser maior que zero');
       return;
     }
     if (!editandoId) {
-      const chave = `${form.modelo}__${form.condicao}`;
-      if (modelosExistentes.has(chave)) {
-        toast.error(`Já existe um valor cadastrado para "${form.modelo}" na condição "${form.condicao}"`);
+      if (modelosExistentes.has(form.modelo)) {
+        toast.error(`Já existe um valor cadastrado para "${form.modelo}"`);
         return;
       }
     }
@@ -160,9 +159,6 @@ export default function EstoqueValoresTroca() {
                 <TableRow>
                   <TableHead>Modelo</TableHead>
                   <TableHead>Marca</TableHead>
-                  <TableHead>Condição</TableHead>
-                  <TableHead className="text-right">Valor Mín</TableHead>
-                  <TableHead className="text-right">Valor Máx</TableHead>
                   <TableHead className="text-right">Valor Sugerido</TableHead>
                   <TableHead>Atualização</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -170,14 +166,11 @@ export default function EstoqueValoresTroca() {
               </TableHeader>
               <TableBody>
                 {dados.length === 0 ? (
-                  <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum valor encontrado</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum valor encontrado</TableCell></TableRow>
                 ) : dados.map(item => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium">{item.modelo}</TableCell>
                     <TableCell>{item.marca}</TableCell>
-                    <TableCell><Badge variant={item.condicao === 'Novo' ? 'default' : 'secondary'}>{item.condicao}</Badge></TableCell>
-                    <TableCell className="text-right">{fmt(item.valorMin)}</TableCell>
-                    <TableCell className="text-right">{fmt(item.valorMax)}</TableCell>
                     <TableCell className="text-right font-semibold">{fmt(item.valorSugerido)}</TableCell>
                     <TableCell>{item.ultimaAtualizacao}</TableCell>
                     <TableCell className="text-right">
@@ -253,7 +246,7 @@ export default function EstoqueValoresTroca() {
                   <div className="absolute z-[100] w-full mt-1 bg-popover border rounded-md shadow-lg overflow-hidden">
                     <div className="max-h-64 overflow-y-auto">
                       {produtosFiltrados.map(p => {
-                        const jaCadastrado = modelosExistentes.has(`${p.produto}__${form.condicao}`);
+                        const jaCadastrado = modelosExistentes.has(p.produto);
                         return (
                           <div
                             key={p.id}
@@ -287,41 +280,12 @@ export default function EstoqueValoresTroca() {
             </div>
 
             <div>
-              <Label>Condição</Label>
-              <Select value={form.condicao} onValueChange={v => setForm(f => ({ ...f, condicao: v as 'Novo' | 'Semi-novo' }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Novo">Novo</SelectItem>
-                  <SelectItem value="Semi-novo">Semi-novo</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label>Valor Mín</Label>
-                <InputComMascara
-                  mascara="moeda"
-                  value={form.valorMin}
-                  onChange={(_formatted, raw) => setForm(f => ({ ...f, valorMin: Number(raw) }))}
-                />
-              </div>
-              <div>
-                <Label>Valor Máx</Label>
-                <InputComMascara
-                  mascara="moeda"
-                  value={form.valorMax}
-                  onChange={(_formatted, raw) => setForm(f => ({ ...f, valorMax: Number(raw) }))}
-                />
-              </div>
-              <div>
-                <Label>Valor Sugerido</Label>
-                <InputComMascara
-                  mascara="moeda"
-                  value={form.valorSugerido}
-                  onChange={(_formatted, raw) => setForm(f => ({ ...f, valorSugerido: Number(raw) }))}
-                />
-              </div>
+              <Label>Valor Sugerido</Label>
+              <InputComMascara
+                mascara="moeda"
+                value={form.valorSugerido}
+                onChange={(_formatted, raw) => setForm(f => ({ ...f, valorSugerido: Number(raw) }))}
+              />
             </div>
           </div>
           <DialogFooter>
