@@ -1,112 +1,89 @@
 
 
-# Nova Aba "Valores de Troca" no Estoque + Atualização de Cadastro de Aparelhos
+# Atualizar Valores Recomendados de Troca (iPhones)
 
-## Escopo
+## O que sera feito
 
-Duas frentes de trabalho:
-1. Criar aba separada no modulo Estoque para gerenciar os Valores Recomendados de Troca (com edicao e logs)
-2. Atualizar a listagem de aparelhos no Cadastro, substituindo os iPhones existentes pela lista completa com capacidade de armazenamento
+Substituir os 18 registros atuais de iPhone (VR-001 a VR-018) no arquivo `valoresRecomendadosTrocaApi.ts` pelos novos valores fornecidos, mantendo os registros de Samsung (VR-019 a VR-027) e Xiaomi (VR-028 a VR-031) intactos.
 
----
+## Dados a serem inseridos
 
-## 1. Nova Aba "Valores de Troca" no Modulo Estoque
+Todos os registros serao condicao **Semi-novo**, marca **Apple**. Como foi fornecido um unico valor por modelo/armazenamento, os campos `valorMin`, `valorMax` e `valorSugerido` terao o mesmo valor.
 
-### O que sera feito
-- Criar nova pagina `EstoqueValoresTroca.tsx` com tabela de valores recomendados
-- Adicionar aba "Valores de Troca" no `EstoqueLayout.tsx` (carousel de abas)
-- Registrar rota `/estoque/valores-troca` no `App.tsx`
+| # | Modelo | Valor |
+|---|--------|-------|
+| 1 | iPhone 7 – 32 GB | R$ 50 |
+| 2 | iPhone 7 Plus – 32 GB | R$ 100 |
+| 3 | iPhone 7 Plus – 128 GB | R$ 200 |
+| 4 | iPhone 8 – 64 GB | R$ 50 |
+| 5 | iPhone 8 – 256 GB | R$ 100 |
+| 6 | iPhone 8 Plus – 64 GB | R$ 200 |
+| 7 | iPhone 8 Plus – 256 GB | R$ 300 |
+| 8 | iPhone X – 64 GB | R$ 200 |
+| 9 | iPhone X – 256 GB | R$ 400 |
+| 10 | iPhone XR – 64 GB | R$ 400 |
+| 11 | iPhone XR – 128 GB | R$ 500 |
+| 12 | iPhone XR – 256 GB | R$ 600 |
+| 13 | iPhone XS Max – 64 GB | R$ 500 |
+| 14 | iPhone XS Max – 256 GB | R$ 700 |
+| 15 | iPhone 11 – 64 GB | R$ 600 |
+| 16 | iPhone 11 – 128 GB | R$ 800 |
+| 17 | iPhone 11 – 256 GB | R$ 1.000 |
+| 18 | iPhone 11 Pro – 64 GB | R$ 900 |
+| 19 | iPhone 11 Pro – 256 GB | R$ 1.100 |
+| 20 | iPhone 11 Pro Max – 64 GB | R$ 1.000 |
+| 21 | iPhone 11 Pro Max – 256 GB | R$ 1.200 |
+| 22 | iPhone 11 Pro Max – 512 GB | R$ 1.400 |
+| 23 | iPhone 12 – 64 GB | R$ 1.200 |
+| 24 | iPhone 12 – 128 GB | R$ 1.300 |
+| 25 | iPhone 12 – 256 GB | R$ 1.500 |
+| 26 | iPhone 12 Pro – 128 GB | R$ 1.750 |
+| 27 | iPhone 12 Pro – 256 GB | R$ 1.900 |
+| 28 | iPhone 12 Pro Max – 128 GB | R$ 2.200 |
+| 29 | iPhone 12 Pro Max – 256 GB | R$ 2.300 |
+| 30 | iPhone 12 Pro Max – 512 GB | R$ 2.450 |
+| 31 | iPhone 13 – 128 GB | R$ 1.700 |
+| 32 | iPhone 13 – 256 GB | R$ 2.000 |
+| 33 | iPhone 13 Pro – 128 GB | R$ 2.400 |
+| 34 | iPhone 13 Pro – 256 GB | R$ 2.500 |
+| 35 | iPhone 13 Pro Max – 128 GB | R$ 2.700 |
+| 36 | iPhone 13 Pro Max – 256 GB | R$ 2.900 |
+| 37 | iPhone 14 – 128 GB | R$ 2.000 |
+| 38 | iPhone 14 – 256 GB | R$ 2.200 |
+| 39 | iPhone 14 Plus – 128 GB | R$ 2.150 |
+| 40 | iPhone 14 Plus – 256 GB | R$ 2.400 |
+| 41 | iPhone 14 Pro – 128 GB | R$ 2.700 |
+| 42 | iPhone 14 Pro – 256 GB | R$ 2.900 |
+| 43 | iPhone 14 Pro Max – 128 GB | R$ 3.200 |
+| 44 | iPhone 14 Pro Max – 256 GB | R$ 3.400 |
+| 45 | iPhone 15 – 128 GB | R$ 2.700 |
+| 46 | iPhone 15 – 256 GB | R$ 3.000 |
+| 47 | iPhone 15 Plus – 128 GB | R$ 2.900 |
+| 48 | iPhone 15 Plus – 256 GB | R$ 3.300 |
+| 49 | iPhone 15 Pro – 128 GB | R$ 3.400 |
+| 50 | iPhone 15 Pro – 256 GB | R$ 3.600 |
+| 51 | iPhone 15 Pro Max – 256 GB | R$ 4.000 |
+| 52 | iPhone 15 Pro Max – 512 GB | R$ 4.300 |
+| 53 | iPhone 16 – 128 GB | R$ 3.500 |
+| 54 | iPhone 16 – 256 GB | R$ 3.800 |
+| 55 | iPhone 16 Plus – 128 GB | R$ 3.700 |
+| 56 | iPhone 16 Plus – 256 GB | R$ 4.000 |
+| 57 | iPhone 16 Pro – 128 GB | R$ 4.500 |
+| 58 | iPhone 16 Pro – 256 GB | R$ 4.700 |
+| 59 | iPhone 16 Pro Max – 256 GB | R$ 5.400 |
+| 60 | iPhone 16 Pro Max – 512 GB | R$ 5.600 |
 
-### Funcionalidades da pagina
-- Tabela com colunas: Modelo, Marca, Condicao (Novo/Semi-novo), Valor Min, Valor Max, Valor Sugerido, Ultima Atualizacao
-- Busca por modelo/marca
-- Botao "Novo Valor" para cadastrar novo registro
-- Botao de editar em cada linha (modal com formulario)
-- Botao de excluir com confirmacao
-- Exportar CSV
+**Total: 60 registros iPhone** (substituindo os 18 anteriores)
 
-### Sistema de Logs
-- Adicionar interface `LogValorTroca` na API (`valoresRecomendadosTrocaApi.ts`) com campos: id, tipo (criacao/edicao/exclusao), modelo, usuario, dataHora, detalhes (campo alterado, valor anterior, valor novo)
-- Cada acao de criar, editar ou excluir gera um registro de log
-- Exibir historico de logs na pagina via botao "Ver Logs" ou secao expansivel
+## Detalhes tecnicos
 
-### Arquivos
-- **Novo:** `src/pages/EstoqueValoresTroca.tsx`
-- **Editar:** `src/components/layout/EstoqueLayout.tsx` (adicionar aba)
-- **Editar:** `src/App.tsx` (adicionar rota)
-- **Editar:** `src/utils/valoresRecomendadosTrocaApi.ts` (adicionar funcoes CRUD + logs)
+### Arquivo a editar
+- `src/utils/valoresRecomendadosTrocaApi.ts`
 
----
-
-## 2. Atualizacao do Cadastro de Aparelhos (iPhones)
-
-### O que sera feito
-- Substituir os 20 registros atuais de iPhones (PROD-CAD-001 a PROD-CAD-020) por 108 registros detalhados com modelo + capacidade de armazenamento
-- Manter os registros de iPad, MacBook, Watch, AirPods e Acessorios (PROD-CAD-021 a PROD-CAD-040)
-- Remover duplicatas, mantendo sempre Marca = "Apple" e Categoria = "iPhone"
-
-### Lista completa (108 registros iPhone)
-- iPhone 7 (32/128/256 GB) -- 3 registros
-- iPhone 7 Plus (32/128/256 GB) -- 3 registros
-- iPhone 8 (64/128/256 GB) -- 3 registros
-- iPhone 8 Plus (64/128/256 GB) -- 3 registros
-- iPhone X (64/256 GB) -- 2 registros
-- iPhone XS (64/256/512 GB) -- 3 registros
-- iPhone XS Max (64/256/512 GB) -- 3 registros
-- iPhone XR (64/128/256 GB) -- 3 registros
-- iPhone 11 (64/128/256 GB) -- 3 registros
-- iPhone 11 Pro (64/256/512 GB) -- 3 registros
-- iPhone 11 Pro Max (64/256/512 GB) -- 3 registros
-- iPhone 12 mini (64/128/256 GB) -- 3 registros
-- iPhone 12 (64/128/256 GB) -- 3 registros
-- iPhone 12 Pro (128/256/512 GB) -- 3 registros
-- iPhone 12 Pro Max (128/256/512 GB) -- 3 registros
-- iPhone 13 mini (128/256/512 GB) -- 3 registros
-- iPhone 13 (128/256/512 GB) -- 3 registros
-- iPhone 13 Pro (128/256/512/1TB) -- 4 registros
-- iPhone 13 Pro Max (128/256/512/1TB) -- 4 registros
-- iPhone 14 (128/256/512 GB) -- 3 registros
-- iPhone 14 Plus (128/256/512 GB) -- 3 registros
-- iPhone 14 Pro (128/256/512/1TB) -- 4 registros
-- iPhone 14 Pro Max (128/256/512/1TB) -- 4 registros
-- iPhone 15 (128/256/512 GB) -- 3 registros
-- iPhone 15 Plus (128/256/512 GB) -- 3 registros
-- iPhone 15 Pro (128/256/512/1TB) -- 4 registros
-- iPhone 15 Pro Max (128/256/512/1TB) -- 4 registros
-- iPhone 16 (128/256 GB) -- 2 registros
-- iPhone 16 Plus (128/256 GB) -- 2 registros
-- iPhone 16 Pro (128/256/512/1TB) -- 4 registros
-- iPhone 16 Pro Max (256/512/1TB) -- 3 registros
-- iPhone 17 (256/512 GB) -- 2 registros
-- iPhone 17 Air (256/512/1TB) -- 3 registros
-- iPhone 17 Pro (256/512/1TB) -- 3 registros
-- iPhone 17 Pro Max (256/512/1TB/2TB) -- 4 registros
-
-### Arquivo
-- **Editar:** `src/utils/cadastrosApi.ts` (substituir array `produtosCadastro` de PROD-CAD-001 a PROD-CAD-020 pelos 108 novos registros, mantendo PROD-CAD-021+ intactos com IDs sequenciais ajustados)
-
----
-
-## Detalhes Tecnicos
-
-### Ordem de implementacao
-1. Atualizar `cadastrosApi.ts` com os 108 iPhones
-2. Atualizar `valoresRecomendadosTrocaApi.ts` com CRUD completo e sistema de logs
-3. Criar pagina `EstoqueValoresTroca.tsx`
-4. Adicionar aba no `EstoqueLayout.tsx`
-5. Registrar rota no `App.tsx`
-
-### Padrao de logs
-```text
-interface LogValorTroca {
-  id: string;
-  tipo: 'criacao' | 'edicao' | 'exclusao';
-  modelo: string;
-  usuario: string;
-  dataHora: string;
-  detalhes: string;
-}
-```
-
-Cada operacao CRUD registra automaticamente um log com usuario logado (do authStore), data/hora e descricao da alteracao.
+### Alteracoes
+1. Substituir as linhas 27-45 (18 entradas iPhone) por 60 novas entradas com IDs VR-001 a VR-060
+2. Reindexar Samsung para VR-061 a VR-069 e Xiaomi para VR-070 a VR-073
+3. Atualizar `nextId` para 74
+4. Todos os registros com condicao "Semi-novo", `ultimaAtualizacao: '2026-02-23'`
+5. `valorMin = valorMax = valorSugerido` = valor fornecido (valor unico por modelo)
 
