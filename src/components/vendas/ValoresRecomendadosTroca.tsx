@@ -79,7 +79,7 @@ export function ValoresRecomendadosTroca({ onUsarValor }: ValoresRecomendadosTro
         </Table>
       </div>
       <p className="text-xs text-muted-foreground">
-        Valores de referência para compra de aparelhos usados. Última atualização: Dez/2025
+        Valores de referência para compra de aparelhos usados. Última atualização: Fev/2026
       </p>
     </div>
   );
