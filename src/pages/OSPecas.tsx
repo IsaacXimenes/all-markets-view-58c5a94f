@@ -242,7 +242,7 @@ export default function OSPecas() {
               <AutocompleteLoja
                 value={filtroLoja === 'todos' ? '' : filtroLoja}
                 onChange={(v) => setFiltroLoja(v || 'todos')}
-                apenasLojasTipoLoja={true}
+                filtrarPorTipo="Assistência"
                 placeholder="Todas"
               />
             </div>
@@ -460,7 +460,7 @@ export default function OSPecas() {
               <AutocompleteLoja
                 value={novaPeca.lojaId}
                 onChange={v => setNovaPeca({...novaPeca, lojaId: v})}
-                apenasLojasTipoLoja={true}
+                filtrarPorTipo="Assistência"
                 placeholder="Selecione..."
               />
             </div>

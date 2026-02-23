@@ -346,13 +346,15 @@ export default function EstoqueAcessorios() {
                 <TableBody>
                   {acessoriosFiltrados.map(acessorio => (
                     <TableRow key={acessorio.id} className={cn(
-                      acessorio.quantidadeTotal === 0 && 'bg-red-500/10',
-                      acessorio.quantidadeTotal > 0 && acessorio.quantidadeTotal < 5 && 'bg-yellow-500/10'
+                      acessorio.quantidadeTotal <= 5 && 'bg-red-500/10',
+                      acessorio.quantidadeTotal > 5 && acessorio.quantidadeTotal < 10 && 'bg-yellow-500/10',
+                      acessorio.quantidadeTotal >= 10 && 'bg-green-500/10'
                     )}>
                       <TableCell className={cn(
                         "font-medium sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]",
-                        acessorio.quantidadeTotal === 0 ? 'bg-red-500/10' :
-                        acessorio.quantidadeTotal > 0 && acessorio.quantidadeTotal < 5 ? 'bg-yellow-500/10' : 'bg-background'
+                        acessorio.quantidadeTotal <= 5 ? 'bg-red-500/10' :
+                        acessorio.quantidadeTotal > 5 && acessorio.quantidadeTotal < 10 ? 'bg-yellow-500/10' : 
+                        acessorio.quantidadeTotal >= 10 ? 'bg-green-500/10' : 'bg-background'
                       )}>{acessorio.descricao}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {acessorio.lojas.map(lojaId => getLojaNome(lojaId)).join(', ')}
@@ -364,16 +366,23 @@ export default function EstoqueAcessorios() {
                       <TableCell className="font-mono font-medium">{acessorio.id}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {acessorio.quantidadeTotal < 10 && (
+                          {acessorio.quantidadeTotal <= 5 && (
                             <AlertTriangle className="h-4 w-4 text-destructive" />
                           )}
-                          <span className={acessorio.quantidadeTotal < 10 ? 'text-destructive font-bold' : ''}>
+                          <span className={cn(
+                            acessorio.quantidadeTotal <= 5 && 'text-destructive font-bold',
+                            acessorio.quantidadeTotal > 5 && acessorio.quantidadeTotal < 10 && 'text-yellow-600 font-bold',
+                            acessorio.quantidadeTotal >= 10 && 'text-green-600 font-semibold'
+                          )}>
                             {acessorio.quantidadeTotal}
                           </span>
                           {acessorio.quantidadeTotal === 0 && (
                             <Badge variant="destructive" className="text-[10px] ml-1">Esgotado</Badge>
                           )}
-                          {acessorio.quantidadeTotal > 0 && acessorio.quantidadeTotal < 5 && (
+                          {acessorio.quantidadeTotal > 0 && acessorio.quantidadeTotal <= 5 && (
+                            <Badge variant="outline" className="text-[10px] ml-1 bg-red-500/15 text-red-700 border-red-300 dark:text-red-400">Crítico</Badge>
+                          )}
+                          {acessorio.quantidadeTotal > 5 && acessorio.quantidadeTotal < 10 && (
                             <Badge variant="outline" className="text-[10px] ml-1 bg-yellow-500/15 text-yellow-700 border-yellow-300 dark:text-yellow-400">Baixo Estoque</Badge>
                           )}
                         </div>

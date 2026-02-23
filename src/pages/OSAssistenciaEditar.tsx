@@ -21,7 +21,8 @@ import {
 } from '@/utils/assistenciaApi';
 import { 
   getClientes, 
-  getFornecedores
+  getFornecedores,
+  getProdutosCadastro
 } from '@/utils/cadastrosApi';
 import { getSolicitacoesByOS, addSolicitacao, cancelarSolicitacao, SolicitacaoPeca } from '@/utils/solicitacaoPecasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -79,6 +80,7 @@ export default function OSAssistenciaEditar() {
   const lojas = obterLojasPorTipo('Assistência');
   const tecnicos = obterTecnicos();
   const fornecedores = getFornecedores().filter(f => f.status === 'Ativo');
+  const produtosCadastro = getProdutosCadastro();
 
   // Inicializar peças do estoque
   useEffect(() => {
@@ -717,11 +719,14 @@ export default function OSAssistenciaEditar() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Modelo do Aparelho</Label>
-                <Input 
-                  value={modeloAparelho}
-                  onChange={(e) => setModeloAparelho(e.target.value)}
-                  placeholder="Ex: iPhone 13 Pro Max"
-                />
+                <Select value={modeloAparelho} onValueChange={setModeloAparelho}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o modelo..." /></SelectTrigger>
+                  <SelectContent>
+                    {produtosCadastro.map(p => (
+                      <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
