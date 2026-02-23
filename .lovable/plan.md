@@ -1,134 +1,130 @@
 
 
-## Validacao IMEI, Integracao Estoque-Financeiro e Padronizacao de Status
+# Padronizacao UX do Modulo de Vendas
 
-### Analise do Estado Atual
+## Escopo da Mudanca
 
-Apos exploracao detalhada do codigo, varias funcionalidades ja existem parcialmente. Este plano foca nas lacunas reais:
-
-**JA IMPLEMENTADO:**
-- Central de Decisao com Caminho Verde e Amarelo (EstoqueNotaConferencia.tsx)
-- Status "Em Revisao Tecnica" no modelo de dados (estoqueApi.ts)
-- Funcao getStatusAparelho reconhece "Em Revisao Tecnica"
-- Sistema de Credito de Fornecedor (notaEntradaFluxoApi.ts)
-- Icone de credito na tabela de notas (TabelaNotasPendencias.tsx)
-- Matriz de abatimento no Financeiro (FinanceiroNotasAssistencia.tsx)
-- Logistica reversa no loteRevisaoApi.ts
-- Tag "Retorno de Assistencia" em EstoqueProdutosPendentes.tsx
-- DNA da Peca com origens (Consignado, Estoque Thiago, Retirada, Fornecedor)
-- Explosao de origem nos cards de custo
-
-**O QUE PRECISA SER IMPLEMENTADO:**
+Este plano aborda 4 frentes de trabalho para unificar a experiencia do modulo de Vendas, usando a tela "Nova Venda" (`VendasNova.tsx`) como referencia padrao.
 
 ---
 
-### 1. Validacao de Unicidade de IMEI
+## 1. Padronizacao de Layout nas Telas de Conferencia e Finalizacao
 
-**Arquivo: `src/utils/notaEntradaFluxoApi.ts`**
-- Criar funcao `verificarImeiUnicoSistema(imei: string): { duplicado: boolean; localExistente?: string }` que verifica:
-  - Produtos ativos no estoque (estoqueApi - produtos com status != Vendido)
-  - Produtos pendentes (osApi - produtosPendentes)
-  - Outras notas de entrada (notaEntradaFluxoApi - produtos com IMEI)
-- Retornar informacao sobre onde o IMEI ja existe
+### Situacao Atual
 
-**Arquivo: `src/pages/EstoqueNotaConferencia.tsx`**
-- No campo de IMEI editavel (InputComMascara, linha ~466-472), adicionar validacao ao onChange:
-  - Apos debounce de 500ms, chamar `verificarImeiUnicoSistema`
-  - Se duplicado: borda vermelha no campo + tooltip com mensagem "IMEI ja cadastrado em [local]"
-  - Bloquear botao de conferir para este item enquanto IMEI duplicado
-- No handleSalvarConferencia: verificar novamente todos os IMEIs antes de salvar
+- **VendasNova.tsx** (3647 linhas): Layout completo com Cards estruturados: Info da Venda, Cliente, Itens + Acessorios, Trade-In, Logistica/Retirada, Pagamentos (via `PagamentoQuadro`), Resumo Financeiro com lucro/margem.
+- **VendasFinalizarDigital.tsx** (1956 linhas): Ja segue estrutura similar, mas faltam alguns quadros (garantia extendida, downgrade detection, trade-in com tipo de entrega obrigatorio).
+- **VendasConferenciaLancamento.tsx** (835 linhas): Modal de aprovacao mostra apenas grid basico (ID, Cliente, Valor, Data) + lista simples de produtos/pagamentos. Nao exibe acessorios detalhados, trade-ins, resumo financeiro, taxa de entrega.
+- **VendasConferenciaGestor.tsx** (1166 linhas): Painel lateral mostra informacoes parciais. Faltam: quadro de itens com tabela completa, quadro de trade-in, resumo financeiro com lucro/margem/custo, quadro de logistica.
 
-**Arquivo: `src/pages/EstoqueNotaCadastrar.tsx`**
-- Na tabela de produtos (campo IMEI), aplicar a mesma validacao com debounce
-- Bloquear botao "Salvar Nota" se houver IMEIs duplicados
+### Acoes
 
----
+#### 1.1 Criar componente reutilizavel `VendaResumoCompleto`
+- Novo arquivo: `src/components/vendas/VendaResumoCompleto.tsx`
+- Recebe uma `VendaComFluxo` e renderiza todos os quadros padrao:
+  - Card "Informacoes da Venda" (ID, numero, loja, vendedor, origem, data)
+  - Card "Cliente" (nome, CPF, telefone, email, cidade, historico)
+  - Card "Itens da Venda" (tabela com produto, IMEI, valor recomendado, valor de venda, custo)
+  - Card "Acessorios" (tabela com descricao, quantidade, valor unitario, valor total)
+  - Card "Trade-In / Base de Troca" (tabela com modelo, condicao, IMEI, valor, badges de entrega/anexos)
+  - Card "Logistica" (tipo retirada, local, taxa entrega, motoboy)
+  - Card "Pagamentos" (tabela com meio, conta destino, parcelas, valor final, taxa, valor liquido, comprovante)
+  - Card "Resumo Financeiro" (subtotal, acessorios, trade-in, taxa entrega, garantia extendida, total, custo total, lucro, margem %)
+- Props: `readOnly?: boolean`, `showCustos?: boolean` (para controlar visibilidade de custos/lucro por perfil)
 
-### 2. Integracao Estoque-Financeiro (Caminho Verde Completo)
+#### 1.2 Atualizar VendasConferenciaLancamento
+- Substituir o modal de aprovacao simples pelo componente `VendaResumoCompleto`
+- Manter botoes de acao (Conferir / Cancelar) no footer do modal
 
-**Arquivo: `src/utils/notaEntradaFluxoApi.ts`**
-- Expandir `enviarDiretoAoFinanceiro`:
-  - Atualizar status para "Conferencia Concluida" (se ainda nao estiver)
-  - Para cada produto da nota, chamar uma funcao que atualiza status no estoque para "Disponivel"
-  - Importar e utilizar `getProdutos` do estoqueApi para localizar produtos migrados e garantir status correto
+#### 1.3 Atualizar VendasConferenciaGestor
+- Substituir o conteudo do painel lateral pelo componente `VendaResumoCompleto`
+- Manter secao de validacao de pagamentos (checkboxes) e botoes de acao (Aprovar / Recusar)
 
-**Arquivo: `src/utils/estoqueApi.ts`**
-- Criar funcao `marcarProdutosComoDisponiveis(imeis: string[])` que localiza produtos por IMEI e garante que estejam com status disponivel (estoqueConferido = true, assistenciaConferida = true)
-
-**Arquivo: `src/pages/FinanceiroConferenciaNotas.tsx`**
-- Verificar se notas enviadas via "Caminho Verde" ja aparecem na lista. Se nao, adicionar filtro para incluir notas com `enviadoDiretoFinanceiro = true` e `atuacaoAtual === 'Financeiro'`
-
----
-
-### 3. Geracao Automatica de Credito (Caminho Amarelo + Antecipado)
-
-**Arquivo: `src/pages/EstoqueEncaminharAssistencia.tsx`**
-- No handleConfirmarEncaminhamento (linha ~133):
-  - Apos criar lote e encaminhar, verificar `notaSelecionada.tipoPagamento`
-  - Se "Pagamento 100% Antecipado": chamar `gerarCreditoFornecedor` automaticamente com o valor total dos itens defeituosos
-  - Exibir toast informando "Vale-Credito gerado: R$ X para fornecedor Y"
-- Apos encaminhar, atualizar status dos produtos para "Em Revisao Tecnica" (chamar estoqueApi)
-
-**Arquivo: `src/utils/estoqueApi.ts`**
-- Criar funcao `marcarProdutosEmRevisaoTecnica(imeis: string[], loteRevisaoId: string)` que localiza produtos migrados no estoque por IMEI e seta `statusRevisaoTecnica = 'Em Revisao Tecnica'` e `loteRevisaoId`
+#### 1.4 Atualizar VendasFinalizarDigital
+- Adicionar deteccao automatica de Upgrade/Downgrade (ja presente em VendasNova)
+- Adicionar suporte a garantia extendida
+- Adicionar validacao de tipo de entrega obrigatorio nos trade-ins
 
 ---
 
-### 4. Status "Em Revisao Tecnica" nos Badges de OS
+## 2. Inteligencia de Troca: Aba de Valores Recomendados
 
-**Arquivo: `src/pages/OSAssistencia.tsx`**
-- No getStatusBadge (linha 101-142): adicionar case para "Aguardando Analise" com visual violeta/roxo para diferenciar OS de Lote de Revisao
-- No filtro de status: adicionar opcao "Aguardando Analise" ao dropdown
+### Acoes
 
-**Arquivo: `src/pages/EstoqueEncaminharAssistencia.tsx`**
-- No handleConfirmarEncaminhamento: chamar `marcarProdutosEmRevisaoTecnica` para cada IMEI encaminhado
+#### 2.1 Criar tabela de precos de referencia
+- Novo arquivo: `src/utils/valoresRecomendadosTrocaApi.ts`
+- Contera uma tabela mock com valores sugeridos de compra de aparelhos usados por modelo e condicao
+- Funcao `getValoresRecomendadosTroca()` retorna a lista completa
+- Funcao `getValorRecomendado(modelo, condicao)` retorna valor sugerido especifico
 
----
+#### 2.2 Criar componente `ValoresRecomendadosTroca`
+- Novo arquivo: `src/components/vendas/ValoresRecomendadosTroca.tsx`
+- Tabela de referencia com colunas: Modelo, Condicao (Novo/Semi-novo), Valor Min, Valor Max, Valor Sugerido
+- Busca por modelo com filtro em tempo real
+- Botao "Usar este valor" que preenche o campo de valor no modal de trade-in
 
-### 5. Logistica Reversa - Conexao com Estoque
-
-**Arquivo: `src/utils/loteRevisaoApi.ts`**
-- Expandir `finalizarLoteComLogisticaReversa`:
-  - Para itens "Consertado": importar estoqueApi e setar `tagRetornoAssistencia = true`, `statusRevisaoTecnica = null` no produto correspondente
-  - Para itens "Devolucao ao Fornecedor": setar `statusRevisaoTecnica = null`, `quantidade = 0` ou status "Devolvido"
-  - Chamar `gerarCreditoFornecedor` para devolucoes em notas antecipadas
-
-**Arquivo: `src/pages/EstoqueProdutosPendentes.tsx`**
-- Garantir que o filtro/badge "Retorno de Assistencia" funcione corretamente com produtos do estoque principal (nao apenas pendentes)
-- Adicionar botao "Validar Retorno" que remove a tag e seta produto como Disponivel
+#### 2.3 Integrar nas telas de venda
+- Em `VendasNova.tsx`, `VendasFinalizarDigital.tsx` e `VendasEditar.tsx`: dentro do modal de Trade-In, adicionar uma aba/secao "Valores Recomendados" abaixo do campo de valor, com o componente `ValoresRecomendadosTroca`
 
 ---
 
-### 6. Credito de Fornecedor - Visualizacao Contextual
+## 3. Travas de Seguranca
 
-**Arquivo: `src/components/estoque/TabelaNotasPendencias.tsx`**
-- O icone de credito ja existe. Verificar se o modal abre corretamente com extrato completo
-- Garantir que o icone apareca apenas quando `getTotalCreditosDisponiveis(fornecedor) > 0`
+### 3.1 Bloqueio de Edicao na Conferencia de Lancamento
+- Em `VendasConferenciaLancamento.tsx`: quando uma venda tem `statusFluxo === 'Conferencia Gestor'` ou qualquer status posterior, o botao "Editar" (Pencil) deve ser removido ou desabilitado
+- Na tabela, vendas com status "Conferencia Gestor" ou superior nao devem exibir o botao de edicao
+- Atualmente a linha 633 ja verifica `venda.statusFluxo !== 'Finalizado'` para exibir o botao de edicao, mas nao bloqueia "Com o Gestor" -- sera corrigido para bloquear quando `statusFluxo` nao for `'Aguardando Conferencia'`, `'Recusada - Gestor'` ou `'Feito Sinal'`
 
-**Arquivo: `src/pages/FinanceiroNotasAssistencia.tsx`**
-- No modal de conferencia, quando nota tem fornecedor com creditos disponiveis, exibir card informativo "Credito disponivel: R$ X" com opcao de aplicar ao pagamento
+### 3.2 Exclusao do campo "Vai na primeira rota"
+- Busca completa realizada: **nao encontrado** em nenhum arquivo do projeto
+- Termos buscados: "vai na primeira rota", "primeiraRota", "primeira_rota", "primeira rota"
+- Este campo ja foi removido ou nunca foi implementado. Nenhuma acao necessaria.
 
 ---
 
-### Arquivos Afetados
+## 4. Padronizacao de Modais de Edicao
 
-1. `src/utils/notaEntradaFluxoApi.ts` - Funcao verificarImeiUnicoSistema + expansao enviarDiretoAoFinanceiro
-2. `src/pages/EstoqueNotaConferencia.tsx` - Validacao IMEI em tempo real com debounce
-3. `src/pages/EstoqueNotaCadastrar.tsx` - Validacao IMEI no cadastro
-4. `src/utils/estoqueApi.ts` - Funcoes marcarProdutosComoDisponiveis e marcarProdutosEmRevisaoTecnica
-5. `src/pages/EstoqueEncaminharAssistencia.tsx` - Credito automatico + status Em Revisao Tecnica
-6. `src/pages/OSAssistencia.tsx` - Badge "Aguardando Analise" no getStatusBadge
-7. `src/utils/loteRevisaoApi.ts` - Logistica reversa com integracao real no estoqueApi
-8. `src/pages/EstoqueProdutosPendentes.tsx` - Botao "Validar Retorno"
-9. `src/pages/FinanceiroNotasAssistencia.tsx` - Card de credito disponivel no modal
-10. `src/pages/FinanceiroConferenciaNotas.tsx` - Verificar exibicao de notas "Caminho Verde"
+### Acoes
 
-### Resultado Esperado
+#### 4.1 Atualizar modal de aprovacao em VendasConferenciaLancamento
+- Usar `VendaResumoCompleto` dentro do `DialogContent` com hierarquia: Cliente > Itens > Pagamentos > Totais
+- Layout de pagamentos em quadro igual ao `PagamentoQuadro` (read-only)
 
-- IMEIs duplicados sao detectados em tempo real no cadastro e na conferencia, bloqueando a operacao
-- O Caminho Verde atualiza produtos para "Disponivel" e cria registro financeiro completo
-- O Caminho Amarelo para notas antecipadas gera Vale-Credito automaticamente
-- O status "Em Revisao Tecnica" e visivel e filtravel na Assistencia e no Estoque
-- A logistica reversa atualiza fisicamente os produtos no estoque (retorno ou devolucao)
-- Creditos de fornecedor sao exibidos contextualmente no Financeiro e no Estoque
+#### 4.2 Atualizar painel lateral em VendasConferenciaGestor
+- Mesma hierarquia de informacoes do `VendaResumoCompleto`
+- Secao de validacao de pagamentos mantida apos o resumo
+
+#### 4.3 Atualizar VendasEditarGestor
+- Garantir que os Cards de edicao sigam a mesma ordem e layout da Nova Venda
+- Adicionar Card de Acessorios e Card de Trade-In que atualmente nao existem nesta tela
+
+---
+
+## Detalhes Tecnicos
+
+### Arquivos a criar
+1. `src/components/vendas/VendaResumoCompleto.tsx` -- componente reutilizavel de resumo
+2. `src/utils/valoresRecomendadosTrocaApi.ts` -- API de valores recomendados para troca
+
+### Arquivos a modificar
+1. `src/pages/VendasConferenciaLancamento.tsx` -- modal padronizado + trava de seguranca
+2. `src/pages/VendasConferenciaGestor.tsx` -- painel lateral padronizado
+3. `src/pages/VendasFinalizarDigital.tsx` -- adicionar funcionalidades faltantes
+4. `src/pages/VendasNova.tsx` -- integrar aba de valores recomendados no modal de trade-in
+5. `src/pages/VendasEditar.tsx` -- integrar aba de valores recomendados no modal de trade-in
+6. `src/pages/VendasEditarGestor.tsx` -- padronizar layout
+
+### Componentes reutilizados
+- `PagamentoQuadro` -- ja existe, sera usado em modo read-only nas conferencias
+- `ComprovantePreview` -- ja existe, sera usado consistentemente
+- `AutocompleteLoja` / `AutocompleteColaborador` -- ja existem
+
+### Ordem de implementacao
+1. Criar `VendaResumoCompleto` (base para tudo)
+2. Criar `valoresRecomendadosTrocaApi` e `ValoresRecomendadosTroca`
+3. Atualizar `VendasConferenciaLancamento` (modal + trava)
+4. Atualizar `VendasConferenciaGestor` (painel lateral)
+5. Atualizar `VendasFinalizarDigital` (funcionalidades faltantes)
+6. Integrar valores recomendados em `VendasNova` e `VendasEditar`
+7. Atualizar `VendasEditarGestor`
 
