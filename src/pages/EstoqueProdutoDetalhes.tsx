@@ -252,11 +252,47 @@ export default function EstoqueProdutoDetalhes() {
                )}
              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-             <CarrosselImagensProduto
-               imagens={imagensTemporarias}
-               onImagensChange={setImagensTemporarias}
-             />
+             <CardContent className="space-y-4">
+              <CarrosselImagensProduto
+                imagens={imagensTemporarias}
+                onImagensChange={setImagensTemporarias}
+              />
+
+              {/* Botão de anexar vídeo dentro do card de imagem */}
+              <div className="flex flex-col gap-2">
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  accept="video/mp4,video/mov,video/quicktime,video/webm"
+                  multiple
+                  onChange={handleVideoUpload}
+                  className="hidden"
+                />
+                <Button variant="outline" size="sm" onClick={() => videoInputRef.current?.click()} className="w-full">
+                  <Video className="mr-2 h-4 w-4" />
+                  Anexar Vídeo (MP4/MOV, max 50MB)
+                </Button>
+                {videosAnexados.length > 0 && (
+                  <div className="space-y-2">
+                    {videosAnexados.map(vid => (
+                      <div key={vid.id} className="border rounded-lg p-2 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-medium truncate">{vid.nome}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {(vid.tamanho / (1024 * 1024)).toFixed(1)} MB · {vid.responsavel}
+                            </p>
+                          </div>
+                          <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleRemoveVideo(vid.id)}>
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        </div>
+                        <video src={vid.blobUrl} controls className="w-full max-h-[200px] rounded bg-black" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-2">QR Code</h3>
@@ -513,65 +549,6 @@ export default function EstoqueProdutoDetalhes() {
           onRemove={handleRemoveImagem}
         />
 
-        {/* Seção Anexos de Vídeo - apenas estoque/gestor */}
-        {ehEstoquistaOuGestor && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Film className="h-5 w-5" />
-                Anexos de Vídeo
-                {videosAnexados.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">{videosAnexados.length}</Badge>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <input
-                  ref={videoInputRef}
-                  type="file"
-                  accept="video/mp4,video/mov,video/quicktime,video/webm"
-                  multiple
-                  onChange={handleVideoUpload}
-                  className="hidden"
-                />
-                <Button variant="outline" onClick={() => videoInputRef.current?.click()}>
-                  <Video className="mr-2 h-4 w-4" />
-                  Anexar Vídeo (MP4/MOV, max 50MB)
-                </Button>
-              </div>
-              
-              {videosAnexados.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhum vídeo anexado
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {videosAnexados.map(vid => (
-                    <div key={vid.id} className="border rounded-lg p-3 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium">{vid.nome}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {(vid.tamanho / (1024 * 1024)).toFixed(1)} MB · {vid.responsavel} · {new Date(vid.dataUpload).toLocaleString('pt-BR')}
-                          </p>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => handleRemoveVideo(vid.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                      <video
-                        src={vid.blobUrl}
-                        controls
-                        className="w-full max-h-[300px] rounded-md bg-black"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
       </div>
       
       {/* Modal Retirada de Peças */}
