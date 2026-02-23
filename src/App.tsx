@@ -45,6 +45,7 @@ import EstoqueEncaminharAssistencia from "./pages/EstoqueEncaminharAssistencia";
 import EstoqueNotaCadastrarProdutos from "./pages/EstoqueNotaCadastrarProdutos";
 import EstoqueNotaConferencia from "./pages/EstoqueNotaConferencia";
 import EstoquePendenciasBaseTrocas from "./pages/EstoquePendenciasBaseTrocas";
+import EstoqueValoresTroca from "./pages/EstoqueValoresTroca";
 import Cadastros from "./pages/Cadastros";
 import CadastrosLojas from "./pages/CadastrosLojas";
 import CadastrosClientes from "./pages/CadastrosClientes";
@@ -199,6 +200,7 @@ const App = () => (
               <Route path="/estoque/nota/:id/conferencia" element={<EstoqueNotaConferencia />} />
               <Route path="/estoque/acessorios" element={<EstoqueAcessorios />} />
               <Route path="/estoque/pendencias-base-trocas" element={<EstoquePendenciasBaseTrocas />} />
+              <Route path="/estoque/valores-troca" element={<EstoqueValoresTroca />} />
               <Route path="/estoque/encaminhar-assistencia" element={<EstoqueEncaminharAssistencia />} />
               <Route path="/os/produtos-analise" element={<OSProdutosAnalise />} />
               <Route path="/os/historico-assistencia" element={<OSHistoricoAssistencia />} />
