@@ -22,6 +22,8 @@ import {
   updateOrdemServico
 } from '@/utils/assistenciaApi';
 import { atualizarStatusProdutoPendente } from '@/utils/osApi';
+import { getLoteRevisaoById, atualizarItemRevisao, finalizarLoteComLogisticaReversa, ResultadoItemRevisao } from '@/utils/loteRevisaoApi';
+import { marcarProdutoRetornoAssistencia } from '@/utils/estoqueApi';
 import { getClientes, getFornecedores } from '@/utils/cadastrosApi';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { getSolicitacoesByOS, addSolicitacao, SolicitacaoPeca } from '@/utils/solicitacaoPecasApi';
@@ -364,6 +366,29 @@ export default function OSAssistenciaDetalhes() {
         custoPecas: valorCustoTecnico,
         tecnico: user?.colaborador?.nome || tecnico?.nome || 'Técnico'
       });
+    }
+    // Sincronizar lote de revisão com estoque
+    if (osFresh.loteRevisaoId && osFresh.itensLoteRevisao) {
+      osFresh.itensLoteRevisao.forEach(item => {
+        if (item.statusReparo === 'Concluido' && item.imei) {
+          marcarProdutoRetornoAssistencia(item.imei);
+        }
+        if (osFresh.loteRevisaoId) {
+          atualizarItemRevisao(osFresh.loteRevisaoId, item.itemId, {
+            custoReparo: item.custoReparo,
+            statusReparo: item.statusReparo === 'Concluido' ? 'Concluido' : 'Em Andamento'
+          });
+        }
+      });
+      // Check if all items are done
+      const allDone = osFresh.itensLoteRevisao.every(i => i.statusReparo === 'Concluido');
+      if (allDone) {
+        const resultados: ResultadoItemRevisao[] = osFresh.itensLoteRevisao.map(i => ({
+          itemId: i.itemId,
+          resultado: 'Consertado' as const
+        }));
+        finalizarLoteComLogisticaReversa(osFresh.loteRevisaoId, resultados, user?.colaborador?.nome || 'Técnico');
+      }
     }
     setEditStatus(novoStatus);
     const updatedOS = getOrdemServicoById(os.id);
@@ -1295,6 +1320,137 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                 </p>
                 <p className="text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">{os.observacaoOrigem}</p>
               </div>
+            )}
+
+            {/* Tratativa Individual por Aparelho - Lote de Revisão */}
+            {os.loteRevisaoId && os.itensLoteRevisao && os.itensLoteRevisao.length > 0 && (
+              <Card className="border-primary/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Smartphone className="h-5 w-5" />
+                    Tratativa Individual — Lote {os.loteRevisaoId} ({os.itensLoteRevisao.length} aparelhos)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {os.itensLoteRevisao.map((item, idx) => (
+                    <div key={item.itemId} className="p-4 border rounded-lg space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline" className="font-mono text-xs">{idx + 1}</Badge>
+                          <div>
+                            <p className="font-medium">{item.marca} {item.modelo}</p>
+                            {item.imei && <p className="text-xs text-muted-foreground font-mono">IMEI: {formatIMEI(item.imei)}</p>}
+                          </div>
+                        </div>
+                        <Badge className={
+                          item.statusReparo === 'Concluido' ? 'bg-green-500 hover:bg-green-600' :
+                          item.statusReparo === 'Em Andamento' ? 'bg-blue-500 hover:bg-blue-600' :
+                          'bg-yellow-500 hover:bg-yellow-600'
+                        }>
+                          {item.statusReparo}
+                        </Badge>
+                      </div>
+                      <div className="bg-muted/50 p-3 rounded">
+                        <p className="text-xs text-muted-foreground mb-1">Motivo (informado pelo estoque):</p>
+                        <p className="text-sm">{item.motivoAssistencia}</p>
+                      </div>
+                      {isEditing && item.statusReparo !== 'Concluido' && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs text-muted-foreground">Parecer Técnico</label>
+                            <Textarea
+                              value={item.parecerTecnico || ''}
+                              onChange={(e) => {
+                                const updated = [...(os.itensLoteRevisao || [])];
+                                updated[idx] = { ...updated[idx], parecerTecnico: e.target.value };
+                                updateOrdemServico(os.id, { itensLoteRevisao: updated } as any);
+                                const refreshed = getOrdemServicoById(os.id);
+                                if (refreshed) setOS(refreshed);
+                              }}
+                              rows={2}
+                              placeholder="Descreva o diagnóstico e serviço realizado..."
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="text-xs text-muted-foreground">Custo Reparo (R$)</label>
+                              <Input
+                                type="number"
+                                value={item.custoReparo || ''}
+                                onChange={(e) => {
+                                  const custo = parseFloat(e.target.value) || 0;
+                                  const updated = [...(os.itensLoteRevisao || [])];
+                                  updated[idx] = { ...updated[idx], custoReparo: custo };
+                                  updateOrdemServico(os.id, { itensLoteRevisao: updated } as any);
+                                  // Sync with loteRevisaoApi
+                                  if (os.loteRevisaoId) {
+                                    atualizarItemRevisao(os.loteRevisaoId, item.itemId, { custoReparo: custo, statusReparo: 'Em Andamento' });
+                                  }
+                                  const refreshed = getOrdemServicoById(os.id);
+                                  if (refreshed) setOS(refreshed);
+                                }}
+                                placeholder="0,00"
+                              />
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => {
+                                const updated = [...(os.itensLoteRevisao || [])];
+                                updated[idx] = { ...updated[idx], statusReparo: 'Concluido' };
+                                const osFresh = getOrdemServicoById(os.id);
+                                if (!osFresh) return;
+                                updateOrdemServico(os.id, {
+                                  itensLoteRevisao: updated,
+                                  timeline: [...osFresh.timeline, {
+                                    data: new Date().toISOString(),
+                                    tipo: 'peca',
+                                    descricao: `Tratativa concluída: ${item.marca} ${item.modelo}${item.imei ? ` (IMEI: ${item.imei})` : ''} — Custo: R$ ${item.custoReparo.toFixed(2)}`,
+                                    responsavel: user?.colaborador?.nome || 'Técnico'
+                                  }]
+                                } as any);
+                                // Sync with loteRevisaoApi
+                                if (os.loteRevisaoId) {
+                                  atualizarItemRevisao(os.loteRevisaoId, item.itemId, { custoReparo: item.custoReparo, statusReparo: 'Concluido' });
+                                }
+                                // Mark product return to stock
+                                if (item.imei) {
+                                  marcarProdutoRetornoAssistencia(item.imei);
+                                }
+                                const refreshed = getOrdemServicoById(os.id);
+                                if (refreshed) setOS(refreshed);
+                                toast.success(`Tratativa do ${item.marca} ${item.modelo} concluída!`);
+
+                                // Check if all items are done - auto finalize lote
+                                const allDone = updated.every(i => i.statusReparo === 'Concluido');
+                                if (allDone && os.loteRevisaoId) {
+                                  const resultados: ResultadoItemRevisao[] = updated.map(i => ({
+                                    itemId: i.itemId,
+                                    resultado: 'Consertado' as const
+                                  }));
+                                  finalizarLoteComLogisticaReversa(os.loteRevisaoId, resultados, user?.colaborador?.nome || 'Técnico');
+                                  toast.success('Todos os aparelhos tratados! Lote de revisão finalizado e estoque atualizado.');
+                                }
+                              }}
+                            >
+                              <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                              Concluir Tratativa
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                      {item.parecerTecnico && !isEditing && (
+                        <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded">
+                          <p className="text-xs text-muted-foreground mb-1">Parecer Técnico:</p>
+                          <p className="text-sm">{item.parecerTecnico}</p>
+                          {item.custoReparo > 0 && <p className="text-sm font-medium mt-1">Custo: {formatCurrency(item.custoReparo)}</p>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
             )}
 
             {/* Descrição */}

@@ -304,10 +304,15 @@ export const gerarPagamentoParcial = (
 
   lote.pagamentosParciais.push(pagamento);
 
+  const detalhesForma = dadosPagamento.formaPagamento || 'Não informado';
+  const detalhesConta = dadosPagamento.contaBancaria ? ` | Conta: ${dadosPagamento.contaBancaria}` : '';
+  const detalhesRecebedor = dadosPagamento.nomeRecebedor ? ` | Recebedor: ${dadosPagamento.nomeRecebedor}` : '';
+  const detalhesPix = dadosPagamento.chavePix ? ` | Chave Pix: ${dadosPagamento.chavePix}` : '';
+
   lote.timeline.push({
     data: new Date().toISOString(),
     tipo: 'pagamento',
-    descricao: `Pagamento parcial gerado: ${notaId} - ${itensSelecionados.length} item(ns) - R$ ${valorTotal.toFixed(2)}`,
+    descricao: `Pagamento parcial gerado: ${notaId} - ${itensSelecionados.length} item(ns) - R$ ${valorTotal.toFixed(2)} | Forma: ${detalhesForma}${detalhesConta}${detalhesRecebedor}${detalhesPix}`,
     responsavel: lote.responsavelCadastro,
   });
 

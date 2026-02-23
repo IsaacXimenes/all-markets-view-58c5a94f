@@ -31,10 +31,10 @@ import { useToast } from '@/hooks/use-toast';
 import {
   Plus, Eye, Trash2, Package, PackageCheck, Clock, DollarSign, Pencil,
   FileText, ArrowRightLeft, CheckCircle, AlertTriangle, ArrowLeft, Undo2, Truck,
-  History, Lock,
+  History, Lock, XCircle,
 } from 'lucide-react';
 
-type ViewMode = 'lista' | 'novo' | 'dossie';
+type ViewMode = 'lista' | 'novo' | 'detalhamento';
 
 export default function OSConsignacao() {
   const { toast } = useToast();
@@ -183,10 +183,14 @@ export default function OSConsignacao() {
     voltar();
   };
 
-  const handleVerDossie = (lote: LoteConsignacao) => {
+  // readOnly mode for detalhamento (Eye) vs edit (Pencil)
+  const [detalhamentoReadOnly, setDetalhamentoReadOnly] = useState(false);
+
+  const handleVerDetalhamento = (lote: LoteConsignacao, readOnly: boolean = false) => {
     setLoteSelecionado(getLoteById(lote.id) || lote);
     setItensSelecionadosPagamento([]);
-    setViewMode('dossie');
+    setDetalhamentoReadOnly(readOnly);
+    setViewMode('detalhamento');
   };
 
   const handleGerarPagamentoParcial = () => {
@@ -253,12 +257,26 @@ export default function OSConsignacao() {
     }
   };
 
-  const handleConfirmarDevolucao = (loteId: string, itemId: string) => {
-    confirmarDevolucaoItem(loteId, itemId, user?.colaborador?.nome || 'Sistema');
-    setLoteSelecionado(getLoteById(loteId) || null);
+  // Devolução state for 2-step confirmation
+  const [devolucaoItemId, setDevolucaoItemId] = useState<string | null>(null);
+  const [devolucaoLoteId, setDevolucaoLoteId] = useState<string | null>(null);
+  const [showDevolucaoDialog, setShowDevolucaoDialog] = useState(false);
+
+  const handleConfirmarDevolucao = () => {
+    if (!devolucaoLoteId || !devolucaoItemId) return;
+    confirmarDevolucaoItem(devolucaoLoteId, devolucaoItemId, user?.colaborador?.nome || 'Sistema');
+    setLoteSelecionado(getLoteById(devolucaoLoteId) || null);
     refreshLotes();
+    setShowDevolucaoDialog(false);
+    setDevolucaoItemId(null);
+    setDevolucaoLoteId(null);
     toast({ title: 'Devolvido', description: 'Item devolvido. Registro mantido no histórico do estoque.' });
   };
+
+  // Inventory filters state
+  const [filtroInventarioStatus, setFiltroInventarioStatus] = useState('todos');
+  const [filtroInventarioLoja, setFiltroInventarioLoja] = useState('todos');
+  const [filtroInventarioBusca, setFiltroInventarioBusca] = useState('');
 
   const formatCurrencyInput = (value: string) => {
     const numbers = value.replace(/\D/g, '');
@@ -360,8 +378,8 @@ export default function OSConsignacao() {
     );
   }
 
-  // ==================== VIEW: DOSSIÊ ====================
-  if (viewMode === 'dossie' && loteSelecionado) {
+   // ==================== VIEW: DETALHAMENTO ====================
+  if (viewMode === 'detalhamento' && loteSelecionado) {
     const itensConsumidos = loteSelecionado.itens.filter(i => ['Consumido', 'Em Pagamento', 'Pago'].includes(i.status));
     const sobras = loteSelecionado.itens.filter(i => i.status === 'Disponivel');
     const consumidosRemanescentes = loteSelecionado.itens.filter(i => i.status === 'Consumido');
@@ -384,8 +402,9 @@ export default function OSConsignacao() {
             </Button>
             <h2 className="text-xl font-bold flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Dossiê do Lote {loteSelecionado.id}
+              Detalhamento do Lote {loteSelecionado.id}
             </h2>
+            {detalhamentoReadOnly && <Badge variant="secondary">Somente Leitura</Badge>}
             {getStatusBadge(loteSelecionado.status)}
           </div>
 
@@ -427,7 +446,37 @@ export default function OSConsignacao() {
             {/* Inventário */}
             <TabsContent value="inventario">
               <Card>
-                <CardContent className="p-0">
+                <CardContent className="p-4 space-y-4">
+                  {/* Filtros do Inventário */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Status</Label>
+                      <Select value={filtroInventarioStatus} onValueChange={setFiltroInventarioStatus}>
+                        <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="todos">Todos</SelectItem>
+                          <SelectItem value="Disponivel">Disponível</SelectItem>
+                          <SelectItem value="Consumido">Consumido</SelectItem>
+                          <SelectItem value="Devolvido">Devolvido</SelectItem>
+                          <SelectItem value="Em Pagamento">Em Pagamento</SelectItem>
+                          <SelectItem value="Pago">Pago</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Loja</Label>
+                      <AutocompleteLoja value={filtroInventarioLoja === 'todos' ? '' : filtroInventarioLoja} onChange={(v) => setFiltroInventarioLoja(v || 'todos')} filtrarPorTipo="Assistência" placeholder="Todas" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Busca</Label>
+                      <Input placeholder="Descrição ou modelo..." value={filtroInventarioBusca} onChange={e => setFiltroInventarioBusca(e.target.value)} />
+                    </div>
+                    <div className="flex items-end">
+                      <Button variant="ghost" size="sm" onClick={() => { setFiltroInventarioStatus('todos'); setFiltroInventarioLoja('todos'); setFiltroInventarioBusca(''); }}>
+                        <XCircle className="h-4 w-4 mr-1" /> Limpar
+                      </Button>
+                    </div>
+                  </div>
                   <div className="rounded-md overflow-x-auto">
                     <Table>
                       <TableHeader>
@@ -444,7 +493,15 @@ export default function OSConsignacao() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {loteSelecionado.itens.map(item => (
+                        {loteSelecionado.itens.filter(item => {
+                          if (filtroInventarioStatus !== 'todos' && item.status !== filtroInventarioStatus) return false;
+                          if (filtroInventarioLoja !== 'todos' && item.lojaAtualId !== filtroInventarioLoja) return false;
+                          if (filtroInventarioBusca) {
+                            const t = filtroInventarioBusca.toLowerCase();
+                            if (!item.descricao.toLowerCase().includes(t) && !item.modelo.toLowerCase().includes(t)) return false;
+                          }
+                          return true;
+                        }).map(item => (
                           <TableRow key={item.id}>
                             <TableCell className="font-mono text-xs">{item.id}</TableCell>
                             <TableCell className="font-medium">{item.descricao}</TableCell>
@@ -470,7 +527,7 @@ export default function OSConsignacao() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">Peças Consumidas</CardTitle>
-                    {!loteConcluido && (
+                    {!loteConcluido && !detalhamentoReadOnly && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button size="sm" disabled={itensSelecionadosPagamento.length === 0}>
@@ -662,7 +719,7 @@ export default function OSConsignacao() {
           </Tabs>
 
           {/* Botão Finalizar Lote */}
-          {loteAberto && temConsumidos && (
+          {loteAberto && temConsumidos && !detalhamentoReadOnly && (
             <Card className="border-amber-300 bg-amber-50/50 dark:bg-amber-950/10">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-4">
@@ -853,10 +910,13 @@ export default function OSConsignacao() {
           <Label className="text-xs text-muted-foreground">Data</Label>
           <Input type="date" value={filtroData} onChange={e => setFiltroData(e.target.value)} />
         </div>
-        <div className="flex items-end">
-          <Button size="sm" onClick={() => setViewMode('novo')} className="w-full">
+        <div className="flex items-end gap-2">
+          <Button size="sm" onClick={() => setViewMode('novo')} className="flex-1">
             <Plus className="h-4 w-4 mr-2" />
             Novo Lote
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => { setFiltroFornecedor(''); setFiltroStatus(''); setFiltroData(''); }} title="Limpar Filtros">
+            <XCircle className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -908,11 +968,11 @@ export default function OSConsignacao() {
                     <TableCell>{getStatusBadge(lote.status)}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => handleVerDossie(lote)} title="Ver Dossiê">
+                        <Button variant="ghost" size="sm" onClick={() => handleVerDetalhamento(lote, true)} title="Detalhamento (somente leitura)">
                           <Eye className="h-4 w-4" />
                         </Button>
                         {lote.status === 'Aberto' && (
-                          <Button variant="ghost" size="sm" onClick={() => handleVerDossie(lote)} title="Editar Lote">
+                          <Button variant="ghost" size="sm" onClick={() => handleVerDetalhamento(lote, false)} title="Editar Lote">
                             <Pencil className="h-4 w-4" />
                           </Button>
                         )}
@@ -925,6 +985,37 @@ export default function OSConsignacao() {
           </TableBody>
         </Table>
       </div>
+
+      {/* AlertDialog for 2-step devolução confirmation */}
+      <AlertDialog open={showDevolucaoDialog} onOpenChange={setShowDevolucaoDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Devolução de Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              {(() => {
+                if (!devolucaoLoteId || !devolucaoItemId) return 'Item não encontrado.';
+                const lote = getLoteById(devolucaoLoteId);
+                const item = lote?.itens.find(i => i.id === devolucaoItemId);
+                return item ? (
+                  <>
+                    Confirmar a devolução de <strong>{item.descricao}</strong> ({item.quantidade} un.)?
+                    <br /><br />
+                    <span className="text-destructive font-medium">Esta ação é irreversível.</span> O item será marcado como devolvido ao fornecedor e removido do estoque ativo.
+                    <br /><br />
+                    <span className="text-xs text-muted-foreground">Responsável: {user?.colaborador?.nome || 'Sistema'} • {new Date().toLocaleString('pt-BR')}</span>
+                  </>
+                ) : 'Item não encontrado.';
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={handleConfirmarDevolucao}>
+              Confirmar Devolução
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </OSLayout>
   );
 }

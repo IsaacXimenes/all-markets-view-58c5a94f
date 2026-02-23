@@ -121,6 +121,16 @@ export interface OrdemServico {
   // Campos para Lote de Revisão
   loteRevisaoId?: string;
   loteRevisaoItemId?: string;
+  itensLoteRevisao?: {
+    itemId: string;
+    marca: string;
+    modelo: string;
+    imei?: string;
+    motivoAssistencia: string;
+    parecerTecnico?: string;
+    custoReparo: number;
+    statusReparo: 'Pendente' | 'Em Andamento' | 'Concluido';
+  }[];
   // Cronômetro de Produtividade
   cronometro?: CronometroOS;
 }
