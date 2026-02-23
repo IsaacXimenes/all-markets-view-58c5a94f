@@ -871,7 +871,7 @@ export default function VendasConferenciaGestor() {
                       <Button 
                         variant="outline" 
                         className="flex-1"
-                        onClick={() => navigate(`/vendas/${vendaSelecionada.id}`, { state: { modoConferencia: true } })}
+                        onClick={() => navigate(`/vendas/editar/${vendaSelecionada.id}`)}
                       >
                         <Pencil className="h-4 w-4 mr-1" />
                         Editar
