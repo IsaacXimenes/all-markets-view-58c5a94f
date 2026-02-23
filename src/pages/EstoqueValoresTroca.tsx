@@ -151,6 +151,9 @@ export default function EstoqueValoresTroca() {
             <Input placeholder="Buscar modelo ou marca..." value={busca} onChange={e => handleBusca(e.target.value)} className="pl-9" />
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setLogsAberto(v => !v)}>
+              <History className="h-4 w-4 mr-1" />Histórico
+            </Button>
             <Button variant="outline" size="sm" onClick={handleExportCSV}><Download className="h-4 w-4 mr-1" />CSV</Button>
             <Button size="sm" onClick={abrirNovo}><Plus className="h-4 w-4 mr-1" />Novo Valor</Button>
           </div>
