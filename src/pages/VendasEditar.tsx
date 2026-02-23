@@ -28,7 +28,7 @@ import {
 import { getTaxasEntregaAtivas, TaxaEntrega } from '@/utils/taxasEntregaApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { getProdutos, Produto, bloquearProdutosEmVenda, desbloquearProdutosDeVenda, getLojaEstoqueReal } from '@/utils/estoqueApi';
-import { getVendaById, updateVenda, registrarEdicaoVenda, ItemVenda, ItemTradeIn, Pagamento, Venda } from '@/utils/vendasApi';
+import { getVendaById, updateVenda, registrarEdicaoVenda, ItemVenda, ItemTradeIn, Pagamento, Venda, AnexoTradeIn } from '@/utils/vendasApi';
 import { getVendaComFluxo, registrarEdicaoFluxo, VendaComFluxo } from '@/utils/fluxoVendasApi';
 import { getAcessorios, Acessorio, VendaAcessorio } from '@/utils/acessoriosApi';
 import { getProdutosCadastro, ProdutoCadastro } from '@/utils/cadastrosApi';
@@ -2282,6 +2282,7 @@ export default function VendasEditar() {
                               id: `TERMO-${Date.now()}`,
                               nome: file.name,
                               tipo: file.type,
+                              tamanho: file.size,
                               dataUrl: reader.result as string
                             }
                           });
@@ -2308,13 +2309,14 @@ export default function VendasEditar() {
                       const files = Array.from(e.target.files || []);
                       if (files.length > 0) {
                         const fotosPromises = files.map(file => {
-                          return new Promise<{ id: string; nome: string; tipo: string; dataUrl: string }>((resolve) => {
+                          return new Promise<AnexoTradeIn>((resolve) => {
                             const reader = new FileReader();
                             reader.onload = () => {
                               resolve({
                                 id: `FOTO-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
                                 nome: file.name,
                                 tipo: file.type,
+                                tamanho: file.size,
                                 dataUrl: reader.result as string
                               });
                             };
@@ -2385,7 +2387,8 @@ export default function VendasEditar() {
       {/* Barcode Scanner Modal */}
       {showBarcodeScanner && (
         <BarcodeScanner
-          onResult={(result) => {
+          open={showBarcodeScanner}
+          onScan={(result) => {
             const digits = result.replace(/\D/g, '').slice(0, 15);
             let masked = '';
             for (let i = 0; i < digits.length; i++) {
