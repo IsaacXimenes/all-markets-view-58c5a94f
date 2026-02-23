@@ -16,7 +16,7 @@ import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
-import { getFornecedores } from '@/utils/cadastrosApi';
+import { getFornecedores, getProdutosCadastro } from '@/utils/cadastrosApi';
 import { formatCurrency } from '@/utils/formatUtils';
 import { setOnConsumoPecaConsignada } from '@/utils/pecasApi';
 import {
@@ -51,6 +51,7 @@ export default function OSConsignacao() {
   const { obterNomeLoja, obterLojasPorTipo } = useCadastroStore();
   const user = useAuthStore(state => state.user);
   const fornecedores = getFornecedores();
+  const produtosCadastro = getProdutosCadastro();
   const lojas = obterLojasPorTipo('Assistência');
 
   const [lotes, setLotes] = useState<LoteConsignacao[]>(getLotesConsignacao());
@@ -439,7 +440,14 @@ export default function OSConsignacao() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Modelo</Label>
-                        <Input value={item.modelo} onChange={e => updateItemRow(idx, 'modelo', e.target.value)} placeholder="iPhone 14" />
+                        <Select value={item.modelo} onValueChange={v => updateItemRow(idx, 'modelo', v)}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Modelo..." /></SelectTrigger>
+                          <SelectContent>
+                            {produtosCadastro.map(p => (
+                              <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Qtd</Label>
@@ -577,7 +585,14 @@ export default function OSConsignacao() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Modelo</Label>
-                      <Input value={item.modelo} onChange={e => updateEditItem(item.id, 'modelo', e.target.value)} />
+                      <Select value={item.modelo} onValueChange={v => updateEditItem(item.id, 'modelo', v)}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Modelo..." /></SelectTrigger>
+                        <SelectContent>
+                          {produtosCadastro.map(p => (
+                            <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Qtd</Label>
@@ -607,7 +622,14 @@ export default function OSConsignacao() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Modelo</Label>
-                      <Input value={item.modelo} onChange={e => updateEditNovoItem(idx, 'modelo', e.target.value)} placeholder="iPhone 14" />
+                      <Select value={item.modelo} onValueChange={v => updateEditNovoItem(idx, 'modelo', v)}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Modelo..." /></SelectTrigger>
+                        <SelectContent>
+                          {produtosCadastro.map(p => (
+                            <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Qtd</Label>
