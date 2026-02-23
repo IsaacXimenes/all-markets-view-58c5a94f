@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
@@ -10,14 +10,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import QRCode from 'qrcode';
 import { 
   Lock, User, Calendar, DollarSign, Search, Plus, Clock, CheckCircle,
-  ShoppingCart, Package, CreditCard, Truck, FileText, AlertTriangle, Check, X, Eye, Trash2, Shield, Save
+  ShoppingCart, Package, CreditCard, Truck, FileText, AlertTriangle, Check, X, Eye, Trash2, Shield, Save,
+  Headphones, ArrowLeftRight, Star, Camera, Image
 } from 'lucide-react';
-import { format, addMonths } from 'date-fns';
+import { format, addMonths, addDays } from 'date-fns';
+import { BarcodeScanner } from '@/components/ui/barcode-scanner';
 
 import { 
   getVendaDigitalById, 
@@ -32,16 +34,21 @@ import {
 import { useCadastroStore } from '@/store/cadastroStore';
 import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
 import { ValoresRecomendadosTroca } from '@/components/vendas/ValoresRecomendadosTroca';
-import { getProdutos, Produto, updateProduto } from '@/utils/estoqueApi';
+import { getProdutos, Produto, updateProduto, getLojaEstoqueReal, LOJA_ONLINE_ID } from '@/utils/estoqueApi';
 import { addVenda, getHistoricoComprasCliente, ItemVenda, ItemTradeIn, Pagamento } from '@/utils/vendasApi';
 import { inicializarVendaNoFluxo } from '@/utils/fluxoVendasApi';
 import { getProdutosCadastro, ProdutoCadastro } from '@/utils/cadastrosApi';
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
 import { getAcessorios, Acessorio, VendaAcessorio } from '@/utils/acessoriosApi';
 import { useDraftVenda } from '@/hooks/useDraftVenda';
+import { getPlanosPorModelo, PlanoGarantia } from '@/utils/planosGarantiaApi';
+import { displayIMEI, formatIMEI } from '@/utils/imeiMask';
 import { formatarMoeda } from '@/utils/formatUtils';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
+import { getTaxasEntregaAtivas, TaxaEntrega } from '@/utils/taxasEntregaApi';
+import { addTradeInPendente } from '@/utils/baseTrocasPendentesApi';
+import { calcularComissaoVenda, getComissaoColaborador } from '@/utils/comissoesApi';
 
 // Alias para compatibilidade
 const formatCurrency = formatarMoeda;
@@ -51,14 +58,16 @@ const TIMER_DURATION = 1800; // 30 minutos em segundos
 export default function VendasFinalizarDigital() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { obterLojasAtivas, obterLojasTipoLoja, obterVendedores, obterLojaById, obterNomeLoja, obterNomeColaborador, obterColaboradorById } = useCadastroStore();
+  const { obterLojasAtivas, obterLojasTipoLoja, obterVendedores, obterMotoboys, obterLojaById, obterNomeLoja, obterNomeColaborador, obterColaboradorById } = useCadastroStore();
   
   // Dados do pré-cadastro
   const [venda, setVenda] = useState<VendaDigital | null>(null);
   
   // Dados do cadastros - usando Zustand store
   const lojas = obterLojasAtivas();
+  const lojasTipoLoja = obterLojasTipoLoja();
   const vendedoresDisponiveis = obterVendedores();
+  const motoboys = obterMotoboys();
   const [clientes, setClientes] = useState<Cliente[]>(getClientes());
   const [origensVenda] = useState<OrigemVenda[]>(getOrigensVenda());
   const [contasFinanceiras] = useState<ContaFinanceira[]>(getContasFinanceiras());
@@ -93,6 +102,13 @@ export default function VendasFinalizarDigital() {
   const [localRetirada, setLocalRetirada] = useState('');
   const [tipoRetirada, setTipoRetirada] = useState<'Retirada Balcão' | 'Entrega' | 'Retirada em Outra Loja'>('Retirada Balcão');
   const [taxaEntrega, setTaxaEntrega] = useState(0);
+  const [valorRecomendadoEntrega, setValorRecomendadoEntrega] = useState(0);
+  const [localEntregaId, setLocalEntregaId] = useState('');
+  const [localEntregaNome, setLocalEntregaNome] = useState('');
+  const [buscaLocalEntrega, setBuscaLocalEntrega] = useState('');
+  const [taxasEntrega] = useState<TaxaEntrega[]>(getTaxasEntregaAtivas());
+  const [showLocaisEntrega, setShowLocaisEntrega] = useState(false);
+  const [motoboyId, setMotoboyId] = useState('');
   const [observacoes, setObservacoes] = useState('');
   
   // Itens da venda
@@ -111,6 +127,20 @@ export default function VendasFinalizarDigital() {
   const [tradeIns, setTradeIns] = useState<ItemTradeIn[]>([]);
   const [showTradeInModal, setShowTradeInModal] = useState(false);
   const [novoTradeIn, setNovoTradeIn] = useState<Partial<ItemTradeIn>>({});
+  const [tipoOperacaoTroca, setTipoOperacaoTroca] = useState<'Upgrade' | 'Downgrade'>('Upgrade');
+  const [chavePix, setChavePix] = useState('');
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  
+  // Preview de anexos Trade-In
+  const [previewAnexo, setPreviewAnexo] = useState<{
+    aberto: boolean;
+    tipo: 'termo' | 'fotos';
+    trade: ItemTradeIn | null;
+  }>({ aberto: false, tipo: 'termo', trade: null });
+  
+  const abrirPreviewAnexo = (trade: ItemTradeIn, tipo: 'termo' | 'fotos') => {
+    setPreviewAnexo({ aberto: true, tipo, trade });
+  };
   
   // Pagamentos
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
@@ -132,8 +162,28 @@ export default function VendasFinalizarDigital() {
     tipoGarantia: 'Garantia - Apple' | 'Garantia - Thiago Imports';
     mesesGarantia: number;
     dataFimGarantia: string;
+    garantiaComplementar?: {
+      meses: number;
+      dataInicio: string;
+      dataFim: string;
+    };
   }
   const [garantiaItens, setGarantiaItens] = useState<GarantiaItemVenda[]>([]);
+
+  // Garantia Extendida
+  const [garantiaExtendida, setGarantiaExtendida] = useState<{
+    planoId: string;
+    planoNome: string;
+    valor: number;
+    meses: number;
+    dataInicio: string;
+    dataFim: string;
+  } | null>(null);
+  const [showGarantiaExtendidaModal, setShowGarantiaExtendidaModal] = useState(false);
+  
+  // Upload de ficheiro para garantia extendida
+  const [arquivoGarantia, setArquivoGarantia] = useState<File | null>(null);
+  const [arquivoGarantiaUrl, setArquivoGarantiaUrl] = useState<string>('');
 
   // Draft (rascunho automático)
   const draftKey = `draft_venda_digital_${id}`;
@@ -149,12 +199,9 @@ export default function VendasFinalizarDigital() {
       const vendaData = getVendaDigitalById(id);
       if (vendaData) {
         setVenda(vendaData);
-        // Pré-preencher cliente nome do pré-cadastro
         setClienteNome(vendaData.clienteNome);
-        // Loja de Venda fixa como Loja Online para vendas digitais
         setLojaVenda('fcc78c1a');
         
-        // Verificar se existe rascunho após carregar a venda
         setTimeout(() => {
           if (hasDraft()) {
             setDraftAge(getDraftAge());
@@ -184,12 +231,14 @@ export default function VendasFinalizarDigital() {
       setLocalRetirada(draft.localRetirada || '');
       setTipoRetirada(draft.tipoRetirada || 'Retirada Balcão');
       setTaxaEntrega(draft.taxaEntrega || 0);
+      setMotoboyId(draft.motoboyId || '');
       setObservacoes(draft.observacoes || '');
       setItens(draft.itens || []);
       setAcessoriosVenda(draft.acessoriosVenda || []);
       setTradeIns(draft.tradeIns || []);
       setPagamentos(draft.pagamentos || []);
       setGarantiaItens(draft.garantiaItens || []);
+      setGarantiaExtendida(draft.garantiaExtendida || null);
       toast.success('Rascunho carregado');
     }
     setShowDraftModal(false);
@@ -210,7 +259,7 @@ export default function VendasFinalizarDigital() {
     const now = Date.now();
     if (now - lastSaveTime.current < 2000) return;
     
-    const hasData = lojaVenda || clienteId || itens.length > 0 || acessoriosVenda.length > 0 || pagamentos.length > 0;
+    const hasData = lojaVenda || clienteId || itens.length > 0 || acessoriosVenda.length > 0 || pagamentos.length > 0 || garantiaExtendida;
     if (!hasData) return;
 
     const timeout = setTimeout(() => {
@@ -226,18 +275,20 @@ export default function VendasFinalizarDigital() {
         localRetirada,
         tipoRetirada,
         taxaEntrega,
+        motoboyId,
         observacoes,
         itens,
         acessoriosVenda,
         tradeIns,
         pagamentos,
-        garantiaItens
+        garantiaItens,
+        garantiaExtendida
       });
       lastSaveTime.current = Date.now();
     }, 2000);
 
     return () => clearTimeout(timeout);
-  }, [lojaVenda, clienteId, clienteNome, origemVenda, localRetirada, tipoRetirada, taxaEntrega, observacoes, itens, acessoriosVenda, tradeIns, pagamentos, garantiaItens, id]);
+  }, [lojaVenda, clienteId, clienteNome, origemVenda, localRetirada, tipoRetirada, taxaEntrega, motoboyId, observacoes, itens, acessoriosVenda, tradeIns, pagamentos, garantiaItens, garantiaExtendida, id]);
 
   // Timer effect
   useEffect(() => {
@@ -271,9 +322,86 @@ export default function VendasFinalizarDigital() {
   const totalAcessorios = useMemo(() => acessoriosVenda.reduce((acc, a) => acc + a.valorTotal, 0), [acessoriosVenda]);
   const totalTradeIn = useMemo(() => tradeIns.reduce((acc, t) => acc + t.valorCompraUsado, 0), [tradeIns]);
   const totalPagamentos = useMemo(() => pagamentos.reduce((acc, p) => acc + p.valor, 0), [pagamentos]);
-  const total = useMemo(() => subtotal + totalAcessorios - totalTradeIn + taxaEntrega, [subtotal, totalAcessorios, totalTradeIn, taxaEntrega]);
+  const valorGarantiaExtendida = garantiaExtendida?.valor || 0;
+  const valorProdutos = subtotal + totalAcessorios;
+  
+  // Cálculos para Downgrade
+  const isDowngrade = tipoOperacaoTroca === 'Downgrade';
+  const saldoDevolver = useMemo(() => {
+    if (!isDowngrade) return 0;
+    const saldo = totalTradeIn - valorProdutos - taxaEntrega;
+    return saldo > 0 ? saldo : 0;
+  }, [isDowngrade, totalTradeIn, valorProdutos, taxaEntrega]);
+  const hasValidDowngrade = isDowngrade && saldoDevolver > 0;
+  
+  // Detecção automática do tipo de operação baseado nos valores
+  useEffect(() => {
+    if (tradeIns.length === 0) return;
+    if (totalTradeIn > valorProdutos) {
+      if (tipoOperacaoTroca !== 'Downgrade') setTipoOperacaoTroca('Downgrade');
+    } else {
+      if (tipoOperacaoTroca !== 'Upgrade') setTipoOperacaoTroca('Upgrade');
+    }
+  }, [totalTradeIn, valorProdutos, tradeIns.length]);
+  
+  // Validação de Upgrade inválido
+  const isUpgradeInvalido = useMemo(() => {
+    if (tipoOperacaoTroca !== 'Upgrade') return false;
+    return totalTradeIn > valorProdutos && tradeIns.length > 0;
+  }, [tipoOperacaoTroca, totalTradeIn, valorProdutos, tradeIns.length]);
+
+  const total = useMemo(() => {
+    return subtotal + totalAcessorios - totalTradeIn + taxaEntrega + valorGarantiaExtendida;
+  }, [subtotal, totalAcessorios, totalTradeIn, taxaEntrega, valorGarantiaExtendida]);
   const valorPendente = useMemo(() => total - totalPagamentos, [total, totalPagamentos]);
   
+  // Planos de garantia extendida disponíveis
+  const planosExtendidaDisponiveis = useMemo(() => {
+    if (itens.length === 0) return [];
+    const item = itens[0];
+    const produto = produtosEstoque.find(p => p.id === item.produtoId);
+    const condicao = produto?.tipo === 'Novo' ? 'Novo' : 'Seminovo';
+    return getPlanosPorModelo(item.produto, condicao).filter(p => p.nome === 'Silver' || p.nome === 'Gold');
+  }, [itens, produtosEstoque]);
+  
+  // Calcular garantia complementar para completar 12 meses
+  const calcularGarantiaComplementar = (mesesApple: number) => {
+    if (mesesApple >= 12) return null;
+    const mesesComplementar = 12 - mesesApple;
+    const dataInicioComplementar = addMonths(new Date(), mesesApple);
+    const dataFimComplementar = addMonths(dataInicioComplementar, mesesComplementar);
+    return { 
+      meses: mesesComplementar, 
+      dataInicio: format(dataInicioComplementar, 'yyyy-MM-dd'), 
+      dataFim: format(dataFimComplementar, 'yyyy-MM-dd') 
+    };
+  };
+  
+  // Calcular vigência da garantia extendida
+  const calcularVigenciaExtendida = (plano: PlanoGarantia) => {
+    const dataFimGarantiaPadrao = addMonths(new Date(), 12);
+    const dataInicioGarantiaExtendida = addDays(dataFimGarantiaPadrao, 1);
+    const dataFim = addMonths(dataInicioGarantiaExtendida, plano.meses);
+    return { 
+      dataInicio: format(dataInicioGarantiaExtendida, 'yyyy-MM-dd'), 
+      dataFim: format(dataFim, 'yyyy-MM-dd') 
+    };
+  };
+  
+  // Adicionar garantia extendida
+  const handleAddGarantiaExtendida = (plano: PlanoGarantia) => {
+    const vigencia = calcularVigenciaExtendida(plano);
+    setGarantiaExtendida({
+      planoId: plano.id,
+      planoNome: plano.nome,
+      valor: plano.valor,
+      meses: plano.meses,
+      dataInicio: vigencia.dataInicio,
+      dataFim: vigencia.dataFim
+    });
+    setShowGarantiaExtendidaModal(false);
+  };
+
   const valorCustoAcessorios = useMemo(() => acessoriosVenda.reduce((acc, a) => {
     const acessorio = acessoriosEstoque.find(ae => ae.id === a.acessorioId);
     return acc + (acessorio?.valorCusto || 0) * a.quantidade;
@@ -281,6 +409,13 @@ export default function VendasFinalizarDigital() {
   const valorCustoTotal = useMemo(() => itens.reduce((acc, item) => acc + item.valorCusto * item.quantidade, 0) + valorCustoAcessorios, [itens, valorCustoAcessorios]);
   const lucroProjetado = useMemo(() => total - valorCustoTotal, [total, valorCustoTotal]);
   
+  // Cálculo de prejuízo em acessórios
+  const prejuizoAcessorios = useMemo(() => {
+    const vendaAcessorios = acessoriosVenda.reduce((acc, a) => acc + a.valorTotal, 0);
+    if (vendaAcessorios <= 0) return 0;
+    return valorCustoAcessorios > vendaAcessorios ? valorCustoAcessorios - vendaAcessorios : 0;
+  }, [acessoriosVenda, valorCustoAcessorios]);
+
   // Acessórios filtrados
   const acessoriosFiltrados = useMemo(() => {
     return acessoriosEstoque.filter(a => {
@@ -332,9 +467,23 @@ export default function VendasFinalizarDigital() {
     if (valorCustoTotal === 0) return 0;
     return ((lucroProjetado / valorCustoTotal) * 100);
   }, [lucroProjetado, valorCustoTotal]);
-  const isPrejuizo = lucroProjetado < 0;
+  const isPrejuizo = total > 0 && lucroProjetado < 0;
 
   const tradeInNaoValidado = useMemo(() => tradeIns.some(t => !t.imeiValidado), [tradeIns]);
+
+  // Verificar se tem pagamento Sinal
+  const temPagamentoSinal = useMemo(() => {
+    return pagamentos.some(p => p.meioPagamento === 'Sinal');
+  }, [pagamentos]);
+
+  const valorSinal = useMemo(() => {
+    const pagSinal = pagamentos.find(p => p.meioPagamento === 'Sinal');
+    return pagSinal?.valor || 0;
+  }, [pagamentos]);
+
+  const valorPendenteSinal = useMemo(() => {
+    return total - valorSinal;
+  }, [total, valorSinal]);
 
   // Buscar cliente
   const clientesFiltrados = useMemo(() => {
@@ -427,12 +576,42 @@ export default function VendasFinalizarDigital() {
   const produtosFiltrados = useMemo(() => {
     return produtosEstoque.filter(p => {
       if (p.quantidade <= 0) return false;
-      if (filtroLojaProduto && p.loja !== filtroLojaProduto) return false;
+      if ((p as any).bloqueadoEmVendaId) return false;
+      if ((p as any).statusMovimentacao) return false;
+      if ((p as any).statusEmprestimo) return false;
+      
+      if (lojaVenda) {
+        const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
+        const lojaEfetivaProduto = (p as any).lojaAtualId || p.loja;
+        if (lojaEfetivaProduto !== lojaEstoqueReal) return false;
+      }
+      
+      if (filtroLojaProduto) {
+        const lojaEfetivaProduto = (p as any).lojaAtualId || p.loja;
+        if (lojaEfetivaProduto !== filtroLojaProduto) return false;
+      }
       if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
       if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
       return true;
     });
-  }, [produtosEstoque, filtroLojaProduto, buscaProduto, buscaModeloProduto]);
+  }, [produtosEstoque, lojaVenda, filtroLojaProduto, buscaProduto, buscaModeloProduto]);
+
+  // Produtos de OUTRAS lojas
+  const produtosOutrasLojas = useMemo(() => {
+    if (!lojaVenda) return [];
+    const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
+    return produtosEstoque.filter(p => {
+      if (p.quantidade <= 0) return false;
+      if ((p as any).bloqueadoEmVendaId) return false;
+      if ((p as any).statusMovimentacao) return false;
+      if ((p as any).statusEmprestimo) return false;
+      const lojaEfetivaProduto = (p as any).lojaAtualId || p.loja;
+      if (lojaEfetivaProduto === lojaEstoqueReal) return false;
+      if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
+      if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
+      return true;
+    });
+  }, [produtosEstoque, lojaVenda, buscaProduto, buscaModeloProduto]);
 
   const handleAddProduto = (produto: Produto) => {
     const novoItem: ItemVenda = {
@@ -442,7 +621,7 @@ export default function VendasFinalizarDigital() {
       imei: produto.imei,
       categoria: produto.marca,
       quantidade: 1,
-      valorRecomendado: produto.valorVendaSugerido,
+      valorRecomendado: produto.vendaRecomendada || produto.valorVendaSugerido,
       valorVenda: produto.vendaRecomendada || produto.valorVendaSugerido,
       valorCusto: produto.valorCusto,
       loja: produto.loja
@@ -463,7 +642,7 @@ export default function VendasFinalizarDigital() {
 
   const handleRemoveItem = (itemId: string) => {
     setItens(itens.filter(i => i.id !== itemId));
-    if (itens.length === 1) {
+    if (itens.length === 1 && acessoriosVenda.length === 0) {
       setTimer(null);
       setTimerStart(null);
     }
@@ -475,6 +654,22 @@ export default function VendasFinalizarDigital() {
       return;
     }
     
+    if (!novoTradeIn.tipoEntrega) {
+      toast.error('Selecione o tipo de entrega do aparelho');
+      return;
+    }
+    
+    if (novoTradeIn.tipoEntrega === 'Com o Cliente') {
+      if (!novoTradeIn.termoResponsabilidade) {
+        toast.error('Termo de Responsabilidade é obrigatório para aparelho com o cliente');
+        return;
+      }
+      if (!novoTradeIn.fotosAparelho || novoTradeIn.fotosAparelho.length === 0) {
+        toast.error('Adicione pelo menos uma foto do aparelho');
+        return;
+      }
+    }
+    
     const tradeIn: ItemTradeIn = {
       id: `TRADE-${Date.now()}`,
       modelo: novoTradeIn.modelo!,
@@ -482,14 +677,17 @@ export default function VendasFinalizarDigital() {
       imei: novoTradeIn.imei || '',
       valorCompraUsado: novoTradeIn.valorCompraUsado!,
       imeiValidado: novoTradeIn.imeiValidado || false,
-      condicao: novoTradeIn.condicao as 'Novo' | 'Semi-novo'
+      condicao: novoTradeIn.condicao as 'Novo' | 'Semi-novo',
+      tipoEntrega: novoTradeIn.tipoEntrega,
+      termoResponsabilidade: novoTradeIn.termoResponsabilidade,
+      fotosAparelho: novoTradeIn.fotosAparelho,
+      dataRegistro: new Date().toISOString()
     };
     
     setTradeIns([...tradeIns, tradeIn]);
     setShowTradeInModal(false);
     setNovoTradeIn({});
   };
-
 
   const handleVerDetalhes = (produto: Produto) => {
     setProdutoDetalhe(produto);
@@ -514,19 +712,38 @@ export default function VendasFinalizarDigital() {
   };
 
   const canSubmit = useMemo(() => {
+    const motoboyValido = tipoRetirada !== 'Entrega' || !!motoboyId;
     return (
       lojaVenda &&
       clienteId &&
       origemVenda &&
-      localRetirada &&
-      itens.length > 0 &&
-      valorPendente <= 0 &&
-      !tradeInNaoValidado
+      (itens.length > 0 || acessoriosVenda.length > 0) &&
+      valorPendente <= 0.01 &&
+      !tradeInNaoValidado &&
+      motoboyValido &&
+      !temPagamentoSinal &&
+      !isUpgradeInvalido
     );
-  }, [lojaVenda, clienteId, origemVenda, localRetirada, itens.length, valorPendente, tradeInNaoValidado]);
+  }, [lojaVenda, clienteId, origemVenda, itens.length, acessoriosVenda.length, valorPendente, tradeInNaoValidado, tipoRetirada, motoboyId, temPagamentoSinal, isUpgradeInvalido]);
+
+  const canSubmitDowngrade = useMemo(() => {
+    const motoboyValido = tipoRetirada !== 'Entrega' || !!motoboyId;
+    return (
+      hasValidDowngrade &&
+      lojaVenda &&
+      clienteId &&
+      origemVenda &&
+      itens.length > 0 &&
+      tradeIns.length > 0 &&
+      !tradeInNaoValidado &&
+      motoboyValido &&
+      saldoDevolver > 0 &&
+      chavePix.trim() !== ''
+    );
+  }, [hasValidDowngrade, lojaVenda, clienteId, origemVenda, itens.length, tradeIns.length, tradeInNaoValidado, tipoRetirada, motoboyId, saldoDevolver, chavePix]);
 
   const handleRegistrarVenda = () => {
-    if (!canSubmit) return;
+    if (!canSubmit && !canSubmitDowngrade) return;
     setShowConfirmacaoModal(true);
   };
 
@@ -574,7 +791,26 @@ export default function VendasFinalizarDigital() {
     const vendedorNome = obterNomeColaborador(venda.responsavelVendaId);
     inicializarVendaNoFluxo(vendaRegistrada.id, venda.responsavelVendaId, vendedorNome);
 
-    // Obter finalizador atual (usar o gestor logado como mock)
+    // Trade-Ins "Com o Cliente" → Base de Trocas Pendentes
+    tradeIns.forEach(tradeIn => {
+      if (tradeIn.tipoEntrega === 'Com o Cliente') {
+        addTradeInPendente({
+          vendaId: vendaRegistrada.id,
+          clienteId,
+          clienteNome,
+          tradeIn,
+          dataVenda: new Date().toISOString(),
+          lojaVenda,
+          vendedorId: venda.responsavelVendaId,
+          vendedorNome,
+          status: 'Aguardando Devolução',
+          termoResponsabilidade: tradeIn.termoResponsabilidade,
+          fotosAparelho: tradeIn.fotosAparelho
+        });
+      }
+    });
+
+    // Obter finalizador atual
     const finalizadorLogado = vendedoresDisponiveis[0] || { id: 'MOCK-FIN', nome: 'Finalizador' };
 
     // Atualizar status da venda digital
@@ -671,7 +907,7 @@ export default function VendasFinalizarDigital() {
           </CardContent>
         </Card>
 
-        {/* Info da Venda - campos editáveis */}
+        {/* Info da Venda */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -682,9 +918,7 @@ export default function VendasFinalizarDigital() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="text-sm font-medium">
-                  Loja de Venda *
-                </label>
+                <label className="text-sm font-medium">Loja de Venda *</label>
                 <Input value="Loja Online" disabled className="bg-muted" />
               </div>
               <div>
@@ -805,6 +1039,7 @@ export default function VendasFinalizarDigital() {
                     <TableHead>Produto</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>Loja</TableHead>
+                    <TableHead className="text-right">Custo do Produto</TableHead>
                     <TableHead className="text-right">Valor Recomendado</TableHead>
                     <TableHead className="text-right">Valor Venda</TableHead>
                     <TableHead></TableHead>
@@ -814,8 +1049,11 @@ export default function VendasFinalizarDigital() {
                   {itens.map(item => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.produto}</TableCell>
-                      <TableCell>{item.imei}</TableCell>
-                      <TableCell>{item.loja}</TableCell>
+                      <TableCell className="font-mono text-sm">{displayIMEI(item.imei)}</TableCell>
+                      <TableCell>{obterNomeLoja(item.loja)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {formatCurrency(item.valorCusto)}
+                      </TableCell>
                       <TableCell className="text-right text-muted-foreground">
                         {formatCurrency(item.valorRecomendado)}
                       </TableCell>
@@ -861,7 +1099,7 @@ export default function VendasFinalizarDigital() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
+                <Headphones className="h-5 w-5" />
                 Acessórios
               </span>
               <Button onClick={() => setShowAcessorioModal(true)}>
@@ -881,9 +1119,9 @@ export default function VendasFinalizarDigital() {
                   <TableRow>
                     <TableHead>Acessório</TableHead>
                     <TableHead className="text-center">Qtd</TableHead>
-                    <TableHead className="text-right">Custo Unit.</TableHead>
+                    <TableHead className="text-right">Custo Produto</TableHead>
                     <TableHead className="text-right">Valor Recomendado</TableHead>
-                    <TableHead className="text-right">Valor Unit.</TableHead>
+                    <TableHead className="text-right">Valor de Venda</TableHead>
                     <TableHead className="text-right">Valor Total</TableHead>
                     <TableHead className="text-right">Lucro</TableHead>
                     <TableHead></TableHead>
@@ -998,12 +1236,15 @@ export default function VendasFinalizarDigital() {
         </Card>
 
         {/* Base de Troca */}
-        <Card>
+        <Card className={hasValidDowngrade ? 'border-2 border-destructive' : ''}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Base de Troca
+                <ArrowLeftRight className="h-5 w-5" />
+                Base de Troca (Aparelhos de Troca)
+                {hasValidDowngrade && (
+                  <Badge variant="destructive" className="ml-2">DOWNGRADE</Badge>
+                )}
               </span>
               <Button variant="outline" onClick={() => setShowTradeInModal(true)}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -1012,6 +1253,34 @@ export default function VendasFinalizarDigital() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* Abas UPGRADE / DOWNGRADE */}
+            {tradeIns.length > 0 && (
+              <div className="mb-4 border-b">
+                <div className="flex gap-1">
+                  <button
+                    className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                      tipoOperacaoTroca === 'Upgrade'
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                    onClick={() => setTipoOperacaoTroca('Upgrade')}
+                  >
+                    UPGRADE
+                  </button>
+                  <button
+                    className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                      tipoOperacaoTroca === 'Downgrade'
+                        ? 'border-destructive text-destructive'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    }`}
+                    onClick={() => setTipoOperacaoTroca('Downgrade')}
+                  >
+                    DOWNGRADE
+                  </button>
+                </div>
+              </div>
+            )}
+            
             {tradeIns.length === 0 ? (
               <div className="text-center py-4 text-muted-foreground">
                 Nenhum item de troca adicionado.
@@ -1020,10 +1289,12 @@ export default function VendasFinalizarDigital() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Modelo</TableHead>
+                    <TableHead>Produto</TableHead>
                     <TableHead>Condição</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>IMEI Validado</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Anexos</TableHead>
                     <TableHead className="text-right">Valor de Compra Usado</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
@@ -1041,6 +1312,52 @@ export default function VendasFinalizarDigital() {
                           <Badge variant="default" className="bg-green-500">Sim</Badge>
                         ) : (
                           <Badge variant="destructive">Não</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {trade.tipoEntrega === 'Entregue no Ato' ? (
+                          <Badge className="bg-green-500 text-white">Entregue</Badge>
+                        ) : trade.tipoEntrega === 'Com o Cliente' ? (
+                          <Badge className="bg-amber-500 text-white">Com Cliente</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {trade.tipoEntrega === 'Com o Cliente' && (
+                          <div className="flex items-center gap-2">
+                            {trade.termoResponsabilidade && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button 
+                                    type="button"
+                                    onClick={() => abrirPreviewAnexo(trade, 'termo')}
+                                    className="text-blue-500 hover:text-blue-600 cursor-pointer"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Termo de Responsabilidade</TooltipContent>
+                              </Tooltip>
+                            )}
+                            {trade.fotosAparelho && trade.fotosAparelho.length > 0 && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button 
+                                    type="button"
+                                    onClick={() => abrirPreviewAnexo(trade, 'fotos')}
+                                    className="relative text-green-500 hover:text-green-600 cursor-pointer"
+                                  >
+                                    <Image className="h-4 w-4" />
+                                    <span className="absolute -top-1 -right-2 text-[10px] bg-primary text-primary-foreground rounded-full w-4 h-4 flex items-center justify-center">
+                                      {trade.fotosAparelho.length}
+                                    </span>
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>{trade.fotosAparelho.length} foto(s)</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
                         )}
                       </TableCell>
                       <TableCell className="text-right text-green-600">
@@ -1065,6 +1382,86 @@ export default function VendasFinalizarDigital() {
               <div className="mt-4 p-3 bg-destructive/10 rounded-lg flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
                 <span className="font-medium">Há item de troca com IMEI NÃO validado! Registrar venda desabilitado.</span>
+              </div>
+            )}
+            
+            {isUpgradeInvalido && (
+              <div className="mt-4 p-4 bg-destructive/10 rounded-lg border-2 border-destructive flex items-center gap-3">
+                <AlertTriangle className="h-6 w-6 text-destructive flex-shrink-0" />
+                <div>
+                  <p className="font-bold text-destructive">Valor da Base de Troca maior que produtos!</p>
+                  <p className="text-sm text-muted-foreground">
+                    Altere para a aba "DOWNGRADE" ou ajuste os valores. Registrar venda desabilitado.
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {tipoOperacaoTroca === 'Upgrade' && tradeIns.length > 0 && !isUpgradeInvalido && (
+              <div className="mt-4 p-4 bg-green-500/10 rounded-lg border-2 border-green-500">
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-600" />
+                  <span className="font-bold text-green-600">UPGRADE em Conformidade</span>
+                </div>
+                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                  Valor da Base de Troca ({formatCurrency(totalTradeIn)}) menor ou igual aos produtos ({formatCurrency(valorProdutos)}).
+                </p>
+              </div>
+            )}
+            
+            {tipoOperacaoTroca === 'Downgrade' && tradeIns.length > 0 && saldoDevolver > 0 && chavePix.trim() !== '' && (
+              <div className="mt-4 p-4 bg-green-500/10 rounded-lg border-2 border-green-500">
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-600" />
+                  <span className="font-bold text-green-600">DOWNGRADE em Conformidade</span>
+                </div>
+                <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                  Chave PIX informada. Saldo de {formatCurrency(saldoDevolver)} será devolvido ao cliente.
+                </p>
+              </div>
+            )}
+            
+            {hasValidDowngrade && (
+              <div className="mt-4 p-4 bg-destructive/10 rounded-lg border-2 border-destructive">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                  <span className="font-bold text-destructive text-lg">OPERAÇÃO DOWNGRADE</span>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Valor Base de Troca</p>
+                    <p className="text-lg font-bold text-green-600">{formatCurrency(totalTradeIn)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Valor Produtos</p>
+                    <p className="text-lg font-bold">{formatCurrency(valorProdutos)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">PIX a Devolver</p>
+                    <p className="text-2xl font-bold text-destructive">{formatCurrency(saldoDevolver)}</p>
+                  </div>
+                </div>
+                
+                <div className="mt-4 pt-4 border-t border-destructive/30">
+                  <label className="text-sm font-medium text-destructive flex items-center gap-1">
+                    Chave PIX do Cliente *
+                  </label>
+                  <Input
+                    value={chavePix}
+                    onChange={(e) => setChavePix(e.target.value)}
+                    placeholder="CPF, e-mail, telefone ou chave aleatória"
+                    className="mt-1 border-destructive focus:ring-destructive"
+                  />
+                  {!chavePix.trim() && (
+                    <p className="text-xs text-destructive mt-1">
+                      * Obrigatório para operações de Downgrade
+                    </p>
+                  )}
+                </div>
+                
+                <p className="text-xs text-destructive/80 mt-3">
+                  * Em operações de Downgrade, o cliente recebe a diferença via PIX após aprovação do Financeiro.
+                </p>
               </div>
             )}
           </CardContent>
@@ -1097,109 +1494,142 @@ export default function VendasFinalizarDigital() {
                 </TableHeader>
                 <TableBody>
                   {itens.map(item => {
-                    // Buscar condição do produto no estoque
                     const produto = produtosEstoque.find(p => p.id === item.produtoId);
                     const condicao = produto?.tipo || 'Semi-novo';
                     const isNovo = condicao === 'Novo';
-                    
-                    // Buscar garantia configurada para este item
                     const garantiaItem = garantiaItens.find(g => g.itemId === item.id);
-                    
-                    // Calcular data fim garantia
                     const meses = garantiaItem?.mesesGarantia || 12;
                     const dataFim = format(addMonths(new Date(), meses), 'dd/MM/yyyy');
                     
+                    const tipoGarantiaAtual = isNovo 
+                      ? 'Garantia - Apple' 
+                      : (garantiaItem?.tipoGarantia || 'Garantia - Thiago Imports');
+                    
+                    const complementar = tipoGarantiaAtual === 'Garantia - Apple' && meses < 12 
+                      ? calcularGarantiaComplementar(meses) 
+                      : null;
+                    
                     return (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.produto}</TableCell>
-                        <TableCell className="font-mono text-sm">{item.imei}</TableCell>
-                        <TableCell>
-                          <Badge variant={isNovo ? 'default' : 'secondary'}>
-                            {condicao}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {isNovo ? (
-                            <Badge variant="outline">Garantia - Apple</Badge>
-                          ) : (
-                            <Select 
-                              value={garantiaItem?.tipoGarantia || 'Garantia - Apple'} 
-                              onValueChange={(val: 'Garantia - Apple' | 'Garantia - Thiago Imports') => {
-                                setGarantiaItens(prev => {
-                                  const existing = prev.find(g => g.itemId === item.id);
-                                  const mesesDefault = val === 'Garantia - Thiago Imports' ? 12 : (existing?.mesesGarantia || 12);
-                                  if (existing) {
-                                    return prev.map(g => 
-                                      g.itemId === item.id 
-                                        ? { ...g, tipoGarantia: val, mesesGarantia: mesesDefault, dataFimGarantia: format(addMonths(new Date(), mesesDefault), 'yyyy-MM-dd') }
-                                        : g
-                                    );
-                                  } else {
-                                    return [...prev, { 
-                                      itemId: item.id, 
-                                      tipoGarantia: val,
-                                      mesesGarantia: mesesDefault,
-                                      dataFimGarantia: format(addMonths(new Date(), mesesDefault), 'yyyy-MM-dd')
-                                    }];
-                                  }
-                                });
-                              }}
-                            >
-                              <SelectTrigger className="w-[180px]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Garantia - Apple">Garantia - Apple</SelectItem>
-                                <SelectItem value="Garantia - Thiago Imports">Garantia - Thiago Imports</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {isNovo ? (
-                            <span className="text-muted-foreground">12</span>
-                          ) : (garantiaItem?.tipoGarantia || 'Garantia - Apple') === 'Garantia - Apple' ? (
-                            <Input 
-                              type="number" 
-                              min={1} 
-                              max={12}
-                              className="w-20"
-                              value={garantiaItem?.mesesGarantia || 12}
-                              onChange={(e) => {
-                                const meses = parseInt(e.target.value) || 12;
-                                setGarantiaItens(prev => {
-                                  const existing = prev.find(g => g.itemId === item.id);
-                                  if (existing) {
-                                    return prev.map(g => 
-                                      g.itemId === item.id 
-                                        ? { ...g, mesesGarantia: meses, dataFimGarantia: format(addMonths(new Date(), meses), 'yyyy-MM-dd') }
-                                        : g
-                                    );
-                                  } else {
-                                    return [...prev, { 
-                                      itemId: item.id, 
-                                      tipoGarantia: 'Garantia - Apple',
-                                      mesesGarantia: meses,
-                                      dataFimGarantia: format(addMonths(new Date(), meses), 'yyyy-MM-dd')
-                                    }];
-                                  }
-                                });
-                              }}
-                              placeholder="1-12"
-                            />
-                          ) : (
-                            <span className="text-muted-foreground">12</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">
-                            {garantiaItem?.dataFimGarantia 
-                              ? format(new Date(garantiaItem.dataFimGarantia), 'dd/MM/yyyy')
-                              : dataFim
-                            }
-                          </span>
-                        </TableCell>
-                      </TableRow>
+                      <React.Fragment key={item.id}>
+                        <TableRow>
+                          <TableCell className="font-medium">{item.produto}</TableCell>
+                          <TableCell className="font-mono text-sm">{displayIMEI(item.imei)}</TableCell>
+                          <TableCell>
+                            <Badge variant={isNovo ? 'default' : 'secondary'}>
+                              {condicao}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {isNovo ? (
+                              <Badge variant="outline">Garantia - Apple</Badge>
+                            ) : (
+                              <Select 
+                                value={garantiaItem?.tipoGarantia || 'Garantia - Thiago Imports'} 
+                                onValueChange={(val: 'Garantia - Apple' | 'Garantia - Thiago Imports') => {
+                                  setGarantiaItens(prev => {
+                                    const existing = prev.find(g => g.itemId === item.id);
+                                    const mesesDefault = val === 'Garantia - Thiago Imports' ? 12 : (existing?.mesesGarantia || 12);
+                                    if (existing) {
+                                      return prev.map(g => 
+                                        g.itemId === item.id 
+                                          ? { ...g, tipoGarantia: val, mesesGarantia: mesesDefault, dataFimGarantia: format(addMonths(new Date(), mesesDefault), 'yyyy-MM-dd') }
+                                          : g
+                                      );
+                                    } else {
+                                      return [...prev, { 
+                                        itemId: item.id, 
+                                        tipoGarantia: val,
+                                        mesesGarantia: mesesDefault,
+                                        dataFimGarantia: format(addMonths(new Date(), mesesDefault), 'yyyy-MM-dd')
+                                      }];
+                                    }
+                                  });
+                                }}
+                              >
+                                <SelectTrigger className="w-auto min-w-[200px]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Garantia - Apple">Garantia - Apple</SelectItem>
+                                  <SelectItem value="Garantia - Thiago Imports">Garantia - Thiago Imports</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {isNovo ? (
+                              <span className="text-muted-foreground">12</span>
+                            ) : tipoGarantiaAtual === 'Garantia - Apple' ? (
+                              <Input 
+                                type="number" 
+                                min={1} 
+                                max={12}
+                                className="w-20"
+                                value={garantiaItem?.mesesGarantia || 12}
+                                onChange={(e) => {
+                                  const mesesVal = parseInt(e.target.value) || 12;
+                                  setGarantiaItens(prev => {
+                                    const existing = prev.find(g => g.itemId === item.id);
+                                    if (existing) {
+                                      return prev.map(g => 
+                                        g.itemId === item.id 
+                                          ? { ...g, mesesGarantia: mesesVal, dataFimGarantia: format(addMonths(new Date(), mesesVal), 'yyyy-MM-dd') }
+                                          : g
+                                      );
+                                    } else {
+                                      return [...prev, { 
+                                        itemId: item.id, 
+                                        tipoGarantia: 'Garantia - Apple' as const,
+                                        mesesGarantia: mesesVal,
+                                        dataFimGarantia: format(addMonths(new Date(), mesesVal), 'yyyy-MM-dd')
+                                      }];
+                                    }
+                                  });
+                                }}
+                                placeholder="1-12"
+                              />
+                            ) : (
+                              <span className="text-muted-foreground">12</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">
+                              {garantiaItem?.dataFimGarantia 
+                                ? format(new Date(garantiaItem.dataFimGarantia), 'dd/MM/yyyy')
+                                : dataFim
+                              }
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                        {complementar && (
+                          <TableRow className="bg-blue-50 dark:bg-blue-950/30">
+                            <TableCell className="pl-8 text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                └ {item.produto}
+                              </span>
+                            </TableCell>
+                            <TableCell className="font-mono text-sm text-muted-foreground">{displayIMEI(item.imei)}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border-blue-300">
+                                Complementar
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300">
+                                Garantia - Thiago Imports
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-blue-700 dark:text-blue-300 font-medium">{complementar.meses}</span>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm text-blue-700 dark:text-blue-300">
+                                {format(new Date(complementar.dataInicio), 'dd/MM/yyyy')} a {format(new Date(complementar.dataFim), 'dd/MM/yyyy')}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </TableBody>
@@ -1208,31 +1638,107 @@ export default function VendasFinalizarDigital() {
           </CardContent>
         </Card>
 
-        {/* Garantia Extendida - Alinhado com VendasNova */}
-        {itens.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Garantia Extendida
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-4 text-muted-foreground">
-                <p className="text-sm">Planos de garantia extendida serão configurados na tela de Nova Venda quando disponíveis para o modelo selecionado.</p>
+        {/* Adesão da Garantia Extendida */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Star className="h-5 w-5" />
+                Adesão da Garantia Extendida
+              </span>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowGarantiaExtendidaModal(true)} 
+                disabled={itens.length === 0}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Incluir Garantia Extendida
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {garantiaExtendida ? (
+              <div className="p-4 bg-blue-100 dark:bg-blue-950/30 rounded-lg">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-blue-900 dark:text-blue-100">Plano {garantiaExtendida.planoNome}</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      {garantiaExtendida.meses} meses - Vigência: {format(new Date(garantiaExtendida.dataInicio), 'dd/MM/yyyy')} a {format(new Date(garantiaExtendida.dataFim), 'dd/MM/yyyy')}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      * Inicia após o término da garantia padrão de 12 meses
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-xl font-bold text-blue-600">{formatCurrency(garantiaExtendida.valor)}</span>
+                    <Button variant="ghost" size="icon" onClick={() => setGarantiaExtendida(null)}>
+                      <X className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
+                    Documento Físico
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <input
+                      type="file"
+                      id="arquivo-garantia-digital"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setArquivoGarantia(file);
+                          const url = URL.createObjectURL(file);
+                          setArquivoGarantiaUrl(url);
+                          toast.success(`Arquivo ${file.name} anexado`);
+                        }
+                      }}
+                      className="hidden"
+                    />
+                    <label 
+                      htmlFor="arquivo-garantia-digital"
+                      className="cursor-pointer inline-flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Adicionar Ficheiro
+                    </label>
+                    
+                    {arquivoGarantia && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-blue-700 dark:text-blue-300">{arquivoGarantia.name}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => window.open(arquivoGarantiaUrl, '_blank')}
+                          title="Visualizar arquivo"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            setArquivoGarantia(null);
+                            setArquivoGarantiaUrl('');
+                          }}
+                          title="Remover arquivo"
+                        >
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Pagamentos - Usando PagamentoQuadro */}
-        <PagamentoQuadro
-          valorTotalProdutos={total}
-          custoTotalProdutos={valorCustoTotal}
-          lojaVendaId={lojaVenda}
-          onPagamentosChange={setPagamentos}
-          pagamentosIniciais={pagamentos}
-        />
+            ) : (
+              <div className="text-center py-4 text-muted-foreground">
+                Nenhuma garantia extendida adicionada. Clique em "Incluir Garantia Extendida" para adicionar.
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Retirada e Logística */}
         <Card>
@@ -1243,12 +1749,21 @@ export default function VendasFinalizarDigital() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className={`grid gap-4 ${tipoRetirada === 'Entrega' ? 'grid-cols-1 md:grid-cols-5' : 'grid-cols-1 md:grid-cols-2'}`}>
               <div>
                 <label className="text-sm font-medium">Tipo de Retirada</label>
                 <Select 
                   value={tipoRetirada} 
-                  onValueChange={(v) => setTipoRetirada(v as any)}
+                  onValueChange={(v) => {
+                    setTipoRetirada(v as any);
+                    if (v !== 'Entrega') {
+                      setTaxaEntrega(0);
+                      setLocalEntregaId('');
+                      setLocalEntregaNome('');
+                      setValorRecomendadoEntrega(0);
+                      setMotoboyId('');
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -1262,32 +1777,129 @@ export default function VendasFinalizarDigital() {
               </div>
               
               {tipoRetirada === 'Entrega' && (
-                <div>
-                  <label className="text-sm font-medium">Taxa de Entrega</label>
+                <>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                    <Input 
-                      type="text"
-                      value={taxaEntrega.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <label className="text-sm font-medium">Local de Entrega *</label>
+                    <Input
+                      value={localEntregaNome || buscaLocalEntrega}
                       onChange={(e) => {
-                        const value = e.target.value.replace(/\D/g, '');
-                        setTaxaEntrega(Number(value) / 100);
+                        setBuscaLocalEntrega(e.target.value);
+                        setLocalEntregaNome('');
+                        setLocalEntregaId('');
+                        setValorRecomendadoEntrega(0);
+                        setShowLocaisEntrega(true);
                       }}
-                      className="pl-10"
+                      onFocus={() => setShowLocaisEntrega(true)}
+                      placeholder="Digite para buscar local..."
                     />
+                    {showLocaisEntrega && (buscaLocalEntrega || !localEntregaNome) && (
+                      <div className="absolute z-50 w-full mt-1 bg-card border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        {taxasEntrega
+                          .filter(t => t.local.toLowerCase().includes((buscaLocalEntrega || '').toLowerCase()))
+                          .map(taxa => (
+                            <div
+                              key={taxa.id}
+                              className="px-3 py-2 hover:bg-muted cursor-pointer flex justify-between items-center"
+                              onClick={() => {
+                                setLocalEntregaId(taxa.id);
+                                setLocalEntregaNome(taxa.local);
+                                setValorRecomendadoEntrega(taxa.valor);
+                                setTaxaEntrega(taxa.valor);
+                                setBuscaLocalEntrega('');
+                                setShowLocaisEntrega(false);
+                              }}
+                            >
+                              <span>{taxa.local}</span>
+                              <span className="text-sm text-muted-foreground">{formatCurrency(taxa.valor)}</span>
+                            </div>
+                          ))}
+                        {taxasEntrega.filter(t => t.local.toLowerCase().includes((buscaLocalEntrega || '').toLowerCase())).length === 0 && (
+                          <div className="px-3 py-2 text-muted-foreground text-sm">
+                            Nenhum local encontrado
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Valor Recom.</label>
+                    <div className="h-10 flex items-center px-3 bg-muted rounded-md text-sm font-medium text-muted-foreground">
+                      {valorRecomendadoEntrega > 0 ? formatCurrency(valorRecomendadoEntrega) : '-'}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Valor Entrega *</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
+                      <Input 
+                        type="text"
+                        value={taxaEntrega.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          setTaxaEntrega(Number(value) / 100);
+                        }}
+                        className={`pl-10 ${taxaEntrega < valorRecomendadoEntrega && valorRecomendadoEntrega > 0 ? 'border-destructive text-destructive' : ''}`}
+                        placeholder="0,00"
+                      />
+                    </div>
+                    {taxaEntrega < valorRecomendadoEntrega && valorRecomendadoEntrega > 0 && (
+                      <div className="flex items-center gap-1 mt-1 text-xs text-destructive">
+                        <AlertTriangle className="h-3 w-3" />
+                        <span>-{formatCurrency(valorRecomendadoEntrega - taxaEntrega)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className={`text-sm font-medium ${!motoboyId ? 'text-destructive' : ''}`}>
+                      Motoboy *
+                    </label>
+                    <Select value={motoboyId} onValueChange={setMotoboyId}>
+                      <SelectTrigger className={!motoboyId ? 'border-destructive' : ''}>
+                        <SelectValue placeholder="Selecione o motoboy" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {motoboys.map(motoboy => {
+                          const lojaNome = obterNomeLoja(motoboy.loja_id);
+                          return (
+                            <SelectItem key={motoboy.id} value={motoboy.id}>
+                              {motoboy.nome} - {lojaNome}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
               )}
               
-              <div className="md:col-span-3">
-                <label className="text-sm font-medium">Observações</label>
-                <Textarea 
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  placeholder="Observações sobre a venda..."
-                  rows={3}
-                />
-              </div>
+              {tipoRetirada === 'Retirada em Outra Loja' && (
+                <div>
+                  <label className="text-sm font-medium">Loja de Retirada</label>
+                  <Select value={localRetirada} onValueChange={setLocalRetirada}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a loja" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lojas.filter(l => l.ativa).map(loja => (
+                        <SelectItem key={loja.id} value={loja.id}>{loja.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+            
+            <div className="mt-4">
+              <label className="text-sm font-medium">Observações</label>
+              <Textarea 
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+                placeholder="Observações adicionais..."
+                rows={3}
+              />
             </div>
           </CardContent>
         </Card>
@@ -1317,15 +1929,55 @@ export default function VendasFinalizarDigital() {
           </CardContent>
         </Card>
 
+        {/* Pagamentos - Bloqueado em Downgrade */}
+        {hasValidDowngrade ? (
+          <Card className="border-2 border-muted opacity-60">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                <CreditCard className="h-5 w-5" />
+                Pagamentos
+                <Badge variant="outline" className="ml-2">Bloqueado - Downgrade</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="font-medium">Quadro de pagamentos bloqueado</p>
+                <p className="text-sm mt-2">
+                  Em operações de Downgrade, não há pagamento do cliente. 
+                  O valor de <span className="font-bold text-destructive">{formatCurrency(saldoDevolver)}</span> será 
+                  devolvido ao cliente via PIX após aprovação do Financeiro.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <PagamentoQuadro
+            valorTotalProdutos={total}
+            custoTotalProdutos={valorCustoTotal}
+            lojaVendaId={lojaVenda}
+            onPagamentosChange={setPagamentos}
+            pagamentosIniciais={pagamentos}
+          />
+        )}
+
         {/* Resumo */}
-        <Card className={isPrejuizo ? 'border-destructive bg-destructive/5' : ''}>
+        <Card className={`border-2 ${
+          hasValidDowngrade ? 'border-orange-500' : isPrejuizo ? 'border-destructive' : 'border-primary'
+        }`}>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
                 Resumo
+                {hasValidDowngrade && (
+                  <Badge className="bg-orange-500 text-white ml-2">
+                    <ArrowLeftRight className="h-3 w-3 mr-1" />
+                    DOWN
+                  </Badge>
+                )}
               </span>
-              {isPrejuizo && (
+              {isPrejuizo && !hasValidDowngrade && (
                 <Badge variant="destructive" className="text-lg px-4 py-1">
                   <AlertTriangle className="h-4 w-4 mr-2" />
                   PREJUÍZO
@@ -1335,23 +1987,31 @@ export default function VendasFinalizarDigital() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Subtotal Itens</p>
+              <div className="p-2 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">Aparelhos</p>
                 <p className="text-xl font-bold">{formatCurrency(subtotal)}</p>
               </div>
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Subtotal Acessórios</p>
-                <p className="text-xl font-bold">{formatCurrency(totalAcessorios)}</p>
-              </div>
-              <div className="p-3 bg-green-100 dark:bg-green-950/30 rounded-lg">
-                <p className="text-sm text-muted-foreground">Base de Troca</p>
+              {totalAcessorios > 0 && (
+                <div className="p-2 bg-blue-100 dark:bg-blue-950/30 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Acessórios</p>
+                  <p className="text-xl font-bold text-blue-600">{formatCurrency(totalAcessorios)}</p>
+                </div>
+              )}
+              {valorGarantiaExtendida > 0 && (
+                <div className="p-2 bg-blue-100 dark:bg-blue-950/30 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Garantia Ext.</p>
+                  <p className="text-xl font-bold text-blue-600">{formatCurrency(valorGarantiaExtendida)}</p>
+                </div>
+              )}
+              <div className="p-2 bg-green-100 dark:bg-green-950/30 rounded-lg">
+                <p className="text-sm text-muted-foreground">Trade-in</p>
                 <p className="text-xl font-bold text-green-600">-{formatCurrency(totalTradeIn)}</p>
               </div>
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Taxa Entrega</p>
+              <div className="p-2 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">Entrega</p>
                 <p className="text-xl font-bold">{formatCurrency(taxaEntrega)}</p>
               </div>
-              <div className="p-3 bg-primary/10 rounded-lg">
+              <div className="p-2 bg-primary/10 rounded-lg col-span-2 md:col-span-1">
                 <p className="text-sm text-muted-foreground">Total da Venda</p>
                 <p className="text-2xl font-bold text-primary">{formatCurrency(total)}</p>
               </div>
@@ -1364,16 +2024,22 @@ export default function VendasFinalizarDigital() {
                 <p className="text-sm text-muted-foreground">Custo Total</p>
                 <p className="text-lg font-medium">{formatCurrency(valorCustoTotal)}</p>
               </div>
-              <div className={`p-3 rounded-lg ${isPrejuizo ? 'bg-destructive/20' : 'bg-green-100 dark:bg-green-950/30'}`}>
-                <p className="text-sm text-muted-foreground">{isPrejuizo ? 'Prejuízo' : 'Lucro'} Projetado</p>
-                <p className={`text-lg font-bold ${isPrejuizo ? 'text-destructive' : 'text-green-600'}`}>
-                  {formatCurrency(lucroProjetado)}
+              <div className={`p-3 rounded-lg ${
+                hasValidDowngrade ? 'bg-destructive/20' : isPrejuizo ? 'bg-destructive/20' : 'bg-green-100 dark:bg-green-950/30'
+              }`}>
+                <p className="text-sm text-muted-foreground">
+                  {hasValidDowngrade ? 'Devolver' : (isPrejuizo ? 'Prejuízo' : 'Lucro')} Projetado
+                </p>
+                <p className={`text-lg font-bold ${
+                  hasValidDowngrade || isPrejuizo ? 'text-destructive' : 'text-green-600'
+                }`}>
+                  {hasValidDowngrade ? formatCurrency(saldoDevolver) : formatCurrency(lucroProjetado)}
                 </p>
               </div>
-              <div className={`p-3 rounded-lg ${isPrejuizo ? 'bg-destructive/20' : 'bg-muted'}`}>
+              <div className={`p-3 rounded-lg ${hasValidDowngrade || isPrejuizo ? 'bg-destructive/20' : 'bg-muted'}`}>
                 <p className="text-sm text-muted-foreground">Margem</p>
-                <p className={`text-lg font-medium ${isPrejuizo ? 'text-destructive' : ''}`}>
-                  {margemProjetada.toFixed(1)}%
+                <p className={`text-lg font-medium ${(hasValidDowngrade || isPrejuizo) ? 'text-destructive' : ''}`}>
+                  {hasValidDowngrade ? '-' : `${margemProjetada.toFixed(1)}%`}
                 </p>
               </div>
               <div className="p-3 bg-blue-100 dark:bg-blue-950/30 rounded-lg">
@@ -1381,6 +2047,68 @@ export default function VendasFinalizarDigital() {
                 <p className="text-lg font-medium text-blue-600">{formatCurrency(totalPagamentos)}</p>
               </div>
             </div>
+            
+            {/* Comissão do Vendedor */}
+            {venda.responsavelVendaId && lucroProjetado > 0 && (
+              <div className="mt-4 p-3 bg-orange-100 dark:bg-orange-950/30 rounded-lg flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-muted-foreground">Comissão do Vendedor</p>
+                  <p className="text-xs text-muted-foreground">
+                    ({getComissaoColaborador(venda.responsavelVendaId).comissao}% sobre o lucro)
+                  </p>
+                </div>
+                <p className="text-lg font-bold text-orange-600">
+                  {formatCurrency(calcularComissaoVenda(venda.responsavelVendaId, lucroProjetado))}
+                </p>
+              </div>
+            )}
+            
+            {/* Prejuízo em Acessórios */}
+            {prejuizoAcessorios > 0 && (
+              <div className="mt-4 p-3 bg-destructive/20 rounded-lg">
+                <p className="text-sm text-muted-foreground">Prejuízo em Acessórios</p>
+                <p className="text-lg font-bold text-destructive">-{formatCurrency(prejuizoAcessorios)}</p>
+              </div>
+            )}
+
+            {/* Card de informação quando há Sinal */}
+            {temPagamentoSinal && (
+              <div className="mt-4 p-4 bg-red-100 dark:bg-red-900/30 rounded-lg border border-red-200 dark:border-red-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                  <span className="font-medium text-red-700 dark:text-red-300">Venda com Sinal</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Valor do Sinal</p>
+                    <p className="font-bold text-red-600">{formatCurrency(valorSinal)}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Valor Pendente</p>
+                    <p className="font-bold text-red-600">{formatCurrency(valorPendenteSinal)}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-2">
+                  Os produtos serão bloqueados até o pagamento do valor restante.
+                </p>
+              </div>
+            )}
+            
+            {/* PIX a Devolver - Downgrade */}
+            {hasValidDowngrade && (
+              <div className="mt-4 p-4 bg-destructive/10 rounded-lg border-2 border-destructive">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    <span className="font-bold text-destructive">PIX a Devolver</span>
+                  </div>
+                  <span className="text-2xl font-bold text-destructive">{formatCurrency(saldoDevolver)}</span>
+                </div>
+                <p className="text-xs text-destructive/80 mt-2">
+                  Valor será pago ao cliente via PIX após aprovação do Gestor e execução pelo Financeiro.
+                </p>
+              </div>
+            )}
             
             <Button 
               className="w-full mt-4" 
@@ -1395,26 +2123,84 @@ export default function VendasFinalizarDigital() {
         </Card>
 
         {/* Botões Finais */}
-        <div className="flex gap-4 justify-end">
-          <Button variant="outline" onClick={() => navigate('/vendas/pendentes-digitais')}>
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleRegistrarVenda}
-            disabled={!canSubmit}
-            size="lg"
-          >
-            <Check className="h-4 w-4 mr-2" />
-            Finalizar Venda
-          </Button>
+        <div className="flex flex-col gap-4">
+          {/* Alerta de campos obrigatórios faltando */}
+          {(() => {
+            const camposFaltando: string[] = [];
+            if (!clienteId) camposFaltando.push('Cliente');
+            if (itens.length === 0 && acessoriosVenda.length === 0) camposFaltando.push('Produtos ou Acessórios');
+            if (tipoRetirada === 'Entrega' && !motoboyId) camposFaltando.push('Motoboy');
+            if (tradeInNaoValidado) camposFaltando.push('Trade-in com IMEI não validado');
+            
+            const isDowngradeMode = hasValidDowngrade;
+            const isNormalMode = !temPagamentoSinal && !hasValidDowngrade;
+            
+            if (isNormalMode && valorPendente > 0.01) {
+              camposFaltando.push('Pagamento (valor pendente: ' + formatCurrency(Math.abs(valorPendente) <= 0.01 ? 0 : valorPendente) + ')');
+            }
+            
+            if (isDowngradeMode) {
+              if (tradeIns.length === 0) camposFaltando.push('Trade-in obrigatório para Downgrade');
+              if (itens.length === 0) camposFaltando.push('Produto obrigatório para Downgrade');
+              if (saldoDevolver <= 0) camposFaltando.push('Saldo a devolver deve ser positivo');
+              if (!chavePix.trim()) camposFaltando.push('Chave PIX do cliente');
+            }
+            
+            if (camposFaltando.length > 0) {
+              return (
+                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-destructive">Campos obrigatórios não preenchidos:</p>
+                    <ul className="mt-1 text-muted-foreground list-disc list-inside">
+                      {camposFaltando.map((campo, i) => (
+                        <li key={i}>{campo}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
+          
+          <div className="flex gap-4 justify-end">
+            <Button variant="outline" onClick={() => navigate('/vendas/pendentes-digitais')}>
+              Cancelar
+            </Button>
+            
+            {/* Botão Registrar Downgrade */}
+            {hasValidDowngrade && (
+              <Button 
+                onClick={handleRegistrarVenda}
+                disabled={!canSubmitDowngrade}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                <ArrowLeftRight className="h-4 w-4 mr-2" />
+                Registrar Downgrade
+              </Button>
+            )}
+            
+            {/* Botão Finalizar Venda normal */}
+            {!hasValidDowngrade && (
+              <Button 
+                onClick={handleRegistrarVenda}
+                disabled={!canSubmit}
+                size="lg"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Finalizar Venda
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Modal Buscar Cliente - max-w-5xl igual Nova Venda */}
+      {/* Modal Buscar Cliente */}
       <Dialog open={showClienteModal} onOpenChange={setShowClienteModal}>
         <DialogContent className="max-w-5xl">
           <DialogHeader>
-            <DialogTitle>Buscar Cliente</DialogTitle>
+            <DialogTitle>Selecionar Cliente</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="flex gap-2">
@@ -1424,10 +2210,7 @@ export default function VendasFinalizarDigital() {
                 onChange={(e) => setBuscaCliente(e.target.value)}
                 className="flex-1"
               />
-              <Button variant="outline" onClick={() => {
-                setShowClienteModal(false);
-                setShowNovoClienteModal(true);
-              }}>
+              <Button onClick={() => setShowNovoClienteModal(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Cliente
               </Button>
@@ -1437,46 +2220,49 @@ export default function VendasFinalizarDigital() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Tipo</TableHead>
                     <TableHead>CPF/CNPJ</TableHead>
-                    <TableHead>Telefone</TableHead>
-                    <TableHead>Cidade</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Tipo Pessoa</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Telefone</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {clientesFiltrados.map(cliente => (
-                    <TableRow key={cliente.id} className={cliente.status === 'Inativo' ? 'opacity-50' : ''}>
+                    <TableRow key={cliente.id} className={cliente.status === 'Inativo' ? 'bg-destructive/10' : ''}>
+                      <TableCell>{cliente.cpf}</TableCell>
                       <TableCell className="font-medium">{cliente.nome}</TableCell>
                       <TableCell>
                         <Badge variant={calcularTipoPessoa(cliente.cpf) === 'Pessoa Física' ? 'default' : 'secondary'}>
                           {calcularTipoPessoa(cliente.cpf) === 'Pessoa Física' ? 'PF' : 'PJ'}
                         </Badge>
                       </TableCell>
-                      <TableCell>{cliente.cpf}</TableCell>
-                      <TableCell>{cliente.telefone}</TableCell>
-                      <TableCell>{cliente.cidade || '-'}</TableCell>
                       <TableCell>
-                        <Badge variant={cliente.status === 'Ativo' ? 'default' : 'destructive'}>
-                          {cliente.status}
-                        </Badge>
+                        {cliente.status === 'Inativo' ? (
+                          <Badge variant="destructive">Bloqueado</Badge>
+                        ) : (
+                          <Badge variant="outline">Ativo</Badge>
+                        )}
                       </TableCell>
+                      <TableCell>{cliente.telefone}</TableCell>
                       <TableCell>
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleSelectCliente(cliente)}
-                          disabled={cliente.status === 'Inativo'}
-                        >
-                          Selecionar
-                        </Button>
+                        {cliente.status === 'Inativo' ? (
+                          <span className="text-destructive text-sm font-medium">Bloqueado</span>
+                        ) : (
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleSelectCliente(cliente)}
+                          >
+                            Selecionar
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
                   {clientesFiltrados.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                         Nenhum cliente encontrado.
                       </TableCell>
                     </TableRow>
@@ -1588,17 +2374,40 @@ export default function VendasFinalizarDigital() {
 
       {/* Modal Selecionar Produto */}
       <Dialog open={showProdutoModal} onOpenChange={setShowProdutoModal}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Selecionar Produto</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="flex gap-2">
+          <div className="flex-1 overflow-hidden flex flex-col space-y-4">
+            <div className="flex border-b flex-shrink-0">
+              <button
+                className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                  !showPendentesTab 
+                    ? 'border-primary text-primary' 
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setShowPendentesTab(false)}
+              >
+                Produtos – Estoque
+              </button>
+              <button
+                className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                  showPendentesTab 
+                    ? 'border-primary text-primary' 
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setShowPendentesTab(true)}
+              >
+                Produtos – Pendentes
+              </button>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-2 flex-shrink-0">
               <Input 
                 placeholder="Buscar por IMEI..."
                 value={buscaProduto}
                 onChange={(e) => setBuscaProduto(e.target.value)}
-                className="w-[200px]"
+                className="sm:w-[200px]"
               />
               <Input 
                 placeholder="Buscar por modelo..."
@@ -1607,80 +2416,183 @@ export default function VendasFinalizarDigital() {
                 className="flex-1"
               />
               <Select value={filtroLojaProduto || 'all'} onValueChange={(val) => setFiltroLojaProduto(val === 'all' ? '' : val)}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="sm:w-[200px]">
                   <SelectValue placeholder="Todas as Lojas" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as Lojas</SelectItem>
-                  {lojas.map(loja => (
+                  {lojasTipoLoja.map(loja => (
                     <SelectItem key={loja.id} value={loja.nome}>{loja.nome}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Produto</TableHead>
-                  <TableHead>Condição</TableHead>
-                  <TableHead>IMEI</TableHead>
-                  <TableHead>Qtd</TableHead>
-                  <TableHead className="text-right">Valor Recomendado</TableHead>
-                  <TableHead>Loja</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {produtosFiltrados.map(produto => (
-                  <TableRow key={produto.id} className={produto.quantidade === 0 ? 'opacity-50' : ''}>
-                    <TableCell className="font-mono text-xs">{produto.id}</TableCell>
-                    <TableCell className="font-medium">{produto.modelo}</TableCell>
-                    <TableCell>
-                      <Badge variant={produto.tipo === 'Novo' ? 'default' : 'secondary'}>
-                        {produto.tipo || 'Semi-novo'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{produto.imei}</TableCell>
-                    <TableCell>
-                      {produto.quantidade === 0 ? (
-                        <Badge variant="destructive">Indisponível</Badge>
-                      ) : (
-                        produto.quantidade
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(produto.valorVendaSugerido)}</TableCell>
-                    <TableCell>{produto.loja}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleVerDetalhes(produto)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          size="sm"
-                          disabled={produto.quantidade === 0}
-                          onClick={() => handleAddProduto(produto)}
-                        >
-                          Selecionar
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="flex-1 overflow-y-auto">
+              {!showPendentesTab ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produto</TableHead>
+                      <TableHead>IMEI</TableHead>
+                      <TableHead className="text-right">Valor Rec.</TableHead>
+                      <TableHead>Loja</TableHead>
+                      <TableHead>Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {produtosFiltrados.map(produto => (
+                      <TableRow key={produto.id}>
+                        <TableCell className="font-medium">{produto.modelo}</TableCell>
+                        <TableCell className="font-mono text-sm">{displayIMEI(produto.imei)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(produto.vendaRecomendada || produto.valorVendaSugerido)}</TableCell>
+                        <TableCell>{obterNomeLoja(produto.loja)}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => handleVerDetalhes(produto)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm"
+                              disabled={produto.quantidade === 0}
+                              onClick={() => handleAddProduto(produto)}
+                            >
+                              Selecionar
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {produtosFiltrados.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                          Nenhum produto disponível nesta loja
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    {lojaVenda && produtosOutrasLojas.length > 0 && (
+                      <>
+                        <TableRow className="bg-muted/50">
+                          <TableCell colSpan={5} className="text-center py-2 font-medium text-muted-foreground">
+                            📍 Produtos em outras lojas (apenas visualização)
+                          </TableCell>
+                        </TableRow>
+                        {produtosOutrasLojas.map(produto => (
+                          <TableRow key={produto.id} className="opacity-60 bg-muted/20">
+                            <TableCell className="font-medium">{produto.modelo}</TableCell>
+                            <TableCell className="font-mono text-sm">{displayIMEI(produto.imei)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(produto.vendaRecomendada || produto.valorVendaSugerido)}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+                                {obterNomeLoja(produto.loja)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon"
+                                  onClick={() => handleVerDetalhes(produto)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  size="sm"
+                                  variant="outline"
+                                  disabled
+                                  className="text-muted-foreground"
+                                >
+                                  Outra loja
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </>
+                    )}
+                  </TableBody>
+                </Table>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Produto</TableHead>
+                      <TableHead>IMEI</TableHead>
+                      <TableHead>Origem</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Loja</TableHead>
+                      <TableHead>Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {produtosPendentes.filter(p => {
+                      if (filtroLojaProduto && obterNomeLoja(p.loja) !== filtroLojaProduto) return false;
+                      if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
+                      if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
+                      return true;
+                    }).map(produto => (
+                      <TableRow key={produto.id}>
+                        <TableCell className="font-medium">{produto.modelo}</TableCell>
+                        <TableCell className="font-mono text-sm">{displayIMEI(produto.imei)}</TableCell>
+                        <TableCell>
+                          <Badge variant={produto.origemEntrada === 'Base de Troca' ? 'secondary' : 'outline'}>
+                            {produto.origemEntrada}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="destructive">Bloqueado</Badge>
+                        </TableCell>
+                        <TableCell>{obterNomeLoja(produto.loja)}</TableCell>
+                        <TableCell>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => {
+                              setProdutoDetalhe({
+                                id: produto.id,
+                                imei: produto.imei,
+                                modelo: produto.modelo,
+                                cor: produto.cor,
+                                marca: produto.marca,
+                                tipo: produto.tipo,
+                                quantidade: 0,
+                                valorCusto: produto.valorCusto,
+                                valorVendaSugerido: 0,
+                                saudeBateria: produto.saudeBateria,
+                                loja: produto.loja,
+                                conferidoEstoque: false,
+                                conferidoAssistencia: false
+                              } as any);
+                              setShowDetalheProduto(true);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {produtosPendentes.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          Nenhum produto pendente de conferência
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Modal Base de Troca */}
       <Dialog open={showTradeInModal} onOpenChange={setShowTradeInModal}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Adicionar Item de Troca</DialogTitle>
           </DialogHeader>
@@ -1717,57 +2629,254 @@ export default function VendasFinalizarDigital() {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium">IMEI</label>
-              <Input 
-                value={novoTradeIn.imei || ''}
-                onChange={(e) => {
-                  const formatted = e.target.value.replace(/\D/g, '').slice(0, 15);
-                  let masked = '';
-                  for (let i = 0; i < formatted.length; i++) {
-                    if (i === 2 || i === 8 || i === 14) masked += '-';
-                    masked += formatted[i];
-                  }
-                  setNovoTradeIn({ ...novoTradeIn, imei: masked });
-                }}
-                placeholder="00-000000-000000-0"
-                maxLength={18}
+              <label className="text-sm font-medium">Descrição Detalhada</label>
+              <Textarea 
+                value={novoTradeIn.descricao || ''}
+                onChange={(e) => setNovoTradeIn({ ...novoTradeIn, descricao: e.target.value })}
+                placeholder="Estado do aparelho, condições, etc."
               />
             </div>
-            <div className="flex items-center gap-2">
-              <input 
-                type="checkbox"
-                checked={novoTradeIn.imeiValidado || false}
-                onChange={(e) => setNovoTradeIn({ ...novoTradeIn, imeiValidado: e.target.checked })}
-                className="h-4 w-4"
-              />
-              <label className="text-sm">IMEI Validado</label>
+            <div>
+              <label className="text-sm font-medium">IMEI</label>
+              <div className="flex gap-2">
+                <Input 
+                  value={novoTradeIn.imei || ''}
+                  onChange={(e) => {
+                    const formatted = e.target.value.replace(/\D/g, '').slice(0, 15);
+                    let masked = '';
+                    for (let i = 0; i < formatted.length; i++) {
+                      if (i === 2 || i === 8 || i === 14) masked += '-';
+                      masked += formatted[i];
+                    }
+                    setNovoTradeIn({ ...novoTradeIn, imei: masked });
+                  }}
+                  placeholder="00-000000-000000-0"
+                  maxLength={18}
+                  className="flex-1"
+                />
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  onClick={() => setShowBarcodeScanner(true)}
+                  title="Escanear código de barras"
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium">Valor de Compra Usado *</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
                 <Input
                   type="text"
-                  value={(novoTradeIn.valorCompraUsado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  value={novoTradeIn.valorCompraUsado ? novoTradeIn.valorCompraUsado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''}
                   onChange={(e) => {
                     const value = e.target.value.replace(/\D/g, '');
                     setNovoTradeIn({ ...novoTradeIn, valorCompraUsado: Number(value) / 100 });
                   }}
                   className="pl-10"
+                  placeholder="0,00"
                 />
               </div>
             </div>
-           </div>
-
-            {/* Valores Recomendados para Troca */}
-            <div className="border-t pt-4">
-              <p className="text-sm font-medium mb-2">📊 Valores Recomendados para Troca</p>
-              <ValoresRecomendadosTroca
-                onUsarValor={(valor) => {
-                  setNovoTradeIn({ ...novoTradeIn, valorCompraUsado: valor });
-                }}
-              />
+            
+            {/* Tipo de Entrega */}
+            <div>
+              <label className="text-sm font-medium">Entrega do Aparelho *</label>
+              <Select 
+                value={novoTradeIn.tipoEntrega || ''} 
+                onValueChange={(v) => setNovoTradeIn({ 
+                  ...novoTradeIn, 
+                  tipoEntrega: v as 'Entregue no Ato' | 'Com o Cliente',
+                  termoResponsabilidade: v === 'Entregue no Ato' ? undefined : novoTradeIn.termoResponsabilidade,
+                  fotosAparelho: v === 'Entregue no Ato' ? undefined : novoTradeIn.fotosAparelho
+                })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo de entrega" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Entregue no Ato">Aparelho entregue no ato da Venda</SelectItem>
+                  <SelectItem value="Com o Cliente">Aparelho com o Cliente</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Campos obrigatórios para "Com o Cliente" */}
+            {novoTradeIn.tipoEntrega === 'Com o Cliente' && (
+              <>
+                <Separator />
+                <div className="bg-amber-50 dark:bg-amber-950/20 p-3 rounded-lg border border-amber-200 dark:border-amber-900">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      Quando o aparelho fica com o cliente, é obrigatório anexar o Termo de Responsabilidade e fotos do estado atual. O registro será enviado para "Pendências - Base de Trocas" no Estoque.
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Termo de Responsabilidade */}
+                <div>
+                  <label className="text-sm font-medium">Termo de Responsabilidade *</label>
+                  <div className="mt-2">
+                    {novoTradeIn.termoResponsabilidade ? (
+                      <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg border">
+                        <FileText className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{novoTradeIn.termoResponsabilidade.nome}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(novoTradeIn.termoResponsabilidade.tamanho / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
+                        <Button 
+                          type="button"
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => setNovoTradeIn({ ...novoTradeIn, termoResponsabilidade: undefined })}
+                        >
+                          <X className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast.error('Arquivo muito grande. Máximo de 5MB');
+                              return;
+                            }
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              setNovoTradeIn({
+                                ...novoTradeIn,
+                                termoResponsabilidade: {
+                                  id: `termo-${Date.now()}`,
+                                  nome: file.name,
+                                  tipo: file.type,
+                                  tamanho: file.size,
+                                  dataUrl: reader.result as string
+                                }
+                              });
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                        <div className="flex items-center gap-2 p-3 border-2 border-dashed rounded-lg hover:border-primary transition-colors">
+                          <FileText className="h-5 w-5 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Clique para anexar o termo assinado</span>
+                        </div>
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                {/* Fotos do Aparelho */}
+                <div>
+                  <label className="text-sm font-medium">Fotos do Aparelho *</label>
+                  <div className="mt-2 space-y-3">
+                    {novoTradeIn.fotosAparelho && novoTradeIn.fotosAparelho.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2">
+                        {novoTradeIn.fotosAparelho.map((foto) => (
+                          <div key={foto.id} className="relative group aspect-square">
+                            <img
+                              src={foto.dataUrl}
+                              alt={foto.nome}
+                              className="w-full h-full object-cover rounded-lg border"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => setNovoTradeIn({
+                                ...novoTradeIn,
+                                fotosAparelho: novoTradeIn.fotosAparelho?.filter(f => f.id !== foto.id)
+                              })}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={async (e) => {
+                          const files = e.target.files;
+                          if (!files) return;
+                          
+                          const novasFotos: typeof novoTradeIn.fotosAparelho = [...(novoTradeIn.fotosAparelho || [])];
+                          
+                          for (let i = 0; i < files.length; i++) {
+                            const file = files[i];
+                            if (file.size > 5 * 1024 * 1024) {
+                              toast.error(`${file.name} excede 5MB`);
+                              continue;
+                            }
+                            const dataUrl = await new Promise<string>((resolve) => {
+                              const reader = new FileReader();
+                              reader.onload = () => resolve(reader.result as string);
+                              reader.readAsDataURL(file);
+                            });
+                            novasFotos.push({
+                              id: `foto-${Date.now()}-${i}`,
+                              nome: file.name,
+                              tipo: file.type,
+                              tamanho: file.size,
+                              dataUrl
+                            });
+                          }
+                          
+                          setNovoTradeIn({ ...novoTradeIn, fotosAparelho: novasFotos });
+                        }}
+                      />
+                      <div className="flex items-center gap-2 p-3 border-2 border-dashed rounded-lg hover:border-primary transition-colors">
+                        <Camera className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Clique para adicionar fotos do aparelho</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="imeiValidadoDigital"
+                checked={novoTradeIn.imeiValidado || false}
+                onChange={(e) => setNovoTradeIn({ ...novoTradeIn, imeiValidado: e.target.checked })}
+                className="h-4 w-4"
+              />
+              <label htmlFor="imeiValidadoDigital" className="text-sm font-medium">IMEI Validado</label>
+            </div>
+            {!novoTradeIn.imeiValidado && (
+              <div className="bg-destructive/10 p-3 rounded-lg flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                <span className="text-sm">IMEI não validado bloqueia o registro da venda</span>
+              </div>
+            )}
+          </div>
+
+          {/* Valores Recomendados para Troca */}
+          <div className="border-t pt-4">
+            <p className="text-sm font-medium mb-2">📊 Valores Recomendados para Troca</p>
+            <ValoresRecomendadosTroca
+              onUsarValor={(valor) => {
+                setNovoTradeIn({ ...novoTradeIn, valorCompraUsado: valor });
+              }}
+            />
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTradeInModal(false)}>Cancelar</Button>
             <Button onClick={handleAddTradeIn}>Adicionar</Button>
@@ -1775,6 +2884,22 @@ export default function VendasFinalizarDigital() {
         </DialogContent>
       </Dialog>
 
+      {/* Modal Barcode Scanner */}
+      <BarcodeScanner
+        open={showBarcodeScanner}
+        onScan={(imei) => {
+          let masked = '';
+          for (let i = 0; i < imei.length && i < 15; i++) {
+            if (i === 2 || i === 8 || i === 14) masked += '-';
+            masked += imei[i];
+          }
+          setNovoTradeIn({ ...novoTradeIn, imei: masked });
+          setShowBarcodeScanner(false);
+        }}
+        onClose={() => setShowBarcodeScanner(false)}
+      />
+
+      {/* Modal Confirmação */}
       <Dialog open={showConfirmacaoModal} onOpenChange={setShowConfirmacaoModal}>
         <DialogContent>
           <DialogHeader>
@@ -1782,31 +2907,37 @@ export default function VendasFinalizarDigital() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-muted-foreground">
-              Você está prestes a finalizar a venda digital <strong>{venda?.id}</strong>.
+              Confirme os dados abaixo para finalizar a venda digital.
             </p>
-            <div className="p-4 bg-muted rounded-lg space-y-2">
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span>ID Venda:</span>
+                <span className="font-mono font-bold">{venda.id}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Responsável:</span>
+                <span className="font-medium">{venda.responsavelVendaNome}</span>
+              </div>
               <div className="flex justify-between">
                 <span>Cliente:</span>
                 <span className="font-medium">{clienteNome}</span>
               </div>
+              <Separator />
               <div className="flex justify-between">
-                <span>Total:</span>
-                <span className="font-bold text-primary">{formatCurrency(total)}</span>
+                <span>Total da Venda:</span>
+                <span className="font-bold">{formatCurrency(total)}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Itens:</span>
-                <span>{itens.length}</span>
+              <div className="flex justify-between text-green-600">
+                <span>Lucro:</span>
+                <span className="font-medium">{formatCurrency(lucroProjetado)}</span>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Esta ação irá subtrair os produtos do estoque e enviar a venda para conferência financeira.
-            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowConfirmacaoModal(false)}>Cancelar</Button>
             <Button onClick={handleConfirmarVenda}>
               <Check className="h-4 w-4 mr-2" />
-              Confirmar Finalização
+              Confirmar Venda
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1814,136 +2945,208 @@ export default function VendasFinalizarDigital() {
 
       {/* Modal Nota Fiscal */}
       <Dialog open={showNotaModal} onOpenChange={setShowNotaModal}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Nota Fiscal Simplificada</DialogTitle>
           </DialogHeader>
-          <div className="text-center space-y-4">
-            {qrCodeUrl && <img src={qrCodeUrl} alt="QR Code" className="mx-auto" />}
-            <p className="text-sm text-muted-foreground">
-              Escaneie o QR Code para verificar a nota fiscal
-            </p>
+          <div className="space-y-4 p-4 border rounded-lg bg-background">
+            <div className="text-center border-b pb-4">
+              <h2 className="text-xl font-bold">Thiago Imports</h2>
+              <p className="text-sm text-muted-foreground">CNPJ: 12.345.678/0001-01</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-muted-foreground">Nº da Venda:</span>
+                <span className="ml-2 font-medium">{venda.id}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Data:</span>
+                <span className="ml-2 font-medium">{new Date().toLocaleString('pt-BR')}</span>
+              </div>
+              <div className="col-span-2">
+                <span className="text-muted-foreground">Cliente:</span>
+                <span className="ml-2 font-medium">{clienteNome} - CPF: {clienteCpf}</span>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div>
+              <h3 className="font-medium mb-2">Itens:</h3>
+              {itens.map(item => (
+                <div key={item.id} className="flex justify-between text-sm py-1">
+                  <span>{item.produto}</span>
+                  <span>{formatCurrency(item.valorVenda)}</span>
+                </div>
+              ))}
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-1">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span>{formatCurrency(subtotal)}</span>
+              </div>
+              {totalTradeIn > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Base de Troca:</span>
+                  <span>-{formatCurrency(totalTradeIn)}</span>
+                </div>
+              )}
+              {taxaEntrega > 0 && (
+                <div className="flex justify-between">
+                  <span>Taxa de Entrega:</span>
+                  <span>{formatCurrency(taxaEntrega)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-lg font-bold pt-2 border-t">
+                <span>TOTAL:</span>
+                <span>{formatCurrency(total)}</span>
+              </div>
+            </div>
+            
+            {qrCodeUrl && (
+              <div className="text-center pt-4">
+                <img src={qrCodeUrl} alt="QR Code" className="mx-auto w-32 h-32" />
+                <p className="text-xs text-muted-foreground mt-2">Escaneie para verificar</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button onClick={() => setShowNotaModal(false)}>Fechar</Button>
+            <Button variant="outline" onClick={() => setShowNotaModal(false)}>Fechar</Button>
+            <Button onClick={() => window.print()}>Imprimir</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modal Detalhes Produto */}
+      {/* Modal Detalhes do Produto */}
       <Dialog open={showDetalheProduto} onOpenChange={setShowDetalheProduto}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Detalhes do Produto</DialogTitle>
           </DialogHeader>
           {produtoDetalhe && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Modelo</p>
+                  <label className="text-sm text-muted-foreground">Modelo</label>
                   <p className="font-medium">{produtoDetalhe.modelo}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Marca</p>
-                  <p className="font-medium">{produtoDetalhe.marca}</p>
+                  <label className="text-sm text-muted-foreground">IMEI</label>
+                  <p className="font-medium">{displayIMEI(produtoDetalhe.imei)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">IMEI</p>
-                  <p className="font-medium font-mono">{produtoDetalhe.imei}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Cor</p>
+                  <label className="text-sm text-muted-foreground">Cor</label>
                   <p className="font-medium">{produtoDetalhe.cor}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Loja</p>
-                  <p className="font-medium">{produtoDetalhe.loja}</p>
+                  <label className="text-sm text-muted-foreground">Condição</label>
+                  <p className="font-medium">{produtoDetalhe.tipo}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Saúde Bateria</p>
-                  <p className="font-medium">{produtoDetalhe.saudeBateria}%</p>
+                  <label className="text-sm text-muted-foreground">Saúde da Bateria</label>
+                  <Badge variant={produtoDetalhe.saudeBateria >= 85 ? "default" : "destructive"}>
+                    {produtoDetalhe.saudeBateria}%
+                  </Badge>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Valor Custo</p>
+                  <label className="text-sm text-muted-foreground">Loja</label>
+                  <p className="font-medium">{obterNomeLoja(produtoDetalhe.loja)}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Valor de Custo</label>
                   <p className="font-medium">{formatCurrency(produtoDetalhe.valorCusto)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Valor Venda Sugerido</p>
+                  <label className="text-sm text-muted-foreground">Valor Sugerido</label>
                   <p className="font-medium">{formatCurrency(produtoDetalhe.valorVendaSugerido)}</p>
                 </div>
               </div>
+              {produtoDetalhe.pareceres && (
+                <div>
+                  <label className="text-sm text-muted-foreground">Pareceres</label>
+                  <p className="text-sm">{produtoDetalhe.pareceres}</p>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => setShowDetalheProduto(false)}>Fechar</Button>
+            <Button variant="outline" onClick={() => setShowDetalheProduto(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Modal Selecionar Acessórios */}
       <Dialog open={showAcessorioModal} onOpenChange={setShowAcessorioModal}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Selecionar Acessórios</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="flex-1 overflow-hidden flex flex-col space-y-4">
             <Input 
               placeholder="Buscar acessório..."
               value={buscaAcessorio}
               onChange={(e) => setBuscaAcessorio(e.target.value)}
+              className="flex-shrink-0"
             />
             
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead className="text-center">Qtd Disp.</TableHead>
-                  <TableHead className="text-right">Valor Custo</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {acessoriosFiltrados.map(acessorio => (
-                  <TableRow key={acessorio.id} className={acessorio.quantidade < 10 ? 'bg-destructive/10' : ''}>
-                    <TableCell className="font-mono text-sm">{acessorio.id}</TableCell>
-                    <TableCell className="font-medium">{acessorio.descricao}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{acessorio.categoria}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant={acessorio.quantidade < 10 ? "destructive" : "secondary"}>
-                        {acessorio.quantidade}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(acessorio.valorCusto)}</TableCell>
-                    <TableCell>
-                      <Button 
-                        size="sm" 
-                        onClick={() => handleAddAcessorio(acessorio)}
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Adicionar
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {acessoriosFiltrados.length === 0 && (
+            <div className="flex-1 overflow-y-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      Nenhum acessório encontrado.
-                    </TableCell>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead className="text-center">Qtd Disp.</TableHead>
+                    <TableHead className="text-right">Valor Custo</TableHead>
+                    <TableHead></TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {acessoriosFiltrados.map(acessorio => (
+                    <TableRow key={acessorio.id} className={acessorio.quantidade < 10 ? 'bg-destructive/10' : ''}>
+                      <TableCell className="font-mono text-sm">{acessorio.id}</TableCell>
+                      <TableCell className="font-medium">{acessorio.descricao}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{acessorio.categoria}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={acessorio.quantidade < 10 ? "destructive" : "secondary"}>
+                          {acessorio.quantidade}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">{formatCurrency(acessorio.valorCusto)}</TableCell>
+                      <TableCell>
+                        <Button 
+                          size="sm" 
+                          onClick={() => handleAddAcessorio(acessorio)}
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          Adicionar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {acessoriosFiltrados.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Nenhum acessório encontrado.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0">
             <Button variant="outline" onClick={() => setShowAcessorioModal(false)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Modal Rascunho */}
       <Dialog open={showDraftModal} onOpenChange={setShowDraftModal}>
         <DialogContent>
@@ -1959,6 +3162,114 @@ export default function VendasFinalizarDigital() {
           <DialogFooter>
             <Button variant="outline" onClick={handleDiscardDraft}>Descartar</Button>
             <Button onClick={handleLoadDraft}>Carregar Rascunho</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Garantia Extendida */}
+      <Dialog open={showGarantiaExtendidaModal} onOpenChange={setShowGarantiaExtendidaModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Selecionar Garantia Extendida</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {planosExtendidaDisponiveis.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                Nenhum plano de garantia extendida disponível para este modelo.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {planosExtendidaDisponiveis.map(plano => {
+                  const vigencia = calcularVigenciaExtendida(plano);
+                  return (
+                    <div 
+                      key={plano.id} 
+                      className="p-4 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => handleAddGarantiaExtendida(plano)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-bold text-lg">{plano.nome}</p>
+                          <p className="text-sm text-muted-foreground">+{plano.meses} meses de garantia</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Vigência: {format(new Date(vigencia.dataInicio), 'dd/MM/yyyy')} a {format(new Date(vigencia.dataFim), 'dd/MM/yyyy')}
+                          </p>
+                        </div>
+                        <span className="text-xl font-bold text-primary">{formatCurrency(plano.valor)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground text-center">
+              * A garantia extendida sempre inicia após o término da garantia padrão de 12 meses.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowGarantiaExtendidaModal(false)}>Cancelar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Preview Anexos Trade-In */}
+      <Dialog open={previewAnexo.aberto} onOpenChange={(open) => 
+        setPreviewAnexo({ ...previewAnexo, aberto: open })}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {previewAnexo.tipo === 'termo' 
+                ? 'Termo de Responsabilidade' 
+                : `Fotos do Aparelho (${previewAnexo.trade?.fotosAparelho?.length || 0})`}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {previewAnexo.tipo === 'termo' && previewAnexo.trade?.termoResponsabilidade && (
+            <div className="space-y-4">
+              {previewAnexo.trade.termoResponsabilidade.tipo.includes('image') ? (
+                <img 
+                  src={previewAnexo.trade.termoResponsabilidade.dataUrl} 
+                  alt="Termo de Responsabilidade"
+                  className="max-h-[60vh] object-contain mx-auto rounded" 
+                />
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="h-16 w-16 mx-auto text-muted-foreground" />
+                  <p className="mt-2 font-medium">{previewAnexo.trade.termoResponsabilidade.nome}</p>
+                  <Button 
+                    className="mt-4"
+                    onClick={() => {
+                      const link = document.createElement('a');
+                      link.href = previewAnexo.trade?.termoResponsabilidade?.dataUrl || '';
+                      link.download = previewAnexo.trade?.termoResponsabilidade?.nome || 'termo.pdf';
+                      link.click();
+                    }}
+                  >
+                    Baixar Documento
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {previewAnexo.tipo === 'fotos' && previewAnexo.trade?.fotosAparelho && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {previewAnexo.trade.fotosAparelho.map((foto) => (
+                <img 
+                  key={foto.id} 
+                  src={foto.dataUrl} 
+                  alt={foto.nome}
+                  className="w-full aspect-square object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => window.open(foto.dataUrl, '_blank')} 
+                />
+              ))}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewAnexo({ aberto: false, tipo: 'termo', trade: null })}>
+              Fechar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
