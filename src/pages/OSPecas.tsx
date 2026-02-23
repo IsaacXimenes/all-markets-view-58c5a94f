@@ -14,7 +14,7 @@ import { getProdutosCadastro } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { getPecasCadastro } from '@/pages/CadastrosPecas';
-import { Download, Eye, Plus, Package, History } from 'lucide-react';
+import { Download, Eye, Plus, Package, History, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
 
@@ -277,6 +277,15 @@ export default function OSPecas() {
               />
             </div>
             <div className="flex items-end gap-2 md:col-span-2">
+              <Button variant="ghost" size="icon" onClick={() => {
+                setFiltroData('');
+                setFiltroLoja('todos');
+                setFiltroDescricao('');
+                setFiltroOrigem('todos');
+                setFiltroModelo('');
+              }} title="Limpar Filtros">
+                <XCircle className="h-4 w-4" />
+              </Button>
               <Button variant="outline" onClick={handleExport}>
                 <Download className="h-4 w-4" />
               </Button>

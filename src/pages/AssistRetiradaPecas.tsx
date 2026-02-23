@@ -28,7 +28,8 @@ import {
   XCircle,
   Package,
   TrendingDown,
-  Edit
+  Edit,
+  X
 } from 'lucide-react';
 import { ResponsiveCardGrid, ResponsiveFilterGrid } from '@/components/ui/ResponsiveContainers';
 
@@ -263,7 +264,14 @@ export default function AssistRetiradaPecas() {
                 />
               </div>
 
-              <div className="flex items-end">
+              <div className="flex items-end gap-2">
+                <Button variant="ghost" size="icon" onClick={() => {
+                  setFiltroStatus('todos');
+                  setFiltroLoja('todas');
+                  setFiltroImei('');
+                }} title="Limpar Filtros">
+                  <X className="h-4 w-4" />
+                </Button>
                 <Button variant="outline" onClick={handleExport}>
                   <Download className="h-4 w-4 mr-2" />
                   Exportar CSV
