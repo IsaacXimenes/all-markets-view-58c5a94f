@@ -8,7 +8,7 @@ import { buscarValoresRecomendados, ValorRecomendadoTroca } from '@/utils/valore
 import { formatCurrency } from '@/utils/formatUtils';
 
 interface ValoresRecomendadosTrocaProps {
-  onUsarValor?: (valor: number, modelo: string) => void;
+  onUsarValor?: (valor: number, modelo: string, condicao: 'Novo' | 'Semi-novo') => void;
 }
 
 export function ValoresRecomendadosTroca({ onUsarValor }: ValoresRecomendadosTrocaProps) {
@@ -65,7 +65,7 @@ export function ValoresRecomendadosTroca({ onUsarValor }: ValoresRecomendadosTro
                         size="sm"
                         variant="ghost"
                         className="h-7 text-xs"
-                        onClick={() => onUsarValor(item.valorSugerido, item.modelo)}
+                        onClick={() => onUsarValor(item.valorSugerido, item.modelo, item.condicao as 'Novo' | 'Semi-novo')}
                       >
                         <Check className="h-3 w-3 mr-1" />
                         Usar

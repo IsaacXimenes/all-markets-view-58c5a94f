@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, Printer, ShoppingCart, User, Package, CreditCard, Truck, Clock, DollarSign, TrendingUp, AlertTriangle, Shield, History, Pencil, Wrench, FileText, Image, Download, Check, X } from 'lucide-react';
+import { aprovarLancamento } from '@/utils/fluxoVendasApi';
 import { getVendaById, formatCurrency, Venda, ItemTradeIn, AnexoTradeIn } from '@/utils/vendasApi';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { ComprovantePreview, ComprovanteBadgeSemAnexo } from '@/components/vendas/ComprovantePreview';
@@ -16,10 +17,13 @@ import { getGarantiasByVendaId, calcularStatusExpiracao } from '@/utils/garantia
 import { calcularComissaoVenda, getComissaoColaborador } from '@/utils/comissoesApi';
 import { format, addMonths } from 'date-fns';
 import QRCode from 'qrcode';
+import { toast } from 'sonner';
 
 export default function VendaDetalhes() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const modoConferencia = (location.state as any)?.modoConferencia === true;
   const { obterNomeLoja, obterNomeColaborador } = useCadastroStore();
   const [venda, setVenda] = useState<Venda | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
@@ -113,22 +117,59 @@ export default function VendaDetalhes() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>
-          {isFiadoVenda ? (
+          {modoConferencia && (
+            <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 text-sm px-3 py-1">
+              Modo Conferência
+            </Badge>
+          )}
+          {!modoConferencia && isFiadoVenda ? (
             <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 text-sm px-3 py-1">
               <CreditCard className="h-4 w-4 mr-1" />
               Fiado
             </Badge>
-          ) : (
+          ) : !modoConferencia ? (
             <Badge variant="outline" className="text-sm px-3 py-1">
               Normal
             </Badge>
-          )}
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleImprimir}>
-            <Printer className="h-4 w-4 mr-2" />
-            Imprimir Recibo
-          </Button>
+          {modoConferencia && (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate(-1)}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancelar
+              </Button>
+              <Button 
+                className="bg-green-600 hover:bg-green-700"
+                onClick={() => {
+                  const resultado = aprovarLancamento(
+                    venda.id,
+                    'COL-007',
+                    'Carlos Lançador'
+                  );
+                  if (resultado) {
+                    toast.success(`Lançamento da venda ${venda.id} aprovado! Enviado para Conferência do Gestor.`);
+                    navigate(-1);
+                  } else {
+                    toast.error('Erro ao aprovar lançamento.');
+                  }
+                }}
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Confirmar Conferência
+              </Button>
+            </>
+          )}
+          {!modoConferencia && (
+            <Button onClick={handleImprimir}>
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimir Recibo
+            </Button>
+          )}
         </div>
       </div>
 

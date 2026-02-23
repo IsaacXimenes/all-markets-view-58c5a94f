@@ -32,7 +32,7 @@ import {
   DialogDescription
 } from '@/components/ui/dialog';
 import { Eye, Download, Filter, X, Pencil, Check, XCircle, AlertTriangle, Clock, Undo2, CreditCard, Banknote, Smartphone, Wallet, ChevronRight, Lock, MessageSquare, ArrowLeftRight, Shield, Package } from 'lucide-react';
-import { ComprovantePreview } from '@/components/vendas/ComprovantePreview';
+import { ComprovantePreview, ComprovanteBadgeSemAnexo } from '@/components/vendas/ComprovantePreview';
 import { VendaResumoCompleto } from '@/components/vendas/VendaResumoCompleto';
 import { useFluxoVendas } from '@/hooks/useFluxoVendas';
 import { 
@@ -678,6 +678,7 @@ export default function VendasConferenciaGestor() {
                       <TableHead>Responsável</TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead className="text-right">Valor Total</TableHead>
+                      <TableHead>Comprovante</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-center">Ações</TableHead>
                     </TableRow>
@@ -685,7 +686,7 @@ export default function VendasConferenciaGestor() {
                   <TableBody>
                     {vendasFiltradas.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                           Nenhuma venda encontrada com os filtros selecionados.
                         </TableCell>
                       </TableRow>
@@ -719,6 +720,14 @@ export default function VendasConferenciaGestor() {
                           </TableCell>
                           <TableCell className="text-right font-medium">
                             {formatCurrency(venda.total)}
+                          </TableCell>
+                          <TableCell>
+                            {(() => {
+                              const pag = venda.pagamentos?.find(p => p.comprovante);
+                              return pag?.comprovante 
+                                ? <ComprovantePreview comprovante={pag.comprovante} comprovanteNome={pag.comprovanteNome} />
+                                : <ComprovanteBadgeSemAnexo />;
+                            })()}
                           </TableCell>
                           <TableCell>
                             {getStatusBadge(venda.statusFluxo as StatusVenda)}

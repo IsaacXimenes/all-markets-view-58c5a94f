@@ -2597,6 +2597,15 @@ export default function VendasFinalizarDigital() {
             <DialogTitle>Adicionar Item de Troca</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Valores Recomendados para Troca - no topo */}
+            <div className="border-b pb-4">
+              <p className="text-sm font-medium mb-2">📊 Valores Recomendados para Troca</p>
+              <ValoresRecomendadosTroca
+                onUsarValor={(valor, modelo, condicao) => {
+                  setNovoTradeIn({ ...novoTradeIn, valorCompraUsado: valor, modelo, condicao });
+                }}
+              />
+            </div>
             <div>
               <label className="text-sm font-medium">Modelo *</label>
               <Select 
@@ -2868,15 +2877,6 @@ export default function VendasFinalizarDigital() {
             )}
           </div>
 
-          {/* Valores Recomendados para Troca */}
-          <div className="border-t pt-4">
-            <p className="text-sm font-medium mb-2">📊 Valores Recomendados para Troca</p>
-            <ValoresRecomendadosTroca
-              onUsarValor={(valor) => {
-                setNovoTradeIn({ ...novoTradeIn, valorCompraUsado: valor });
-              }}
-            />
-          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTradeInModal(false)}>Cancelar</Button>
             <Button onClick={handleAddTradeIn}>Adicionar</Button>

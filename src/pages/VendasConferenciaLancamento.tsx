@@ -561,6 +561,7 @@ export default function VendasConferenciaLancamento() {
                   <TableHead>Cliente</TableHead>
                   <TableHead className="text-right">Valor Total</TableHead>
                   <TableHead className="text-right">Valor Pendente</TableHead>
+                  <TableHead>Comprovante</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
@@ -568,7 +569,7 @@ export default function VendasConferenciaLancamento() {
               <TableBody>
                 {vendasFiltradas.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                       Nenhuma venda encontrada para conferência de lançamento.
                     </TableCell>
                   </TableRow>
@@ -619,6 +620,14 @@ export default function VendasConferenciaLancamento() {
                           )}
                         </TableCell>
                         <TableCell>
+                          {(() => {
+                            const pag = venda.pagamentos?.find(p => p.comprovante);
+                            return pag?.comprovante 
+                              ? <ComprovantePreview comprovante={pag.comprovante} comprovanteNome={pag.comprovanteNome} />
+                              : <ComprovanteBadgeSemAnexo />;
+                          })()}
+                        </TableCell>
+                        <TableCell>
                           {getStatusBadge(venda.statusFluxo as StatusVenda)}
                         </TableCell>
                         <TableCell className="text-center">
@@ -659,8 +668,8 @@ export default function VendasConferenciaLancamento() {
                               return podeAprovarVenda() ? (
                                 <Button 
                                   size="sm"
-                                  onClick={() => handleAbrirModalAprovar(venda)}
-                                  title="Aprovar lançamento"
+                                  onClick={() => navigate(`/vendas/${venda.id}`, { state: { modoConferencia: true } })}
+                                  title="Conferir lançamento"
                                   className="bg-green-600 hover:bg-green-700"
                                 >
                                   <Check className="h-4 w-4 mr-1" />
@@ -692,53 +701,6 @@ export default function VendasConferenciaLancamento() {
         </span>
       </div>
 
-      {/* Modal de Aprovação */}
-      <Dialog open={modalAprovar} onOpenChange={setModalAprovar}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Conferir Lançamento</DialogTitle>
-            <DialogDescription>
-              Você está prestes a conferir o lançamento da venda e enviá-la para conferência do gestor.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {vendaSelecionada && (
-            <div className="space-y-4">
-              <VendaResumoCompleto venda={vendaSelecionada} readOnly showCustos={false} />
-
-              {vendaSelecionada.statusFluxo === 'Recusada - Gestor' && vendaSelecionada.recusaGestor && (
-                <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800">
-                  <p className="text-sm font-medium text-red-700 dark:text-red-400 mb-1">
-                    Motivo da Recusa Anterior:
-                  </p>
-                  <p className="text-sm text-red-600 dark:text-red-300">
-                    {vendaSelecionada.recusaGestor.motivo}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Recusado por {vendaSelecionada.recusaGestor.usuarioNome} em{' '}
-                    {new Date(vendaSelecionada.recusaGestor.dataHora).toLocaleString('pt-BR')}
-                  </p>
-                </div>
-              )}
-
-              <div className="text-sm text-muted-foreground">
-                <p>Ao conferir, a venda será enviada para:</p>
-                <p className="font-medium text-foreground mt-1">📋 Conferência do Gestor</p>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setModalAprovar(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleAprovarLancamento} className="bg-green-600 hover:bg-green-700">
-              <Check className="h-4 w-4 mr-2" />
-              Confirmar Conferência
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </VendasLayout>
   );
 }
