@@ -1189,17 +1189,26 @@ export default function OSAssistenciaEditar() {
                   <Label className="text-xs">Justificativa</Label>
                   <Input value={novaSolJustificativa} onChange={e => setNovaSolJustificativa(e.target.value)} placeholder="Motivo..." />
                 </div>
-                <Button size="sm" onClick={() => {
-                  if (!novaSolPeca || !novaSolJustificativa) {
-                    toast({ title: 'Preencha peça e justificativa', variant: 'destructive' });
-                    return;
-                  }
-                  setCheckConfirmarSolLocal(false);
-                  setModalConfirmarSolLocal(true);
-                }}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Adicionar
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => {
+                    setNovaSolPeca('');
+                    setNovaSolQtd(1);
+                    setNovaSolJustificativa('');
+                  }}>
+                    Cancelar
+                  </Button>
+                  <Button size="sm" onClick={() => {
+                    if (!novaSolPeca || !novaSolJustificativa) {
+                      toast({ title: 'Preencha peça e justificativa', variant: 'destructive' });
+                      return;
+                    }
+                    setCheckConfirmarSolLocal(false);
+                    setModalConfirmarSolLocal(true);
+                  }}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar
+                  </Button>
+                </div>
               </div>
             </div>
           </CardContent>

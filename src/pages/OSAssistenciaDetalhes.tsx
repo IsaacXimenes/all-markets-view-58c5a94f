@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useAuthStore } from '@/store/authStore';
 import { ComprovantePreview } from '@/components/vendas/ComprovantePreview';
 import { 
@@ -68,6 +69,10 @@ export default function OSAssistenciaDetalhes() {
   const [novaSolPeca, setNovaSolPeca] = useState('');
   const [novaSolQtd, setNovaSolQtd] = useState(1);
   const [novaSolJustificativa, setNovaSolJustificativa] = useState('');
+
+  // Dupla confirmação - Solicitação de peça
+  const [modalConfirmarSolDetalhes, setModalConfirmarSolDetalhes] = useState(false);
+  const [checkConfirmarSolDetalhes, setCheckConfirmarSolDetalhes] = useState(false);
 
   // Dupla confirmação
   const [modalConfirmarPagamento, setModalConfirmarPagamento] = useState(false);
@@ -1064,44 +1069,26 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
                         />
                       </div>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => {
-                      if (!novaSolPeca.trim() || !novaSolJustificativa.trim()) {
-                        toast.error('Preencha peça e justificativa');
-                        return;
-                      }
-                      addSolicitacao({
-                        osId: os.id,
-                        peca: novaSolPeca,
-                        quantidade: novaSolQtd,
-                        justificativa: novaSolJustificativa,
-                        modeloImei: os.pecas[0]?.imei || '',
-                        lojaSolicitante: os.lojaId
-                      });
-                      // Atualizar status da OS para Solicitação de Peça
-                      updateOrdemServico(os.id, {
-                        status: 'Solicitação de Peça' as any,
-                        proximaAtuacao: 'Gestor (Suprimentos)',
-                        timeline: [...os.timeline, {
-                          data: new Date().toISOString(),
-                          tipo: 'peca',
-                          descricao: `Solicitação de peça: ${novaSolPeca} x${novaSolQtd} – ${novaSolJustificativa}`,
-                          responsavel: 'Atendente'
-                        }]
-                      });
-                      // Atualizar estado local do status para evitar sobrescrita ao salvar
-                      setEditStatus('Solicitação de Peça');
-                      // Refresh OS e solicitações
-                      const updatedOS = getOrdemServicoById(os.id);
-                      if (updatedOS) setOS(updatedOS);
-                      setSolicitacoesOS(getSolicitacoesByOS(os.id));
-                      setNovaSolPeca('');
-                      setNovaSolQtd(1);
-                      setNovaSolJustificativa('');
-                      toast.success('Solicitação adicionada! Status atualizado para Aguardando Peça.');
-                    }}>
-                      <Plus className="h-4 w-4 mr-1" />
-                      Adicionar Solicitação
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" onClick={() => {
+                        setNovaSolPeca('');
+                        setNovaSolQtd(1);
+                        setNovaSolJustificativa('');
+                      }}>
+                        Cancelar
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => {
+                        if (!novaSolPeca.trim() || !novaSolJustificativa.trim()) {
+                          toast.error('Preencha peça e justificativa');
+                          return;
+                        }
+                        setCheckConfirmarSolDetalhes(false);
+                        setModalConfirmarSolDetalhes(true);
+                      }}>
+                        <Plus className="h-4 w-4 mr-1" />
+                        Adicionar Solicitação
+                      </Button>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -1859,6 +1846,72 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Modal Dupla Confirmação - Adicionar Solicitação */}
+      <Dialog open={modalConfirmarSolDetalhes} onOpenChange={setModalConfirmarSolDetalhes}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Confirmar Solicitação de Peça
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-muted/30 rounded-md p-4 space-y-2 text-sm">
+              <p><strong>Peça:</strong> {novaSolPeca}</p>
+              <p><strong>Quantidade:</strong> {novaSolQtd}</p>
+              <p><strong>Justificativa:</strong> {novaSolJustificativa}</p>
+            </div>
+            <div className="flex items-center gap-2 border rounded-md p-3 bg-muted/30">
+              <Checkbox
+                checked={checkConfirmarSolDetalhes}
+                onCheckedChange={(checked) => setCheckConfirmarSolDetalhes(checked as boolean)}
+              />
+              <label className="text-sm cursor-pointer">
+                Confirmo que os dados da solicitação estão corretos e desejo adicionar esta peça
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModalConfirmarSolDetalhes(false)}>Cancelar</Button>
+            <Button
+              disabled={!checkConfirmarSolDetalhes}
+              onClick={() => {
+                if (!checkConfirmarSolDetalhes) return;
+                addSolicitacao({
+                  osId: os!.id,
+                  peca: novaSolPeca,
+                  quantidade: novaSolQtd,
+                  justificativa: novaSolJustificativa,
+                  modeloImei: os!.pecas[0]?.imei || '',
+                  lojaSolicitante: os!.lojaId
+                });
+                updateOrdemServico(os!.id, {
+                  status: 'Solicitação de Peça' as any,
+                  proximaAtuacao: 'Gestor (Suprimentos)',
+                  timeline: [...os!.timeline, {
+                    data: new Date().toISOString(),
+                    tipo: 'peca',
+                    descricao: `Solicitação de peça: ${novaSolPeca} x${novaSolQtd} – ${novaSolJustificativa}`,
+                    responsavel: 'Atendente'
+                  }]
+                });
+                setEditStatus('Solicitação de Peça');
+                const updatedOS = getOrdemServicoById(os!.id);
+                if (updatedOS) setOS(updatedOS);
+                setSolicitacoesOS(getSolicitacoesByOS(os!.id));
+                setNovaSolPeca('');
+                setNovaSolQtd(1);
+                setNovaSolJustificativa('');
+                setModalConfirmarSolDetalhes(false);
+                toast.success('Solicitação adicionada! Status atualizado para Aguardando Peça.');
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Confirmar e Adicionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageLayout>
   );
 }
