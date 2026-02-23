@@ -1,30 +1,23 @@
 
-# Correcao dos Filtros de Data na Gestao Administrativa
+
+# Correcao do Botao "Editar" na Conferencia do Gestor
 
 ## Problema
 
-Os filtros "Data Inicio" e "Data Fim" sao inicializados com `new Date()`, que inclui o horario atual (ex: `2026-02-23T14:30:00`). Porem, as datas das conferencias sao comparadas via `parseISO(conf.data)` que retorna meia-noite (`2026-02-23T00:00:00`).
-
-Resultado: `00:00:00 < 14:30:00` faz com que os registros de hoje sejam filtrados. Ao selecionar manualmente a mesma data no calendario, o componente Calendar retorna a data com horario zerado, e os registros aparecem.
+Atualmente, ao clicar em "Editar" no painel lateral da Conferencia do Gestor, o sistema navega para `/vendas/${id}` (pagina VendaDetalhes.tsx) com `modoConferencia: true`. Essa pagina e apenas de **visualizacao/detalhamento**, nao permite editar os dados do lancamento.
 
 ## Solucao
 
-Normalizar as datas iniciais para inicio e fim do dia, e tambem normalizar as comparacoes no filtro.
+Alterar a navegacao do botao "Editar" para redirecionar a pagina de edicao correta: `/vendas/editar/${id}`.
 
 ## Detalhes Tecnicos
 
-### Arquivo: `src/pages/GestaoAdministrativa.tsx`
+### Arquivo: `src/pages/VendasConferenciaGestor.tsx`
 
-1. **Importar `startOfDay` e `endOfDay`** de `date-fns` (linha 25)
+**Linha 874** - Alterar o `onClick` do botao "Editar":
 
-2. **Inicializar estados com horario normalizado** (linhas 58-59):
-   - `dataInicio`: usar `startOfDay(new Date())` em vez de `new Date()`
-   - `dataFim`: usar `endOfDay(new Date())` em vez de `new Date()`
+- **De:** `navigate('/vendas/${vendaSelecionada.id}', { state: { modoConferencia: true } })`
+- **Para:** `navigate('/vendas/editar/${vendaSelecionada.id}')`
 
-3. **Normalizar comparacoes no filtro** (linhas 103-111):
-   - Ao comparar `dataInicio`, usar `startOfDay(dataInicio)` 
-   - Ao comparar `dataFim`, usar `endOfDay(dataFim)`
-   - Isso garante que mesmo que o usuario selecione uma data pelo calendario (que pode vir com horario variado), a filtragem funcione corretamente
+Isso redirecionara o gestor para a tela `VendasEditar.tsx`, que possui o formulario completo de edicao do lancamento (itens, acessorios, trade-in, pagamentos, etc.).
 
-4. **Normalizar `handleDataInicioChange`** (linha 137):
-   - Aplicar `startOfDay` ao definir a data inicio
