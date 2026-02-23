@@ -1534,10 +1534,21 @@ export default function OSAssistenciaNova() {
                     />
                   </div>
                 </div>
-                <Button onClick={handleAbrirConfirmarSolicitacao}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Adicionar Solicitação
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="ghost" onClick={() => setNovaSolicitacao({
+                    peca: '',
+                    quantidade: 1,
+                    justificativa: '',
+                    modeloCompativel: '',
+                    prioridade: 'Normal'
+                  })}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleAbrirConfirmarSolicitacao}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Adicionar Solicitação
+                  </Button>
+                </div>
               </div>
 
               {/* Lista de solicitações */}
