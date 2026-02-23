@@ -22,7 +22,7 @@ import { useAuthStore } from '@/store/authStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { toast } from 'sonner';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, parse } from 'date-fns';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, parse, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import {
@@ -55,8 +55,8 @@ export default function GestaoAdministrativa() {
   const [competencia, setCompetencia] = useState(format(new Date(), 'yyyy-MM'));
   const [lojaId, setLojaId] = useState<string>('');
   const [vendedorId, setVendedorId] = useState<string>('');
-  const [dataInicio, setDataInicio] = useState<Date | undefined>(new Date());
-  const [dataFim, setDataFim] = useState<Date | undefined>(new Date());
+  const [dataInicio, setDataInicio] = useState<Date | undefined>(startOfDay(new Date()));
+  const [dataFim, setDataFim] = useState<Date | undefined>(endOfDay(new Date()));
   
   // Modal de confirmação do checkbox
   const [modalConfirmacaoCheck, setModalConfirmacaoCheck] = useState<{
@@ -104,8 +104,8 @@ export default function GestaoAdministrativa() {
     if (!dataInicio && !dataFim) return conferencias;
     return conferencias.filter(conf => {
       const dataConf = parseISO(conf.data);
-      if (dataInicio && dataConf < dataInicio) return false;
-      if (dataFim && dataConf > dataFim) return false;
+      if (dataInicio && dataConf < startOfDay(dataInicio)) return false;
+      if (dataFim && dataConf > endOfDay(dataFim)) return false;
       return true;
     });
   }, [conferencias, dataInicio, dataFim]);
@@ -134,7 +134,7 @@ export default function GestaoAdministrativa() {
   
   // Derivar competência automaticamente da data início
   const handleDataInicioChange = (date: Date | undefined) => {
-    setDataInicio(date);
+    setDataInicio(date ? startOfDay(date) : undefined);
     if (date) {
       setCompetencia(format(date, 'yyyy-MM'));
     }
