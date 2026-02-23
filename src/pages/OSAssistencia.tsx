@@ -521,6 +521,16 @@ export default function OSAssistencia() {
               <Button variant="outline" onClick={handleExport}>
                 <Download className="h-4 w-4" />
               </Button>
+              <Button variant="ghost" size="sm" onClick={() => {
+                setFiltroDataInicio('');
+                setFiltroDataFim('');
+                setFiltroIMEI('');
+                setFiltroTecnico('todos');
+                setFiltroStatus('todos');
+                setFiltroAtuacao('todos');
+              }} title="Limpar Filtros">
+                <XCircle className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </CardContent>

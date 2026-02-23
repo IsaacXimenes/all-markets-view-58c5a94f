@@ -163,6 +163,16 @@ export const encaminharLoteParaAssistencia = (
     valorTotal: 0,
     custoTotal: 0,
     loteRevisaoId: lote.id,
+    itensLoteRevisao: lote.itens.map(item => ({
+      itemId: item.id,
+      marca: item.marca,
+      modelo: item.modelo,
+      imei: item.imei,
+      motivoAssistencia: item.motivoAssistencia,
+      parecerTecnico: '',
+      custoReparo: item.custoReparo,
+      statusReparo: item.statusReparo,
+    })),
     observacaoOrigem: `Lote de Revisão com ${lote.itens.length} aparelhos da nota ${lote.numeroNota}`
   } as any);
 

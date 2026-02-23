@@ -23,7 +23,7 @@ import {
   getClientes, 
   getFornecedores
 } from '@/utils/cadastrosApi';
-import { getSolicitacoesByOS, addSolicitacao, SolicitacaoPeca } from '@/utils/solicitacaoPecasApi';
+import { getSolicitacoesByOS, addSolicitacao, cancelarSolicitacao, SolicitacaoPeca } from '@/utils/solicitacaoPecasApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
@@ -31,7 +31,7 @@ import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { getPecas, Peca, darBaixaPeca, initializePecasWithLojaIds } from '@/utils/pecasApi';
 import { InputComMascara } from '@/components/ui/InputComMascara';
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Plus, Trash2, Save, ArrowLeft, History, Package, CheckCircle, XCircle, AlertTriangle, Search, Wrench, Shield, PackageCheck, Info } from 'lucide-react';
 
 import { CronometroOSComponent } from '@/components/assistencia/CronometroOS';
@@ -145,6 +145,10 @@ export default function OSAssistenciaEditar() {
   const [novaSolPeca, setNovaSolPeca] = useState('');
   const [novaSolQtd, setNovaSolQtd] = useState(1);
   const [novaSolJustificativa, setNovaSolJustificativa] = useState('');
+
+  // Excluir solicitação state
+  const [solExcluirId, setSolExcluirId] = useState<string | null>(null);
+  const [showExcluirSolDialog, setShowExcluirSolDialog] = useState(false);
 
   // Modal cancelar OS
   // Auto-fill unidadeServico quando lojaId muda
@@ -1066,7 +1070,7 @@ export default function OSAssistenciaEditar() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {solicitacoesOS.map((sol) => (
+                  {solicitacoesOS.filter(sol => sol.status !== 'Cancelada').map((sol) => (
                     <TableRow key={sol.id}>
                       <TableCell className="font-medium">{sol.peca}</TableCell>
                       <TableCell>{sol.quantidade}</TableCell>
@@ -1087,42 +1091,53 @@ export default function OSAssistenciaEditar() {
                       </TableCell>
                       <TableCell className="text-sm">{new Date(sol.dataSolicitacao).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell>
-                        {(['Pendente', 'Aprovada', 'Enviada', 'Pagamento Finalizado', 'Pagamento - Financeiro', 'Aguardando Chegada', 'Pagamento Concluído'] as string[]).includes(sol.status) && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="gap-1 text-emerald-600"
-                            onClick={() => {
-                              // Atualizar solicitação para Recebida
-                              const { updateSolicitacaoPeca } = require('@/utils/solicitacaoPecasApi');
-                              if (typeof updateSolicitacaoPeca === 'function') {
-                                updateSolicitacaoPeca(sol.id, { status: 'Recebida' });
-                              }
-                              // Fresh fetch e atualizar OS
-                              const osAtual = getOrdemServicoById(id!);
-                              if (osAtual) {
-                                updateOrdemServico(id!, {
-                                  status: 'Em serviço',
-                                  proximaAtuacao: 'Técnico',
-                                  timeline: [...osAtual.timeline, {
-                                    data: new Date().toISOString(),
-                                    tipo: 'peca',
-                                    descricao: `Recebimento confirmado: ${sol.peca} x${sol.quantidade}`,
-                                    responsavel: obterNomeColaborador(tecnicoId) || 'Técnico'
-                                  }]
-                                });
-                                setStatus('Em serviço' as OSStatus);
-                                setOsOriginal(getOrdemServicoById(id!) || osOriginal);
-                              }
-                              // Atualizar lista local
-                              setSolicitacoesOS(getSolicitacoesByOS(id!));
-                              toast({ title: 'Recebimento confirmado! OS retornada para Em Serviço.' });
-                            }}
-                          >
-                            <CheckCircle className="h-3.5 w-3.5" />
-                            Confirmar Recebimento
-                          </Button>
-                        )}
+                        <div className="flex gap-1">
+                          {/* Confirmar Recebimento - NÃO exibir para Rejeitada */}
+                          {(['Pendente', 'Aprovada', 'Enviada', 'Pagamento Finalizado', 'Pagamento - Financeiro', 'Aguardando Chegada', 'Pagamento Concluído'] as string[]).includes(sol.status) && sol.status !== 'Rejeitada' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="gap-1 text-emerald-600"
+                              onClick={() => {
+                                const { updateSolicitacaoPeca } = require('@/utils/solicitacaoPecasApi');
+                                if (typeof updateSolicitacaoPeca === 'function') {
+                                  updateSolicitacaoPeca(sol.id, { status: 'Recebida' });
+                                }
+                                const osAtual = getOrdemServicoById(id!);
+                                if (osAtual) {
+                                  updateOrdemServico(id!, {
+                                    status: 'Em serviço',
+                                    proximaAtuacao: 'Técnico',
+                                    timeline: [...osAtual.timeline, {
+                                      data: new Date().toISOString(),
+                                      tipo: 'peca',
+                                      descricao: `Recebimento confirmado: ${sol.peca} x${sol.quantidade}`,
+                                      responsavel: obterNomeColaborador(tecnicoId) || 'Técnico'
+                                    }]
+                                  });
+                                  setStatus('Em serviço' as OSStatus);
+                                  setOsOriginal(getOrdemServicoById(id!) || osOriginal);
+                                }
+                                setSolicitacoesOS(getSolicitacoesByOS(id!));
+                                toast({ title: 'Recebimento confirmado! OS retornada para Em Serviço.' });
+                              }}
+                            >
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              Confirmar Recebimento
+                            </Button>
+                          )}
+                          {/* Lixeira para excluir solicitações Pendente ou Rejeitada */}
+                          {(['Pendente', 'Rejeitada'] as string[]).includes(sol.status) && (
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              className="text-destructive"
+                              onClick={() => { setSolExcluirId(sol.id); setShowExcluirSolDialog(true); }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1407,6 +1422,60 @@ export default function OSAssistenciaEditar() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* AlertDialog para excluir solicitação de peça */}
+      <AlertDialog open={showExcluirSolDialog} onOpenChange={setShowExcluirSolDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Solicitação de Peça</AlertDialogTitle>
+            <AlertDialogDescription>
+              {(() => {
+                const sol = solicitacoesOS.find(s => s.id === solExcluirId);
+                return sol ? (
+                  <>
+                    Tem certeza que deseja cancelar a solicitação <strong>{sol.peca}</strong> (x{sol.quantidade})?
+                    <br />Esta ação será registrada na timeline da OS para auditoria.
+                  </>
+                ) : 'Solicitação não encontrada.';
+              })()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => {
+              if (!solExcluirId || !id) return;
+              const sol = solicitacoesOS.find(s => s.id === solExcluirId);
+              if (!sol) return;
+              const nomeResp = user?.colaborador?.nome || user?.username || 'Técnico';
+              cancelarSolicitacao(solExcluirId, `Excluída por ${nomeResp}`);
+              // Registrar na timeline
+              const osAtual = getOrdemServicoById(id);
+              if (osAtual) {
+                updateOrdemServico(id, {
+                  timeline: [...osAtual.timeline, {
+                    data: new Date().toISOString(),
+                    tipo: 'peca',
+                    descricao: `Solicitação de peça "${sol.peca}" excluída por ${nomeResp}`,
+                    responsavel: nomeResp
+                  }]
+                });
+                // If OS was Aguardando Peça and sol was Rejeitada, return to Em serviço
+                if (sol.status === 'Rejeitada' && osAtual.status === 'Aguardando Peça') {
+                  updateOrdemServico(id, { status: 'Em serviço', proximaAtuacao: 'Técnico' });
+                  setStatus('Em serviço' as OSStatus);
+                }
+                setOsOriginal(getOrdemServicoById(id) || osOriginal);
+                setTimeline(getOrdemServicoById(id)?.timeline || timeline);
+              }
+              setSolicitacoesOS(getSolicitacoesByOS(id));
+              setSolExcluirId(null);
+              setShowExcluirSolDialog(false);
+              toast({ title: 'Solicitação excluída', description: `Solicitação "${sol.peca}" cancelada com sucesso.` });
+            }}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageLayout>
   );
 }

@@ -101,7 +101,7 @@ export default function OSAssistenciaNova() {
   const origemAnaliseParam = searchParams.get('origemAnalise');
   
   const [osInfo] = useState(getNextOSNumber());
-  const [dataHora] = useState(new Date().toISOString());
+  const [dataHora] = useState(format(new Date(), "yyyy-MM-dd'T'HH:mm:ss"));
   
   const clientes = getClientes();
   const { obterLojasPorTipo, obterNomeLoja, obterTecnicos, obterNomeColaborador } = useCadastroStore();
@@ -239,7 +239,7 @@ export default function OSAssistenciaNova() {
   // Confirmação form
   const [confirmTecnico, setConfirmTecnico] = useState('');
   const [confirmLoja, setConfirmLoja] = useState('');
-  const [confirmData, setConfirmData] = useState(new Date().toISOString().split('T')[0]);
+  const [confirmData, setConfirmData] = useState(format(new Date(), 'yyyy-MM-dd'));
 
   // Cliente selecionado
   const clienteSelecionado = clientes.find(c => c.id === clienteId);
