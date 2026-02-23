@@ -1,135 +1,161 @@
 
-# Ajustes e Melhorias no Modulo de Assistencia Tecnica
+
+# Ajustes em Nota de Entrada, Aparelhos Pendentes, Acessorios e Rastreabilidade
 
 ## Escopo
 
-12 melhorias organizadas em 3 categorias: Usabilidade, Consignacao e Fluxo de OS.
+6 frentes de trabalho cobrindo melhorias em Notas de Entrada, Aparelhos Pendentes, Acessorios, Movimentacao de Pecas e Rastreabilidade de Estoque.
 
 ---
 
-## 1. Melhorias de Usabilidade e Interface
+## 1. Nota de Entrada: Campos PIX Obrigatorios (1.1)
 
-### 1.1 Botao "Limpar" em Todas as Abas
-Algumas abas ja possuem o botao (OSConferenciaGestor, OSOficina, OSHistoricoAssistencia, OSSolicitacoesPecas, OSProdutosAnalise, OSMovimentacaoPecas, OSAnaliseGarantia). Falta adicionar em:
-- **OSAssistencia.tsx** (aba principal de listagem) - nao tem botao de limpar filtros
-- **OSConsignacao.tsx** (lista de lotes) - tem filtros mas sem botao limpar
-- **OSAssistenciaNova.tsx** - nao aplicavel (formulario, nao listagem)
+### Situacao Atual
+Em `EstoqueNotaCadastrar.tsx`, o pagamento tem apenas `formaPagamento` (Dinheiro/Pix), `tipoPagamento` e `observacaoPagamento`. Nao ha campos para Banco, Recebedor ou Chave PIX.
 
-**Acao**: Adicionar botao "Limpar Filtros" com icone X em `OSAssistencia.tsx` e `OSConsignacao.tsx`, resetando todos os filtros.
+### Acao
+- Adicionar 3 novos states: `pixBanco`, `pixRecebedor`, `pixChave`
+- Quando `formaPagamento === 'Pix'`, renderizar os 3 campos abaixo do RadioGroup (Banco, Nome do Recebedor, Chave PIX)
+- Na funcao `handleSalvar`, validar que os 3 campos estao preenchidos quando forma = Pix
+- Incluir os campos PIX no draft (localStorage) e no payload de `criarNotaEntrada`
+- Salvar no draft para persistencia
 
-### 1.2 Renomear "Dossie" para "Detalhamento"
-Arquivos afetados:
-- `OSConsignacao.tsx`: tipo `ViewMode` (`'dossie'` -> `'detalhamento'`), titulo "Dossie do Lote" -> "Detalhamento do Lote", tooltips nos botoes
-- `pecasApi.ts`: comentario (linha 308) - cosmetico
-
-**Acao**: Substituir todas as ocorrencias de "Dossie"/"dossie" por "Detalhamento"/"detalhamento" em `OSConsignacao.tsx`.
-
-### 1.3 Botoes de Detalhamento e Edicao com Funcionalidades Distintas
-Atualmente em `OSConsignacao.tsx` (linhas 911-917), o botao Eye e o botao Pencil executam a mesma funcao `handleVerDossie`. O Pencil so aparece quando `lote.status === 'Aberto'`.
-
-**Acao**:
-- Botao Eye (Detalhamento): abre a visualizacao em modo **somente leitura** (ocultar botoes de acao: pagamento parcial, finalizar lote, devolver)
-- Botao Pencil (Edicao): abre a visualizacao completa com acoes de edicao habilitadas
-- Adicionar prop `readOnly` ao estado do dossie/detalhamento
-- Qualquer alteracao no modo de edicao registra log na timeline via `consignacaoApi`
+### Arquivo
+- `src/pages/EstoqueNotaCadastrar.tsx`
 
 ---
 
-## 2. Gestao de Consignacao
+## 2. Nota de Entrada: Inativacao de IMEI por Quantidade (1.2)
 
-### 2.1 Registro de Pagamento na Timeline do Consignado
-Atualmente `gerarPagamentoParcial` em `consignacaoApi.ts` ja registra na timeline do lote, mas nao inclui detalhes do pagamento (forma, comprovante).
+### Situacao Atual
+No modo nao-simplificado (Pagamento Pos), o campo IMEI aparece para todos os itens, mesmo quando quantidade > 1.
 
-**Acao**:
-- Enriquecer o registro da timeline em `consignacaoApi.ts` para incluir forma de pagamento, conta, chave pix na descricao
-- Na aba "Historico de Pagamentos" em `OSConsignacao.tsx`, adicionar exibicao da forma de pagamento e dados do recebedor ao lado de cada pagamento
+### Acao
+- Na celula de IMEI (linha ~660), adicionar condicao: se `produto.quantidade > 1`, desabilitar o campo e exibir tooltip "IMEI sera preenchido na conferencia (explosao)"
+- Se `produto.quantidade === 1`, manter o campo habilitado normalmente
+- Ao alterar quantidade de 1 para > 1, limpar o valor IMEI automaticamente
 
-### 2.2 Confirmacao em Duas Etapas para Devolucao de Consignado
-Atualmente `handleConfirmarDevolucao` executa diretamente sem confirmacao (linha 256-261).
-
-**Acao**: Envolver o botao de devolucao em um `AlertDialog` com duas etapas:
-1. Primeiro clique abre o AlertDialog com descricao do item e aviso de irreversibilidade
-2. Segundo clique (AlertDialogAction) confirma a devolucao
-- Registrar responsavel e timestamp na confirmacao
-
-### 2.3 Filtros no Navbar do Inventario na Consignacao
-Atualmente a aba "Inventario" dentro do Detalhamento exibe todos os itens sem filtros.
-
-**Acao**: Adicionar barra de filtros acima da tabela de inventario dentro da TabsContent "inventario":
-- Filtro por status (Disponivel, Consumido, Devolvido, Em Pagamento, Pago)
-- Filtro por loja
-- Campo de busca por descricao/modelo
-- Botao Limpar Filtros
+### Arquivo
+- `src/pages/EstoqueNotaCadastrar.tsx`
 
 ---
 
-## 3. Fluxo de Ordem de Servico (OS)
+## 3. Aparelhos Pendentes: Classificacao por SLA (2.1)
 
-### 3.1 Correcao da Data de Registro (D+1)
-Em `OSAssistenciaNova.tsx` (linha 104): `const [dataHora] = useState(new Date().toISOString())`. Isto usa UTC, que no Brasil (UTC-3) pode resultar em data futura apos 21h.
+### Situacao Atual
+`OSAparelhosPendentes.tsx` ordena por data decrescente (mais recentes primeiro). Nao tem indicadores de SLA.
 
-**Acao**: Ajustar para usar data local:
-```text
-// Em vez de new Date().toISOString(), usar formato que preserve timezone local
-const agora = new Date();
-const dataHoraLocal = format(agora, "yyyy-MM-dd'T'HH:mm:ss");
-```
-Aplicar a mesma correcao em `confirmData` (linha 242).
+### Acao
+- Inverter a ordenacao padrao para mais antigos primeiro (mais urgentes no topo)
+- Adicionar coluna "Tempo em Pendencia" calculada como diferenca entre `new Date()` e `os.dataHora`
+- Exibir badges coloridos:
+  - Verde: ate 3 dias
+  - Amarelo: 4-7 dias
+  - Vermelho: > 7 dias (SLA excedido)
+- Adicionar filtro/select para ordenar por "Mais antigo" ou "Mais recente"
 
-### 3.2 Lixeira para Excluir Solicitacao de Peca na Edicao
-Em `OSAssistenciaEditar.tsx`, a tabela de solicitacoes salvas (linhas 1069-1127) nao tem botao de excluir. Apenas as solicitacoes locais nao salvas (linhas 1129-1146) tem lixeira.
+### Arquivo
+- `src/pages/OSAparelhosPendentes.tsx`
 
-**Acao**: Adicionar botao Trash2 para solicitacoes salvas com status `Pendente` ou `Rejeitada`:
-- Ao clicar, abrir AlertDialog de confirmacao
-- Registrar na timeline da OS: "Solicitacao de peca X excluida por Y"
-- Chamar `updateSolicitacaoPeca(sol.id, { status: 'Cancelada' })` (nao deletar, marcar como cancelada para auditoria)
+---
 
-### 3.3 Desabilitar "Confirmar Recebimento" para Peca Recusada
-Em `OSAssistenciaEditar.tsx` (linha 1090), o botao "Confirmar Recebimento" aparece para status incluindo `Pendente`, `Aprovada`, `Enviada`, etc.
+## 4. Nota de Entrada: Coluna Categoria Mais Larga (2.2)
 
-**Acao**: Excluir `'Rejeitada'` da lista de status que exibem o botao (ja nao esta, mas precisa garantir). Adicionalmente, quando `sol.status === 'Rejeitada'`:
-- Alterar o status da OS para 'Em serviço' se estava 'Aguardando Peca'
-- Exibir badge "Rejeitada" sem botao de acao
+### Situacao Atual
+A coluna Categoria tem `className="w-24"` no SelectTrigger (linha 700), truncando o texto.
 
-### 3.4 Encaminhamento Agrupado por Nota com Tratativa Individual
-A logica atual em `loteRevisaoApi.ts` (funcao `encaminharLoteParaAssistencia`, linhas 129-178) ja cria uma unica OS agrupada com todos os aparelhos na descricao. Porem o tecnico nao tem interface para tratar cada aparelho individualmente dentro dessa OS.
+### Acao
+- Alterar o `className` do SelectTrigger da categoria de `w-24` para `w-32` ou `min-w-[120px]`
+- Ja existe `min-w-[120px]` no TableHead (linha 594), mas o SelectTrigger interno limita - corrigir para acompanhar
 
-**Acao**:
-- Na OS gerada pelo lote de revisao, adicionar campo `itensLoteRevisao` com referencia aos itens do lote
-- Em `OSAssistenciaDetalhes.tsx`: quando a OS tem `loteRevisaoId`, renderizar uma grade/acordeao com cada aparelho individual:
-  - Modelo, IMEI, motivo (do encaminhamento pelo estoque)
-  - Campo de parecer tecnico individual
-  - Secao de pecas/custo individual
-  - Status individual (Pendente, Em Andamento, Concluido)
-- Em `loteRevisaoApi.ts`: a funcao `encaminharLoteParaAssistencia` ja vincula `lote.itens[].osId`, manter isso
+### Arquivo
+- `src/pages/EstoqueNotaCadastrar.tsx`
 
-### 3.5 Comunicacao da Finalizacao do Servico com o Estoque
-A finalizacao em `OSAssistenciaDetalhes.tsx` (linhas 359-367) ja sincroniza com estoque via `atualizarStatusProdutoPendente` para OS de origem "Estoque". Porem:
-- Para OS de origem "Balcao" com lote de revisao, nao chama `marcarProdutoRetornoAssistencia`
-- A logistica reversa (`finalizarLoteComLogisticaReversa`) existe mas nao e chamada automaticamente
+---
 
-**Acao**:
-- Na finalizacao da OS em `OSAssistenciaDetalhes.tsx`, quando a OS tem `loteRevisaoId`:
-  - Atualizar o status de cada item do lote de revisao (`atualizarItemRevisao`) com `statusReparo: 'Concluido'` e custos
-  - Verificar se todos os itens do lote estao concluidos; se sim, acionar `finalizarLoteComLogisticaReversa` automaticamente
-  - Chamar `marcarProdutoRetornoAssistencia(imei)` para cada aparelho consertado
-- Garantir que aparelhos de "Balcao" (sem lote de revisao) tambem retornem ao estoque com a tag correta quando aplicavel
+## 5. Acessorios: Cor da Linha por Quantidade (3.1)
+
+### Situacao Atual
+`EstoqueAcessorios.tsx` ja exibe icone de alerta e texto vermelho quando `quantidadeTotal < 10`, mas nao tem cores de fundo na linha.
+
+### Acao
+- Na `TableRow` dos acessorios (linha 347), adicionar classes condicionais:
+  - `quantidadeTotal === 0`: fundo vermelho claro (`bg-red-500/10`) + Badge "Esgotado"
+  - `quantidadeTotal > 0 && quantidadeTotal < 5`: fundo amarelo claro (`bg-yellow-500/10`) + Badge "Baixo Estoque"
+  - Caso contrario: sem cor especial
+- Adicionar Badge na coluna de estoque indicando "Esgotado" ou "Baixo Estoque"
+
+### Arquivo
+- `src/pages/EstoqueAcessorios.tsx`
+
+---
+
+## 6. Movimentacao de Pecas: Redimensionar Modal de Busca (3.2)
+
+### Situacao Atual
+`OSMovimentacaoPecas.tsx` possui modal de busca de pecas. O DialogContent pode estar com largura padrao causando scroll horizontal.
+
+### Acao
+- No DialogContent do modal de busca, adicionar `className="max-w-4xl w-full"` ou `max-w-5xl` para ampliar a largura
+- Garantir que a tabela de resultados use `overflow-x-auto` adequado dentro do espaco ampliado
+
+### Arquivo
+- `src/pages/OSMovimentacaoPecas.tsx`
+
+---
+
+## 7. Rastreabilidade: Saida de "Em Movimentacao" (4.1)
+
+### Situacao Atual
+`confirmarRecebimentoMovimentacao` em `estoqueApi.ts` (linhas 1150-1171) ja:
+- Atualiza `mov.status = 'Recebido'`
+- Atualiza `produto.loja = mov.destino`
+- Limpa `produto.statusMovimentacao = null`
+- Limpa `produto.movimentacaoId = undefined`
+
+O fluxo ja esta implementado corretamente. Sera validado e, se necessario, adicionado registro na timeline do produto.
+
+### Acao
+- Adicionar registro na timeline do produto com descricao da movimentacao finalizada (origem, destino, responsavel, data)
+- Garantir que o produto fique habilitado para venda apos recebimento
+
+### Arquivo
+- `src/utils/estoqueApi.ts`
+
+---
+
+## 8. Anexo de Video no Detalhamento do Aparelho (4.2)
+
+### Situacao Atual
+`EstoqueProdutoDetalhes.tsx` ja tem sistema de imagens temporarias (blob URLs), mas nao suporta videos.
+
+### Acao
+- Adicionar secao "Anexos de Video" no detalhamento do produto
+- Permitir upload de arquivos MP4/MOV com limite de 50MB
+- Armazenar em estado local (mock, sem Supabase Storage), com blob URLs para preview
+- Exibir player de video inline para cada anexo
+- Registrar na timeline do produto: "Video anexado por [usuario] em [data]"
+- Condicionar visibilidade: apenas usuarios com `eh_estoquista` ou `eh_gestor`
+
+### Arquivo
+- `src/pages/EstoqueProdutoDetalhes.tsx`
 
 ---
 
 ## Detalhes Tecnicos
 
 ### Arquivos a modificar
-1. `src/pages/OSAssistencia.tsx` - botao limpar filtros
-2. `src/pages/OSConsignacao.tsx` - renomear Dossie, separar Eye/Pencil, confirmacao devolucao 2 etapas, filtros inventario, botao limpar
-3. `src/utils/consignacaoApi.ts` - enriquecer timeline de pagamento
-4. `src/pages/OSAssistenciaNova.tsx` - correcao data D+1
-5. `src/pages/OSAssistenciaEditar.tsx` - lixeira solicitacao, desabilitar confirmar recebimento para rejeitada
-6. `src/pages/OSAssistenciaDetalhes.tsx` - grade individual para lotes de revisao, comunicacao estoque na finalizacao
-7. `src/utils/loteRevisaoApi.ts` - adicionar campo itensLoteRevisao na OS gerada
+1. `src/pages/EstoqueNotaCadastrar.tsx` -- campos PIX, inativacao IMEI, coluna categoria
+2. `src/pages/OSAparelhosPendentes.tsx` -- SLA badges, ordenacao, coluna tempo
+3. `src/pages/EstoqueAcessorios.tsx` -- cores de linha por quantidade
+4. `src/pages/OSMovimentacaoPecas.tsx` -- redimensionar modal de busca
+5. `src/utils/estoqueApi.ts` -- timeline na confirmacao de recebimento
+6. `src/pages/EstoqueProdutoDetalhes.tsx` -- secao de anexo de video
 
 ### Ordem de implementacao
-1. Correcoes simples: renomear Dossie, botao limpar, data D+1 (items 1.1, 1.2, 3.1)
-2. Consignacao: timeline pagamento, devolucao 2 etapas, filtros inventario, Eye/Pencil (items 1.3, 2.1, 2.2, 2.3)
-3. Solicitacoes: lixeira e desabilitar confirmar recebimento (items 3.2, 3.3)
-4. Tratativa individual do lote + comunicacao estoque (items 3.4, 3.5) - mais complexo, depende dos anteriores
+1. Nota de Entrada: campos PIX + IMEI inativo + coluna categoria (items 1, 2, 4)
+2. Aparelhos Pendentes com SLA (item 3)
+3. Acessorios: cores de linha (item 5)
+4. Modal de busca redimensionado (item 6)
+5. Timeline na movimentacao + anexo de video (items 7, 8)
+
