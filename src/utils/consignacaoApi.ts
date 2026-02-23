@@ -515,3 +515,133 @@ export const finalizarAcerto = (loteId: string): boolean => {
 
   return true;
 };
+
+// ========== EDITAR LOTE ==========
+
+export interface EditarLoteInput {
+  fornecedorId?: string;
+  itens?: {
+    id: string;
+    descricao: string;
+    modelo: string;
+    quantidade: number;
+    valorCusto: number;
+    lojaDestinoId: string;
+  }[];
+  novosItens?: {
+    descricao: string;
+    modelo: string;
+    quantidade: number;
+    valorCusto: number;
+    lojaDestinoId: string;
+  }[];
+  itensRemovidos?: string[];
+}
+
+export const editarLoteConsignacao = (loteId: string, dados: EditarLoteInput, responsavel: string): LoteConsignacao | null => {
+  const lote = lotes.find(l => l.id === loteId);
+  if (!lote || lote.status !== 'Aberto') return null;
+
+  const alteracoes: string[] = [];
+
+  // Editar fornecedor
+  if (dados.fornecedorId && dados.fornecedorId !== lote.fornecedorId) {
+    alteracoes.push(`Fornecedor alterado`);
+    lote.fornecedorId = dados.fornecedorId;
+  }
+
+  // Remover itens
+  if (dados.itensRemovidos && dados.itensRemovidos.length > 0) {
+    dados.itensRemovidos.forEach(itemId => {
+      const item = lote.itens.find(i => i.id === itemId);
+      if (item && item.status === 'Disponivel') {
+        // Remover peça do estoque
+        if (item.pecaId) {
+          deletePeca(item.pecaId);
+        }
+        alteracoes.push(`Item removido: ${item.descricao}`);
+      }
+    });
+    lote.itens = lote.itens.filter(i => !dados.itensRemovidos!.includes(i.id));
+  }
+
+  // Editar itens existentes
+  if (dados.itens) {
+    dados.itens.forEach(editItem => {
+      const item = lote.itens.find(i => i.id === editItem.id);
+      if (!item || item.status !== 'Disponivel') return;
+
+      const changes: string[] = [];
+      if (item.descricao !== editItem.descricao) changes.push(`desc: ${item.descricao} → ${editItem.descricao}`);
+      if (item.modelo !== editItem.modelo) changes.push(`modelo: ${item.modelo} → ${editItem.modelo}`);
+      if (item.quantidade !== editItem.quantidade) changes.push(`qtd: ${item.quantidade} → ${editItem.quantidade}`);
+      if (item.valorCusto !== editItem.valorCusto) changes.push(`valor: R$${item.valorCusto} → R$${editItem.valorCusto}`);
+      if (item.lojaAtualId !== editItem.lojaDestinoId) changes.push(`loja alterada`);
+
+      item.descricao = editItem.descricao;
+      item.modelo = editItem.modelo;
+      item.quantidade = editItem.quantidade;
+      item.quantidadeOriginal = editItem.quantidade;
+      item.valorCusto = editItem.valorCusto;
+      item.lojaAtualId = editItem.lojaDestinoId;
+
+      // Atualizar peça no estoque
+      if (item.pecaId) {
+        updatePeca(item.pecaId, {
+          descricao: editItem.descricao,
+          modelo: editItem.modelo,
+          quantidade: editItem.quantidade,
+          valorCusto: editItem.valorCusto,
+          lojaId: editItem.lojaDestinoId,
+        });
+      }
+
+      if (changes.length > 0) {
+        alteracoes.push(`${editItem.descricao}: ${changes.join(', ')}`);
+      }
+    });
+  }
+
+  // Adicionar novos itens
+  if (dados.novosItens && dados.novosItens.length > 0) {
+    dados.novosItens.forEach(novoItem => {
+      const pecaCriada = addPeca({
+        descricao: novoItem.descricao,
+        lojaId: novoItem.lojaDestinoId,
+        modelo: novoItem.modelo,
+        valorCusto: novoItem.valorCusto,
+        valorRecomendado: novoItem.valorCusto * 1.5,
+        quantidade: novoItem.quantidade,
+        dataEntrada: new Date().toISOString(),
+        origem: 'Consignacao',
+        status: 'Disponível',
+        loteConsignacaoId: loteId,
+      });
+
+      const itemId = `CONS-ITEM-${String(nextItemId++).padStart(3, '0')}`;
+      lote.itens.push({
+        id: itemId,
+        pecaId: pecaCriada.id,
+        descricao: novoItem.descricao,
+        modelo: novoItem.modelo,
+        quantidade: novoItem.quantidade,
+        quantidadeOriginal: novoItem.quantidade,
+        valorCusto: novoItem.valorCusto,
+        lojaAtualId: novoItem.lojaDestinoId,
+        status: 'Disponivel',
+      });
+      alteracoes.push(`Novo item: ${novoItem.descricao} (${novoItem.quantidade} un.)`);
+    });
+  }
+
+  if (alteracoes.length > 0) {
+    lote.timeline.push({
+      data: new Date().toISOString(),
+      tipo: 'entrada',
+      descricao: `Lote editado: ${alteracoes.join('; ')}`,
+      responsavel,
+    });
+  }
+
+  return lote;
+};

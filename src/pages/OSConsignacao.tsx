@@ -24,6 +24,7 @@ import {
   confirmarDevolucaoItem, getValorConsumido,
   registrarConsumoPorPecaId, transferirItemConsignacao,
   gerarPagamentoParcial, confirmarPagamentoParcial, finalizarLote,
+  editarLoteConsignacao,
   LoteConsignacao, ItemConsignacao, CriarLoteInput, PagamentoParcial,
 } from '@/utils/consignacaoApi';
 import { getNotasAssistencia, __pushNotaConsignacao } from '@/utils/solicitacaoPecasApi';
@@ -35,6 +36,15 @@ import {
 } from 'lucide-react';
 
 type ViewMode = 'lista' | 'novo' | 'detalhamento';
+
+interface EditItemState {
+  id: string;
+  descricao: string;
+  modelo: string;
+  quantidade: string;
+  valorCusto: string;
+  lojaDestinoId: string;
+}
 
 export default function OSConsignacao() {
   const { toast } = useToast();
@@ -273,6 +283,95 @@ export default function OSConsignacao() {
     toast({ title: 'Devolvido', description: 'Item devolvido. Registro mantido no histórico do estoque.' });
   };
 
+  // Edit mode state
+  const [editItens, setEditItens] = useState<EditItemState[]>([]);
+  const [editFornecedor, setEditFornecedor] = useState('');
+  const [editItensRemovidos, setEditItensRemovidos] = useState<string[]>([]);
+  const [editNovosItens, setEditNovosItens] = useState<EditItemState[]>([]);
+
+  const iniciarEdicao = (lote: LoteConsignacao) => {
+    setEditFornecedor(lote.fornecedorId);
+    setEditItens(lote.itens.filter(i => i.status === 'Disponivel').map(i => ({
+      id: i.id,
+      descricao: i.descricao,
+      modelo: i.modelo,
+      quantidade: String(i.quantidade),
+      valorCusto: i.valorCusto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      lojaDestinoId: i.lojaAtualId,
+    })));
+    setEditItensRemovidos([]);
+    setEditNovosItens([]);
+  };
+
+  const handleVerDetalhamentoEdit = (lote: LoteConsignacao) => {
+    const loteAtual = getLoteById(lote.id) || lote;
+    setLoteSelecionado(loteAtual);
+    setItensSelecionadosPagamento([]);
+    setDetalhamentoReadOnly(false);
+    iniciarEdicao(loteAtual);
+    setViewMode('detalhamento');
+  };
+
+  const addEditNovoItem = () => {
+    setEditNovosItens([...editNovosItens, { id: `new-${Date.now()}`, descricao: '', modelo: '', quantidade: '1', valorCusto: '', lojaDestinoId: '' }]);
+  };
+
+  const removeEditNovoItem = (idx: number) => setEditNovosItens(editNovosItens.filter((_, i) => i !== idx));
+
+  const updateEditItem = (id: string, field: string, value: string) => {
+    setEditItens(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  const updateEditNovoItem = (idx: number, field: string, value: string) => {
+    const updated = [...editNovosItens];
+    (updated[idx] as any)[field] = value;
+    setEditNovosItens(updated);
+  };
+
+  const marcarItemParaRemover = (itemId: string) => {
+    setEditItensRemovidos(prev => [...prev, itemId]);
+    setEditItens(prev => prev.filter(i => i.id !== itemId));
+  };
+
+  const handleSalvarEdicao = () => {
+    if (!loteSelecionado) return;
+
+    const parseVal = (v: string) => {
+      const numbers = v.replace(/\D/g, '');
+      return parseInt(numbers || '0') / 100;
+    };
+
+    const itensEditados = editItens.map(i => ({
+      id: i.id,
+      descricao: i.descricao,
+      modelo: i.modelo,
+      quantidade: parseInt(i.quantidade) || 1,
+      valorCusto: parseVal(i.valorCusto),
+      lojaDestinoId: i.lojaDestinoId,
+    }));
+
+    const novosItensValidos = editNovosItens.filter(i => i.descricao && i.lojaDestinoId && i.valorCusto).map(i => ({
+      descricao: i.descricao,
+      modelo: i.modelo,
+      quantidade: parseInt(i.quantidade) || 1,
+      valorCusto: parseVal(i.valorCusto),
+      lojaDestinoId: i.lojaDestinoId,
+    }));
+
+    const result = editarLoteConsignacao(loteSelecionado.id, {
+      fornecedorId: editFornecedor !== loteSelecionado.fornecedorId ? editFornecedor : undefined,
+      itens: itensEditados,
+      novosItens: novosItensValidos.length > 0 ? novosItensValidos : undefined,
+      itensRemovidos: editItensRemovidos.length > 0 ? editItensRemovidos : undefined,
+    }, user?.colaborador?.nome || 'Sistema');
+
+    if (result) {
+      toast({ title: 'Lote atualizado', description: 'As alterações foram salvas com sucesso.' });
+      setLoteSelecionado(getLoteById(loteSelecionado.id) || null);
+      refreshLotes();
+    }
+  };
+
   // Inventory filters state
   const [filtroInventarioStatus, setFiltroInventarioStatus] = useState('todos');
   const [filtroInventarioLoja, setFiltroInventarioLoja] = useState('todos');
@@ -402,9 +501,10 @@ export default function OSConsignacao() {
             </Button>
             <h2 className="text-xl font-bold flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Detalhamento do Lote {loteSelecionado.id}
+              {detalhamentoReadOnly ? 'Detalhamento' : 'Edição'} do Lote {loteSelecionado.id}
             </h2>
             {detalhamentoReadOnly && <Badge variant="secondary">Somente Leitura</Badge>}
+            {!detalhamentoReadOnly && <Badge className="bg-amber-500 hover:bg-amber-600 text-white">Modo Edição</Badge>}
             {getStatusBadge(loteSelecionado.status)}
           </div>
 
@@ -414,7 +514,11 @@ export default function OSConsignacao() {
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                 <div>
                   <Label className="text-xs text-muted-foreground">Fornecedor</Label>
-                  <p className="font-medium">{getFornecedorNome(loteSelecionado.fornecedorId)}</p>
+                  {!detalhamentoReadOnly ? (
+                    <AutocompleteFornecedor value={editFornecedor} onChange={setEditFornecedor} placeholder="Selecione..." />
+                  ) : (
+                    <p className="font-medium">{getFornecedorNome(loteSelecionado.fornecedorId)}</p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Data Criação</Label>
@@ -435,6 +539,95 @@ export default function OSConsignacao() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Edição de Itens (apenas no modo edição) */}
+          {!detalhamentoReadOnly && loteAberto && (
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Pencil className="h-4 w-4" />
+                    Editar Itens do Lote
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={addEditNovoItem}>
+                      <Plus className="h-4 w-4 mr-1" /> Adicionar Item
+                    </Button>
+                    <Button size="sm" onClick={handleSalvarEdicao}>
+                      <CheckCircle className="h-4 w-4 mr-1" /> Salvar Alterações
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {editItens.length === 0 && editNovosItens.length === 0 && (
+                  <p className="text-center py-4 text-muted-foreground">Nenhum item disponível para edição</p>
+                )}
+                {editItens.map(item => (
+                  <div key={item.id} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end p-3 bg-muted/30 rounded-lg">
+                    <div className="md:col-span-2 space-y-1">
+                      <Label className="text-xs">Descrição</Label>
+                      <Input value={item.descricao} onChange={e => updateEditItem(item.id, 'descricao', e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Modelo</Label>
+                      <Input value={item.modelo} onChange={e => updateEditItem(item.id, 'modelo', e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Qtd</Label>
+                      <Input type="number" min="1" value={item.quantidade} onChange={e => updateEditItem(item.id, 'quantidade', e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Valor Custo</Label>
+                      <Input value={item.valorCusto} onChange={e => updateEditItem(item.id, 'valorCusto', formatCurrencyInput(e.target.value))} />
+                    </div>
+                    <div className="flex items-end gap-1">
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-xs">Loja</Label>
+                        <AutocompleteLoja value={item.lojaDestinoId} onChange={v => updateEditItem(item.id, 'lojaDestinoId', v)} filtrarPorTipo="Assistência" placeholder="Loja" />
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => marcarItemParaRemover(item.id)} title="Remover item">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {/* Novos itens */}
+                {editNovosItens.map((item, idx) => (
+                  <div key={item.id} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end p-3 bg-green-50/50 dark:bg-green-950/10 rounded-lg border border-dashed border-green-300 dark:border-green-800">
+                    <div className="md:col-span-2 space-y-1">
+                      <Label className="text-xs">Descrição *</Label>
+                      <Input value={item.descricao} onChange={e => updateEditNovoItem(idx, 'descricao', e.target.value)} placeholder="Ex: Tela LCD iPhone 14" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Modelo</Label>
+                      <Input value={item.modelo} onChange={e => updateEditNovoItem(idx, 'modelo', e.target.value)} placeholder="iPhone 14" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Qtd</Label>
+                      <Input type="number" min="1" value={item.quantidade} onChange={e => updateEditNovoItem(idx, 'quantidade', e.target.value)} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Valor Custo *</Label>
+                      <Input value={item.valorCusto} onChange={e => updateEditNovoItem(idx, 'valorCusto', formatCurrencyInput(e.target.value))} placeholder="R$ 0,00" />
+                    </div>
+                    <div className="flex items-end gap-1">
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-xs">Loja *</Label>
+                        <AutocompleteLoja value={item.lojaDestinoId} onChange={v => updateEditNovoItem(idx, 'lojaDestinoId', v)} filtrarPorTipo="Assistência" placeholder="Loja" />
+                      </div>
+                      <Button variant="ghost" size="sm" onClick={() => removeEditNovoItem(idx)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {editItensRemovidos.length > 0 && (
+                  <p className="text-xs text-destructive">{editItensRemovidos.length} item(ns) marcado(s) para remoção</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <Tabs defaultValue="inventario">
             <TabsList className="grid w-full grid-cols-3">
@@ -972,7 +1165,7 @@ export default function OSConsignacao() {
                           <Eye className="h-4 w-4" />
                         </Button>
                         {lote.status === 'Aberto' && (
-                          <Button variant="ghost" size="sm" onClick={() => handleVerDetalhamento(lote, false)} title="Editar Lote">
+                          <Button variant="ghost" size="sm" onClick={() => handleVerDetalhamentoEdit(lote)} title="Editar Lote">
                             <Pencil className="h-4 w-4" />
                           </Button>
                         )}
