@@ -23,7 +23,7 @@ import {
   updateOrdemServico
 } from '@/utils/assistenciaApi';
 import { atualizarStatusProdutoPendente } from '@/utils/osApi';
-import { getLoteRevisaoById, atualizarItemRevisao, finalizarLoteComLogisticaReversa, ResultadoItemRevisao } from '@/utils/loteRevisaoApi';
+import { getLoteRevisaoById, atualizarItemRevisao, finalizarLoteComLogisticaReversa, ResultadoItemRevisao, sincronizarNotaComLote } from '@/utils/loteRevisaoApi';
 import { marcarProdutoRetornoAssistencia } from '@/utils/estoqueApi';
 import { getClientes, getFornecedores } from '@/utils/cadastrosApi';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
@@ -383,6 +383,10 @@ export default function OSAssistenciaDetalhes() {
         custoReparo: valorCustoTecnico,
         statusReparo: 'Concluido'
       });
+
+      // Sincronizar nota com abatimento parcial (acumula conforme itens concluem)
+      sincronizarNotaComLote(osFresh.loteRevisaoId, user?.colaborador?.nome || 'Técnico');
+
       // Verificar se TODOS os itens do lote estão concluídos
       const lote = getLoteRevisaoById(osFresh.loteRevisaoId);
       if (lote) {

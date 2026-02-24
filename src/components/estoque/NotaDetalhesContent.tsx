@@ -17,14 +17,19 @@ import {
   AlertTriangle,
   CheckCircle,
   Plus,
-  ClipboardCheck
+  ClipboardCheck,
+  Wrench,
+  CreditCard
 } from 'lucide-react';
 import { 
   NotaEntrada,
   NotaEntradaStatus,
   AtuacaoAtual,
   TipoPagamentoNota,
+  getCreditosByFornecedor,
 } from '@/utils/notaEntradaFluxoApi';
+import { getLoteRevisaoByNotaId, calcularAbatimento } from '@/utils/loteRevisaoApi';
+import { LoteRevisaoResumo } from '@/components/estoque/LoteRevisaoResumo';
 import { getFornecedores } from '@/utils/cadastrosApi';
 import { formatCurrency } from '@/utils/formatUtils';
 
@@ -46,6 +51,7 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
   const navigate = useNavigate();
   const [timelineOpen, setTimelineOpen] = useState(true);
   const [produtosOpen, setProdutosOpen] = useState(true);
+  const [assistenciaOpen, setAssistenciaOpen] = useState(true);
 
   const progressoConferencia = useMemo(() => {
     const total = nota.qtdInformada;
@@ -260,6 +266,11 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
             <div>
               <p className="text-sm text-muted-foreground">Valor Pendente</p>
               <p className="font-medium text-destructive">{formatCurrency(nota.valorPendente)}</p>
+              {(nota.valorAbatimento || 0) > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  (com abatimento de {formatCurrency(nota.valorAbatimento || 0)})
+                </p>
+              )}
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Qtd Informada</p>
@@ -362,7 +373,113 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
         </Card>
       </Collapsible>
 
-      {/* Timeline */}
+      {/* Seção Assistência Técnica */}
+      {(() => {
+        const loteRevisao = getLoteRevisaoByNotaId(nota.id);
+        if (!loteRevisao) return null;
+        const abatimento = calcularAbatimento(loteRevisao.id);
+        const creditos = nota.tipoPagamento === 'Pagamento 100% Antecipado' 
+          ? getCreditosByFornecedor(nota.fornecedor) 
+          : [];
+        const creditosNota = creditos.filter(c => c.origem === nota.id);
+
+        return (
+          <Collapsible open={assistenciaOpen} onOpenChange={setAssistenciaOpen}>
+            <Card className="border-primary/30">
+              <CardHeader>
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-center justify-between cursor-pointer">
+                    <CardTitle className="flex items-center gap-2">
+                      <Wrench className="h-5 w-5 text-primary" />
+                      Assistência Técnica — Lote {loteRevisao.id}
+                    </CardTitle>
+                    {assistenciaOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                  </div>
+                </CollapsibleTrigger>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent className="space-y-6">
+                  {/* Resumo financeiro */}
+                  {abatimento && (
+                    <LoteRevisaoResumo
+                      valorOriginalNota={abatimento.valorNota}
+                      custoTotalReparos={abatimento.custoReparos}
+                      valorLiquidoSugerido={abatimento.valorLiquido}
+                      percentualReparo={abatimento.percentualReparo}
+                    />
+                  )}
+
+                  {/* Tabela de itens */}
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Marca</TableHead>
+                        <TableHead>Modelo</TableHead>
+                        <TableHead>IMEI</TableHead>
+                        <TableHead>Motivo</TableHead>
+                        <TableHead>Status Reparo</TableHead>
+                        <TableHead>Custo Reparo</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loteRevisao.itens.map(item => (
+                        <TableRow key={item.id}>
+                          <TableCell>{item.marca}</TableCell>
+                          <TableCell>{item.modelo}</TableCell>
+                          <TableCell className="font-mono text-xs">{item.imei || '-'}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">{item.motivoAssistencia}</TableCell>
+                          <TableCell>
+                            <Badge variant={item.statusReparo === 'Concluido' ? 'default' : item.statusReparo === 'Em Andamento' ? 'secondary' : 'outline'}>
+                              {item.statusReparo}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {item.custoReparo > 0 ? formatCurrency(item.custoReparo) : '-'}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  {/* Card de crédito para notas 100% Antecipadas */}
+                  {nota.tipoPagamento === 'Pagamento 100% Antecipado' && creditosNota.length > 0 && (
+                    <Card className="border-primary/20">
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-primary" />
+                          Créditos Gerados ao Fornecedor
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {creditosNota.map(credito => (
+                            <div key={credito.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                              <div>
+                                <p className="text-sm font-medium">{credito.descricao}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(credito.dataGeracao).toLocaleDateString('pt-BR')}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-primary">{formatCurrency(credito.valor)}</span>
+                                <Badge variant={credito.utilizado ? 'secondary' : 'default'}>
+                                  {credito.utilizado ? 'Utilizado' : 'Disponível'}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        );
+      })()}
+
+
       <Collapsible open={timelineOpen} onOpenChange={setTimelineOpen}>
         <Card>
           <CardHeader>

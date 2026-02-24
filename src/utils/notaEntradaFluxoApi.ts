@@ -657,9 +657,9 @@ export const registrarPagamento = (
     ...pagamento
   });
   
-  // Atualizar valores
+  // Atualizar valores (considerar abatimento existente)
   nota.valorPago += pagamento.valor;
-  nota.valorPendente = nota.valorTotal - nota.valorPago;
+  nota.valorPendente = nota.valorTotal - nota.valorPago - (nota.valorAbatimento || 0);
   
   // Registrar na timeline
   registrarTimeline(
@@ -681,8 +681,8 @@ export const registrarPagamento = (
       alterarAtuacao(notaId, 'Estoque', 'Sistema', 'Pagamento 100% concluído - aguardando conferência do estoque');
     }
   } else if (nota.tipoPagamento === 'Pagamento Parcial') {
-    // Tolerância de R$ 0,01
-    const quitado = Math.abs(nota.valorPendente) <= 0.01;
+    // Tolerância de R$ 0,01 (considerando abatimento)
+    const quitado = nota.valorPendente <= 0.01;
     
     if (nota.pagamentos.length === 1 && !quitado) {
       // Primeiro pagamento parcial - transicionar para estoque
@@ -715,7 +715,8 @@ export const registrarPagamento = (
       return null;
     }
     
-    if (nota.valorPago >= nota.valorTotal) {
+    const valorLiquido = nota.valorTotal - (nota.valorAbatimento || 0);
+    if (nota.valorPago >= valorLiquido - 0.01) {
       transicionarStatus(notaId, 'Finalizada', pagamento.responsavel, 'Financeiro');
       nota.dataFinalizacao = new Date().toISOString();
       nota.responsavelFinalizacao = pagamento.responsavel;
@@ -1750,6 +1751,30 @@ export const gerarCreditoFornecedor = (
 
 export const getCreditosByFornecedor = (fornecedor: string): CreditoFornecedor[] => {
   return creditosFornecedor.filter(c => c.fornecedor === fornecedor);
+};
+
+// ============= ABATIMENTO POR RETORNO DA ASSISTÊNCIA =============
+
+export const atualizarAbatimentoNota = (
+  notaId: string,
+  valorAbatimento: number,
+  usuario?: string
+): NotaEntrada | null => {
+  const nota = notasEntrada.find(n => n.id === notaId);
+  if (!nota) return null;
+
+  nota.valorAbatimento = valorAbatimento;
+
+  // Recalcular valorPendente conforme tipo de pagamento
+  if (nota.tipoPagamento === 'Pagamento 100% Antecipado') {
+    // Nota já paga integralmente — não altera valorPendente (fica 0)
+    nota.valorPendente = 0;
+  } else {
+    // Pós ou Parcial: abatimento reduz o saldo devedor
+    nota.valorPendente = Math.max(0, nota.valorTotal - nota.valorPago - valorAbatimento);
+  }
+
+  return nota;
 };
 
 export const utilizarCredito = (creditoId: string, notaDestino: string): CreditoFornecedor | null => {

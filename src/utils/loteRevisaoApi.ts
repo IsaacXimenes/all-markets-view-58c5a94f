@@ -1,7 +1,7 @@
 // ============= API para Lotes de Revisão de Notas de Entrada =============
 // Gerencia o encaminhamento em lote de aparelhos defeituosos para assistência
 
-import { getNotaEntradaById, NotaEntrada, gerarCreditoFornecedor } from './notaEntradaFluxoApi';
+import { getNotaEntradaById, NotaEntrada, gerarCreditoFornecedor, registrarTimeline, atualizarAbatimentoNota } from './notaEntradaFluxoApi';
 import { encaminharParaAnaliseGarantia, MetadadosEstoque } from './garantiasApi';
 import { marcarProdutoRetornoAssistencia, marcarProdutoDevolvido } from './estoqueApi';
 
@@ -154,6 +154,66 @@ export const encaminharLoteParaAssistencia = (
   return lote;
 };
 
+// ============= SINCRONIZAÇÃO NOTA ↔ LOTE =============
+
+export const sincronizarNotaComLote = (
+  loteId: string,
+  responsavel: string
+): NotaEntrada | null => {
+  const lote = lotesRevisao.find(l => l.id === loteId);
+  if (!lote) return null;
+
+  const nota = getNotaEntradaById(lote.notaEntradaId);
+  if (!nota) return null;
+
+  // Calcular custo total dos itens concluídos
+  const custoTotalConcluidos = lote.itens
+    .filter(i => i.statusReparo === 'Concluido')
+    .reduce((acc, i) => acc + i.custoReparo, 0);
+
+  // Atualizar abatimento na nota
+  atualizarAbatimentoNota(nota.id, custoTotalConcluidos);
+
+  // Registrar na timeline da nota
+  const isFinalizado = lote.status === 'Finalizado';
+  const acao = isFinalizado
+    ? `Retorno da Assistência - Lote ${lote.id} finalizado. Custo de reparos: R$ ${custoTotalConcluidos.toFixed(2)}. Abatimento aplicado.`
+    : `Assistência - Item concluído no Lote ${lote.id}. Custo acumulado: R$ ${custoTotalConcluidos.toFixed(2)}.`;
+
+  registrarTimeline(
+    nota,
+    responsavel,
+    'Sistema',
+    acao,
+    nota.status,
+    custoTotalConcluidos,
+    `Valor original: R$ ${nota.valorTotal.toFixed(2)} | Valor líquido: R$ ${(nota.valorTotal - custoTotalConcluidos).toFixed(2)}`
+  );
+
+  // Para notas 100% Antecipadas finalizadas, registrar crédito na timeline
+  if (isFinalizado && nota.tipoPagamento === 'Pagamento 100% Antecipado' && custoTotalConcluidos > 0) {
+    // Gerar crédito ao fornecedor pelo custo de reparos
+    gerarCreditoFornecedor(
+      nota.fornecedor,
+      custoTotalConcluidos,
+      nota.id,
+      `Crédito por custo de reparos - Lote ${lote.id}`
+    );
+
+    registrarTimeline(
+      nota,
+      'Sistema',
+      'Sistema',
+      `Crédito gerado para fornecedor: R$ ${custoTotalConcluidos.toFixed(2)}`,
+      nota.status,
+      custoTotalConcluidos,
+      `Nota 100% antecipada - custo de reparos convertido em crédito ao fornecedor`
+    );
+  }
+
+  return nota;
+};
+
 export const finalizarLoteRevisao = (
   loteId: string,
   responsavel: string
@@ -167,6 +227,9 @@ export const finalizarLoteRevisao = (
   // Recalcular custos com base nas OS vinculadas
   lote.custoTotalReparos = lote.itens.reduce((acc, i) => acc + i.custoReparo, 0);
   lote.valorLiquidoSugerido = lote.valorOriginalNota - lote.custoTotalReparos;
+
+  // Sincronizar nota de entrada com abatimento
+  sincronizarNotaComLote(loteId, responsavel);
 
   return lote;
 };
@@ -233,6 +296,9 @@ export const finalizarLoteComLogisticaReversa = (
   if (valorAbatimentoDevolucao > 0) {
     lote.valorLiquidoSugerido -= valorAbatimentoDevolucao;
   }
+
+  // Sincronizar nota de entrada com abatimento total (reparos + devoluções)
+  sincronizarNotaComLote(loteId, responsavel);
 
   return lote;
 };
