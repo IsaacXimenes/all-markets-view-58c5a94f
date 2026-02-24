@@ -1,11 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   ChevronDown, 
   ChevronUp, 
@@ -27,12 +31,16 @@ import {
   AtuacaoAtual,
   TipoPagamentoNota,
   getCreditosByFornecedor,
+  getNotaEntradaById,
 } from '@/utils/notaEntradaFluxoApi';
-import { getLoteRevisaoByNotaId, calcularAbatimento } from '@/utils/loteRevisaoApi';
+import { getLoteRevisaoByNotaId, calcularAbatimento, criarLoteRevisao, encaminharLoteParaAssistencia } from '@/utils/loteRevisaoApi';
 import { LoteRevisaoResumo } from '@/components/estoque/LoteRevisaoResumo';
 import { getFornecedores } from '@/utils/cadastrosApi';
 import { getOrdemServicoById } from '@/utils/assistenciaApi';
 import { formatCurrency } from '@/utils/formatUtils';
+import { formatIMEI } from '@/utils/imeiMask';
+import { toast } from 'sonner';
+import { useAuthStore } from '@/store/authStore';
 
 const obterNomeFornecedor = (idOuNome: string): string => {
   if (!idOuNome.startsWith('FORN-')) {
@@ -50,9 +58,15 @@ interface NotaDetalhesContentProps {
 
 export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesContentProps) {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [timelineOpen, setTimelineOpen] = useState(true);
   const [produtosOpen, setProdutosOpen] = useState(true);
   const [assistenciaOpen, setAssistenciaOpen] = useState(true);
+
+  // Modal de encaminhamento para assistência
+  const [modalAssistOpen, setModalAssistOpen] = useState(false);
+  const [itensSelecionados, setItensSelecionados] = useState<Record<string, boolean>>({});
+  const [motivosPorItem, setMotivosPorItem] = useState<Record<string, string>>({});
 
   const progressoConferencia = useMemo(() => {
     const total = nota.qtdInformada;
@@ -136,11 +150,73 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
 
   const podeEditar = nota.atuacaoAtual === 'Estoque';
 
+  // Produtos elegíveis para encaminhamento (com IMEI, não já encaminhados)
+  const loteExistente = getLoteRevisaoByNotaId(nota.id);
+  const produtosElegiveis = useMemo(() => {
+    const idsJaEncaminhados = loteExistente?.itens.map(i => i.produtoNotaId) || [];
+    return nota.produtos.filter(p => 
+      p.tipoProduto === 'Aparelho' && 
+      p.imei && 
+      !idsJaEncaminhados.includes(p.id)
+    );
+  }, [nota.produtos, loteExistente]);
+
+  const abrirModalEncaminhamento = () => {
+    setItensSelecionados({});
+    setMotivosPorItem({});
+    setModalAssistOpen(true);
+  };
+
+  const toggleItemSelecionado = (produtoId: string) => {
+    setItensSelecionados(prev => ({ ...prev, [produtoId]: !prev[produtoId] }));
+  };
+
+  const handleConfirmarEncaminhamento = () => {
+    const selecionados = produtosElegiveis.filter(p => itensSelecionados[p.id]);
+    if (selecionados.length === 0) {
+      toast.error('Selecione ao menos um aparelho');
+      return;
+    }
+
+    // Validar motivos
+    for (const p of selecionados) {
+      if (!motivosPorItem[p.id]?.trim()) {
+        toast.error(`Informe o motivo para ${p.marca} ${p.modelo}`);
+        return;
+      }
+    }
+
+    const responsavel = user?.colaborador?.nome || user?.username || 'Sistema';
+
+    const itensLote = selecionados.map(p => ({
+      produtoNotaId: p.id,
+      marca: p.marca,
+      modelo: p.modelo,
+      imei: p.imei || undefined,
+      motivoAssistencia: motivosPorItem[p.id],
+      responsavelRegistro: responsavel,
+      dataRegistro: new Date().toISOString()
+    }));
+
+    const lote = criarLoteRevisao(nota.id, itensLote, responsavel);
+    if (lote) {
+      encaminharLoteParaAssistencia(lote.id, responsavel);
+      const notaRef = getNotaEntradaById(nota.id);
+      if (notaRef) {
+        notaRef.loteRevisaoId = lote.id;
+      }
+      toast.success(`${selecionados.length} aparelho(s) encaminhado(s) para Análise de Tratativas`);
+      setModalAssistOpen(false);
+    } else {
+      toast.error('Erro ao criar lote de revisão');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Ações do estoque (condicionais) */}
       {showActions && (
-        <div className="flex gap-2 justify-end">
+        <div className="flex gap-2 justify-end flex-wrap">
           {podeEditar && nota.qtdCadastrada < nota.qtdInformada && (
             <Button onClick={() => navigate(`/estoque/nota/${nota.id}/cadastrar-produtos`)}>
               <Plus className="mr-2 h-4 w-4" />
@@ -151,6 +227,12 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
             <Button onClick={() => navigate(`/estoque/nota/${nota.id}/conferencia`)}>
               <ClipboardCheck className="mr-2 h-4 w-4" />
               Conferir Produtos
+            </Button>
+          )}
+          {podeEditar && produtosElegiveis.length > 0 && !loteExistente && (
+            <Button variant="outline" onClick={abrirModalEncaminhamento} className="border-orange-500/50 text-orange-600 hover:bg-orange-500/10">
+              <Wrench className="mr-2 h-4 w-4" />
+              Encaminhar para Assistência
             </Button>
           )}
         </div>
@@ -583,6 +665,69 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
           </CardContent>
         </Card>
       )}
+
+      {/* Modal de Encaminhamento para Assistência */}
+      <Dialog open={modalAssistOpen} onOpenChange={setModalAssistOpen}>
+        <DialogContent className="max-w-2xl border-border/50">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="h-5 w-5 text-orange-500" />
+              Encaminhar Aparelhos para Assistência
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            <p className="text-sm text-muted-foreground">
+              Selecione os aparelhos que precisam ser encaminhados e informe o motivo individualmente.
+            </p>
+
+            {produtosElegiveis.map(produto => (
+              <div key={produto.id} className={`p-4 rounded-lg border ${itensSelecionados[produto.id] ? 'border-orange-500/50 bg-orange-500/5' : 'border-border'}`}>
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={!!itensSelecionados[produto.id]}
+                    onCheckedChange={() => toggleItemSelecionado(produto.id)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <span className="font-medium">{produto.marca} {produto.modelo}</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        IMEI: {produto.imei ? formatIMEI(produto.imei) : '-'}
+                      </span>
+                    </div>
+                    {itensSelecionados[produto.id] && (
+                      <div>
+                        <Label className="text-xs">Motivo do encaminhamento *</Label>
+                        <Textarea
+                          value={motivosPorItem[produto.id] || ''}
+                          onChange={(e) => setMotivosPorItem(prev => ({ ...prev, [produto.id]: e.target.value }))}
+                          placeholder="Descreva o defeito ou motivo..."
+                          rows={2}
+                          className="resize-none mt-1"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setModalAssistOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleConfirmarEncaminhamento}
+              className="bg-orange-500 hover:bg-orange-600 text-white border-none"
+            >
+              <Wrench className="mr-2 h-4 w-4" />
+              Confirmar Encaminhamento
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
