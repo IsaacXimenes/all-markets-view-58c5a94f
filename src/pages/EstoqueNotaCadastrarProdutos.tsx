@@ -22,7 +22,7 @@ import {
   podeRealizarAcao 
 } from '@/utils/notaEntradaFluxoApi';
 import { getProdutosCadastro } from '@/utils/cadastrosApi';
-import { encaminharParaAnaliseGarantia } from '@/utils/garantiasApi';
+import { encaminharParaAnaliseGarantia, MetadadosEstoque } from '@/utils/garantiasApi';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 import { InputComMascara } from '@/components/ui/InputComMascara';
@@ -261,17 +261,31 @@ export default function EstoqueNotaCadastrarProdutos() {
     );
     
     if (resultado) {
-      // Encaminhar produtos marcados para assistência
+      // Encaminhar produtos marcados para assistência via Análise de Tratativas
       produtosMarcadosAssistencia.forEach(marcacao => {
         const prod = produtos[marcacao.index];
         if (prod) {
+          // Buscar o ID do produto recém-cadastrado na nota atualizada
+          const notaAtualizada = getNotaEntradaById(nota.id);
+          const produtoNotaCadastrado = notaAtualizada?.produtos.find(
+            p => p.imei === prod.imei && p.modelo === prod.modelo
+          );
+          const produtoNotaId = produtoNotaCadastrado?.id || nota.id;
+
           const descricao = `${prod.marca} ${prod.modelo} - IMEI: ${prod.imei}`;
-          encaminharParaAnaliseGarantia(nota.id, 'Estoque', descricao, marcacao.motivo);
+          const metadata: MetadadosEstoque = {
+            notaEntradaId: nota.id,
+            produtoNotaId,
+            imeiAparelho: prod.imei || undefined,
+            modeloAparelho: prod.modelo,
+            marcaAparelho: prod.marca
+          };
+          encaminharParaAnaliseGarantia(produtoNotaId, 'Estoque', descricao, marcacao.motivo, metadata);
         }
       });
 
       const msgAssistencia = produtosMarcadosAssistencia.length > 0
-        ? ` | ${produtosMarcadosAssistencia.length} encaminhado(s) para assistência`
+        ? ` | ${produtosMarcadosAssistencia.length} encaminhado(s) para Análise de Tratativas`
         : '';
       toast.success(`${produtos.length} produto(s) cadastrado(s) com sucesso!${msgAssistencia}`);
       navigate('/estoque/notas-pendencias');

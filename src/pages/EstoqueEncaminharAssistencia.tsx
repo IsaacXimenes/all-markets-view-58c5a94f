@@ -208,7 +208,7 @@ export default function EstoqueEncaminharAssistencia() {
     }
 
     toast.success(
-      `Lote ${loteEncaminhado.id} criado com ${loteEncaminhado.osIds.length} OS(s) gerada(s)!`
+      `Lote ${loteEncaminhado.id} criado — ${loteEncaminhado.itens.length} aparelho(s) encaminhado(s) para Análise de Tratativas`
     );
 
     setModalConfirmacaoFinal(false);

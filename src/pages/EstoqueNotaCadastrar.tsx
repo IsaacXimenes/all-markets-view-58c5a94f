@@ -23,7 +23,7 @@ import {
   AtuacaoAtual,
   verificarImeiUnicoSistema
 } from '@/utils/notaEntradaFluxoApi';
-import { encaminharParaAnaliseGarantia } from '@/utils/garantiasApi';
+import { encaminharParaAnaliseGarantia, MetadadosEstoque } from '@/utils/garantiasApi';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -405,19 +405,32 @@ export default function EstoqueNotaCadastrar() {
     // Mensagem de sucesso
     const atuacao = definirAtuacaoInicial(tipoPagamento as TipoPagamentoNota);
     
-    // Encaminhar produtos marcados para assistência
+    // Encaminhar produtos marcados para assistência via Análise de Tratativas
     if (novaNota && produtosMarcadosAssistencia.length > 0) {
       produtosMarcadosAssistencia.forEach(marcacao => {
         const prod = produtos[marcacao.index];
         if (prod) {
+          // Buscar o ID do produto cadastrado na nota (pelo índice na lista de produtos válidos)
+          const produtosValidos = produtos.filter(p => p.modelo && p.custoUnitario > 0);
+          const idxValido = produtosValidos.indexOf(prod);
+          const produtoNota = novaNota.produtos?.[idxValido];
+          const produtoNotaId = produtoNota?.id || novaNota.id;
+
           const descricao = `${prod.marca} ${prod.modelo}${prod.imei ? ` - IMEI: ${prod.imei}` : ''}`;
-          encaminharParaAnaliseGarantia(novaNota.id, 'Estoque', descricao, marcacao.motivo);
+          const metadata: MetadadosEstoque = {
+            notaEntradaId: novaNota.id,
+            produtoNotaId,
+            imeiAparelho: prod.imei || undefined,
+            modeloAparelho: prod.modelo,
+            marcaAparelho: prod.marca
+          };
+          encaminharParaAnaliseGarantia(produtoNotaId, 'Estoque', descricao, marcacao.motivo, metadata);
         }
       });
     }
 
     const prodMsg = temProdutosPreenchidos ? ' com produtos registrados' : '';
-    const assistMsg = produtosMarcadosAssistencia.length > 0 ? ` | ${produtosMarcadosAssistencia.length} encaminhado(s) para assistência` : '';
+    const assistMsg = produtosMarcadosAssistencia.length > 0 ? ` | ${produtosMarcadosAssistencia.length} encaminhado(s) para Análise de Tratativas` : '';
     
     toast.success(`Nota ${novaNota.id} lançada com sucesso${prodMsg}!${assistMsg}`, {
       description: `Atuação inicial: ${atuacao}. ${atuacao === 'Estoque' ? 'Acesse Notas Pendências para cadastrar/conferir produtos.' : 'Aguardando ação do Financeiro.'}`
