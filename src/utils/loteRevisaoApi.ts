@@ -4,6 +4,7 @@
 import { getNotaEntradaById, NotaEntrada, gerarCreditoFornecedor, registrarTimeline, atualizarAbatimentoNota } from './notaEntradaFluxoApi';
 import { encaminharParaAnaliseGarantia, MetadadosEstoque } from './garantiasApi';
 import { marcarProdutoRetornoAssistencia, marcarProdutoDevolvido } from './estoqueApi';
+import { getOrdemServicoById } from './assistenciaApi';
 
 // ============= TIPOS E INTERFACES =============
 
@@ -332,6 +333,99 @@ export const calcularAbatimento = (loteId: string): AbatimentoInfo | null => {
     percentualReparo,
     alertaCritico: percentualReparo > 15
   };
+};
+
+// ============= TIMELINE DA NOTA COM EVENTOS TÉCNICOS =============
+
+export const registrarEventoTecnicoNaNota = (
+  loteId: string,
+  osId: string,
+  tipoEvento: 'assuncao' | 'finalizacao' | 'retorno' | 'abatimento',
+  responsavel: string,
+  dados?: { resumo?: string; custo?: number }
+): void => {
+  const lote = lotesRevisao.find(l => l.id === loteId);
+  if (!lote) return;
+
+  const nota = getNotaEntradaById(lote.notaEntradaId);
+  if (!nota) return;
+
+  // Marcador para evitar duplicidade
+  const marcador = `OS:${osId}|EVENTO:${tipoEvento}`;
+  const jáRegistrado = nota.timeline?.some(t => t.detalhes?.includes(marcador));
+  if (jáRegistrado) return;
+
+  const mensagens: Record<string, string> = {
+    assuncao: `Técnico assumiu o serviço na OS ${osId}`,
+    finalizacao: `Serviço finalizado na OS ${osId}. ${dados?.resumo ? `Parecer: ${dados.resumo}` : ''} ${dados?.custo ? `Custo peças: R$ ${dados.custo.toFixed(2)}` : ''}`.trim(),
+    retorno: `Aparelho retornou da assistência (OS ${osId}) para validação do estoque`,
+    abatimento: `Abatimento aplicado na nota referente à OS ${osId}. Valor: R$ ${(dados?.custo || 0).toFixed(2)}`
+  };
+
+  registrarTimeline(
+    nota,
+    responsavel,
+    'Sistema',
+    mensagens[tipoEvento] || `Evento técnico: ${tipoEvento}`,
+    nota.status,
+    dados?.custo,
+    marcador
+  );
+};
+
+// ============= RECONCILIAÇÃO RETROATIVA =============
+
+export const reconciliarLoteComOS = (
+  loteId: string,
+  responsavel: string
+): boolean => {
+  const lote = lotesRevisao.find(l => l.id === loteId);
+  if (!lote) return false;
+
+  let reconciliou = false;
+  const statusConcluidos = [
+    'Serviço concluído', 'Serviço Concluído - Validar Aparelho',
+    'Conferência do Gestor', 'Aguardando Financeiro', 'Liquidado',
+    'Concluído', 'Finalizado'
+  ];
+
+  lote.itens.forEach(item => {
+    if (!item.osId) return;
+    if (item.statusReparo === 'Concluido') return;
+
+    const os = getOrdemServicoById(item.osId);
+    if (!os) return;
+
+    if (statusConcluidos.includes(os.status)) {
+      item.statusReparo = 'Concluido';
+      item.custoReparo = os.valorCustoTecnico || 0;
+      reconciliou = true;
+
+      // Registrar evento de reconciliação na timeline da nota
+      registrarEventoTecnicoNaNota(loteId, os.id, 'finalizacao', responsavel, {
+        resumo: os.resumoConclusao || 'Reconciliação automática',
+        custo: os.valorCustoTecnico || 0
+      });
+    }
+  });
+
+  if (reconciliou) {
+    // Recalcular custos do lote
+    lote.custoTotalReparos = lote.itens.reduce((acc, i) => acc + i.custoReparo, 0);
+    lote.valorLiquidoSugerido = lote.valorOriginalNota - lote.custoTotalReparos;
+
+    // Sincronizar nota
+    sincronizarNotaComLote(loteId, responsavel);
+
+    // Verificar se lote pode ser finalizado
+    const allDone = lote.itens.every(i => i.statusReparo === 'Concluido');
+    if (allDone && lote.status !== 'Finalizado') {
+      lote.status = 'Finalizado';
+      lote.dataFinalizacao = new Date().toISOString();
+    }
+  }
+
+  return reconciliou;
 };
 
 // ============= MOCK DATA =============

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,7 +33,7 @@ import {
   getCreditosByFornecedor,
   getNotaEntradaById,
 } from '@/utils/notaEntradaFluxoApi';
-import { getLoteRevisaoByNotaId, calcularAbatimento, criarLoteRevisao, encaminharLoteParaAssistencia } from '@/utils/loteRevisaoApi';
+import { getLoteRevisaoByNotaId, calcularAbatimento, criarLoteRevisao, encaminharLoteParaAssistencia, reconciliarLoteComOS } from '@/utils/loteRevisaoApi';
 import { LoteRevisaoResumo } from '@/components/estoque/LoteRevisaoResumo';
 import { getFornecedores } from '@/utils/cadastrosApi';
 import { getOrdemServicoById } from '@/utils/assistenciaApi';
@@ -152,11 +152,27 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
 
   // Produtos elegíveis para encaminhamento (com IMEI, não já encaminhados)
   const loteExistente = getLoteRevisaoByNotaId(nota.id);
+
+  // Reconciliação retroativa ao abrir detalhes da nota
+  const reconciliacaoExecutada = useRef(false);
+  useEffect(() => {
+    if (reconciliacaoExecutada.current) return;
+    if (loteExistente && loteExistente.status !== 'Finalizado') {
+      const responsavel = user?.colaborador?.nome || user?.username || 'Sistema';
+      const reconciliou = reconciliarLoteComOS(loteExistente.id, responsavel);
+      if (reconciliou) {
+        console.log('[NotaDetalhes] Reconciliação retroativa executada para lote', loteExistente.id);
+      }
+      reconciliacaoExecutada.current = true;
+    }
+  }, [loteExistente, user]);
+
   const produtosElegiveis = useMemo(() => {
     const idsJaEncaminhados = loteExistente?.itens.map(i => i.produtoNotaId) || [];
     return nota.produtos.filter(p => 
       p.tipoProduto === 'Aparelho' && 
       p.imei && 
+      p.categoria !== 'Novo' &&
       !idsJaEncaminhados.includes(p.id)
     );
   }, [nota.produtos, loteExistente]);
@@ -569,6 +585,7 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
           </Collapsible>
         );
       })()}
+
 
 
       <Collapsible open={timelineOpen} onOpenChange={setTimelineOpen}>

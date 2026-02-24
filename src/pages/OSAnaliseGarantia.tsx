@@ -221,6 +221,9 @@ export default function OSAnaliseGarantia() {
         modeloAparelho,
         imeiAparelho,
         observacaoOrigem: registroAprovado.observacao,
+        // Persistir vínculo OS ↔ Lote de Revisão para sincronização com nota de entrada
+        loteRevisaoId: registroAprovado.metadata?.loteRevisaoId,
+        loteRevisaoItemId: registroAprovado.metadata?.loteRevisaoItemId,
       });
 
       // Atualizar item do lote de revisão com o ID da OS criada

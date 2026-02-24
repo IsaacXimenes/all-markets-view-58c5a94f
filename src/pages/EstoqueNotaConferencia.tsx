@@ -335,7 +335,13 @@ export default function EstoqueNotaConferencia() {
   const qtdAmarelos = useMemo(() => Object.values(triagemProdutos).filter(v => v === 'amarelo').length, [triagemProdutos]);
 
   const handleAtribuirCaminho = (produtoId: string, caminho: 'verde' | 'amarelo') => {
+    // Blindagem: Produto Novo nunca pode ir para caminho amarelo (defeito)
     if (caminho === 'amarelo') {
+      const produto = nota?.produtos.find(p => p.id === produtoId);
+      if (produto?.categoria === 'Novo') {
+        toast.error('Produto Novo não pode ser reportado como defeito.');
+        return;
+      }
       // Abrir modal para motivo do defeito
       setProdutoMotivoId(produtoId);
       setModalMotivoOpen(true);
@@ -375,6 +381,12 @@ export default function EstoqueNotaConferencia() {
     if (!nota || !todosTriados) return;
     if (!todosIMEIsPreenchidos) {
       toast.error('Todos os aparelhos devem ter o IMEI preenchido');
+      return;
+    }
+    // Validação final: nenhum produto Novo pode estar no caminho amarelo
+    const novosNoAmarelo = nota.produtos.filter(p => p.categoria === 'Novo' && triagemProdutos[p.id] === 'amarelo');
+    if (novosNoAmarelo.length > 0) {
+      toast.error('Produtos com categoria "Novo" não podem ser encaminhados como defeito.');
       return;
     }
 
@@ -809,15 +821,27 @@ export default function EstoqueNotaConferencia() {
                                 <Send className="h-3 w-3 mr-1" />
                                 OK
                               </Button>
-                              <Button
-                                size="sm"
-                                variant={caminho === 'amarelo' ? 'default' : 'outline'}
-                                className={caminho === 'amarelo' ? 'bg-yellow-600 hover:bg-yellow-700 text-white h-7 px-2' : 'border-yellow-500/40 text-yellow-700 h-7 px-2 hover:bg-yellow-500/10'}
-                                onClick={() => handleAtribuirCaminho(produto.id, 'amarelo')}
-                              >
-                                <Wrench className="h-3 w-3 mr-1" />
-                                Defeito
-                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span>
+                                      <Button
+                                        size="sm"
+                                        variant={caminho === 'amarelo' ? 'default' : 'outline'}
+                                        className={caminho === 'amarelo' ? 'bg-yellow-600 hover:bg-yellow-700 text-white h-7 px-2' : 'border-yellow-500/40 text-yellow-700 h-7 px-2 hover:bg-yellow-500/10'}
+                                        onClick={() => handleAtribuirCaminho(produto.id, 'amarelo')}
+                                        disabled={produto.categoria === 'Novo'}
+                                      >
+                                        <Wrench className="h-3 w-3 mr-1" />
+                                        Defeito
+                                      </Button>
+                                    </span>
+                                  </TooltipTrigger>
+                                  {produto.categoria === 'Novo' && (
+                                    <TooltipContent>Produto Novo não pode ser reportado como defeito</TooltipContent>
+                                  )}
+                                </Tooltip>
+                              </TooltipProvider>
                               {caminho && (
                                 <Button
                                   size="icon"

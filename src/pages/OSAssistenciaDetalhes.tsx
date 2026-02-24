@@ -23,7 +23,7 @@ import {
   updateOrdemServico
 } from '@/utils/assistenciaApi';
 import { atualizarStatusProdutoPendente } from '@/utils/osApi';
-import { getLoteRevisaoById, atualizarItemRevisao, finalizarLoteComLogisticaReversa, ResultadoItemRevisao, sincronizarNotaComLote } from '@/utils/loteRevisaoApi';
+import { getLoteRevisaoById, atualizarItemRevisao, finalizarLoteComLogisticaReversa, ResultadoItemRevisao, sincronizarNotaComLote, registrarEventoTecnicoNaNota } from '@/utils/loteRevisaoApi';
 import { marcarProdutoRetornoAssistencia } from '@/utils/estoqueApi';
 import { getClientes, getFornecedores } from '@/utils/cadastrosApi';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
@@ -348,6 +348,8 @@ export default function OSAssistenciaDetalhes() {
       ? `Serviço finalizado pelo técnico (Origem: Estoque). Custo peças: R$ ${valorCustoTecnico.toFixed(2)}. Encaminhado para validação do Gestor de Estoque.`
       : `Serviço finalizado pelo técnico. Custo: R$ ${valorCustoTecnico.toFixed(2)}, Venda: R$ ${valorVendaCalculado.toFixed(2)}`;
 
+    const responsavelNome = user?.colaborador?.nome || tecnico?.nome || 'Técnico';
+
     updateOrdemServico(os.id, {
       status: novoStatus as any,
       proximaAtuacao: novaAtuacao as any,
@@ -360,7 +362,7 @@ export default function OSAssistenciaDetalhes() {
         data: new Date().toISOString(),
         tipo: 'conclusao_servico',
         descricao: descMsg,
-        responsavel: user?.colaborador?.nome || tecnico?.nome || 'Técnico'
+        responsavel: responsavelNome
       }]
     });
     // Sincronizar com Aparelhos Pendentes no Estoque
@@ -369,7 +371,7 @@ export default function OSAssistenciaDetalhes() {
         osId: os.id,
         resumo: resumoConclusao,
         custoPecas: valorCustoTecnico,
-        tecnico: user?.colaborador?.nome || tecnico?.nome || 'Técnico'
+        tecnico: responsavelNome
       });
     }
     // Sincronizar lote de revisão com estoque (OS individual)
@@ -384,8 +386,14 @@ export default function OSAssistenciaDetalhes() {
         statusReparo: 'Concluido'
       });
 
+      // Registrar eventos técnicos na timeline da nota
+      registrarEventoTecnicoNaNota(osFresh.loteRevisaoId, os.id, 'finalizacao', responsavelNome, {
+        resumo: resumoConclusao,
+        custo: valorCustoTecnico
+      });
+
       // Sincronizar nota com abatimento parcial (acumula conforme itens concluem)
-      sincronizarNotaComLote(osFresh.loteRevisaoId, user?.colaborador?.nome || 'Técnico');
+      sincronizarNotaComLote(osFresh.loteRevisaoId, responsavelNome);
 
       // Verificar se TODOS os itens do lote estão concluídos
       const lote = getLoteRevisaoById(osFresh.loteRevisaoId);
@@ -396,7 +404,7 @@ export default function OSAssistenciaDetalhes() {
             itemId: i.id,
             resultado: 'Consertado' as const
           }));
-          finalizarLoteComLogisticaReversa(osFresh.loteRevisaoId, resultados, user?.colaborador?.nome || 'Técnico');
+          finalizarLoteComLogisticaReversa(osFresh.loteRevisaoId, resultados, responsavelNome);
         }
       }
     }
