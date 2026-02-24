@@ -297,14 +297,18 @@ export default function EstoqueEncaminharAssistencia() {
                             </TableCell>
                             <TableCell>{formatCurrency(p.custoUnitario)}</TableCell>
                             <TableCell>
-                              <Button 
-                                size="sm" 
-                                variant="destructive"
-                                onClick={() => handleAbrirModalDefeito(p)}
-                              >
-                                <AlertTriangle className="h-3 w-3 mr-1" />
-                                Reportar Defeito
-                              </Button>
+                              {p.categoria === 'Novo' ? (
+                                <Badge variant="secondary" className="text-xs">Novo — sem defeito</Badge>
+                              ) : (
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => handleAbrirModalDefeito(p)}
+                                >
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Reportar Defeito
+                                </Button>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}
