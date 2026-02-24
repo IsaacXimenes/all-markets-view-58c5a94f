@@ -13,8 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandItem, CommandEmpty } from '@/components/ui/command';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { ArrowLeft, Lock, AlertCircle, Info, FileText, Zap, Plus, Trash2, Save, RotateCcw, ChevronsUpDown, Check, Wrench } from 'lucide-react';
+import { ArrowLeft, Lock, AlertCircle, Info, FileText, Zap, Plus, Trash2, Save, RotateCcw, ChevronsUpDown, Check } from 'lucide-react';
 import { getNotasCompra } from '@/utils/estoqueApi';
 import { 
   criarNotaEntrada, 
@@ -22,10 +21,7 @@ import {
   definirAtuacaoInicial,
   AtuacaoAtual,
   verificarImeiUnicoSistema,
-  getNotaEntradaById
 } from '@/utils/notaEntradaFluxoApi';
-import { encaminharParaAnaliseGarantia, MetadadosEstoque } from '@/utils/garantiasApi';
-import { criarLoteRevisao, encaminharLoteParaAssistencia } from '@/utils/loteRevisaoApi';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -53,12 +49,6 @@ interface ProdutoLinha {
   custoUnitario: number;
   custoTotal: number;
   explodido?: boolean;
-}
-
-interface MarcacaoAssistencia {
-  index: number;
-  motivo: string;
-  timestamp: string;
 }
 
 const marcasAparelhos = ['Apple', 'Samsung', 'Xiaomi', 'Motorola', 'LG', 'Huawei', 'OnePlus', 'Realme', 'ASUS', 'Nokia', 'Oppo', 'Vivo'];
@@ -126,13 +116,6 @@ export default function EstoqueNotaCadastrar() {
   // IMEI duplicado por índice
   const [imeiDuplicados, setImeiDuplicados] = useState<Record<number, string | null>>({});
   const [imeiTimers, setImeiTimers] = useState<Record<number, NodeJS.Timeout>>({});
-
-  // Estado para marcação de assistência
-  const [produtosMarcadosAssistencia, setProdutosMarcadosAssistencia] = useState<MarcacaoAssistencia[]>([]);
-  const [modalAssistenciaAberto, setModalAssistenciaAberto] = useState(false);
-  const [indiceProdutoAssistencia, setIndiceProdutoAssistencia] = useState<number | null>(null);
-  const [motivoAssistencia, setMotivoAssistencia] = useState('');
-  const [confirmarAssistencia, setConfirmarAssistencia] = useState(false);
 
   // Estado para popover do autocomplete modelo
   const [openModeloPopover, setOpenModeloPopover] = useState<number | null>(null);
@@ -214,11 +197,6 @@ export default function EstoqueNotaCadastrar() {
   const removerProduto = (index: number) => {
     if (produtos.length > 1) {
       setProdutos(produtos.filter((_, i) => i !== index));
-      // Remover marcação de assistência se existir
-      setProdutosMarcadosAssistencia(prev => prev.filter(m => m.index !== index).map(m => ({
-        ...m,
-        index: m.index > index ? m.index - 1 : m.index
-      })));
     }
   };
 
@@ -234,8 +212,6 @@ export default function EstoqueNotaCadastrar() {
       novosProdutos[index].categoria = '';
       novosProdutos[index].saudeBateria = 100;
       setImeiDuplicados(prev => ({ ...prev, [index]: null }));
-      // Remover marcação de assistência ao trocar tipo
-      setProdutosMarcadosAssistencia(prev => prev.filter(m => m.index !== index));
     }
 
     // Auto-set saudeBateria when categoria changes
@@ -281,40 +257,6 @@ export default function EstoqueNotaCadastrar() {
   const handleCustoChange = (index: number, formatted: string, raw: string | number) => {
     const valor = typeof raw === 'number' ? raw : parseFloat(String(raw)) || 0;
     atualizarProduto(index, 'custoUnitario', valor);
-  };
-
-  // Assistência handlers
-  const isMarcadoAssistencia = (index: number) => produtosMarcadosAssistencia.some(m => m.index === index);
-
-  const abrirModalAssistencia = (index: number) => {
-    setIndiceProdutoAssistencia(index);
-    setMotivoAssistencia('');
-    setConfirmarAssistencia(false);
-    setModalAssistenciaAberto(true);
-  };
-
-  const confirmarEncaminhamento = () => {
-    if (indiceProdutoAssistencia === null) return;
-    if (!motivoAssistencia.trim()) {
-      toast.error('Informe o motivo do encaminhamento');
-      return;
-    }
-    if (!confirmarAssistencia) {
-      toast.error('Confirme o encaminhamento');
-      return;
-    }
-
-    setProdutosMarcadosAssistencia(prev => [
-      ...prev,
-      { index: indiceProdutoAssistencia, motivo: motivoAssistencia, timestamp: new Date().toISOString() }
-    ]);
-    setModalAssistenciaAberto(false);
-    toast.success('Produto marcado para assistência');
-  };
-
-  const desmarcarAssistencia = (index: number) => {
-    setProdutosMarcadosAssistencia(prev => prev.filter(m => m.index !== index));
-    toast.info('Marcação de assistência removida');
   };
 
   const validarCampos = (): string[] => {
@@ -424,40 +366,9 @@ export default function EstoqueNotaCadastrar() {
     // Mensagem de sucesso
     const atuacao = definirAtuacaoInicial(tipoPagamento as TipoPagamentoNota);
     
-    // Criar lote de revisão e encaminhar para assistência
-    if (novaNota && produtosMarcadosAssistencia.length > 0) {
-      const produtosValidos = produtos.filter(p => p.modelo && p.custoUnitario > 0);
-      const itensLote = produtosMarcadosAssistencia.map(marcacao => {
-        const prod = produtos[marcacao.index];
-        const idxValido = produtosValidos.indexOf(prod);
-        const produtoNota = novaNota.produtos?.[idxValido];
-        const produtoNotaId = produtoNota?.id || novaNota.id;
-        return {
-          produtoNotaId,
-          marca: prod.marca,
-          modelo: prod.modelo,
-          imei: prod.imei || undefined,
-          motivoAssistencia: marcacao.motivo,
-          responsavelRegistro: responsavelLancamento || user?.username || 'Sistema',
-          dataRegistro: new Date().toISOString()
-        };
-      }).filter(Boolean);
-
-      const lote = criarLoteRevisao(novaNota.id, itensLote, responsavelLancamento || user?.username || 'Sistema');
-      if (lote) {
-        encaminharLoteParaAssistencia(lote.id, responsavelLancamento || user?.username || 'Sistema');
-        // Vincular lote à nota
-        const notaRef = getNotaEntradaById(novaNota.id);
-        if (notaRef) {
-          notaRef.loteRevisaoId = lote.id;
-        }
-      }
-    }
-
     const prodMsg = temProdutosPreenchidos ? ' com produtos registrados' : '';
-    const assistMsg = produtosMarcadosAssistencia.length > 0 ? ` | ${produtosMarcadosAssistencia.length} encaminhado(s) para Análise de Tratativas` : '';
     
-    toast.success(`Nota ${novaNota.id} lançada com sucesso${prodMsg}!${assistMsg}`, {
+    toast.success(`Nota ${novaNota.id} lançada com sucesso${prodMsg}!`, {
       description: `Atuação inicial: ${atuacao}. ${atuacao === 'Estoque' ? 'Acesse Notas Pendências para cadastrar/conferir produtos.' : 'Aguardando ação do Financeiro.'}`
     });
     // Limpar draft ao salvar com sucesso
@@ -777,7 +688,7 @@ export default function EstoqueNotaCadastrar() {
                 </TableHeader>
                 <TableBody>
                   {produtos.map((produto, index) => (
-                    <TableRow key={index} className={isMarcadoAssistencia(index) ? 'bg-orange-50 dark:bg-orange-950/20' : ''}>
+                    <TableRow key={index}>
                       <TableCell>
                         <Select 
                           value={produto.tipoProduto}
@@ -938,7 +849,6 @@ export default function EstoqueNotaCadastrar() {
                                 <SelectItem value="selecione">Selecione</SelectItem>
                                 <SelectItem value="Novo">Novo</SelectItem>
                                 <SelectItem value="Seminovo">Seminovo</SelectItem>
-                                
                               </SelectContent>
                             </Select>
                           ) : (
@@ -1011,53 +921,14 @@ export default function EstoqueNotaCadastrar() {
                         {formatCurrency(produto.custoTotal)}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1">
-                          {isMarcadoAssistencia(index) ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => desmarcarAssistencia(index)}
-                              title="Remover marcação de assistência"
-                            >
-                              <Badge className="text-[10px] px-1.5 py-0 bg-orange-500 hover:bg-orange-600 text-white cursor-pointer">
-                                Assistência ✕
-                              </Badge>
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => abrirModalAssistencia(index)}
-                              disabled={
-                                produto.tipoProduto !== 'Aparelho' || 
-                                !produto.imei?.trim() || 
-                                produto.categoria === 'Novo' || 
-                                !produto.categoria
-                              }
-                              title={
-                                produto.tipoProduto !== 'Aparelho'
-                                  ? 'Apenas aparelhos podem ser encaminhados'
-                                  : !produto.imei?.trim()
-                                    ? 'Preencha o IMEI para habilitar'
-                                    : produto.categoria === 'Novo'
-                                      ? 'Apenas Seminovo pode ser encaminhado'
-                                      : !produto.categoria
-                                        ? 'Selecione a categoria primeiro'
-                                        : 'Encaminhar para assistência'
-                              }
-                            >
-                              <Wrench className="h-4 w-4 text-orange-500" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removerProduto(index)}
-                            disabled={produtos.length === 1}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removerProduto(index)}
+                          disabled={produtos.length === 1}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1075,63 +946,6 @@ export default function EstoqueNotaCadastrar() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Segundo Quadro: Aparelhos para Análise na Assistência */}
-        {produtosMarcadosAssistencia.length > 0 && (
-          <Card className="border-orange-500/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wrench className="h-5 w-5 text-orange-500" />
-                Aparelhos para Análise na Assistência
-                <Badge className="bg-orange-500 text-white">{produtosMarcadosAssistencia.length}</Badge>
-              </CardTitle>
-              <CardDescription>
-                Estes aparelhos serão encaminhados para Análise de Tratativas ao salvar a nota
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Marca</TableHead>
-                    <TableHead>Modelo</TableHead>
-                    <TableHead>IMEI</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Saúde Bateria</TableHead>
-                    <TableHead>Motivo</TableHead>
-                    <TableHead>Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {produtosMarcadosAssistencia.map(marcacao => {
-                    const prod = produtos[marcacao.index];
-                    if (!prod) return null;
-                    return (
-                      <TableRow key={marcacao.index}>
-                        <TableCell>{prod.marca}</TableCell>
-                        <TableCell>{prod.modelo}</TableCell>
-                        <TableCell className="font-mono text-xs">{prod.imei ? formatIMEI(prod.imei) : '-'}</TableCell>
-                        <TableCell><Badge variant="outline">{prod.categoria}</Badge></TableCell>
-                        <TableCell>{prod.saudeBateria}%</TableCell>
-                        <TableCell className="max-w-[200px] truncate" title={marcacao.motivo}>{marcacao.motivo}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => desmarcarAssistencia(marcacao.index)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Buffer de Anexos */}
         <BufferAnexos 
@@ -1164,81 +978,6 @@ export default function EstoqueNotaCadastrar() {
           </div>
         </div>
       </div>
-
-      {/* Modal de Encaminhamento para Assistência */}
-      <Dialog open={modalAssistenciaAberto} onOpenChange={setModalAssistenciaAberto}>
-        <DialogContent className="max-w-md border-border/50">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Wrench className="h-5 w-5 text-orange-500" />
-              Encaminhar para Assistência
-            </DialogTitle>
-          </DialogHeader>
-
-          {indiceProdutoAssistencia !== null && produtos[indiceProdutoAssistencia] && (
-            <div className="space-y-4">
-              {/* Info do aparelho */}
-              <div className="p-3 bg-muted/50 rounded-lg space-y-1 border border-border/30">
-                <p className="text-sm"><span className="text-muted-foreground">Marca:</span> <span className="font-medium">{produtos[indiceProdutoAssistencia].marca}</span></p>
-                <p className="text-sm"><span className="text-muted-foreground">Modelo:</span> <span className="font-medium">{produtos[indiceProdutoAssistencia].modelo}</span></p>
-                <p className="text-sm"><span className="text-muted-foreground">IMEI:</span> <span className="font-mono font-medium">{produtos[indiceProdutoAssistencia].imei ? formatIMEI(produtos[indiceProdutoAssistencia].imei) : 'Não informado'}</span></p>
-              </div>
-
-              {/* Data/hora e responsável */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Data/Hora</Label>
-                  <p className="text-sm font-medium">{format(new Date(), 'dd/MM/yyyy HH:mm')}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Responsável</Label>
-                  <p className="text-sm font-medium">{user?.colaborador?.nome || user?.username || 'Usuário'}</p>
-                </div>
-              </div>
-
-              {/* Motivo */}
-              <div className="space-y-2">
-                <Label htmlFor="motivo-assistencia">Motivo do encaminhamento *</Label>
-                <Textarea
-                  id="motivo-assistencia"
-                  value={motivoAssistencia}
-                  onChange={(e) => setMotivoAssistencia(e.target.value)}
-                  placeholder="Descreva o motivo pelo qual este aparelho deve ser encaminhado para assistência..."
-                  rows={3}
-                  className="resize-none"
-                />
-              </div>
-
-              {/* Checkbox de confirmação */}
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-orange-500/5 border border-orange-500/10">
-                <Checkbox
-                  id="confirm-assist"
-                  checked={confirmarAssistencia}
-                  onCheckedChange={(checked) => setConfirmarAssistencia(checked as boolean)}
-                  className="mt-1"
-                />
-                <Label htmlFor="confirm-assist" className="text-sm leading-tight cursor-pointer">
-                  Confirmo que este aparelho apresenta defeito e deve ser encaminhado para Análise de Tratativas na Assistência
-                </Label>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setModalAssistenciaAberto(false)}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={confirmarEncaminhamento}
-              disabled={!motivoAssistencia.trim() || !confirmarAssistencia}
-              className="bg-orange-500 hover:bg-orange-600 text-white border-none"
-            >
-              <Wrench className="mr-2 h-4 w-4" />
-              Confirmar Encaminhamento
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </EstoqueLayout>
   );
 }
