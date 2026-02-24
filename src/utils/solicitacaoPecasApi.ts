@@ -1,7 +1,7 @@
 // Solicitação de Peças API - Mock Data
 import { getOrdemServicoById, updateOrdemServico } from './assistenciaApi';
 import { addDespesa } from './financeApi';
-import { finalizarAcerto } from './consignacaoApi';
+import { finalizarAcerto, confirmarPagamentoPorNotaId } from './consignacaoApi';
 export interface SolicitacaoPeca {
   id: string;
   osId: string;
@@ -634,9 +634,14 @@ export const finalizarNotaAssistencia = (notaId: string, dados: {
     periodicidade: null,
     pagoPor: dados.responsavelFinanceiro
   });
-  // Se nota de consignação, finalizar acerto do lote
-  if (nota.tipoConsignacao && nota.loteId) {
-    finalizarAcerto(nota.loteId);
+  // Se nota de consignação, confirmar pagamento parcial automaticamente
+  if (nota.tipoConsignacao && nota.solicitacaoId) {
+    confirmarPagamentoPorNotaId(
+      nota.solicitacaoId,
+      nota.id,
+      dados.responsavelFinanceiro,
+      undefined // comprovante será anexado separadamente se necessário
+    );
   }
   
   return notasAssistencia[notaIndex];

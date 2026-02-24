@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { AutocompleteFornecedor } from '@/components/AutocompleteFornecedor';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -92,6 +94,7 @@ export default function OSConsignacao() {
     setViewMode('lista');
     setLoteSelecionado(null);
     setItensSelecionadosPagamento([]);
+    setModoPagamento(false);
     refreshLotes();
   };
 
@@ -197,11 +200,13 @@ export default function OSConsignacao() {
 
   // readOnly mode for detalhamento (Eye) vs edit (Pencil)
   const [detalhamentoReadOnly, setDetalhamentoReadOnly] = useState(false);
+  const [modoPagamento, setModoPagamento] = useState(false);
 
-  const handleVerDetalhamento = (lote: LoteConsignacao, readOnly: boolean = false) => {
+  const handleVerDetalhamento = (lote: LoteConsignacao, readOnly: boolean = false, pagamentoMode: boolean = false) => {
     setLoteSelecionado(getLoteById(lote.id) || lote);
     setItensSelecionadosPagamento([]);
     setDetalhamentoReadOnly(readOnly);
+    setModoPagamento(pagamentoMode);
     setViewMode('detalhamento');
   };
 
@@ -315,6 +320,7 @@ export default function OSConsignacao() {
     setLoteSelecionado(loteAtual);
     setItensSelecionadosPagamento([]);
     setDetalhamentoReadOnly(false);
+    setModoPagamento(false);
     iniciarEdicao(loteAtual);
     setViewMode('detalhamento');
   };
@@ -440,14 +446,28 @@ export default function OSConsignacao() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Modelo</Label>
-                        <Select value={item.modelo} onValueChange={v => updateItemRow(idx, 'modelo', v)}>
-                          <SelectTrigger className="h-9"><SelectValue placeholder="Modelo..." /></SelectTrigger>
-                          <SelectContent>
-                            {produtosCadastro.map(p => (
-                              <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start h-9 font-normal text-sm">
+                              {item.modelo || <span className="text-muted-foreground">Modelo...</span>}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[250px] p-0 z-[100]" align="start">
+                            <Command>
+                              <CommandInput placeholder="Buscar modelo..." />
+                              <CommandList>
+                                <CommandEmpty>Nenhum modelo encontrado</CommandEmpty>
+                                <CommandGroup>
+                                  {produtosCadastro.map(p => (
+                                    <CommandItem key={p.id} value={p.produto} onSelect={() => updateItemRow(idx, 'modelo', p.produto)}>
+                                      {p.produto}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Qtd</Label>
@@ -585,14 +605,28 @@ export default function OSConsignacao() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Modelo</Label>
-                      <Select value={item.modelo} onValueChange={v => updateEditItem(item.id, 'modelo', v)}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Modelo..." /></SelectTrigger>
-                        <SelectContent>
-                          {produtosCadastro.map(p => (
-                            <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start h-9 font-normal text-sm">
+                            {item.modelo || <span className="text-muted-foreground">Modelo...</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[250px] p-0 z-[100]" align="start">
+                          <Command>
+                            <CommandInput placeholder="Buscar modelo..." />
+                            <CommandList>
+                              <CommandEmpty>Nenhum modelo encontrado</CommandEmpty>
+                              <CommandGroup>
+                                {produtosCadastro.map(p => (
+                                  <CommandItem key={p.id} value={p.produto} onSelect={() => updateEditItem(item.id, 'modelo', p.produto)}>
+                                    {p.produto}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Qtd</Label>
@@ -622,14 +656,28 @@ export default function OSConsignacao() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Modelo</Label>
-                      <Select value={item.modelo} onValueChange={v => updateEditNovoItem(idx, 'modelo', v)}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Modelo..." /></SelectTrigger>
-                        <SelectContent>
-                          {produtosCadastro.map(p => (
-                            <SelectItem key={p.id} value={p.produto}>{p.produto}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-start h-9 font-normal text-sm">
+                            {item.modelo || <span className="text-muted-foreground">Modelo...</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[250px] p-0 z-[100]" align="start">
+                          <Command>
+                            <CommandInput placeholder="Buscar modelo..." />
+                            <CommandList>
+                              <CommandEmpty>Nenhum modelo encontrado</CommandEmpty>
+                              <CommandGroup>
+                                {produtosCadastro.map(p => (
+                                  <CommandItem key={p.id} value={p.produto} onSelect={() => updateEditNovoItem(idx, 'modelo', p.produto)}>
+                                    {p.produto}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Qtd</Label>
@@ -711,6 +759,7 @@ export default function OSConsignacao() {
                           <TableHead>Loja</TableHead>
                           <TableHead>OS</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead>Ações</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -733,6 +782,17 @@ export default function OSConsignacao() {
                             <TableCell className="text-xs">{obterNomeLoja(item.lojaAtualId)}</TableCell>
                             <TableCell className="font-mono text-xs">{item.osVinculada || '-'}</TableCell>
                             <TableCell>{getItemStatusBadge(item.status)}</TableCell>
+                            <TableCell>
+                              {item.status === 'Disponivel' && loteSelecionado.status !== 'Concluido' && (
+                                <Button variant="ghost" size="sm" onClick={() => {
+                                  setDevolucaoLoteId(loteSelecionado.id);
+                                  setDevolucaoItemId(item.id);
+                                  setShowDevolucaoDialog(true);
+                                }} title="Registrar Devolução">
+                                  <Undo2 className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              )}
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -740,6 +800,102 @@ export default function OSConsignacao() {
                   </div>
                 </CardContent>
               </Card>
+              {/* Finalizar Lote - apenas na aba Inventário */}
+              {!loteConcluido && (
+                <Card className="border-amber-300 bg-amber-50/50 dark:bg-amber-950/10 mt-4">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <h3 className="font-semibold flex items-center gap-2">
+                          <Lock className="h-4 w-4" />
+                          Finalizar Lote e Confirmar Devoluções
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {consumidosRemanescentes.length > 0 && `${consumidosRemanescentes.length} peça(s) consumida(s) remanescente(s) serão pagas (${formatCurrency(valorConsumidosRemanescentes)}). `}
+                          {sobras.length > 0 && `${sobras.length} sobra(s) serão devolvidas (${formatCurrency(valorSobras)}).`}
+                        </p>
+                      </div>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive">
+                            <Lock className="h-4 w-4 mr-2" />
+                            Finalizar Lote
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="max-w-lg">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Finalizar Lote e Confirmar Devoluções</AlertDialogTitle>
+                            <AlertDialogDescription asChild>
+                              <div className="space-y-3">
+                                <p>Esta ação é irreversível. Ao confirmar:</p>
+                                {consumidosRemanescentes.length > 0 && (
+                                  <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                                    <p className="font-medium text-red-700 dark:text-red-400">Peças a pagar ({consumidosRemanescentes.length}):</p>
+                                    <ul className="text-xs mt-1 space-y-0.5">
+                                      {consumidosRemanescentes.map(i => (
+                                        <li key={i.id}>• {i.descricao} - {formatCurrency(i.valorCusto * (i.quantidadeOriginal - i.quantidade || i.quantidadeOriginal))}</li>
+                                      ))}
+                                    </ul>
+                                    <p className="font-bold mt-1 text-red-700 dark:text-red-400">Total: {formatCurrency(valorConsumidosRemanescentes)}</p>
+                                  </div>
+                                )}
+                                {sobras.length > 0 && (
+                                  <div className="p-3 bg-gray-50 dark:bg-gray-950/20 rounded-lg">
+                                    <p className="font-medium">Sobras a devolver ({sobras.length}):</p>
+                                    <ul className="text-xs mt-1 space-y-0.5">
+                                      {sobras.map(i => (
+                                        <li key={i.id}>• {i.descricao} ({i.quantidade} un.)</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                <div className="space-y-3 pt-2 border-t">
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Forma de Pagamento *</Label>
+                                    <Select value={finFormaPagamento} onValueChange={setFinFormaPagamento}>
+                                      <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="Pix">Pix</SelectItem>
+                                        <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  {finFormaPagamento === 'Pix' && (
+                                    <>
+                                      <div className="space-y-2">
+                                        <Label className="text-sm font-medium">Conta Bancária</Label>
+                                        <Input value={finContaBancaria} onChange={e => setFinContaBancaria(e.target.value)} />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label className="text-sm font-medium">Nome do Recebedor</Label>
+                                        <Input value={finNomeRecebedor} onChange={e => setFinNomeRecebedor(e.target.value)} />
+                                      </div>
+                                      <div className="space-y-2">
+                                        <Label className="text-sm font-medium">Chave Pix</Label>
+                                        <Input value={finChavePix} onChange={e => setFinChavePix(e.target.value)} />
+                                      </div>
+                                    </>
+                                  )}
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Observação</Label>
+                                    <Textarea value={finObservacao} onChange={e => setFinObservacao(e.target.value)} rows={2} />
+                                  </div>
+                                </div>
+                              </div>
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleFinalizarLote} disabled={!finFormaPagamento}>
+                              Confirmar Finalização
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             {/* Peças Usadas com seleção para pagamento parcial */}
@@ -748,7 +904,7 @@ export default function OSConsignacao() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">Peças Consumidas</CardTitle>
-                    {!loteConcluido && !detalhamentoReadOnly && (
+                    {!loteConcluido && (!detalhamentoReadOnly || modoPagamento) && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button size="sm" disabled={itensSelecionadosPagamento.length === 0}>
@@ -928,49 +1084,7 @@ export default function OSConsignacao() {
                         <div className="flex items-center gap-3">
                           <span className="font-bold text-lg">{formatCurrency(pag.valor)}</span>
                           {pag.status === 'Pendente' && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                  <CheckCircle className="h-3.5 w-3.5 mr-1" /> Confirmar
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Confirmar Pagamento</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Confirmar o pagamento da nota <strong>{pag.notaFinanceiraId}</strong> no valor de <strong>{formatCurrency(pag.valor)}</strong>?
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <div className="space-y-3 py-2">
-                                  <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Comprovante de Pagamento</Label>
-                                    <Input
-                                      type="file"
-                                      accept="image/*,.pdf"
-                                      onChange={e => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                          const reader = new FileReader();
-                                          reader.onload = () => setComprovanteFile(reader.result as string);
-                                          reader.readAsDataURL(file);
-                                        }
-                                      }}
-                                    />
-                                    {comprovanteFile && (
-                                      <div className="mt-2">
-                                        <img src={comprovanteFile} alt="Comprovante" className="max-h-32 rounded-md border object-contain" />
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel onClick={() => setComprovanteFile(null)}>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleConfirmarPagamento(pag.id)}>
-                                    Confirmar
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            <Badge className="bg-amber-500/15 text-amber-600 border border-amber-300 text-xs">Aguardando Financeiro</Badge>
                           )}
                         </div>
                       </div>
@@ -981,102 +1095,6 @@ export default function OSConsignacao() {
             </TabsContent>
           </Tabs>
 
-          {/* Botão Finalizar Lote */}
-          {loteAberto && temConsumidos && !detalhamentoReadOnly && (
-            <Card className="border-amber-300 bg-amber-50/50 dark:bg-amber-950/10">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <h3 className="font-semibold flex items-center gap-2">
-                      <Lock className="h-4 w-4" />
-                      Finalizar Lote e Confirmar Devoluções
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {consumidosRemanescentes.length > 0 && `${consumidosRemanescentes.length} peça(s) consumida(s) remanescente(s) serão pagas (${formatCurrency(valorConsumidosRemanescentes)}). `}
-                      {sobras.length > 0 && `${sobras.length} sobra(s) serão devolvidas (${formatCurrency(valorSobras)}).`}
-                    </p>
-                  </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive">
-                        <Lock className="h-4 w-4 mr-2" />
-                        Finalizar Lote
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="max-w-lg">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Finalizar Lote e Confirmar Devoluções</AlertDialogTitle>
-                        <AlertDialogDescription asChild>
-                          <div className="space-y-3">
-                            <p>Esta ação é irreversível. Ao confirmar:</p>
-                            {consumidosRemanescentes.length > 0 && (
-                              <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                                <p className="font-medium text-red-700 dark:text-red-400">Peças a pagar ({consumidosRemanescentes.length}):</p>
-                                <ul className="text-xs mt-1 space-y-0.5">
-                                  {consumidosRemanescentes.map(i => (
-                                    <li key={i.id}>• {i.descricao} - {formatCurrency(i.valorCusto * (i.quantidadeOriginal - i.quantidade || i.quantidadeOriginal))}</li>
-                                  ))}
-                                </ul>
-                                <p className="font-bold mt-1 text-red-700 dark:text-red-400">Total: {formatCurrency(valorConsumidosRemanescentes)}</p>
-                              </div>
-                            )}
-                            {sobras.length > 0 && (
-                              <div className="p-3 bg-gray-50 dark:bg-gray-950/20 rounded-lg">
-                                <p className="font-medium">Sobras a devolver ({sobras.length}):</p>
-                                <ul className="text-xs mt-1 space-y-0.5">
-                                  {sobras.map(i => (
-                                    <li key={i.id}>• {i.descricao} ({i.quantidade} un.)</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                            <div className="space-y-3 pt-2 border-t">
-                              <div className="space-y-2">
-                                <Label className="text-sm font-medium">Forma de Pagamento *</Label>
-                                <Select value={finFormaPagamento} onValueChange={setFinFormaPagamento}>
-                                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="Pix">Pix</SelectItem>
-                                    <SelectItem value="Dinheiro">Dinheiro</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              {finFormaPagamento === 'Pix' && (
-                                <>
-                                  <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Conta Bancária</Label>
-                                    <Input value={finContaBancaria} onChange={e => setFinContaBancaria(e.target.value)} />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Nome do Recebedor</Label>
-                                    <Input value={finNomeRecebedor} onChange={e => setFinNomeRecebedor(e.target.value)} />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Chave Pix</Label>
-                                    <Input value={finChavePix} onChange={e => setFinChavePix(e.target.value)} />
-                                  </div>
-                                </>
-                              )}
-                              <div className="space-y-2">
-                                <Label className="text-sm font-medium">Observação</Label>
-                                <Textarea value={finObservacao} onChange={e => setFinObservacao(e.target.value)} rows={2} />
-                              </div>
-                            </div>
-                          </div>
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleFinalizarLote} disabled={!finFormaPagamento}>
-                          Confirmar Finalização
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Timeline fixa */}
           <Card>
@@ -1263,11 +1281,7 @@ export default function OSConsignacao() {
                         )}
                         {lote.itens.some(i => i.status === 'Consumido') && lote.status !== 'Concluido' && (
                           <Button variant="ghost" size="sm" onClick={() => {
-                            const loteAtual = getLoteById(lote.id) || lote;
-                            setLoteSelecionado(loteAtual);
-                            setDetalhamentoReadOnly(false);
-                            setItensSelecionadosPagamento([]);
-                            setViewMode('detalhamento');
+                            handleVerDetalhamento(lote, true, true);
                           }} title="Gerar Pagamento" className="text-green-600 hover:text-green-700">
                             <DollarSign className="h-4 w-4" />
                           </Button>

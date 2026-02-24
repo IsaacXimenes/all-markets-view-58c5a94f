@@ -511,6 +511,19 @@ export const gerarLoteFinanceiro = (loteId: string, dadosPagamento?: {
   return nota;
 };
 
+// Confirmar pagamento por notaFinanceiraId (chamado pelo Financeiro)
+export const confirmarPagamentoPorNotaId = (
+  loteId: string, notaFinanceiraId: string, responsavel: string, comprovanteUrl?: string
+): boolean => {
+  const lote = lotes.find(l => l.id === loteId);
+  if (!lote) return false;
+
+  const pagamento = lote.pagamentosParciais.find(p => p.notaFinanceiraId === notaFinanceiraId);
+  if (!pagamento || pagamento.status === 'Pago') return false;
+
+  return confirmarPagamentoParcial(loteId, pagamento.id, responsavel, comprovanteUrl);
+};
+
 export const finalizarAcerto = (loteId: string): boolean => {
   const lote = lotes.find(l => l.id === loteId);
   if (!lote || lote.status !== 'Em Acerto') return false;
