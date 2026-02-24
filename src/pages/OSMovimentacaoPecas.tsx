@@ -528,7 +528,7 @@ export default function OSMovimentacaoPecas() {
                   value={formData.destino}
                   onChange={(v) => setFormData(prev => ({ ...prev, destino: v }))}
                   placeholder="Selecione o destino"
-                  apenasLojasTipoLoja={true}
+                  filtrarPorTipo="Assistência"
                 />
               </div>
             </div>
@@ -763,7 +763,7 @@ export default function OSMovimentacaoPecas() {
                   value={editForm.destino}
                   onChange={(v) => setEditForm(prev => ({ ...prev, destino: v }))}
                   placeholder="Selecione o destino"
-                  apenasLojasTipoLoja={true}
+                  filtrarPorTipo="Assistência"
                 />
               </div>
               <div>

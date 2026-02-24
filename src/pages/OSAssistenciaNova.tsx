@@ -1363,15 +1363,9 @@ export default function OSAssistenciaNova() {
                     {peca.pecaNoEstoque && peca.pecaEstoqueId && (() => {
                       const pecaSel = pecasEstoque.find(p => p.id === peca.pecaEstoqueId);
                       return (
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">V. Recomendado</Label>
-                            <Input disabled value={formatCurrency(pecaSel?.valorRecomendado || 0)} className="bg-muted h-9 text-xs" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">V. Custo</Label>
-                            <Input disabled value={formatCurrency(pecaSel?.valorCusto || 0)} className="bg-muted h-9 text-xs" />
-                          </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">V. Custo</Label>
+                          <Input disabled value={formatCurrency(pecaSel?.valorCusto || 0)} className="bg-muted h-9 text-xs" />
                         </div>
                       );
                     })()}
@@ -2080,7 +2074,7 @@ export default function OSAssistenciaNova() {
                   <TableHead>Loja</TableHead>
                   <TableHead className="text-center">Qtd</TableHead>
                   <TableHead>Valor Custo</TableHead>
-                  <TableHead>Valor Recomendado</TableHead>
+                  <TableHead>Origem</TableHead>
                   <TableHead>Ação</TableHead>
                 </TableRow>
               </TableHeader>
@@ -2113,7 +2107,7 @@ export default function OSAssistenciaNova() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-xs">{formatCurrency(p.valorCusto)}</TableCell>
-                            <TableCell className="text-xs">{formatCurrency(p.valorRecomendado)}</TableCell>
+                            <TableCell className="text-xs">{p.origem}</TableCell>
                             <TableCell>
                               <Button size="sm" variant="default" onClick={() => {
                                 const newPecas = [...pecas];
@@ -2153,7 +2147,7 @@ export default function OSAssistenciaNova() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-xs">{formatCurrency(p.valorCusto)}</TableCell>
-                            <TableCell className="text-xs">{formatCurrency(p.valorRecomendado)}</TableCell>
+                            <TableCell className="text-xs">{p.origem}</TableCell>
                             <TableCell>
                               <Badge variant="secondary" className="text-xs">Outra loja</Badge>
                             </TableCell>
