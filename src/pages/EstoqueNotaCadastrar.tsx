@@ -123,8 +123,11 @@ export default function EstoqueNotaCadastrar() {
   // Indicador de draft carregado
   const [hasDraft, setHasDraft] = useState(!!draft);
 
-  // Salvar draft
-  const handleSalvarDraft = useCallback(() => {
+  // Indicador visual de auto-save
+  const [draftSalvoRecente, setDraftSalvoRecente] = useState(false);
+
+  // Salvar draft (sem toast, usado pelo auto-save)
+  const salvarDraftSilencioso = useCallback(() => {
     const draftData = {
       fornecedor,
       responsavelLancamento,
@@ -140,8 +143,20 @@ export default function EstoqueNotaCadastrar() {
     };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
     setHasDraft(true);
-    toast.success('Rascunho salvo com sucesso!');
-  }, [fornecedor, responsavelLancamento, urgente, formaPagamento, tipoPagamento, observacaoPagamento, produtos]);
+    setDraftSalvoRecente(true);
+    setTimeout(() => setDraftSalvoRecente(false), 2500);
+  }, [fornecedor, responsavelLancamento, urgente, formaPagamento, tipoPagamento, observacaoPagamento, pixBanco, pixRecebedor, pixChave, produtos]);
+
+  // Auto-save com debounce de 2 segundos
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Só salva se houver algum dado preenchido
+      if (fornecedor || tipoPagamento || produtos.some(p => p.modelo)) {
+        salvarDraftSilencioso();
+      }
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [fornecedor, responsavelLancamento, urgente, formaPagamento, tipoPagamento, observacaoPagamento, pixBanco, pixRecebedor, pixChave, produtos, salvarDraftSilencioso]);
 
   // Descartar draft
   const handleDescartarDraft = useCallback(() => {
@@ -955,17 +970,19 @@ export default function EstoqueNotaCadastrar() {
           maxSizeMB={5}
         />
 
-        <div className="flex justify-between gap-2">
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={handleSalvarDraft}>
-              <Save className="h-4 w-4 mr-2" />
-              Salvar Rascunho
-            </Button>
+        <div className="flex justify-between items-center gap-2">
+          <div className="flex items-center gap-3">
             {hasDraft && (
               <Button variant="ghost" onClick={handleDescartarDraft} className="text-destructive">
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Descartar Rascunho
               </Button>
+            )}
+            {draftSalvoRecente && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Save className="h-3 w-3" />
+                Rascunho salvo automaticamente
+              </span>
             )}
           </div>
           <div className="flex gap-2">
