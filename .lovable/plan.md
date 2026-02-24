@@ -1,45 +1,66 @@
 
 
-## Plano: Centralizar Visualizacao de Conferencia na Tela de Detalhes da Nota
+## Plano: Draft com Modal + Bloqueio Novo + Pagamento no Detalhe + Conferencia Centralizada
 
-### Problema Atual
-Existem duas telas separadas com logica duplicada:
-- **Detalhes da Nota** (`NotaDetalhesContent.tsx`) -- visualizacao completa com assistencia e botoes de Conferir/Recusar
-- **Conferencia** (`EstoqueNotaConferencia.tsx`) -- tela separada com sua propria copia dos botoes de assistencia
+### 1. Draft/Rascunho com modal de confirmacao (como VendasNova)
 
-O usuario quer que ao clicar "Conferir" (na lista de notas ou nos detalhes), abra a **mesma tela de detalhes** (`NotaDetalhesContent`), unificando tudo em um so lugar.
+**Arquivo:** `src/pages/EstoqueNotaCadastrar.tsx`
 
-### Mudancas Propostas
+**Situacao atual:** O draft e carregado automaticamente ao abrir a tela, sem perguntar ao usuario. Exibe apenas um banner amarelo.
 
-#### 1. Redirecionar "Conferir Produtos" para a tela de detalhes (`src/components/estoque/NotaDetalhesContent.tsx`)
-- O botao "Conferir Produtos" no detalhamento da nota passara a navegar para `/estoque/nota/{id}/conferencia` normalmente (isso ja funciona).
-- **Nenhuma mudanca aqui**, pois a tela de conferencia continuara existindo para o fluxo de check individual + triagem.
-- A tela de detalhes ja contem os botoes de Conferir/Recusar assistencia -- esta correto.
+**Mudanca:**
+- Usar o hook `useDraftVenda` (ja existente em `src/hooks/useDraftVenda.ts`) em vez da logica manual de localStorage. Este hook ja possui `getDraftAge`, `formatDraftAge`, `hasDraft`, `loadDraft`, `clearDraft`.
+- Ao montar o componente, verificar `hasDraft()`. Se sim, exibir um **Dialog/modal** perguntando se deseja carregar o rascunho (mostrando o tempo salvo via `formatDraftAge`), identico ao de VendasNova.
+- NAO carregar o draft automaticamente nos `useState`. Iniciar os campos vazios e so carregar se o usuario clicar "Carregar Rascunho" no modal.
+- Manter o auto-save com debounce de 2s (ja existe), usando `saveDraft` do hook.
+- Remover a logica manual de `loadDraft`/`salvarDraftSilencioso`/`draftSalvoRecente` e substituir pelo hook.
+- O modal tera dois botoes: "Descartar" e "Carregar Rascunho".
 
-#### 2. Remover secao duplicada de Assistencia Tecnica da Conferencia (`src/pages/EstoqueNotaConferencia.tsx`)
-- Remover toda a secao "Assistencia Tecnica" (Collapsible com tabela de itens e botoes Conferir/Recusar) da pagina de conferencia.
-- Remover o modal de recusa duplicado dessa pagina.
-- Remover estados e handlers relacionados: `assistenciaOpen`, `modalRecusaOpen`, `itemRecusa`, `motivoRecusa`, `refreshAssist`, `handleConferirItem`, `handleAbrirRecusa`, `handleConfirmarRecusa`.
-- Remover imports que ficarem sem uso (`getOrdemServicoById`, `updateOrdemServico`, `getProdutoByIMEI`, `atualizarCustoAssistencia`, `updateProduto`, `atualizarItemRevisao`, `sincronizarNotaComLote`, `registrarEventoTecnicoNaNota`, `Wrench`, `XCircle`, `RotateCcw`).
+### 2. Bloquear "Reportar Defeito" para categoria "Novo" no encaminhamento
 
-#### 3. Garantir navegacao de "Conferir" na lista de notas para os detalhes (`src/components/estoque/TabelaNotasPendencias.tsx` e `src/pages/EstoqueNotasPendencias.tsx`)
-- Alterar a navegacao do botao "Conferir" na tabela de notas pendentes: em vez de ir para `/estoque/nota/{id}/conferencia`, ir para `/estoque/nota/{id}` (detalhes da nota).
-- Assim o usuario sempre vera a tela completa com cards, produtos, assistencia (com botoes de acao) e timeline.
-- A partir dessa tela, o botao "Conferir Produtos" dentro do detalhamento leva para a conferencia especifica quando necessario.
+**Arquivo:** `src/components/estoque/NotaDetalhesContent.tsx`
 
-### Resultado Final
-- **Tela de Detalhes** (centralizada): exibe tudo -- cards, produtos, assistencia com botoes de Conferir/Recusar, encaminhamento, timeline.
-- **Tela de Conferencia**: foca exclusivamente na conferencia fisica dos itens (marcar conferido, explodir, IMEI, cor, categoria, triagem). Sem duplicacao de assistencia.
-- **Botao "Conferir" na lista**: leva para detalhes da nota, nao para a conferencia diretamente.
+**Situacao atual:** `produtosElegiveis` ja filtra `p.categoria !== 'Novo'` (linha 187), portanto produtos "Novo" nao aparecem na lista de encaminhamento. Isso ja esta correto.
 
-### Detalhes Tecnicos
+**Verificacao:** O filtro na linha 187 ja exclui itens com `categoria === 'Novo'`. Nenhuma mudanca necessaria aqui -- a funcionalidade ja esta implementada.
+
+### 3. Financeiro: Botao "Pagar" abre detalhes da nota com quadro de pagamento
+
+**Arquivo:** `src/pages/FinanceiroNotasPendencias.tsx`
+
+**Situacao atual:** O botao "Pagar" (icone CreditCard na tabela) abre diretamente o modal `ModalFinalizarPagamento`. O detalhamento mostra `NotaDetalhesContent` com `showActions={false}`.
+
+**Mudanca:**
+- Alterar `handleAbrirPagamento`: em vez de abrir o modal de pagamento, navegar para o modo de detalhes (`setModoDetalhes(true)`) e marcar uma flag `mostrarPagamento` para exibir o quadro de pagamento abaixo da assistencia tecnica.
+- No modo de detalhes, apos a secao de `NotaDetalhesContent`, adicionar uma nova secao com Card de "Pagamento" contendo:
+  - Informacoes resumidas (valor total, pago, pendente)
+  - Botao "Registrar Pagamento" que abre o `ModalFinalizarPagamento`
+  - Historico de pagamentos (ja existe dentro de NotaDetalhesContent, mas sera reforçado)
+- A flag `mostrarPagamento` controla se a secao de pagamento aparece visivel e com scroll automatico.
+
+### 4. Remover botao "Conferir Produtos" e centralizar conferencia na tela de detalhes
+
+**Arquivo:** `src/components/estoque/NotaDetalhesContent.tsx`
+
+**Situacao atual:** Existe um botao "Conferir Produtos" que navega para `/estoque/nota/{id}/conferencia`. Na tabela de produtos, as colunas exibem ID, Tipo, Marca, Modelo, IMEI, Qtd, Custo, Status Rec., Status Conf. -- sem coluna de acao.
+
+**Mudanca:**
+- Remover o botao "Conferir Produtos" da barra de acoes superiores.
+- Adicionar coluna **"Acao"** na tabela de produtos.
+- Para produtos com `statusConferencia !== 'Conferido'` e que nao foram encaminhados para assistencia, exibir botao **"Conferir"** (verde) na coluna de acao. Este botao marca o produto como conferido diretamente, sem navegar para outra tela.
+- Para produtos que foram encaminhados para assistencia e retornaram (ja tem os botoes Conferir/Recusar na secao de assistencia), manter como esta.
+- A logica de conferir um produto individual: atualizar `statusConferencia` para `'Conferido'`, incrementar `qtdConferida` da nota, registrar na timeline. Reutilizar a funcao `finalizarConferencia` ou equivalente de `notaEntradaFluxoApi`.
+- Resultado: toda a conferencia (tanto de aparelhos normais quanto de retornos de assistencia) acontece na mesma tela de detalhes.
+
+### Detalhes tecnicos
 
 **Arquivos modificados:**
-- `src/pages/EstoqueNotaConferencia.tsx` -- remover secao de assistencia duplicada, modal de recusa, estados e handlers relacionados
-- `src/components/estoque/TabelaNotasPendencias.tsx` -- alterar navegacao do botao "Conferir" para `/estoque/nota/{id}`
-- `src/pages/EstoqueNotasPendencias.tsx` -- alterar `handleConferir` para navegar para `/estoque/nota/{id}`
+- `src/pages/EstoqueNotaCadastrar.tsx` -- refatorar draft para usar `useDraftVenda` + modal de confirmacao
+- `src/components/estoque/NotaDetalhesContent.tsx` -- remover botao "Conferir Produtos", adicionar coluna de acao com botao "Conferir" na tabela de produtos
+- `src/pages/FinanceiroNotasPendencias.tsx` -- alterar "Pagar" para navegar para detalhes com quadro de pagamento
 
-**Sem alteracao:**
-- `src/components/estoque/NotaDetalhesContent.tsx` -- ja possui os botoes de Conferir/Recusar na assistencia (mantido como esta)
-- `src/pages/EstoqueNotaDetalhes.tsx` -- ja renderiza `NotaDetalhesContent` (mantido como esta)
+**APIs reutilizadas:**
+- `useDraftVenda` de `hooks/useDraftVenda.ts`
+- `getNotaEntradaById`, `podeEditarNota` de `notaEntradaFluxoApi`
+- Funcoes de conferencia individual ja existentes em `notaEntradaFluxoApi`
 
