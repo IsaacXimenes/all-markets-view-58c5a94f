@@ -215,7 +215,7 @@ export function TabelaNotasPendencias({
     if (onConferir) {
       onConferir(nota);
     } else {
-      navigate(`/estoque/nota/${nota.id}/conferencia`);
+      navigate(`/estoque/nota/${nota.id}`);
     }
   };
 

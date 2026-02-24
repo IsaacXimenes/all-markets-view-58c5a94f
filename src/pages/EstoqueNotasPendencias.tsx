@@ -99,7 +99,7 @@ export default function EstoqueNotasPendencias() {
   };
 
   const handleConferir = (nota: NotaEntrada) => {
-    navigate(`/estoque/nota/${nota.id}/conferencia`);
+    navigate(`/estoque/nota/${nota.id}`);
   };
 
   const handleVerDetalhes = (nota: NotaEntrada) => {

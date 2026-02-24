@@ -27,9 +27,7 @@ import {
   Wrench,
   AlertTriangle,
   ShieldCheck,
-  Coins,
-  XCircle,
-  RotateCcw
+  Coins
 } from 'lucide-react';
 import { 
   getNotaEntradaById, 
@@ -49,10 +47,7 @@ import {
   TipoPagamentoNota
 } from '@/utils/notaEntradaFluxoApi';
 import { getCores } from '@/utils/coresApi';
-import { getLoteRevisaoByNotaId, calcularAbatimento, atualizarItemRevisao, sincronizarNotaComLote, registrarEventoTecnicoNaNota } from '@/utils/loteRevisaoApi';
-import { LoteRevisaoResumo } from '@/components/estoque/LoteRevisaoResumo';
-import { getOrdemServicoById, updateOrdemServico } from '@/utils/assistenciaApi';
-import { getProdutoByIMEI, atualizarCustoAssistencia, updateProduto } from '@/utils/estoqueApi';
+import { getLoteRevisaoByNotaId } from '@/utils/loteRevisaoApi';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
 import { formatCurrency } from '@/utils/formatUtils';
@@ -85,12 +80,6 @@ export default function EstoqueNotaConferencia() {
   const [imeiDuplicado, setImeiDuplicado] = useState<Record<string, string | null>>({});
   const [imeiDebounceTimers, setImeiDebounceTimers] = useState<Record<string, NodeJS.Timeout>>({});
 
-  // Estado para assistência - Conferir/Recusar
-  const [assistenciaOpen, setAssistenciaOpen] = useState(true);
-  const [modalRecusaOpen, setModalRecusaOpen] = useState(false);
-  const [itemRecusa, setItemRecusa] = useState<{ itemId: string; osId: string; modelo: string; imei?: string } | null>(null);
-  const [motivoRecusa, setMotivoRecusa] = useState('');
-  const [refreshAssist, setRefreshAssist] = useState(0);
 
   const { user } = useAuthStore();
   const coresCadastradas = useMemo(() => getCores(), []);
@@ -436,86 +425,6 @@ export default function EstoqueNotaConferencia() {
     }
 
     navigate('/estoque/notas-pendencias');
-  };
-
-  // ===== HANDLERS DE CONFERIR / RECUSAR ASSISTÊNCIA =====
-
-  const handleConferirItem = (item: any, loteId: string) => {
-    if (!item.osId) return;
-    const osFresh = getOrdemServicoById(item.osId);
-    if (!osFresh) return;
-
-    const nomeResponsavel = user?.colaborador?.nome || user?.username || 'Gestor (Estoque)';
-    const custoReparo = osFresh.valorCustoTecnico || 0;
-
-    if (osFresh.imeiAparelho) {
-      const produto = getProdutoByIMEI(osFresh.imeiAparelho);
-      if (produto) {
-        atualizarCustoAssistencia(produto.id, osFresh.id, custoReparo);
-        updateProduto(produto.id, { statusEmprestimo: null, emprestimoOsId: undefined });
-      }
-    }
-
-    updateOrdemServico(item.osId, {
-      status: 'Liquidado' as any,
-      proximaAtuacao: '-',
-      timeline: [...osFresh.timeline, {
-        data: new Date().toISOString(),
-        tipo: 'validacao_financeiro',
-        descricao: `Aparelho aprovado pelo Estoque. Custo: R$ ${custoReparo.toFixed(2)} incorporado.`,
-        responsavel: nomeResponsavel
-      }]
-    });
-
-    atualizarItemRevisao(loteId, item.id, { statusReparo: 'Concluido', custoReparo });
-    registrarEventoTecnicoNaNota(loteId, item.osId, 'retorno', nomeResponsavel);
-    registrarEventoTecnicoNaNota(loteId, item.osId, 'abatimento', nomeResponsavel, { custo: custoReparo });
-    sincronizarNotaComLote(loteId, nomeResponsavel);
-
-    toast.success(`Aparelho ${item.modelo} aprovado! Custo de R$ ${custoReparo.toFixed(2)} incorporado.`);
-    setRefreshAssist(k => k + 1);
-  };
-
-  const handleAbrirRecusa = (item: any) => {
-    setItemRecusa({ itemId: item.id, osId: item.osId, modelo: item.modelo, imei: item.imei });
-    setMotivoRecusa('');
-    setModalRecusaOpen(true);
-  };
-
-  const handleConfirmarRecusa = () => {
-    if (!itemRecusa?.osId || !nota) return;
-    if (!motivoRecusa.trim()) {
-      toast.error('Informe o motivo da recusa.');
-      return;
-    }
-
-    const osFresh = getOrdemServicoById(itemRecusa.osId);
-    if (!osFresh) return;
-
-    const nomeResponsavel = user?.colaborador?.nome || user?.username || 'Gestor (Estoque)';
-    const loteRevisao = getLoteRevisaoByNotaId(nota.id);
-
-    updateOrdemServico(itemRecusa.osId, {
-      status: 'Retrabalho - Recusado pelo Estoque' as any,
-      proximaAtuacao: 'Técnico',
-      timeline: [...osFresh.timeline, {
-        data: new Date().toISOString(),
-        tipo: 'status',
-        descricao: `🔄 Retrabalho solicitado por ${nomeResponsavel} - Motivo: ${motivoRecusa}`,
-        responsavel: nomeResponsavel,
-        motivo: motivoRecusa
-      }]
-    });
-
-    if (loteRevisao) {
-      atualizarItemRevisao(loteRevisao.id, itemRecusa.itemId, { statusReparo: 'Em Andamento', custoReparo: 0 });
-    }
-
-    toast.success(`OS ${itemRecusa.osId} devolvida para retrabalho.`);
-    setModalRecusaOpen(false);
-    setItemRecusa(null);
-    setMotivoRecusa('');
-    setRefreshAssist(k => k + 1);
   };
 
   const formatDateTime = (dateStr: string) => {
@@ -1013,154 +922,6 @@ export default function EstoqueNotaConferencia() {
               </Button>
               <Button onClick={handleConfirmarMotivo} className="bg-yellow-600 hover:bg-yellow-700 text-white">
                 Confirmar Defeito
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Seção Assistência Técnica - Conferir / Recusar */}
-        {(() => {
-          const loteRevisao = nota ? getLoteRevisaoByNotaId(nota.id) : null;
-          if (!loteRevisao) return null;
-          const abatimento = calcularAbatimento(loteRevisao.id);
-          const creditos = nota!.tipoPagamento === 'Pagamento 100% Antecipado' 
-            ? getCreditosByFornecedor(nota!.fornecedor) 
-            : [];
-          const creditosNota = creditos.filter(c => c.origem === nota!.id);
-
-          return (
-            <Collapsible open={assistenciaOpen} onOpenChange={setAssistenciaOpen}>
-              <Card className="border-primary/30">
-                <CardHeader>
-                  <CollapsibleTrigger asChild>
-                    <div className="flex items-center justify-between cursor-pointer">
-                      <CardTitle className="flex items-center gap-2">
-                        <Wrench className="h-5 w-5 text-primary" />
-                        Assistência Técnica — Lote {loteRevisao.id}
-                      </CardTitle>
-                      {assistenciaOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                    </div>
-                  </CollapsibleTrigger>
-                </CardHeader>
-                <CollapsibleContent>
-                  <CardContent className="space-y-6">
-                    {abatimento && (
-                      <LoteRevisaoResumo
-                        valorOriginalNota={abatimento.valorNota}
-                        custoTotalReparos={abatimento.custoReparos}
-                        valorLiquidoSugerido={abatimento.valorLiquido}
-                        percentualReparo={abatimento.percentualReparo}
-                      />
-                    )}
-
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Marca</TableHead>
-                          <TableHead>Modelo</TableHead>
-                          <TableHead>IMEI</TableHead>
-                          <TableHead>Motivo</TableHead>
-                          <TableHead>Status Reparo</TableHead>
-                          <TableHead>Custo Reparo</TableHead>
-                          <TableHead>Parecer</TableHead>
-                          <TableHead className="text-right">Ação</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {loteRevisao.itens.map(item => {
-                          const os = item.osId ? getOrdemServicoById(item.osId) : null;
-                          const parecer = os?.resumoConclusao || os?.conclusaoServico || (item.statusReparo === 'Concluido' ? 'Sem parecer' : 'Aguardando');
-                          const podeValidar = os?.status === 'Serviço Concluído - Validar Aparelho';
-                          return (
-                            <TableRow key={item.id}>
-                              <TableCell>{item.marca}</TableCell>
-                              <TableCell>{item.modelo}</TableCell>
-                              <TableCell className="font-mono text-xs">{item.imei || '-'}</TableCell>
-                              <TableCell className="max-w-[200px] truncate">{item.motivoAssistencia}</TableCell>
-                              <TableCell>
-                                <Badge variant={item.statusReparo === 'Concluido' ? 'default' : item.statusReparo === 'Em Andamento' ? 'secondary' : 'outline'}>
-                                  {item.statusReparo}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                {item.custoReparo > 0 ? formatCurrency(item.custoReparo) : '-'}
-                              </TableCell>
-                              <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground" title={parecer}>
-                                {parecer}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {podeValidar ? (
-                                  <div className="flex gap-1 justify-end">
-                                    <Button
-                                      size="sm"
-                                      className="bg-green-600 hover:bg-green-700 gap-1 h-7 text-xs"
-                                      onClick={() => handleConferirItem(item, loteRevisao.id)}
-                                    >
-                                      <CheckCircle className="h-3 w-3" />
-                                      Conferir
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="destructive"
-                                      className="gap-1 h-7 text-xs"
-                                      onClick={() => handleAbrirRecusa(item)}
-                                    >
-                                      <XCircle className="h-3 w-3" />
-                                      Recusar
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground">-</span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-          );
-        })()}
-
-        {/* Modal de Recusa */}
-        <Dialog open={modalRecusaOpen} onOpenChange={setModalRecusaOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <RotateCcw className="h-5 w-5 text-destructive" />
-                Solicitar Retrabalho — {itemRecusa?.modelo || ''}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-2 gap-4 p-3 rounded-lg bg-muted/50">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Modelo</Label>
-                  <p className="font-medium text-sm">{itemRecusa?.modelo || '-'}</p>
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">IMEI</Label>
-                  <p className="font-medium text-sm font-mono">{itemRecusa?.imei ? formatIMEI(itemRecusa.imei) : '-'}</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Motivo da Recusa *</Label>
-                <Textarea
-                  value={motivoRecusa}
-                  onChange={(e) => setMotivoRecusa(e.target.value)}
-                  placeholder="Descreva o motivo pelo qual o serviço não está satisfatório..."
-                  rows={4}
-                  className={cn(!motivoRecusa && 'border-destructive')}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setModalRecusaOpen(false)}>Cancelar</Button>
-              <Button variant="destructive" onClick={handleConfirmarRecusa} className="gap-1">
-                <RotateCcw className="h-4 w-4" />
-                Confirmar Recusa
               </Button>
             </DialogFooter>
           </DialogContent>
