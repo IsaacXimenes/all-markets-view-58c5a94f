@@ -281,6 +281,9 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
     // Sincronizar nota
     sincronizarNotaComLote(loteId, nomeResponsavel);
 
+    // Conferir produto na nota (contabilizar no progresso de conferência)
+    conferirProdutoSimples(nota.id, item.produtoNotaId, nomeResponsavel);
+
     toast.success(`Aparelho ${item.modelo} aprovado! Custo de R$ ${custoReparo.toFixed(2)} incorporado.`);
     setRefreshKey(k => k + 1);
   };
