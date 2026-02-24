@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, Printer, ShoppingCart, User, Package, CreditCard, Truck, Clock, DollarSign, TrendingUp, AlertTriangle, Shield, History, Pencil, Wrench, FileText, Image, Download, Check, X } from 'lucide-react';
 import { aprovarLancamento } from '@/utils/fluxoVendasApi';
+import { gerarNotaGarantiaPdf } from '@/utils/gerarNotaGarantiaPdf';
 import { getVendaById, formatCurrency, Venda, ItemTradeIn, AnexoTradeIn } from '@/utils/vendasApi';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { ComprovantePreview, ComprovanteBadgeSemAnexo } from '@/components/vendas/ComprovantePreview';
@@ -165,10 +166,16 @@ export default function VendaDetalhes() {
             </>
           )}
           {!modoConferencia && (
-            <Button onClick={handleImprimir}>
-              <Printer className="h-4 w-4 mr-2" />
-              Imprimir Recibo
-            </Button>
+            <>
+              <Button variant="outline" onClick={() => gerarNotaGarantiaPdf(venda)}>
+                <FileText className="h-4 w-4 mr-2" />
+                Gerar Nota de Garantia
+              </Button>
+              <Button onClick={handleImprimir}>
+                <Printer className="h-4 w-4 mr-2" />
+                Imprimir Recibo
+              </Button>
+            </>
           )}
         </div>
       </div>
