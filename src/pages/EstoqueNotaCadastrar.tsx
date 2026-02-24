@@ -1,6 +1,8 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EstoqueLayout } from '@/components/layout/EstoqueLayout';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { useDraftVenda } from '@/hooks/useDraftVenda';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -75,34 +77,29 @@ export default function EstoqueNotaCadastrar() {
   
   const DRAFT_KEY = 'draft_nota_entrada';
 
-  // Carregar draft do localStorage
-  const loadDraft = useCallback(() => {
-    try {
-      const saved = localStorage.getItem(DRAFT_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return null;
-  }, []);
+  // Draft via hook (idêntico ao VendasNova)
+  const { saveDraft, loadDraft: loadDraftHook, clearDraft, hasDraft: checkHasDraft, getDraftAge, formatDraftAge } = useDraftVenda(DRAFT_KEY);
+  const [showDraftModal, setShowDraftModal] = useState(false);
+  const [draftAge, setDraftAge] = useState<number | null>(null);
+  const isLoadingDraft = useRef(false);
 
-  const draft = loadDraft();
-
-  // Informações da Nota
-  const [fornecedor, setFornecedor] = useState(draft?.fornecedor || '');
+  // Informações da Nota (iniciam vazios, carregam só se user confirmar)
+  const [fornecedor, setFornecedor] = useState('');
   const [dataEntrada] = useState(new Date().toISOString().split('T')[0]);
-  const [responsavelLancamento, setResponsavelLancamento] = useState(draft?.responsavelLancamento || user?.colaborador?.id || '');
+  const [responsavelLancamento, setResponsavelLancamento] = useState(user?.colaborador?.id || '');
   
   // Flag de Urgência
-  const [urgente, setUrgente] = useState(draft?.urgente || false);
+  const [urgente, setUrgente] = useState(false);
   
   // Pagamento
-  const [formaPagamento, setFormaPagamento] = useState<'Dinheiro' | 'Pix' | ''>(draft?.formaPagamento || '');
-  const [tipoPagamento, setTipoPagamento] = useState<TipoPagamentoNota | ''>(draft?.tipoPagamento || '');
-  const [observacaoPagamento, setObservacaoPagamento] = useState(draft?.observacaoPagamento || '');
+  const [formaPagamento, setFormaPagamento] = useState<'Dinheiro' | 'Pix' | ''>('');
+  const [tipoPagamento, setTipoPagamento] = useState<TipoPagamentoNota | ''>('');
+  const [observacaoPagamento, setObservacaoPagamento] = useState('');
   
   // Campos PIX obrigatórios
-  const [pixBanco, setPixBanco] = useState(draft?.pixBanco || '');
-  const [pixRecebedor, setPixRecebedor] = useState(draft?.pixRecebedor || '');
-  const [pixChave, setPixChave] = useState(draft?.pixChave || '');
+  const [pixBanco, setPixBanco] = useState('');
+  const [pixRecebedor, setPixRecebedor] = useState('');
+  const [pixChave, setPixChave] = useState('');
   
   // Atuação Atual (somente leitura, calculado automaticamente)
   const [atuacaoAtual, setAtuacaoAtual] = useState<AtuacaoAtual | ''>('');
@@ -111,7 +108,7 @@ export default function EstoqueNotaCadastrar() {
   const [anexos, setAnexos] = useState<AnexoTemporario[]>([]);
 
   // Produtos
-  const [produtos, setProdutos] = useState<ProdutoLinha[]>(draft?.produtos?.length ? draft.produtos : [produtoLinhaVazia()]);
+  const [produtos, setProdutos] = useState<ProdutoLinha[]>([produtoLinhaVazia()]);
   
   // IMEI duplicado por índice
   const [imeiDuplicados, setImeiDuplicados] = useState<Record<number, string | null>>({});
@@ -120,11 +117,44 @@ export default function EstoqueNotaCadastrar() {
   // Estado para popover do autocomplete modelo
   const [openModeloPopover, setOpenModeloPopover] = useState<number | null>(null);
 
-  // Indicador de draft carregado
-  const [hasDraft, setHasDraft] = useState(!!draft);
-
   // Indicador visual de auto-save
   const [draftSalvoRecente, setDraftSalvoRecente] = useState(false);
+
+  // Verificar se existe rascunho ao montar
+  useEffect(() => {
+    if (checkHasDraft()) {
+      setDraftAge(getDraftAge());
+      setShowDraftModal(true);
+    }
+  }, []);
+
+  // Carregar rascunho
+  const handleLoadDraft = () => {
+    isLoadingDraft.current = true;
+    const draft = loadDraftHook();
+    if (draft) {
+      setFornecedor(draft.fornecedor || '');
+      setResponsavelLancamento(draft.responsavelLancamento || user?.colaborador?.id || '');
+      setUrgente(draft.urgente || false);
+      setFormaPagamento(draft.formaPagamento || '');
+      setTipoPagamento(draft.tipoPagamento || '');
+      setObservacaoPagamento(draft.observacaoPagamento || '');
+      setPixBanco(draft.pixBanco || '');
+      setPixRecebedor(draft.pixRecebedor || '');
+      setPixChave(draft.pixChave || '');
+      setProdutos(draft.produtos?.length ? draft.produtos : [produtoLinhaVazia()]);
+      toast.success('Rascunho carregado com sucesso');
+    }
+    setShowDraftModal(false);
+    setTimeout(() => { isLoadingDraft.current = false; }, 500);
+  };
+
+  // Descartar rascunho
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftModal(false);
+    toast.info('Rascunho descartado.');
+  };
 
   // Salvar draft (sem toast, usado pelo auto-save)
   const salvarDraftSilencioso = useCallback(() => {
@@ -139,41 +169,22 @@ export default function EstoqueNotaCadastrar() {
       pixRecebedor,
       pixChave,
       produtos,
-      savedAt: new Date().toISOString()
     };
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(draftData));
-    setHasDraft(true);
+    saveDraft(draftData);
     setDraftSalvoRecente(true);
     setTimeout(() => setDraftSalvoRecente(false), 2500);
-  }, [fornecedor, responsavelLancamento, urgente, formaPagamento, tipoPagamento, observacaoPagamento, pixBanco, pixRecebedor, pixChave, produtos]);
+  }, [fornecedor, responsavelLancamento, urgente, formaPagamento, tipoPagamento, observacaoPagamento, pixBanco, pixRecebedor, pixChave, produtos, saveDraft]);
 
   // Auto-save com debounce de 2 segundos
   useEffect(() => {
+    if (isLoadingDraft.current) return;
     const timer = setTimeout(() => {
-      // Só salva se houver algum dado preenchido
       if (fornecedor || tipoPagamento || produtos.some(p => p.modelo)) {
         salvarDraftSilencioso();
       }
     }, 2000);
     return () => clearTimeout(timer);
   }, [fornecedor, responsavelLancamento, urgente, formaPagamento, tipoPagamento, observacaoPagamento, pixBanco, pixRecebedor, pixChave, produtos, salvarDraftSilencioso]);
-
-  // Descartar draft
-  const handleDescartarDraft = useCallback(() => {
-    localStorage.removeItem(DRAFT_KEY);
-    setFornecedor('');
-    setResponsavelLancamento(user?.colaborador?.id || '');
-    setUrgente(false);
-    setFormaPagamento('');
-    setTipoPagamento('');
-    setObservacaoPagamento('');
-    setPixBanco('');
-    setPixRecebedor('');
-    setPixChave('');
-    setProdutos([produtoLinhaVazia()]);
-    setHasDraft(false);
-    toast.info('Rascunho descartado.');
-  }, [user]);
 
   // Campos simplificados (oculta IMEI, Cor, Categoria)
   const camposSimplificados = useMemo(() => {
@@ -387,7 +398,7 @@ export default function EstoqueNotaCadastrar() {
       description: `Atuação inicial: ${atuacao}. ${atuacao === 'Estoque' ? 'Acesse Notas Pendências para cadastrar/conferir produtos.' : 'Aguardando ação do Financeiro.'}`
     });
     // Limpar draft ao salvar com sucesso
-    localStorage.removeItem(DRAFT_KEY);
+    clearDraft();
     navigate('/estoque/notas-pendencias');
   };
 
@@ -414,21 +425,7 @@ export default function EstoqueNotaCadastrar() {
           Voltar para Notas Pendências
         </Button>
 
-        {/* Banner de Rascunho */}
-        {hasDraft && (
-          <Alert className="border-yellow-500/30 bg-yellow-500/5">
-            <Save className="h-4 w-4 text-yellow-600" />
-            <AlertDescription className="text-sm flex items-center justify-between">
-              <span>
-                <strong>Rascunho restaurado.</strong> Os dados do último rascunho foram carregados automaticamente.
-              </span>
-              <Button variant="ghost" size="sm" onClick={handleDescartarDraft} className="text-destructive ml-2">
-                <RotateCcw className="h-3 w-3 mr-1" />
-                Descartar
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
+        {/* Banner de Rascunho - removido, agora usa modal */}
 
         {/* Alerta informativo */}
         <Alert className="border-primary/30 bg-primary/5">
@@ -972,12 +969,6 @@ export default function EstoqueNotaCadastrar() {
 
         <div className="flex justify-between items-center gap-2">
           <div className="flex items-center gap-3">
-            {hasDraft && (
-              <Button variant="ghost" onClick={handleDescartarDraft} className="text-destructive">
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Descartar Rascunho
-              </Button>
-            )}
             {draftSalvoRecente && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Save className="h-3 w-3" />
@@ -994,6 +985,25 @@ export default function EstoqueNotaCadastrar() {
             </Button>
           </div>
         </div>
+
+        {/* Modal Rascunho (idêntico ao VendasNova) */}
+        <Dialog open={showDraftModal} onOpenChange={setShowDraftModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Save className="h-5 w-5" />
+                Rascunho Encontrado
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-muted-foreground">
+              Foi encontrado um rascunho de nota de compra salvo {formatDraftAge(draftAge)}. Deseja continuar de onde parou?
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleDiscardDraft}>Descartar</Button>
+              <Button onClick={handleLoadDraft}>Carregar Rascunho</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </EstoqueLayout>
   );

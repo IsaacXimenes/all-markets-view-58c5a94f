@@ -34,6 +34,7 @@ import {
   TipoPagamentoNota,
   getCreditosByFornecedor,
   getNotaEntradaById,
+  conferirProdutoSimples,
 } from '@/utils/notaEntradaFluxoApi';
 import { getLoteRevisaoByNotaId, calcularAbatimento, criarLoteRevisao, encaminharLoteParaAssistencia, reconciliarLoteComOS, atualizarItemRevisao, sincronizarNotaComLote, registrarEventoTecnicoNaNota } from '@/utils/loteRevisaoApi';
 import { LoteRevisaoResumo } from '@/components/estoque/LoteRevisaoResumo';
@@ -328,6 +329,23 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
     setRefreshKey(k => k + 1);
   };
 
+  // Handler para conferir produto direto (não encaminhado para assistência)
+  const handleConferirProdutoDireto = (produtoId: string) => {
+    const nomeResponsavel = user?.colaborador?.nome || user?.username || 'Estoque';
+    const resultado = conferirProdutoSimples(nota.id, produtoId, nomeResponsavel);
+    if (resultado) {
+      toast.success('Produto conferido com sucesso!');
+      setRefreshKey(k => k + 1);
+    } else {
+      toast.error('Erro ao conferir produto.');
+    }
+  };
+
+  // IDs dos produtos encaminhados para assistência
+  const idsEncaminhados = useMemo(() => {
+    return new Set(loteExistente?.itens.map(i => i.produtoNotaId) || []);
+  }, [loteExistente]);
+
   return (
     <div className="space-y-6">
       {/* Ações do estoque (condicionais) */}
@@ -337,12 +355,6 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
             <Button onClick={() => navigate(`/estoque/nota/${nota.id}/cadastrar-produtos`)}>
               <Plus className="mr-2 h-4 w-4" />
               Cadastrar Produtos
-            </Button>
-          )}
-          {podeEditar && nota.qtdCadastrada > 0 && (
-            <Button onClick={() => navigate(`/estoque/nota/${nota.id}/conferencia`)}>
-              <ClipboardCheck className="mr-2 h-4 w-4" />
-              Conferir Produtos
             </Button>
           )}
           {podeEditar && produtosElegiveis.length > 0 && !loteExistente && (
@@ -540,30 +552,53 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
                       <TableHead>Custo Unit.</TableHead>
                       <TableHead>Status Rec.</TableHead>
                       <TableHead>Status Conf.</TableHead>
+                      {showActions && <TableHead className="text-right">Ação</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {nota.produtos.map((produto) => (
-                      <TableRow key={produto.id}>
-                        <TableCell className="font-mono text-xs">{produto.id}</TableCell>
-                        <TableCell>{produto.tipoProduto}</TableCell>
-                        <TableCell>{produto.marca}</TableCell>
-                        <TableCell>{produto.modelo}</TableCell>
-                        <TableCell className="font-mono text-xs">{produto.imei || '-'}</TableCell>
-                        <TableCell>{produto.quantidade}</TableCell>
-                        <TableCell>{formatCurrency(produto.custoUnitario)}</TableCell>
-                        <TableCell>
-                          <Badge variant={produto.statusRecebimento === 'Recebido' ? 'default' : 'secondary'}>
-                            {produto.statusRecebimento}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={produto.statusConferencia === 'Conferido' ? 'default' : 'outline'}>
-                            {produto.statusConferencia}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {nota.produtos.map((produto) => {
+                      const encaminhadoAssist = idsEncaminhados.has(produto.id);
+                      const podeConferir = showActions && produto.statusConferencia !== 'Conferido' && !encaminhadoAssist;
+                      return (
+                        <TableRow key={produto.id}>
+                          <TableCell className="font-mono text-xs">{produto.id}</TableCell>
+                          <TableCell>{produto.tipoProduto}</TableCell>
+                          <TableCell>{produto.marca}</TableCell>
+                          <TableCell>{produto.modelo}</TableCell>
+                          <TableCell className="font-mono text-xs">{produto.imei || '-'}</TableCell>
+                          <TableCell>{produto.quantidade}</TableCell>
+                          <TableCell>{formatCurrency(produto.custoUnitario)}</TableCell>
+                          <TableCell>
+                            <Badge variant={produto.statusRecebimento === 'Recebido' ? 'default' : 'secondary'}>
+                              {produto.statusRecebimento}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={produto.statusConferencia === 'Conferido' ? 'default' : 'outline'}>
+                              {produto.statusConferencia}
+                            </Badge>
+                          </TableCell>
+                          {showActions && (
+                            <TableCell className="text-right">
+                              {podeConferir ? (
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 gap-1 h-7 text-xs"
+                                  onClick={() => handleConferirProdutoDireto(produto.id)}
+                                >
+                                  <CheckCircle className="h-3 w-3" />
+                                  Conferir
+                                </Button>
+                              ) : encaminhadoAssist && produto.statusConferencia !== 'Conferido' ? (
+                                <span className="text-xs text-muted-foreground">Via Assistência</span>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}

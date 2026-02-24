@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { FinanceiroLayout } from '@/components/layout/FinanceiroLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,7 +36,8 @@ import {
   ArrowLeft,
   Wrench,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  CreditCard
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -119,12 +120,22 @@ export default function FinanceiroNotasPendencias() {
 
   const handleVerDetalhes = (nota: NotaEntrada) => {
     setNotaSelecionada(nota);
+    setMostrarPagamento(false);
     setModoDetalhes(true);
   };
 
+  // Flag para mostrar quadro de pagamento nos detalhes
+  const [mostrarPagamento, setMostrarPagamento] = useState(false);
+  const pagamentoRef = useRef<HTMLDivElement>(null);
+
   const handleAbrirPagamento = (nota: NotaEntrada) => {
     setNotaSelecionada(nota);
-    setDialogPagamento(true);
+    setMostrarPagamento(true);
+    setModoDetalhes(true);
+    // Scroll para quadro de pagamento após render
+    setTimeout(() => {
+      pagamentoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 300);
   };
 
   const handleAbrirRejeicao = (nota: NotaEntrada) => {
@@ -331,6 +342,42 @@ export default function FinanceiroNotasPendencias() {
           })()}
 
           <NotaDetalhesContent nota={notaSelecionada} showActions={false} />
+
+          {/* Quadro de Pagamento */}
+          {mostrarPagamento && (
+            <div ref={pagamentoRef}>
+              <Card className="border-primary/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                    Pagamento
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="p-4 rounded-lg bg-muted/50">
+                      <p className="text-sm text-muted-foreground">Valor Total</p>
+                      <p className="text-xl font-bold">{formatCurrency(notaSelecionada.valorTotal)}</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-primary/5">
+                      <p className="text-sm text-muted-foreground">Valor Pago</p>
+                      <p className="text-xl font-bold text-primary">{formatCurrency(notaSelecionada.valorPago)}</p>
+                    </div>
+                    <div className="p-4 rounded-lg bg-destructive/5">
+                      <p className="text-sm text-muted-foreground">Valor Pendente</p>
+                      <p className="text-xl font-bold text-destructive">{formatCurrency(notaSelecionada.valorPendente)}</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={() => setDialogPagamento(true)} className="gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Registrar Pagamento
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       ) : (
         <div className="space-y-6">
