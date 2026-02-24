@@ -95,6 +95,12 @@ export const criarLoteRevisao = (
   };
 
   lotesRevisao.push(lote);
+
+  // Vincular lote à nota de entrada automaticamente
+  if (nota) {
+    nota.loteRevisaoId = id;
+  }
+
   return lote;
 };
 

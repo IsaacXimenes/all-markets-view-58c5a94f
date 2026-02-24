@@ -21,9 +21,11 @@ import {
   TipoPagamentoNota, 
   definirAtuacaoInicial,
   AtuacaoAtual,
-  verificarImeiUnicoSistema
+  verificarImeiUnicoSistema,
+  getNotaEntradaById
 } from '@/utils/notaEntradaFluxoApi';
 import { encaminharParaAnaliseGarantia, MetadadosEstoque } from '@/utils/garantiasApi';
+import { criarLoteRevisao, encaminharLoteParaAssistencia } from '@/utils/loteRevisaoApi';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -194,8 +196,14 @@ export default function EstoqueNotaCadastrar() {
     return produtos.reduce((acc, p) => acc + p.custoTotal, 0);
   }, [produtos]);
 
+  // Categorias que são acessórios/não-aparelhos — excluir do filtro de Aparelhos
+  const categoriasNaoAparelho = ['Watch', 'AirPods', 'Acessórios', 'MacBook', 'iPad'];
+
   const getModelosAparelhos = (marca: string) => {
-    return produtosCadastro.filter(p => p.marca.toLowerCase() === marca.toLowerCase());
+    return produtosCadastro.filter(p => 
+      p.marca.toLowerCase() === marca.toLowerCase() &&
+      !categoriasNaoAparelho.includes(p.categoria)
+    );
   };
 
 
@@ -416,28 +424,34 @@ export default function EstoqueNotaCadastrar() {
     // Mensagem de sucesso
     const atuacao = definirAtuacaoInicial(tipoPagamento as TipoPagamentoNota);
     
-    // Encaminhar produtos marcados para assistência via Análise de Tratativas
+    // Criar lote de revisão e encaminhar para assistência
     if (novaNota && produtosMarcadosAssistencia.length > 0) {
-      produtosMarcadosAssistencia.forEach(marcacao => {
+      const produtosValidos = produtos.filter(p => p.modelo && p.custoUnitario > 0);
+      const itensLote = produtosMarcadosAssistencia.map(marcacao => {
         const prod = produtos[marcacao.index];
-        if (prod) {
-          // Buscar o ID do produto cadastrado na nota (pelo índice na lista de produtos válidos)
-          const produtosValidos = produtos.filter(p => p.modelo && p.custoUnitario > 0);
-          const idxValido = produtosValidos.indexOf(prod);
-          const produtoNota = novaNota.produtos?.[idxValido];
-          const produtoNotaId = produtoNota?.id || novaNota.id;
+        const idxValido = produtosValidos.indexOf(prod);
+        const produtoNota = novaNota.produtos?.[idxValido];
+        const produtoNotaId = produtoNota?.id || novaNota.id;
+        return {
+          produtoNotaId,
+          marca: prod.marca,
+          modelo: prod.modelo,
+          imei: prod.imei || undefined,
+          motivoAssistencia: marcacao.motivo,
+          responsavelRegistro: responsavelLancamento || user?.username || 'Sistema',
+          dataRegistro: new Date().toISOString()
+        };
+      }).filter(Boolean);
 
-          const descricao = `${prod.marca} ${prod.modelo}${prod.imei ? ` - IMEI: ${prod.imei}` : ''}`;
-          const metadata: MetadadosEstoque = {
-            notaEntradaId: novaNota.id,
-            produtoNotaId,
-            imeiAparelho: prod.imei || undefined,
-            modeloAparelho: prod.modelo,
-            marcaAparelho: prod.marca
-          };
-          encaminharParaAnaliseGarantia(produtoNotaId, 'Estoque', descricao, marcacao.motivo, metadata);
+      const lote = criarLoteRevisao(novaNota.id, itensLote, responsavelLancamento || user?.username || 'Sistema');
+      if (lote) {
+        encaminharLoteParaAssistencia(lote.id, responsavelLancamento || user?.username || 'Sistema');
+        // Vincular lote à nota
+        const notaRef = getNotaEntradaById(novaNota.id);
+        if (notaRef) {
+          notaRef.loteRevisaoId = lote.id;
         }
-      });
+      }
     }
 
     const prodMsg = temProdutosPreenchidos ? ' com produtos registrados' : '';
@@ -924,7 +938,7 @@ export default function EstoqueNotaCadastrar() {
                                 <SelectItem value="selecione">Selecione</SelectItem>
                                 <SelectItem value="Novo">Novo</SelectItem>
                                 <SelectItem value="Seminovo">Seminovo</SelectItem>
-                                <SelectItem value="Usado">Usado</SelectItem>
+                                
                               </SelectContent>
                             </Select>
                           ) : (
@@ -945,7 +959,7 @@ export default function EstoqueNotaCadastrar() {
                                 />
                                 <span className="text-xs text-muted-foreground">%</span>
                               </div>
-                            ) : produto.categoria === 'Seminovo' || produto.categoria === 'Usado' ? (
+                            ) : produto.categoria === 'Seminovo' ? (
                               <div className="flex items-center gap-1 w-20">
                                 <Input
                                   type="number"
@@ -1026,7 +1040,7 @@ export default function EstoqueNotaCadastrar() {
                                   : !produto.imei?.trim()
                                     ? 'Preencha o IMEI para habilitar'
                                     : produto.categoria === 'Novo'
-                                      ? 'Apenas Usado/Seminovo pode ser encaminhado'
+                                      ? 'Apenas Seminovo pode ser encaminhado'
                                       : !produto.categoria
                                         ? 'Selecione a categoria primeiro'
                                         : 'Encaminhar para assistência'
