@@ -28,6 +28,7 @@ export interface Peca {
   status: 'Disponível' | 'Utilizada' | 'Devolvida';
   statusMovimentacao?: 'Em movimentação' | null;
   movimentacaoPecaId?: string;
+  fornecedorId?: string;
 }
 
 // Mock de peças

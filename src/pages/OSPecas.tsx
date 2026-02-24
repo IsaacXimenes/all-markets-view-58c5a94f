@@ -10,10 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getPecas, Peca, exportPecasToCSV, addPeca, initializePecasWithLojaIds, getMovimentacoesByPecaId, MovimentacaoPeca } from '@/utils/pecasApi';
 import { formatCurrency } from '@/utils/formatUtils';
-import { getProdutosCadastro } from '@/utils/cadastrosApi';
+import { getProdutosCadastro, getFornecedores } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { getPecasCadastro } from '@/pages/CadastrosPecas';
+import { getLoteById } from '@/utils/consignacaoApi';
 import { Download, Eye, Plus, Package, History, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect } from 'react';
@@ -34,6 +35,7 @@ export default function OSPecas() {
   const [pecas, setPecas] = useState<Peca[]>(getPecas());
   const pecasCadastradas = getPecasCadastro();
   const produtosCadastrados = getProdutosCadastro();
+  const fornecedoresList = getFornecedores();
   
   // Atualizar lista quando peças são inicializadas
   useEffect(() => {
@@ -83,6 +85,21 @@ export default function OSPecas() {
 
   const getLojaNome = (lojaId: string) => {
     return obterNomeLoja(lojaId);
+  };
+
+  const getFornecedorNome = (peca: Peca): string => {
+    // Direto do campo fornecedorId
+    if (peca.fornecedorId) {
+      return fornecedoresList.find(f => f.id === peca.fornecedorId)?.nome || peca.fornecedorId;
+    }
+    // Fallback: buscar via lote de consignação
+    if (peca.loteConsignacaoId) {
+      const lote = getLoteById(peca.loteConsignacaoId);
+      if (lote?.fornecedorId) {
+        return fornecedoresList.find(f => f.id === lote.fornecedorId)?.nome || lote.fornecedorId;
+      }
+    }
+    return '-';
   };
 
   const getStatusBadge = (status: string) => {
@@ -303,6 +320,7 @@ export default function OSPecas() {
               <TableHead>Descrição</TableHead>
               <TableHead>Loja</TableHead>
               <TableHead>Modelo</TableHead>
+              <TableHead>Fornecedor</TableHead>
               <TableHead>Valor Custo</TableHead>
               <TableHead>Valor Recomendado</TableHead>
               <TableHead>Qtd</TableHead>
@@ -320,6 +338,7 @@ export default function OSPecas() {
                 </TableCell>
                 <TableCell className="text-xs">{getLojaNome(peca.lojaId)}</TableCell>
                 <TableCell className="text-xs">{peca.modelo}</TableCell>
+                <TableCell className="text-xs">{getFornecedorNome(peca)}</TableCell>
                 <TableCell>{formatCurrency(peca.valorCusto)}</TableCell>
                 <TableCell className="font-medium text-green-600">{formatCurrency(peca.valorRecomendado)}</TableCell>
                 <TableCell>{peca.quantidade}</TableCell>
@@ -339,7 +358,7 @@ export default function OSPecas() {
             ))}
             {pecasFiltradas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                   Nenhuma peça encontrada
                 </TableCell>
               </TableRow>

@@ -92,6 +92,38 @@ export default function FinanceiroNotasAssistencia() {
 
   const getFornecedorNome = (fornId: string) => fornecedoresList.find(f => f.id === fornId)?.nome || fornId;
 
+  const getOrigemServico = (nota: NotaAssistencia): string => {
+    // Para notas normais: buscar origemEntrada da solicitação
+    if (!nota.tipoConsignacao && nota.solicitacaoId) {
+      const sol = getSolicitacaoById(nota.solicitacaoId);
+      if (sol?.origemEntrada) return sol.origemEntrada;
+    }
+    // Para notas de lote agrupado
+    if (nota.solicitacaoIds && nota.solicitacaoIds.length > 0) {
+      const sol = getSolicitacaoById(nota.solicitacaoIds[0]);
+      if (sol?.origemEntrada) return sol.origemEntrada;
+    }
+    // Para consignação: buscar via OS dos itens
+    if (nota.tipoConsignacao && nota.osId) {
+      const os = getOrdemServicoById(nota.osId);
+      if (os?.origemOS) {
+        if (os.origemOS === 'Garantia') return 'Garantia';
+        if (os.origemOS === 'Estoque') return 'Estoque';
+        return 'Balcao';
+      }
+    }
+    return 'N/A';
+  };
+
+  const getOrigemBadge = (origem: string) => {
+    switch (origem) {
+      case 'Balcao': return <Badge className="bg-blue-500/15 text-blue-600 border border-blue-300">Balcão</Badge>;
+      case 'Garantia': return <Badge className="bg-orange-500/15 text-orange-600 border border-orange-300">Garantia</Badge>;
+      case 'Estoque': return <Badge className="bg-green-500/15 text-green-600 border border-green-300">Estoque</Badge>;
+      default: return <Badge variant="secondary">N/A</Badge>;
+    }
+  };
+
   const handleVerNota = (nota: NotaAssistencia) => {
     setNotaSelecionada(nota);
     setContaPagamento('');
@@ -294,8 +326,9 @@ export default function FinanceiroNotasAssistencia() {
                     <TableHead>Fornecedor</TableHead>
                     <TableHead>Loja Solicitante</TableHead>
                     <TableHead>OS Vinculada</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Valor Total</TableHead>
+                     <TableHead>Tipo</TableHead>
+                     <TableHead>Origem</TableHead>
+                     <TableHead className="text-right">Valor Total</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Dias</TableHead>
                     <TableHead>Ações</TableHead>
@@ -304,13 +337,14 @@ export default function FinanceiroNotasAssistencia() {
                 <TableBody>
                   {filteredNotas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                         Nenhuma nota encontrada
                       </TableCell>
                     </TableRow>
-                  ) : (
+                   ) : (
                     filteredNotas.map(nota => {
                       const dias = Math.ceil((new Date().getTime() - new Date(nota.dataCriacao).getTime()) / (1000 * 60 * 60 * 24));
+                      const origem = getOrigemServico(nota);
                       return (
                         <TableRow 
                           key={nota.id}
@@ -344,6 +378,7 @@ export default function FinanceiroNotasAssistencia() {
                               <Badge variant="outline">Peças</Badge>
                             )}
                           </TableCell>
+                          <TableCell>{getOrigemBadge(origem)}</TableCell>
                           <TableCell className="font-semibold text-right">
                             {formatCurrency(nota.valorTotal)}
                           </TableCell>

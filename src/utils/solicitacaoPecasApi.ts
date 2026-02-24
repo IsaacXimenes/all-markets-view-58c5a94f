@@ -634,13 +634,13 @@ export const finalizarNotaAssistencia = (notaId: string, dados: {
     periodicidade: null,
     pagoPor: dados.responsavelFinanceiro
   });
-  // Se nota de consignação, confirmar pagamento parcial automaticamente
+   // Se nota de consignação, confirmar pagamento parcial automaticamente
   if (nota.tipoConsignacao && nota.solicitacaoId) {
     confirmarPagamentoPorNotaId(
       nota.solicitacaoId,
       nota.id,
       dados.responsavelFinanceiro,
-      undefined // comprovante será anexado separadamente se necessário
+      (dados as any).comprovante || undefined
     );
   }
   

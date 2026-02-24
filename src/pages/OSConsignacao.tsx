@@ -705,7 +705,7 @@ export default function OSConsignacao() {
             </Card>
           )}
 
-          <Tabs defaultValue="inventario">
+          <Tabs defaultValue={modoPagamento ? "pecas-usadas" : "inventario"}>
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="inventario">Inventário</TabsTrigger>
               <TabsTrigger value="pecas-usadas">Peças Usadas</TabsTrigger>
@@ -801,7 +801,9 @@ export default function OSConsignacao() {
                 </CardContent>
               </Card>
               {/* Finalizar Lote - apenas na aba Inventário */}
-              {!loteConcluido && (
+              {!loteConcluido && (() => {
+                const temPagamentoPendente = loteSelecionado.itens.some(i => i.status === 'Em Pagamento');
+                return (
                 <Card className="border-amber-300 bg-amber-50/50 dark:bg-amber-950/10 mt-4">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
@@ -811,13 +813,19 @@ export default function OSConsignacao() {
                           Finalizar Lote e Confirmar Devoluções
                         </h3>
                         <p className="text-sm text-muted-foreground">
+                          {temPagamentoPendente && (
+                            <span className="text-amber-600 font-medium block mb-1">
+                              <AlertTriangle className="h-3.5 w-3.5 inline mr-1" />
+                              Há itens com pagamento pendente no financeiro. Finalize os pagamentos antes de fechar o lote.
+                            </span>
+                          )}
                           {consumidosRemanescentes.length > 0 && `${consumidosRemanescentes.length} peça(s) consumida(s) remanescente(s) serão pagas (${formatCurrency(valorConsumidosRemanescentes)}). `}
                           {sobras.length > 0 && `${sobras.length} sobra(s) serão devolvidas (${formatCurrency(valorSobras)}).`}
                         </p>
                       </div>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="destructive">
+                          <Button variant="destructive" disabled={temPagamentoPendente}>
                             <Lock className="h-4 w-4 mr-2" />
                             Finalizar Lote
                           </Button>
@@ -895,7 +903,8 @@ export default function OSConsignacao() {
                     </div>
                   </CardContent>
                 </Card>
-              )}
+                );
+              })()}
             </TabsContent>
 
             {/* Peças Usadas com seleção para pagamento parcial */}

@@ -100,6 +100,7 @@ export const criarLoteConsignacao = (dados: CriarLoteInput): LoteConsignacao => 
       origem: 'Consignacao',
       status: 'Disponível',
       loteConsignacaoId: loteId,
+      fornecedorId: dados.fornecedorId,
     });
 
     const itemId = `CONS-ITEM-${String(nextItemId++).padStart(3, '0')}`;
@@ -657,6 +658,7 @@ export const editarLoteConsignacao = (loteId: string, dados: EditarLoteInput, re
         origem: 'Consignacao',
         status: 'Disponível',
         loteConsignacaoId: loteId,
+        fornecedorId: lote.fornecedorId,
       });
 
       const itemId = `CONS-ITEM-${String(nextItemId++).padStart(3, '0')}`;
