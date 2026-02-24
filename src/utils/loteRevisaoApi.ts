@@ -331,63 +331,69 @@ export const calcularAbatimento = (loteId: string): AbatimentoInfo | null => {
 // ============= MOCK DATA =============
 
 const initMockData = () => {
-  // Lote de revisão mock vinculado a uma nota existente
+  // Lote de revisão mock vinculado à primeira nota mock (NE-2026-00001)
   const mockLote: LoteRevisao = {
     id: 'REV-NOTA-00001',
-    notaEntradaId: 'NE-2025-00001',
-    numeroNota: 'NE-2025-00001',
-    fornecedor: 'Distribuidor Global Tech',
-    valorOriginalNota: 15000,
+    notaEntradaId: 'NE-2026-00001',
+    numeroNota: 'NE-2026-00001',
+    fornecedor: 'Apple Distribuidor BR',
+    valorOriginalNota: 32000,
     status: 'Encaminhado',
     itens: [
       {
         id: 'REV-NOTA-00001-ITEM-001',
-        produtoNotaId: 'PROD-NE-2025-00001-001',
+        produtoNotaId: 'PROD-NE-2026-00001-001',
         marca: 'Apple',
         modelo: 'iPhone 14',
         imei: '350000111222333',
         motivoAssistencia: 'Display com manchas e touch falhando na parte inferior',
-        responsavelRegistro: 'João Gestor',
-        dataRegistro: '2025-01-20T10:00:00',
+        responsavelRegistro: 'Carlos Estoque',
+        dataRegistro: '2026-01-16T10:00:00',
         osId: 'OS-2025-0012',
         custoReparo: 520,
         statusReparo: 'Em Andamento'
       },
       {
         id: 'REV-NOTA-00001-ITEM-002',
-        produtoNotaId: 'PROD-NE-2025-00001-002',
+        produtoNotaId: 'PROD-NE-2026-00001-002',
         marca: 'Samsung',
         modelo: 'Galaxy S23',
         imei: '350000444555666',
         motivoAssistencia: 'Bateria inflada - risco de segurança',
         observacao: 'Aparelho veio lacrado mas com bateria visivelmente inflada',
-        responsavelRegistro: 'João Gestor',
-        dataRegistro: '2025-01-20T10:15:00',
+        responsavelRegistro: 'Carlos Estoque',
+        dataRegistro: '2026-01-16T10:15:00',
         custoReparo: 95,
         statusReparo: 'Concluido'
       },
       {
         id: 'REV-NOTA-00001-ITEM-003',
-        produtoNotaId: 'PROD-NE-2025-00001-003',
+        produtoNotaId: 'PROD-NE-2026-00001-003',
         marca: 'Apple',
         modelo: 'iPhone 15 Pro',
         imei: '350000777888999',
         motivoAssistencia: 'Câmera traseira com defeito de foco automático',
-        responsavelRegistro: 'João Gestor',
-        dataRegistro: '2025-01-20T10:30:00',
+        responsavelRegistro: 'Carlos Estoque',
+        dataRegistro: '2026-01-16T10:30:00',
         custoReparo: 0,
         statusReparo: 'Pendente'
       }
     ],
-    dataCriacao: '2025-01-20T10:00:00',
-    responsavelCriacao: 'João Gestor',
+    dataCriacao: '2026-01-16T10:00:00',
+    responsavelCriacao: 'Carlos Estoque',
     custoTotalReparos: 615,
-    valorLiquidoSugerido: 14385,
+    valorLiquidoSugerido: 31385,
     osIds: ['OS-2025-0012']
   };
 
   lotesRevisao.push(mockLote);
   proximoSequencialLote = 2;
+
+  // Vincular lote à nota mock
+  const nota = getNotaEntradaById('NE-2026-00001');
+  if (nota) {
+    nota.loteRevisaoId = 'REV-NOTA-00001';
+  }
 };
 
 initMockData();
