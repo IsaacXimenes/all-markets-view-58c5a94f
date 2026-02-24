@@ -354,14 +354,38 @@ export function TabelaNotasPendencias({
                       }
                       const loteRevisao = getLoteRevisaoByNotaId(nota.id);
                       if (loteRevisao) {
+                        const totalItens = loteRevisao.itens.length;
+                        const concluidos = loteRevisao.itens.filter(i => i.statusReparo === 'Concluido').length;
+                        const emAndamento = loteRevisao.itens.filter(i => i.statusReparo === 'Em Andamento').length;
+                        
+                        const statusConfig = {
+                          'Em Revisao': { bg: 'bg-orange-500/10 text-orange-600 border-orange-500/30', label: 'Em Revisão' },
+                          'Encaminhado': { bg: 'bg-blue-500/10 text-blue-600 border-blue-500/30', label: 'Encaminhado' },
+                          'Em Andamento': { bg: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30', label: 'Em Andamento' },
+                          'Finalizado': { bg: 'bg-green-500/10 text-green-600 border-green-500/30', label: 'Finalizado' }
+                        };
+                        
+                        // Determinar status real baseado nos itens
+                        let statusReal = loteRevisao.status;
+                        if (statusReal === 'Encaminhado' && emAndamento > 0) {
+                          statusReal = 'Em Andamento';
+                        }
+                        
+                        const config = statusConfig[statusReal] || statusConfig['Em Revisao'];
+                        
                         return (
-                          <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30 gap-1 text-[10px]">
-                            <Wrench className="h-3 w-3" />
-                            Em Revisão - Lote #{loteRevisao.id}
-                          </Badge>
+                          <div className="flex flex-col gap-0.5">
+                            <Badge variant="outline" className={`${config.bg} gap-1 text-[10px]`}>
+                              <Wrench className="h-3 w-3" />
+                              {config.label}
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground ml-1">
+                              {concluidos}/{totalItens} concluído(s)
+                            </span>
+                          </div>
                         );
                       }
-                      return <span className="text-muted-foreground text-xs">Pendente</span>;
+                      return <span className="text-muted-foreground text-xs">-</span>;
                     })()}
                   </TableCell>
                   <TableCell className="text-center">

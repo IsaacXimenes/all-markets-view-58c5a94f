@@ -23,6 +23,7 @@ import {
 } from '@/utils/garantiasApi';
 import { updateProdutoPendente, getProdutoPendenteById, ParecerAssistencia } from '@/utils/osApi';
 import { addOrdemServico, getOrdensServico } from '@/utils/assistenciaApi';
+import { atualizarItemRevisao, getLoteRevisaoById } from '@/utils/loteRevisaoApi';
 import { formatarTempo, calcularTempoLiquido } from '@/components/assistencia/CronometroOS';
 import { getClientes } from '@/utils/cadastrosApi';
 import { formatIMEI, unformatIMEI } from '@/utils/imeiMask';
@@ -154,8 +155,8 @@ export default function OSAnaliseGarantia() {
     });
 
     if (registroAprovado) {
-      // Atualizar statusGeral do produto pendente
-      if (registroAprovado.origemId) {
+      // Atualizar statusGeral do produto pendente (fluxo legado)
+      if (registroAprovado.origemId && !registroAprovado.metadata?.loteRevisaoItemId) {
         updateProdutoPendente(registroAprovado.origemId, {
           statusGeral: 'Em Análise Assistência'
         });
@@ -177,9 +178,17 @@ export default function OSAnaliseGarantia() {
           modeloAparelho = garantia.modelo || '';
           imeiAparelho = garantia.imei || '';
         }
-    } else if (registroAprovado.origem === 'Estoque') {
+      } else if (registroAprovado.origem === 'Estoque') {
         origemOS = 'Estoque';
-        if (registroAprovado.origemId) {
+        
+        // Prioridade 1: metadados explícitos do registro
+        if (registroAprovado.metadata) {
+          modeloAparelho = registroAprovado.metadata.modeloAparelho || '';
+          imeiAparelho = registroAprovado.metadata.imeiAparelho || '';
+        }
+        
+        // Prioridade 2: fallback por produto pendente (fluxo legado)
+        if (!modeloAparelho && registroAprovado.origemId) {
           const produtoPendente = getProdutoPendenteById(registroAprovado.origemId);
           if (produtoPendente) {
             modeloAparelho = produtoPendente.modelo || '';
@@ -188,7 +197,7 @@ export default function OSAnaliseGarantia() {
         }
       }
 
-      addOrdemServico({
+      const novaOS = addOrdemServico({
         dataHora: new Date().toISOString(),
         clienteId,
         lojaId: lojaSelecionada,
@@ -214,8 +223,16 @@ export default function OSAnaliseGarantia() {
         observacaoOrigem: registroAprovado.observacao,
       });
 
+      // Atualizar item do lote de revisão com o ID da OS criada
+      if (registroAprovado.metadata?.loteRevisaoId && registroAprovado.metadata?.loteRevisaoItemId && novaOS) {
+        atualizarItemRevisao(
+          registroAprovado.metadata.loteRevisaoId,
+          registroAprovado.metadata.loteRevisaoItemId,
+          { osId: novaOS.id, statusReparo: 'Em Andamento' }
+        );
+      }
+
       toast.success('Solicitação aprovada e OS criada com sucesso!');
-      // Navegar para a aba Nova Assistência (lista)
       navigate('/os/assistencia');
     }
 

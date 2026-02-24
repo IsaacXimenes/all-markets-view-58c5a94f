@@ -97,6 +97,16 @@ export interface TimelineContatoAtivo {
 }
 
 // Interface para Análise Garantia (OS)
+export interface MetadadosEstoque {
+  notaEntradaId?: string;
+  produtoNotaId?: string;
+  loteRevisaoId?: string;
+  loteRevisaoItemId?: string;
+  imeiAparelho?: string;
+  modeloAparelho?: string;
+  marcaAparelho?: string;
+}
+
 export interface RegistroAnaliseGarantia {
   id: string;
   origem: 'Garantia' | 'Estoque';
@@ -111,6 +121,7 @@ export interface RegistroAnaliseGarantia {
   observacao?: string;
   motivoRecusa?: string;
   dataRecusa?: string;
+  metadata?: MetadadosEstoque;
 }
 
 // Dados mockados para Contatos Ativos
@@ -900,7 +911,13 @@ export const recusarAnaliseGarantia = (id: string, motivo: string): RegistroAnal
   return null;
 };
 
-export const encaminharParaAnaliseGarantia = (origemId: string, origem: 'Garantia' | 'Estoque', descricao: string, observacao?: string): void => {
+export const encaminharParaAnaliseGarantia = (
+  origemId: string, 
+  origem: 'Garantia' | 'Estoque', 
+  descricao: string, 
+  observacao?: string,
+  metadata?: MetadadosEstoque
+): void => {
   registroAnaliseCounter++;
   registrosAnaliseGarantia.push({
     id: `RAG-${String(registroAnaliseCounter).padStart(4, '0')}`,
@@ -909,7 +926,8 @@ export const encaminharParaAnaliseGarantia = (origemId: string, origem: 'Garanti
     clienteDescricao: descricao,
     dataChegada: new Date().toISOString(),
     status: 'Pendente',
-    observacao
+    observacao,
+    metadata
   });
 };
 

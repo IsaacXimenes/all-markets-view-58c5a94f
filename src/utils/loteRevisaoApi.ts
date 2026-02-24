@@ -2,7 +2,7 @@
 // Gerencia o encaminhamento em lote de aparelhos defeituosos para assistência
 
 import { getNotaEntradaById, NotaEntrada, gerarCreditoFornecedor } from './notaEntradaFluxoApi';
-import { encaminharParaAnaliseGarantia } from './garantiasApi';
+import { encaminharParaAnaliseGarantia, MetadadosEstoque } from './garantiasApi';
 import { marcarProdutoRetornoAssistencia, marcarProdutoDevolvido } from './estoqueApi';
 
 // ============= TIPOS E INTERFACES =============
@@ -137,7 +137,16 @@ export const encaminharLoteParaAssistencia = (
   lote.itens.forEach(item => {
     const descricao = `Lote ${lote.id} — ${item.marca} ${item.modelo}${item.imei ? ` (IMEI: ${item.imei})` : ''}`;
     const observacao = `Motivo: ${item.motivoAssistencia}${item.observacao ? `\nObs: ${item.observacao}` : ''}\nNota: ${lote.numeroNota}`;
-    encaminharParaAnaliseGarantia(item.produtoNotaId, 'Estoque', descricao, observacao);
+    const metadata: MetadadosEstoque = {
+      notaEntradaId: lote.notaEntradaId,
+      produtoNotaId: item.produtoNotaId,
+      loteRevisaoId: lote.id,
+      loteRevisaoItemId: item.id,
+      imeiAparelho: item.imei,
+      modeloAparelho: item.modelo,
+      marcaAparelho: item.marca
+    };
+    encaminharParaAnaliseGarantia(item.produtoNotaId, 'Estoque', descricao, observacao, metadata);
   });
 
   lote.status = 'Encaminhado';
