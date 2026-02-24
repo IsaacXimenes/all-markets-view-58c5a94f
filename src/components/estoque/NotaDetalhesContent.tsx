@@ -31,6 +31,7 @@ import {
 import { getLoteRevisaoByNotaId, calcularAbatimento } from '@/utils/loteRevisaoApi';
 import { LoteRevisaoResumo } from '@/components/estoque/LoteRevisaoResumo';
 import { getFornecedores } from '@/utils/cadastrosApi';
+import { getOrdemServicoById } from '@/utils/assistenciaApi';
 import { formatCurrency } from '@/utils/formatUtils';
 
 const obterNomeFornecedor = (idOuNome: string): string => {
@@ -419,25 +420,33 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
                         <TableHead>Motivo</TableHead>
                         <TableHead>Status Reparo</TableHead>
                         <TableHead>Custo Reparo</TableHead>
+                        <TableHead>Parecer</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {loteRevisao.itens.map(item => (
-                        <TableRow key={item.id}>
-                          <TableCell>{item.marca}</TableCell>
-                          <TableCell>{item.modelo}</TableCell>
-                          <TableCell className="font-mono text-xs">{item.imei || '-'}</TableCell>
-                          <TableCell className="max-w-[200px] truncate">{item.motivoAssistencia}</TableCell>
-                          <TableCell>
-                            <Badge variant={item.statusReparo === 'Concluido' ? 'default' : item.statusReparo === 'Em Andamento' ? 'secondary' : 'outline'}>
-                              {item.statusReparo}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {item.custoReparo > 0 ? formatCurrency(item.custoReparo) : '-'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {loteRevisao.itens.map(item => {
+                        const os = item.osId ? getOrdemServicoById(item.osId) : null;
+                        const parecer = os?.resumoConclusao || os?.conclusaoServico || (item.statusReparo === 'Concluido' ? 'Sem parecer' : 'Aguardando');
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell>{item.marca}</TableCell>
+                            <TableCell>{item.modelo}</TableCell>
+                            <TableCell className="font-mono text-xs">{item.imei || '-'}</TableCell>
+                            <TableCell className="max-w-[200px] truncate">{item.motivoAssistencia}</TableCell>
+                            <TableCell>
+                              <Badge variant={item.statusReparo === 'Concluido' ? 'default' : item.statusReparo === 'Em Andamento' ? 'secondary' : 'outline'}>
+                                {item.statusReparo}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {item.custoReparo > 0 ? formatCurrency(item.custoReparo) : '-'}
+                            </TableCell>
+                            <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground" title={parecer}>
+                              {parecer}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
 

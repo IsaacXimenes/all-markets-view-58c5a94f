@@ -37,6 +37,7 @@ import { BufferAnexos, AnexoTemporario } from '@/components/estoque/BufferAnexos
 import { getProdutosCadastro } from '@/utils/cadastrosApi';
 import { getAcessorios } from '@/utils/acessoriosApi';
 import { formatIMEI } from '@/utils/imeiMask';
+import { getCores } from '@/utils/coresApi';
 
 interface ProdutoLinha {
   tipoProduto: 'Aparelho' | 'Acessorio';
@@ -45,6 +46,7 @@ interface ProdutoLinha {
   imei: string;
   cor: string;
   categoria: string;
+  saudeBateria: number;
   quantidade: number;
   custoUnitario: number;
   custoTotal: number;
@@ -66,6 +68,7 @@ const produtoLinhaVazia = (): ProdutoLinha => ({
   imei: '',
   cor: '',
   categoria: '',
+  saudeBateria: 100,
   quantidade: 1,
   custoUnitario: 0,
   custoTotal: 0,
@@ -221,9 +224,17 @@ export default function EstoqueNotaCadastrar() {
       novosProdutos[index].imei = '';
       novosProdutos[index].cor = '';
       novosProdutos[index].categoria = '';
+      novosProdutos[index].saudeBateria = 100;
       setImeiDuplicados(prev => ({ ...prev, [index]: null }));
       // Remover marcação de assistência ao trocar tipo
       setProdutosMarcadosAssistencia(prev => prev.filter(m => m.index !== index));
+    }
+
+    // Auto-set saudeBateria when categoria changes
+    if (campo === 'categoria') {
+      if (valor === 'Novo') {
+        novosProdutos[index].saudeBateria = 100;
+      }
     }
 
     if (campo === 'marca') {
@@ -743,6 +754,7 @@ export default function EstoqueNotaCadastrar() {
                     {!camposSimplificados && <TableHead>IMEI</TableHead>}
                     {!camposSimplificados && <TableHead>Cor</TableHead>}
                     {!camposSimplificados && <TableHead className="min-w-[120px]">Categoria</TableHead>}
+                    {!camposSimplificados && <TableHead className="min-w-[100px]">Saúde Bateria</TableHead>}
                     <TableHead>Qtd *</TableHead>
                     <TableHead className="min-w-[130px]">Custo Unit. *</TableHead>
                     <TableHead>Custo Total</TableHead>
@@ -871,12 +883,28 @@ export default function EstoqueNotaCadastrar() {
                       {!camposSimplificados && (
                         <TableCell>
                           {produto.tipoProduto === 'Aparelho' ? (
-                            <Input
-                              value={produto.cor}
-                              onChange={(e) => atualizarProduto(index, 'cor', e.target.value)}
-                              className="w-32"
-                              placeholder="Cor"
-                            />
+                            <Select
+                              value={produto.cor || 'selecione'}
+                              onValueChange={(value) => atualizarProduto(index, 'cor', value === 'selecione' ? '' : value)}
+                            >
+                              <SelectTrigger className="w-36">
+                                <SelectValue placeholder="Cor" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-popover border z-[100]">
+                                <SelectItem value="selecione">Selecione</SelectItem>
+                                {getCores().filter(c => c.status === 'Ativo').map(cor => (
+                                  <SelectItem key={cor.id} value={cor.nome}>
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className="inline-block w-3 h-3 rounded-full border border-border/50 shrink-0"
+                                        style={{ backgroundColor: cor.hexadecimal }}
+                                      />
+                                      {cor.nome}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           ) : (
                             <Input disabled placeholder="N/A" className="w-32 bg-muted" />
                           )}
@@ -892,14 +920,59 @@ export default function EstoqueNotaCadastrar() {
                               <SelectTrigger className="min-w-[120px]">
                                 <SelectValue placeholder="Cat" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="bg-popover border z-[100]">
                                 <SelectItem value="selecione">Selecione</SelectItem>
                                 <SelectItem value="Novo">Novo</SelectItem>
                                 <SelectItem value="Seminovo">Seminovo</SelectItem>
+                                <SelectItem value="Usado">Usado</SelectItem>
                               </SelectContent>
                             </Select>
                           ) : (
                             <Input disabled placeholder="N/A" className="w-24 bg-muted" />
+                          )}
+                        </TableCell>
+                      )}
+                      {!camposSimplificados && (
+                        <TableCell>
+                          {produto.tipoProduto === 'Aparelho' ? (
+                            produto.categoria === 'Novo' ? (
+                              <div className="flex items-center gap-1 w-20">
+                                <Input
+                                  type="number"
+                                  value={100}
+                                  readOnly
+                                  className="w-16 bg-muted cursor-not-allowed text-center"
+                                />
+                                <span className="text-xs text-muted-foreground">%</span>
+                              </div>
+                            ) : produto.categoria === 'Seminovo' || produto.categoria === 'Usado' ? (
+                              <div className="flex items-center gap-1 w-20">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={produto.saudeBateria}
+                                  onChange={(e) => {
+                                    const val = Math.min(100, Math.max(0, parseInt(e.target.value) || 0));
+                                    atualizarProduto(index, 'saudeBateria', val);
+                                  }}
+                                  className="w-16 text-center"
+                                />
+                                <span className="text-xs text-muted-foreground">%</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 w-20">
+                                <Input
+                                  type="number"
+                                  disabled
+                                  placeholder="-"
+                                  className="w-16 bg-muted cursor-not-allowed text-center"
+                                />
+                                <span className="text-xs text-muted-foreground">%</span>
+                              </div>
+                            )
+                          ) : (
+                            <Input disabled placeholder="N/A" className="w-20 bg-muted" />
                           )}
                         </TableCell>
                       )}
@@ -941,13 +1014,22 @@ export default function EstoqueNotaCadastrar() {
                               variant="ghost"
                               size="sm"
                               onClick={() => abrirModalAssistencia(index)}
-                              disabled={produto.tipoProduto !== 'Aparelho' || !produto.imei?.trim()}
+                              disabled={
+                                produto.tipoProduto !== 'Aparelho' || 
+                                !produto.imei?.trim() || 
+                                produto.categoria === 'Novo' || 
+                                !produto.categoria
+                              }
                               title={
                                 produto.tipoProduto !== 'Aparelho'
                                   ? 'Apenas aparelhos podem ser encaminhados'
                                   : !produto.imei?.trim()
                                     ? 'Preencha o IMEI para habilitar'
-                                    : 'Encaminhar para assistência'
+                                    : produto.categoria === 'Novo'
+                                      ? 'Apenas Usado/Seminovo pode ser encaminhado'
+                                      : !produto.categoria
+                                        ? 'Selecione a categoria primeiro'
+                                        : 'Encaminhar para assistência'
                               }
                             >
                               <Wrench className="h-4 w-4 text-orange-500" />
@@ -979,6 +1061,63 @@ export default function EstoqueNotaCadastrar() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Segundo Quadro: Aparelhos para Análise na Assistência */}
+        {produtosMarcadosAssistencia.length > 0 && (
+          <Card className="border-orange-500/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-orange-500" />
+                Aparelhos para Análise na Assistência
+                <Badge className="bg-orange-500 text-white">{produtosMarcadosAssistencia.length}</Badge>
+              </CardTitle>
+              <CardDescription>
+                Estes aparelhos serão encaminhados para Análise de Tratativas ao salvar a nota
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Marca</TableHead>
+                    <TableHead>Modelo</TableHead>
+                    <TableHead>IMEI</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead>Saúde Bateria</TableHead>
+                    <TableHead>Motivo</TableHead>
+                    <TableHead>Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {produtosMarcadosAssistencia.map(marcacao => {
+                    const prod = produtos[marcacao.index];
+                    if (!prod) return null;
+                    return (
+                      <TableRow key={marcacao.index}>
+                        <TableCell>{prod.marca}</TableCell>
+                        <TableCell>{prod.modelo}</TableCell>
+                        <TableCell className="font-mono text-xs">{prod.imei ? formatIMEI(prod.imei) : '-'}</TableCell>
+                        <TableCell><Badge variant="outline">{prod.categoria}</Badge></TableCell>
+                        <TableCell>{prod.saudeBateria}%</TableCell>
+                        <TableCell className="max-w-[200px] truncate" title={marcacao.motivo}>{marcacao.motivo}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => desmarcarAssistencia(marcacao.index)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Buffer de Anexos */}
         <BufferAnexos 
