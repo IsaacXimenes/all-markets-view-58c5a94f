@@ -9,6 +9,36 @@ const getLogoBase64 = async (): Promise<string> => {
   return logoBase64Promise;
 };
 
+/** Retorna cabeçalho condicional por loja */
+export const getCabecalhoLoja = (lojaId: string): { subtitulo: string; endereco: string } => {
+  const mapa: Record<string, { subtitulo: string; endereco: string }> = {
+    '3ac7e00c': { subtitulo: 'FEIRA DOS IMPORTADOS', endereco: 'BLOCO D, LOJA 433/434 – BRASÍLIA' },
+    'fcc78c1a': { subtitulo: 'FEIRA DOS IMPORTADOS', endereco: 'BLOCO D, LOJA 433/434 – BRASÍLIA' },
+    '5b9446d5': { subtitulo: 'SHOPPING SUL', endereco: 'BR-040 – Parque Esplanada III, Valparaíso de Goiás' },
+    '0d06e7db': { subtitulo: 'SHOPPING ÁGUAS LINDAS', endereco: 'BR-070 – Mansões Centroeste, Águas Lindas de Goiás' },
+    'db894e7d': { subtitulo: 'JK SHOPPING', endereco: 'St. M Norte QNM 34 Área especial 01 – Taguatinga' },
+  };
+  return mapa[lojaId] || { subtitulo: 'FEIRA DOS IMPORTADOS', endereco: 'BLOCO D, LOJA 433/434 – BRASÍLIA' };
+};
+
+/** Carrega imagem como base64 data URL */
+const loadImageAsBase64 = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/jpeg', 0.92));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+};
+
 /**
  * Gera a Nota de Garantia em PDF baseado no modelo Thiago Imports
  */
@@ -85,18 +115,19 @@ export const gerarNotaGarantiaPdf = async (venda: Venda) => {
     // Logo não disponível
   }
 
-  // Texto do cabeçalho
+  // Texto do cabeçalho (condicional por loja)
+  const cabecalho = getCabecalhoLoja(venda.lojaVenda || '');
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
   doc.text('THIAGO IMPORTS', margin + 30, y + 8);
   doc.setFontSize(9);
-  doc.text('FEIRA DOS IMPORTADOS', margin + 30, y + 13);
+  doc.text(cabecalho.subtitulo, margin + 30, y + 13);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.text('NOTA DE GARANTIA', margin + 30, y + 19);
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
-  doc.text('BLOCO D, LOJA 433/434 – BRASÍLIA', margin + 30, y + 24);
+  doc.text(cabecalho.endereco, margin + 30, y + 24);
 
   // Campos do lado direito: Nº, DATA, IDENTIFICAÇÃO
   const rightColX = margin + 140;
@@ -343,6 +374,22 @@ export const gerarNotaGarantiaPdf = async (venda: Venda) => {
   doc.setFont('helvetica', 'normal');
   doc.text(`DATA E HORA DA IMPRESSÃO: ${formatarDataHora(new Date())}`, margin, y + 4);
   doc.text('Sistema: Thiago Imports', margin + contentWidth - 40, y + 4);
+
+  // Anexar páginas do Termo de Garantia
+  try {
+    const [p1Data, p2Data] = await Promise.all([
+      loadImageAsBase64('/docs/termo-garantia-p1.jpg'),
+      loadImageAsBase64('/docs/termo-garantia-p2.jpg'),
+    ]);
+    const pageW = 210;
+    const pageH = 297;
+    doc.addPage('a4', 'p');
+    doc.addImage(p1Data, 'JPEG', 0, 0, pageW, pageH);
+    doc.addPage('a4', 'p');
+    doc.addImage(p2Data, 'JPEG', 0, 0, pageW, pageH);
+  } catch {
+    console.warn('Não foi possível anexar o Termo de Garantia ao PDF.');
+  }
 
   // Abrir em nova aba
   const pdfUrl = doc.output('bloburl');

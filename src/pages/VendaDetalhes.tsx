@@ -9,7 +9,9 @@ import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, Printer, ShoppingCart, User, Package, CreditCard, Truck, Clock, DollarSign, TrendingUp, AlertTriangle, Shield, History, Pencil, Wrench, FileText, Image, Download, Check, X } from 'lucide-react';
 import { aprovarLancamento } from '@/utils/fluxoVendasApi';
-import { gerarNotaGarantiaPdf } from '@/utils/gerarNotaGarantiaPdf';
+import { gerarNotaGarantiaPdf, getCabecalhoLoja } from '@/utils/gerarNotaGarantiaPdf';
+import { addTimelineEntry } from '@/utils/timelineApi';
+import { useAuthStore } from '@/store/authStore';
 import { getVendaById, formatCurrency, Venda, ItemTradeIn, AnexoTradeIn } from '@/utils/vendasApi';
 import { getContasFinanceiras } from '@/utils/cadastrosApi';
 import { ComprovantePreview, ComprovanteBadgeSemAnexo } from '@/components/vendas/ComprovantePreview';
@@ -167,7 +169,22 @@ export default function VendaDetalhes() {
           )}
           {!modoConferencia && (
             <>
-              <Button variant="outline" onClick={() => gerarNotaGarantiaPdf(venda)}>
+              <Button variant="outline" onClick={async () => {
+                await gerarNotaGarantiaPdf(venda);
+                const cab = getCabecalhoLoja(venda.lojaVenda || '');
+                const authUser = useAuthStore.getState().user;
+                addTimelineEntry({
+                  entidadeId: venda.id,
+                  entidadeTipo: 'OS' as any,
+                  tipo: 'nota_garantia',
+                  titulo: 'Nota de Garantia gerada',
+                  descricao: `Cabeçalho: ${cab.subtitulo} – ${cab.endereco}. Termo de Garantia anexado ao PDF.`,
+                  dataHora: new Date().toISOString(),
+                  usuarioId: authUser?.colaborador?.id || 'sistema',
+                  usuarioNome: authUser?.colaborador?.nome || 'Sistema',
+                });
+                toast.success('Nota de Garantia gerada com sucesso');
+              }}>
                 <FileText className="h-4 w-4 mr-2" />
                 Gerar Nota de Garantia
               </Button>
