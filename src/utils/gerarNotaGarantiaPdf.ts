@@ -309,19 +309,30 @@ export const gerarNotaGarantiaPdf = async (venda: Venda) => {
   y += rowH;
 
   // ==========================================
-  // FRETE
+  // FRETE / ENTREGA
   // ==========================================
-  y = drawSectionHeader('FRETE', y);
+  y = drawSectionHeader('FRETE / ENTREGA', y);
   const freteH = 10;
   const temFrete = venda.tipoRetirada === 'Entrega';
-  const freteCol1W = contentWidth * 0.15;
-  const freteCol2W = contentWidth * 0.15;
-  const freteCol3W = contentWidth * 0.70;
+  const freteCol1W = contentWidth * 0.10;
+  const freteCol2W = contentWidth * 0.10;
+  const freteCol3W = contentWidth * 0.25;
+  const freteCol4W = contentWidth * 0.55;
 
   drawField('SIM', temFrete ? 'X' : '', margin, y, freteCol1W, freteH);
   drawField('NÃO', !temFrete ? 'X' : '', margin + freteCol1W, y, freteCol2W, freteH);
-  drawField('ENDEREÇO ENTREGA', temFrete ? (venda.localRetirada || 'Endereço de entrega') : '-', margin + freteCol1W + freteCol2W, y, freteCol3W, freteH);
+  drawField('TIPO DE RETIRADA', venda.tipoRetirada || '-', margin + freteCol1W + freteCol2W, y, freteCol3W, freteH);
+  drawField('ENDEREÇO / LOCAL', temFrete ? (venda.localRetirada || 'Endereço de entrega') : (venda.localRetirada || '-'), margin + freteCol1W + freteCol2W + freteCol3W, y, freteCol4W, freteH);
   y += freteH;
+
+  // Linha 2: Taxa de entrega e observações
+  if (temFrete) {
+    const freteL2Col1W = contentWidth * 0.20;
+    const freteL2Col2W = contentWidth * 0.80;
+    drawField('TAXA DE ENTREGA', venda.taxaEntrega ? formatCurrency(venda.taxaEntrega) : 'Grátis', margin, y, freteL2Col1W, freteH);
+    drawField('MOTOBOY / OBSERVAÇÕES', venda.motoboyId || '-', margin + freteL2Col1W, y, freteL2Col2W, freteH);
+    y += freteH;
+  }
 
   // ==========================================
   // DADOS DOS PRODUTOS
