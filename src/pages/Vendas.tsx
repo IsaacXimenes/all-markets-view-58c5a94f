@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Download, Eye, TrendingUp, DollarSign, Percent, ShoppingCart, CreditCard, FileText, Image, Package, Check, AlertTriangle, X } from 'lucide-react';
 import { getVendas, exportVendasToCSV, formatCurrency, Venda, ItemTradeIn, AnexoTradeIn } from '@/utils/vendasApi';
+import { calcularLucroReal } from '@/utils/calculoRentabilidadeVenda';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { getStatusConferenciaByVendaId, StatusConferencia } from '@/utils/conferenciaGestorApi';
 import { displayIMEI } from '@/utils/imeiMask';
@@ -78,8 +79,34 @@ export default function Vendas() {
     const valorVenda = venda.total;
     const lucro = valorVenda - valorCusto;
     const margem = valorCusto > 0 ? ((lucro / valorCusto) * 100) : 0;
-    
-    return { valorCusto, valorRecomendado, valorVenda, lucro, margem };
+
+    // Colunas expandidas
+    const valorAparelhos = venda.itens.reduce((acc, item) => acc + item.valorVenda, 0);
+    const valorAcessorios = venda.acessorios?.reduce((acc, a) => acc + a.valorTotal, 0) ?? 0;
+    const valorGarantia = venda.garantiaExtendida?.valor ?? 0;
+    const custoAcessorios = venda.acessorios?.reduce((acc, a) => {
+      // Use inline cost lookup - acessoriosApi getAcessorioById
+      return acc + (a.valorTotal * 0.5); // fallback estimate; real cost from calcularLucroReal
+    }, 0) ?? 0;
+
+    const resumo = calcularLucroReal({
+      itens: venda.itens,
+      acessoriosVenda: venda.acessorios ?? [],
+      tradeIns: venda.tradeIns,
+      valorGarantia,
+      taxaEntregaCobrada: venda.taxaEntrega,
+      localEntregaId: '',
+      lojaVendaId: venda.lojaVenda,
+      pagamentos: venda.pagamentos,
+      totalVenda: venda.total,
+    });
+
+    return {
+      valorCusto, valorRecomendado, valorVenda, lucro, margem,
+      valorAparelhos, valorAcessorios, valorGarantia,
+      custoTotal: resumo.custoTotal,
+      lucroReal: resumo.lucroReal,
+    };
   };
 
   // Obter info de garantia para uma venda
@@ -404,8 +431,13 @@ export default function Vendas() {
                   <TableHead>Resp. Venda</TableHead>
                   <TableHead>Base de Troca</TableHead>
                   <TableHead className="text-right">V. Custo</TableHead>
+                  <TableHead className="text-right">V. Aparelhos</TableHead>
+                  <TableHead className="text-right">V. Acessórios</TableHead>
+                  <TableHead className="text-right">V. Garantia</TableHead>
                   <TableHead className="text-right">V. Venda</TableHead>
+                  <TableHead className="text-right">Custo Total</TableHead>
                   <TableHead className="text-right">Lucro</TableHead>
+                  <TableHead className="text-right">Lucro Real</TableHead>
                   <TableHead className="text-right">Margem %</TableHead>
                   <TableHead>Resp. Garantia</TableHead>
                   <TableHead>Data Fim Garantia</TableHead>
@@ -534,11 +566,26 @@ export default function Vendas() {
                       <TableCell className="text-right text-muted-foreground">
                         {formatCurrency(calc.valorCusto)}
                       </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(calc.valorAparelhos)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(calc.valorAcessorios)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {calc.valorGarantia > 0 ? formatCurrency(calc.valorGarantia) : '-'}
+                      </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(calc.valorVenda)}
                       </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {formatCurrency(calc.custoTotal)}
+                      </TableCell>
                       <TableCell className={`text-right font-medium ${isPrejuizo ? 'text-destructive' : 'text-green-600'}`}>
                         {formatCurrency(calc.lucro)}
+                      </TableCell>
+                      <TableCell className={`text-right font-medium ${calc.lucroReal < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                        {formatCurrency(calc.lucroReal)}
                       </TableCell>
                       <TableCell className="text-right">
                         <Badge 

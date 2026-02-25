@@ -1,6 +1,6 @@
 import { PageLayout } from '@/components/layout/PageLayout';
 import { CarouselTabsNavigation } from '@/components/layout/CarouselTabsNavigation';
-import { Store, Users, UserCog, Truck, ShoppingCart, Package, Percent, Briefcase, CreditCard, Building2, Wrench, Headphones, Shield, Palette, MapPinned, MessageSquare, ListChecks, History, Database } from 'lucide-react';
+import { Store, Users, UserCog, Truck, ShoppingCart, Package, Percent, Briefcase, CreditCard, Building2, Wrench, Headphones, Shield, Palette, MapPinned, MessageSquare, ListChecks, History, Database, Target } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 
 interface CadastrosLayoutProps {
@@ -28,6 +28,7 @@ const tabs = [
   { name: 'Taxas de Entrega', href: '/cadastros/taxas-entrega', icon: MapPinned },
   { name: 'Config. WhatsApp', href: '/cadastros/config-whatsapp', icon: MessageSquare },
   { name: 'Atividades', href: '/cadastros/atividades', icon: ListChecks },
+  { name: 'Metas', href: '/cadastros/metas', icon: Target },
   { name: 'Logs de Auditoria', href: '/cadastros/logs-auditoria', icon: History },
 ];
 
