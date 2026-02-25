@@ -3,7 +3,7 @@
 export interface TimelineEntry {
   id: string;
   entidadeId: string; // ID da OS, Garantia, Solicitação, Lote, Colaborador
-  entidadeTipo: 'OS' | 'Garantia' | 'Solicitacao' | 'Lote' | 'Produto' | 'Colaborador';
+  entidadeTipo: 'OS' | 'Garantia' | 'Solicitacao' | 'Lote' | 'Produto' | 'Colaborador' | 'Venda';
   dataHora: string;
   tipo: string;
   titulo: string;

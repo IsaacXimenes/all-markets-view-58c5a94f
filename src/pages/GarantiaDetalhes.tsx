@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
@@ -20,7 +21,7 @@ import {
 import { 
   ArrowLeft, Shield, User, Package, Phone, Mail, Clock, 
   FileText, CheckCircle, AlertCircle, Smartphone, Wrench, ArrowRightLeft,
-  Plus, Search, RotateCcw
+  Plus, Search, RotateCcw, AlertTriangle, Ban
 } from 'lucide-react';
 import { 
   getGarantiaById, getTratativasByGarantiaId, getTimelineByGarantiaId,
@@ -173,6 +174,7 @@ export default function GarantiaDetalhes() {
   };
 
   const precisaAparelho = tipoTratativa === 'Assistência + Empréstimo' || tipoTratativa === 'Troca Direta';
+  const garantiaBloqueada = garantia?.status === 'Expirada' || garantia?.status === 'Concluída';
 
   if (!garantia) {
     return (
@@ -360,6 +362,22 @@ export default function GarantiaDetalhes() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Alertas de Expiração */}
+          {statusExpiracao && (statusExpiracao.status === 'urgente' || statusExpiracao.status === 'atencao') && (
+            <Alert variant={statusExpiracao.status === 'urgente' ? 'destructive' : 'default'} className={statusExpiracao.status === 'atencao' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' : ''}>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>{statusExpiracao.status === 'urgente' ? 'Garantia Expirando!' : 'Atenção'}</AlertTitle>
+              <AlertDescription>{statusExpiracao.mensagem}</AlertDescription>
+            </Alert>
+          )}
+          {statusExpiracao && statusExpiracao.status === 'expirada' && (
+            <Alert variant="destructive">
+              <Ban className="h-4 w-4" />
+              <AlertTitle>Garantia Expirada</AlertTitle>
+              <AlertDescription>{statusExpiracao.mensagem}. Não é possível registrar novas tratativas.</AlertDescription>
+            </Alert>
+          )}
           
           {/* Timeline Visual */}
           <Card>
@@ -416,6 +434,17 @@ export default function GarantiaDetalhes() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {garantiaBloqueada ? (
+                <div className="p-4 bg-muted rounded-lg text-center space-y-2">
+                  <Ban className="h-8 w-8 mx-auto text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground font-medium">
+                    {garantia.status === 'Expirada' 
+                      ? 'Não é possível registrar tratativa para garantia expirada'
+                      : 'Não é possível registrar tratativa para garantia concluída'}
+                  </p>
+                </div>
+              ) : (
+                <>
               <div className="space-y-2">
                 <Label>Tipo de Tratativa *</Label>
                 <Select value={tipoTratativa} onValueChange={setTipoTratativa}>
@@ -472,6 +501,15 @@ export default function GarantiaDetalhes() {
                   )}
                 </div>
               )}
+
+              {(tipoTratativa === 'Assistência + Empréstimo' || tipoTratativa === 'Troca Direta') && (
+                <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-xs text-amber-700 dark:text-amber-400">
+                    Esta tratativa requer aprovação do gestor antes da execução das ações de estoque.
+                  </AlertDescription>
+                </Alert>
+              )}
               
               <Separator />
               
@@ -482,6 +520,8 @@ export default function GarantiaDetalhes() {
               >
                 Registrar Tratativa
               </Button>
+                </>
+              )}
             </CardContent>
           </Card>
           

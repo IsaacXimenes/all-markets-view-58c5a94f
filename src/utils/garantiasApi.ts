@@ -2,7 +2,29 @@
 import { format, addMonths, differenceInDays } from 'date-fns';
 import { addOrdemServico } from './assistenciaApi';
 import { updateProduto, addMovimentacao, Produto } from './estoqueApi';
-import { registrarEmprestimoGarantia } from './timelineApi';
+import { registrarEmprestimoGarantia, addTimelineEntry as addTimelineUnificada } from './timelineApi';
+
+// ==================== HELPERS localStorage ====================
+
+const loadFromStorage = <T>(key: string, defaultData: T): T => {
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {
+    console.warn(`[GARANTIA] Erro ao carregar ${key} do localStorage:`, e);
+  }
+  return defaultData;
+};
+
+const saveToStorage = <T>(key: string, data: T): void => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (e) {
+    console.warn(`[GARANTIA] Erro ao salvar ${key} no localStorage:`, e);
+  }
+};
+
+// ==================== INTERFACES ====================
 
 export interface GarantiaItem {
   id: string;
@@ -39,7 +61,7 @@ export interface TratativaGarantia {
   aparelhoTrocaModelo?: string;
   aparelhoTrocaImei?: string;
   osId?: string;
-  status: 'Em Andamento' | 'Concluído';
+  status: 'Em Andamento' | 'Concluído' | 'Aguardando Aprovação' | 'Aprovada' | 'Recusada';
 }
 
 export interface TimelineGarantia {
@@ -79,7 +101,6 @@ export interface ContatoAtivoGarantia {
   garantiaEstendida?: {
     aderida: boolean;
     plano?: 'Um Ano' | 'Dois Anos' | 'Três Anos';
-    // Novos campos para planos detalhados
     planoId?: string;
     planoNome?: string;
     planoMeses?: number;
@@ -87,6 +108,7 @@ export interface ContatoAtivoGarantia {
   };
   status: 'Pendente' | 'Garantia Criada' | 'Entregue';
   timeline: TimelineContatoAtivo[];
+  autoGerado?: boolean;
 }
 
 export interface TimelineContatoAtivo {
@@ -124,8 +146,11 @@ export interface RegistroAnaliseGarantia {
   metadata?: MetadadosEstoque;
 }
 
-// Dados mockados para Contatos Ativos
-let contatosAtivos: ContatoAtivoGarantia[] = [
+// ==================== DADOS MOCKADOS (default para localStorage) ====================
+
+const hoje = new Date();
+
+const defaultContatosAtivos: ContatoAtivoGarantia[] = [
   {
     id: 'CTA-0001',
     dataLancamento: '2025-01-05T10:00:00',
@@ -157,8 +182,7 @@ let contatosAtivos: ContatoAtivoGarantia[] = [
   }
 ];
 
-// Dados mockados para Análise Garantia
-let registrosAnaliseGarantia: RegistroAnaliseGarantia[] = [
+const defaultRegistrosAnalise: RegistroAnaliseGarantia[] = [
   {
     id: 'RAG-0001',
     origem: 'Garantia',
@@ -177,444 +201,218 @@ let registrosAnaliseGarantia: RegistroAnaliseGarantia[] = [
   }
 ];
 
-let contatoAtivoCounter = 1;
-let registroAnaliseCounter = 2;
-
-// Dados mockados
-const hoje = new Date();
-const dataHoje = format(hoje, 'yyyy-MM-dd');
-
-let garantias: GarantiaItem[] = [
-  // 4 Novos Apple (12 meses automático)
+const defaultGarantias: GarantiaItem[] = [
   {
-    id: 'GAR-0001',
-    vendaId: 'VEN-2025-0001',
-    itemVendaId: 'ITEM-001',
-    produtoId: 'PROD-0010',
-    imei: '352123456789012',
-    modelo: 'iPhone 15 Pro Max',
-    tipoGarantia: 'Garantia - Apple',
-    mesesGarantia: 12,
-    dataInicioGarantia: '2025-03-15',
-    dataFimGarantia: '2026-03-15',
-    status: 'Ativa',
-    lojaVenda: 'db894e7d', // Loja - JK Shopping
-    vendedorId: '6dcbc817', // Caua Victor Costa dos Santos
-    clienteId: 'CLI-001',
-    clienteNome: 'João Silva',
-    clienteTelefone: '(11) 99999-1111',
-    clienteEmail: 'joao@email.com'
+    id: 'GAR-0001', vendaId: 'VEN-2025-0001', itemVendaId: 'ITEM-001', produtoId: 'PROD-0010',
+    imei: '352123456789012', modelo: 'iPhone 15 Pro Max', tipoGarantia: 'Garantia - Apple',
+    mesesGarantia: 12, dataInicioGarantia: '2025-03-15', dataFimGarantia: '2026-03-15',
+    status: 'Ativa', lojaVenda: 'db894e7d', vendedorId: '6dcbc817',
+    clienteId: 'CLI-001', clienteNome: 'João Silva', clienteTelefone: '(11) 99999-1111', clienteEmail: 'joao@email.com'
   },
   {
-    id: 'GAR-0002',
-    vendaId: 'VEN-2025-0002',
-    itemVendaId: 'ITEM-002',
-    produtoId: 'PROD-0011',
-    imei: '352123456789013',
-    modelo: 'iPhone 15 Pro',
-    tipoGarantia: 'Garantia - Apple',
-    mesesGarantia: 12,
-    dataInicioGarantia: '2025-04-16',
-    dataFimGarantia: '2026-04-10',
-    status: 'Concluída',
-    lojaVenda: '3ac7e00c', // Loja - Matriz
-    vendedorId: '143ac0c2', // Antonio Sousa Silva Filho
-    clienteId: 'CLI-002',
-    clienteNome: 'Maria Santos',
-    clienteTelefone: '(11) 99999-2222',
-    clienteEmail: 'maria@email.com'
+    id: 'GAR-0002', vendaId: 'VEN-2025-0002', itemVendaId: 'ITEM-002', produtoId: 'PROD-0011',
+    imei: '352123456789013', modelo: 'iPhone 15 Pro', tipoGarantia: 'Garantia - Apple',
+    mesesGarantia: 12, dataInicioGarantia: '2025-04-16', dataFimGarantia: '2026-04-10',
+    status: 'Concluída', lojaVenda: '3ac7e00c', vendedorId: '143ac0c2',
+    clienteId: 'CLI-002', clienteNome: 'Maria Santos', clienteTelefone: '(11) 99999-2222', clienteEmail: 'maria@email.com'
   },
-  // Garantia expirando em 5 dias (URGENTE)
   {
-    id: 'GAR-0003',
-    vendaId: 'VEN-2025-0003',
-    itemVendaId: 'ITEM-003',
-    produtoId: 'PROD-0012',
-    imei: '352123456789014',
-    modelo: 'iPhone 14 Pro',
-    tipoGarantia: 'Garantia - Apple',
-    mesesGarantia: 12,
-    dataInicioGarantia: '2024-01-10',
+    id: 'GAR-0003', vendaId: 'VEN-2025-0003', itemVendaId: 'ITEM-003', produtoId: 'PROD-0012',
+    imei: '352123456789014', modelo: 'iPhone 14 Pro', tipoGarantia: 'Garantia - Apple',
+    mesesGarantia: 12, dataInicioGarantia: '2024-01-10',
     dataFimGarantia: format(new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-    status: 'Ativa',
-    lojaVenda: '5b9446d5', // Loja - Shopping Sul
-    vendedorId: '428d37c2', // Bruno Alves Peres
-    clienteId: 'CLI-003',
-    clienteNome: 'Pedro Oliveira',
-    clienteTelefone: '(11) 99999-3333',
-    clienteEmail: 'pedro@email.com'
+    status: 'Ativa', lojaVenda: '5b9446d5', vendedorId: '428d37c2',
+    clienteId: 'CLI-003', clienteNome: 'Pedro Oliveira', clienteTelefone: '(11) 99999-3333', clienteEmail: 'pedro@email.com'
   },
-  // Garantia expirando em 20 dias (ATENÇÃO)
   {
-    id: 'GAR-0004',
-    vendaId: 'VEN-2025-0004',
-    itemVendaId: 'ITEM-004',
-    produtoId: 'PROD-0014',
-    imei: '352123456789016',
-    modelo: 'iPhone 15',
-    tipoGarantia: 'Garantia - Apple',
-    mesesGarantia: 12,
-    dataInicioGarantia: '2024-01-25',
+    id: 'GAR-0004', vendaId: 'VEN-2025-0004', itemVendaId: 'ITEM-004', produtoId: 'PROD-0014',
+    imei: '352123456789016', modelo: 'iPhone 15', tipoGarantia: 'Garantia - Apple',
+    mesesGarantia: 12, dataInicioGarantia: '2024-01-25',
     dataFimGarantia: format(new Date(Date.now() + 20 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-    status: 'Ativa',
-    lojaVenda: 'fcc78c1a', // Loja - Online
-    vendedorId: '4bfe3508', // Elida Franca de Souza
-    clienteId: 'CLI-004',
-    clienteNome: 'Ana Costa',
-    clienteTelefone: '(11) 99999-4444',
-    clienteEmail: 'ana@email.com'
-  },
-  // 2 Semi-novos Thiago Imports (12 meses)
-  {
-    id: 'GAR-0005',
-    vendaId: 'VEN-2025-0005',
-    itemVendaId: 'ITEM-005',
-    produtoId: 'PROD-0016',
-    imei: '352123456789018',
-    modelo: 'iPhone 14 Plus',
-    tipoGarantia: 'Garantia - Thiago Imports',
-    mesesGarantia: 12,
-    dataInicioGarantia: '2025-01-19',
-    dataFimGarantia: '2025-12-15',
-    status: 'Em Tratativa',
-    lojaVenda: '0d06e7db', // Loja - Águas Lindas Shopping
-    vendedorId: 'b106080f', // Erick Guthemberg Ferreira da Silva
-    clienteId: 'CLI-001',
-    clienteNome: 'João Silva',
-    clienteTelefone: '(11) 99999-1111',
-    clienteEmail: 'joao@email.com'
+    status: 'Ativa', lojaVenda: 'fcc78c1a', vendedorId: '4bfe3508',
+    clienteId: 'CLI-004', clienteNome: 'Ana Costa', clienteTelefone: '(11) 99999-4444', clienteEmail: 'ana@email.com'
   },
   {
-    id: 'GAR-0006',
-    vendaId: 'VEN-2024-0050',
-    itemVendaId: 'ITEM-050',
-    produtoId: 'PROD-0017',
-    imei: '352123456789019',
-    modelo: 'iPhone SE 2022',
-    tipoGarantia: 'Garantia - Thiago Imports',
-    mesesGarantia: 12,
-    dataInicioGarantia: '2024-11-20',
-    dataFimGarantia: '2025-11-20',
-    status: 'Concluída',
-    lojaVenda: '3ac7e00c', // Loja - Matriz
-    vendedorId: '1b9137c8', // Evelyn Cordeiro de Oliveira
-    clienteId: 'CLI-005',
-    clienteNome: 'Carlos Lima',
-    clienteTelefone: '(11) 99999-5555',
-    clienteEmail: 'carlos@email.com'
-  },
-  // 2 Semi-novos Apple (meses restantes)
-  {
-    id: 'GAR-0007',
-    vendaId: 'VEN-2024-0060',
-    itemVendaId: 'ITEM-060',
-    produtoId: 'PROD-0018',
-    imei: '352123456789020',
-    modelo: 'iPhone 13 Pro',
-    tipoGarantia: 'Garantia - Apple',
-    mesesGarantia: 6,
-    dataInicioGarantia: '2024-12-05',
-    dataFimGarantia: '2025-06-05',
-    status: 'Em Tratativa',
-    lojaVenda: 'fcc78c1a', // Loja - Online
-    vendedorId: '143ac0c2', // Antonio Sousa Silva Filho
-    clienteId: 'CLI-002',
-    clienteNome: 'Maria Santos',
-    clienteTelefone: '(11) 99999-2222',
-    clienteEmail: 'maria@email.com'
+    id: 'GAR-0005', vendaId: 'VEN-2025-0005', itemVendaId: 'ITEM-005', produtoId: 'PROD-0016',
+    imei: '352123456789018', modelo: 'iPhone 14 Plus', tipoGarantia: 'Garantia - Thiago Imports',
+    mesesGarantia: 12, dataInicioGarantia: '2025-01-19', dataFimGarantia: '2025-12-15',
+    status: 'Em Tratativa', lojaVenda: '0d06e7db', vendedorId: 'b106080f',
+    clienteId: 'CLI-001', clienteNome: 'João Silva', clienteTelefone: '(11) 99999-1111', clienteEmail: 'joao@email.com'
   },
   {
-    id: 'GAR-0008',
-    vendaId: 'VEN-2024-0070',
-    itemVendaId: 'ITEM-070',
-    produtoId: 'PROD-0020',
-    imei: '352123456789022',
-    modelo: 'iPhone 14',
-    tipoGarantia: 'Garantia - Apple',
-    mesesGarantia: 3,
-    dataInicioGarantia: '2024-12-05',
-    dataFimGarantia: '2025-03-05',
-    status: 'Ativa',
-    lojaVenda: 'db894e7d', // Loja - JK Shopping
-    vendedorId: '6dcbc817', // Caua Victor Costa dos Santos
-    clienteId: 'CLI-003',
-    clienteNome: 'Pedro Oliveira',
-    clienteTelefone: '(11) 99999-3333',
-    clienteEmail: 'pedro@email.com'
+    id: 'GAR-0006', vendaId: 'VEN-2024-0050', itemVendaId: 'ITEM-050', produtoId: 'PROD-0017',
+    imei: '352123456789019', modelo: 'iPhone SE 2022', tipoGarantia: 'Garantia - Thiago Imports',
+    mesesGarantia: 12, dataInicioGarantia: '2024-11-20', dataFimGarantia: '2025-11-20',
+    status: 'Concluída', lojaVenda: '3ac7e00c', vendedorId: '1b9137c8',
+    clienteId: 'CLI-005', clienteNome: 'Carlos Lima', clienteTelefone: '(11) 99999-5555', clienteEmail: 'carlos@email.com'
   },
-  // Garantia expirando em 3 dias (URGENTE VERMELHO)
   {
-    id: 'GAR-0009',
-    vendaId: 'VEN-2024-0080',
-    itemVendaId: 'ITEM-080',
-    produtoId: 'PROD-0025',
-    imei: '352123456789023',
-    modelo: 'iPhone 16 Pro',
-    tipoGarantia: 'Garantia - Apple',
-    mesesGarantia: 12,
-    dataInicioGarantia: '2024-01-10',
+    id: 'GAR-0007', vendaId: 'VEN-2024-0060', itemVendaId: 'ITEM-060', produtoId: 'PROD-0018',
+    imei: '352123456789020', modelo: 'iPhone 13 Pro', tipoGarantia: 'Garantia - Apple',
+    mesesGarantia: 6, dataInicioGarantia: '2024-12-05', dataFimGarantia: '2025-06-05',
+    status: 'Em Tratativa', lojaVenda: 'fcc78c1a', vendedorId: '143ac0c2',
+    clienteId: 'CLI-002', clienteNome: 'Maria Santos', clienteTelefone: '(11) 99999-2222', clienteEmail: 'maria@email.com'
+  },
+  {
+    id: 'GAR-0008', vendaId: 'VEN-2024-0070', itemVendaId: 'ITEM-070', produtoId: 'PROD-0020',
+    imei: '352123456789022', modelo: 'iPhone 14', tipoGarantia: 'Garantia - Apple',
+    mesesGarantia: 3, dataInicioGarantia: '2024-12-05', dataFimGarantia: '2025-03-05',
+    status: 'Ativa', lojaVenda: 'db894e7d', vendedorId: '6dcbc817',
+    clienteId: 'CLI-003', clienteNome: 'Pedro Oliveira', clienteTelefone: '(11) 99999-3333', clienteEmail: 'pedro@email.com'
+  },
+  {
+    id: 'GAR-0009', vendaId: 'VEN-2024-0080', itemVendaId: 'ITEM-080', produtoId: 'PROD-0025',
+    imei: '352123456789023', modelo: 'iPhone 16 Pro', tipoGarantia: 'Garantia - Apple',
+    mesesGarantia: 12, dataInicioGarantia: '2024-01-10',
     dataFimGarantia: format(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-    status: 'Ativa',
-    lojaVenda: 'db894e7d', // Loja - JK Shopping
-    vendedorId: '6dcbc817', // Caua Victor Costa dos Santos
-    clienteId: 'CLI-001',
-    clienteNome: 'João Silva',
-    clienteTelefone: '(11) 99999-1111',
-    clienteEmail: 'joao@email.com'
+    status: 'Ativa', lojaVenda: 'db894e7d', vendedorId: '6dcbc817',
+    clienteId: 'CLI-001', clienteNome: 'João Silva', clienteTelefone: '(11) 99999-1111', clienteEmail: 'joao@email.com'
   },
-  // Garantia expirando em 25 dias (ATENÇÃO AMARELO)
   {
-    id: 'GAR-0010',
-    vendaId: 'VEN-2024-0081',
-    itemVendaId: 'ITEM-081',
-    produtoId: 'PROD-0026',
-    imei: '352123456789024',
-    modelo: 'iPhone 15 Plus',
-    tipoGarantia: 'Garantia - Thiago Imports',
-    mesesGarantia: 12,
-    dataInicioGarantia: '2024-01-18',
+    id: 'GAR-0010', vendaId: 'VEN-2024-0081', itemVendaId: 'ITEM-081', produtoId: 'PROD-0026',
+    imei: '352123456789024', modelo: 'iPhone 15 Plus', tipoGarantia: 'Garantia - Thiago Imports',
+    mesesGarantia: 12, dataInicioGarantia: '2024-01-18',
     dataFimGarantia: format(new Date(Date.now() + 25 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-    status: 'Ativa',
-    lojaVenda: '3ac7e00c', // Loja - Matriz
-    vendedorId: '143ac0c2', // Antonio Sousa Silva Filho
-    clienteId: 'CLI-002',
-    clienteNome: 'Maria Santos',
-    clienteTelefone: '(11) 99999-2222',
-    clienteEmail: 'maria@email.com'
+    status: 'Ativa', lojaVenda: '3ac7e00c', vendedorId: '143ac0c2',
+    clienteId: 'CLI-002', clienteNome: 'Maria Santos', clienteTelefone: '(11) 99999-2222', clienteEmail: 'maria@email.com'
   },
-  // Garantia já expirada (EXPIRADA)
   {
-    id: 'GAR-0011',
-    vendaId: 'VEN-2024-0082',
-    itemVendaId: 'ITEM-082',
-    produtoId: 'PROD-0027',
-    imei: '352123456789025',
-    modelo: 'iPhone 14 Pro Max',
-    tipoGarantia: 'Garantia - Apple',
-    mesesGarantia: 12,
-    dataInicioGarantia: '2024-01-01',
+    id: 'GAR-0011', vendaId: 'VEN-2024-0082', itemVendaId: 'ITEM-082', produtoId: 'PROD-0027',
+    imei: '352123456789025', modelo: 'iPhone 14 Pro Max', tipoGarantia: 'Garantia - Apple',
+    mesesGarantia: 12, dataInicioGarantia: '2024-01-01',
     dataFimGarantia: format(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-    status: 'Expirada',
-    lojaVenda: 'fcc78c1a', // Loja - Online
-    vendedorId: '428d37c2', // Bruno Alves Peres
-    clienteId: 'CLI-004',
-    clienteNome: 'Ana Costa',
-    clienteTelefone: '(11) 99999-4444',
-    clienteEmail: 'ana@email.com'
+    status: 'Expirada', lojaVenda: 'fcc78c1a', vendedorId: '428d37c2',
+    clienteId: 'CLI-004', clienteNome: 'Ana Costa', clienteTelefone: '(11) 99999-4444', clienteEmail: 'ana@email.com'
   },
-  // Mais uma expirada para teste de renovação
   {
-    id: 'GAR-0012',
-    vendaId: 'VEN-2024-0083',
-    itemVendaId: 'ITEM-083',
-    produtoId: 'PROD-0028',
-    imei: '352123456789026',
-    modelo: 'iPhone 13',
-    tipoGarantia: 'Garantia - Thiago Imports',
-    mesesGarantia: 12,
-    dataInicioGarantia: '2023-12-01',
+    id: 'GAR-0012', vendaId: 'VEN-2024-0083', itemVendaId: 'ITEM-083', produtoId: 'PROD-0028',
+    imei: '352123456789026', modelo: 'iPhone 13', tipoGarantia: 'Garantia - Thiago Imports',
+    mesesGarantia: 12, dataInicioGarantia: '2023-12-01',
     dataFimGarantia: format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
-    status: 'Expirada',
-    lojaVenda: '5b9446d5', // Loja - Shopping Sul
-    vendedorId: '4bfe3508', // Elida Franca de Souza
-    clienteId: 'CLI-005',
-    clienteNome: 'Carlos Lima',
-    clienteTelefone: '(11) 99999-5555',
-    clienteEmail: 'carlos@email.com'
+    status: 'Expirada', lojaVenda: '5b9446d5', vendedorId: '4bfe3508',
+    clienteId: 'CLI-005', clienteNome: 'Carlos Lima', clienteTelefone: '(11) 99999-5555', clienteEmail: 'carlos@email.com'
   }
 ];
 
-let tratativas: TratativaGarantia[] = [
-  // 2 Direcionado Apple (Concluído) - IDs atualizados para UUIDs reais
+const defaultTratativas: TratativaGarantia[] = [
   {
-    id: 'TRAT-0001',
-    garantiaId: 'GAR-0001',
-    tipo: 'Direcionado Apple',
-    dataHora: '2025-01-20T10:30:00',
-    usuarioId: 'b467c728', // Anna Beatriz Borges
-    usuarioNome: 'Anna Beatriz Borges',
+    id: 'TRAT-0001', garantiaId: 'GAR-0001', tipo: 'Direcionado Apple',
+    dataHora: '2025-01-20T10:30:00', usuarioId: 'b467c728', usuarioNome: 'Anna Beatriz Borges',
     descricao: 'Cliente orientado a procurar Apple Store mais próxima para acionamento de garantia.',
     status: 'Concluído'
   },
   {
-    id: 'TRAT-0002',
-    garantiaId: 'GAR-0002',
-    tipo: 'Direcionado Apple',
-    dataHora: '2025-01-18T14:00:00',
-    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
-    usuarioNome: 'Fernanda Gabrielle Silva de Lima',
+    id: 'TRAT-0002', garantiaId: 'GAR-0002', tipo: 'Direcionado Apple',
+    dataHora: '2025-01-18T14:00:00', usuarioId: '7c1231ea', usuarioNome: 'Fernanda Gabrielle Silva de Lima',
     descricao: 'Problema na câmera. Cliente direcionado para Apple para reparo sob garantia.',
     status: 'Concluído'
   },
-  // 2 Encaminhado Assistência (1 Concluído, 1 Em Andamento)
   {
-    id: 'TRAT-0003',
-    garantiaId: 'GAR-0006',
-    tipo: 'Encaminhado Assistência',
-    dataHora: '2024-12-10T09:00:00',
-    usuarioId: 'b467c728', // Anna Beatriz Borges
-    usuarioNome: 'Anna Beatriz Borges',
+    id: 'TRAT-0003', garantiaId: 'GAR-0006', tipo: 'Encaminhado Assistência',
+    dataHora: '2024-12-10T09:00:00', usuarioId: 'b467c728', usuarioNome: 'Anna Beatriz Borges',
     descricao: 'Tela com manchas. Encaminhado para assistência técnica interna.',
-    osId: 'OS-0050',
-    status: 'Concluído'
+    osId: 'OS-0050', status: 'Concluído'
   },
   {
-    id: 'TRAT-0004',
-    garantiaId: 'GAR-0007',
-    tipo: 'Encaminhado Assistência',
-    dataHora: '2025-01-02T11:30:00',
-    usuarioId: '6dcbc817', // Caua Victor Costa dos Santos
-    usuarioNome: 'Caua Victor Costa dos Santos',
+    id: 'TRAT-0004', garantiaId: 'GAR-0007', tipo: 'Encaminhado Assistência',
+    dataHora: '2025-01-02T11:30:00', usuarioId: '6dcbc817', usuarioNome: 'Caua Victor Costa dos Santos',
     descricao: 'Bateria não carrega corretamente. Em análise na assistência.',
-    osId: 'OS-0051',
-    status: 'Em Andamento'
+    osId: 'OS-0051', status: 'Em Andamento'
   },
-  // 2 Empréstimo (1 ativo, 1 devolvido)
   {
-    id: 'TRAT-0005',
-    garantiaId: 'GAR-0005',
-    tipo: 'Assistência + Empréstimo',
-    dataHora: '2024-12-20T14:35:00',
-    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
-    usuarioNome: 'Fernanda Gabrielle Silva de Lima',
+    id: 'TRAT-0005', garantiaId: 'GAR-0005', tipo: 'Assistência + Empréstimo',
+    dataHora: '2024-12-20T14:35:00', usuarioId: '7c1231ea', usuarioNome: 'Fernanda Gabrielle Silva de Lima',
     descricao: 'Problema no microfone. Cliente recebeu aparelho emprestado enquanto aguarda reparo.',
-    aparelhoEmprestadoId: 'PROD-0100',
-    aparelhoEmprestadoModelo: 'iPhone 13',
-    aparelhoEmprestadoImei: '999000111222333',
-    osId: 'OS-0052',
-    status: 'Em Andamento'
+    aparelhoEmprestadoId: 'PROD-0100', aparelhoEmprestadoModelo: 'iPhone 13',
+    aparelhoEmprestadoImei: '999000111222333', osId: 'OS-0052', status: 'Em Andamento'
   },
   {
-    id: 'TRAT-0006',
-    garantiaId: 'GAR-0006',
-    tipo: 'Assistência + Empréstimo',
-    dataHora: '2024-11-25T10:00:00',
-    usuarioId: 'b467c728', // Anna Beatriz Borges
-    usuarioNome: 'Anna Beatriz Borges',
+    id: 'TRAT-0006', garantiaId: 'GAR-0006', tipo: 'Assistência + Empréstimo',
+    dataHora: '2024-11-25T10:00:00', usuarioId: 'b467c728', usuarioNome: 'Anna Beatriz Borges',
     descricao: 'Alto-falante com ruído. Cliente utilizou aparelho emprestado por 5 dias.',
-    aparelhoEmprestadoId: 'PROD-0101',
-    aparelhoEmprestadoModelo: 'iPhone 12',
-    aparelhoEmprestadoImei: '999000111222334',
-    osId: 'OS-0053',
-    status: 'Concluído'
+    aparelhoEmprestadoId: 'PROD-0101', aparelhoEmprestadoModelo: 'iPhone 12',
+    aparelhoEmprestadoImei: '999000111222334', osId: 'OS-0053', status: 'Concluído'
   },
-  // 2 Troca Direta (Concluído)
   {
-    id: 'TRAT-0007',
-    garantiaId: 'GAR-0002',
-    tipo: 'Troca Direta',
-    dataHora: '2025-01-22T16:00:00',
-    usuarioId: '6dcbc817', // Caua Victor Costa dos Santos
-    usuarioNome: 'Caua Victor Costa dos Santos',
+    id: 'TRAT-0007', garantiaId: 'GAR-0002', tipo: 'Troca Direta',
+    dataHora: '2025-01-22T16:00:00', usuarioId: '6dcbc817', usuarioNome: 'Caua Victor Costa dos Santos',
     descricao: 'Defeito de fabricação identificado. Realizada troca direta por novo aparelho.',
-    aparelhoTrocaId: 'PROD-0102',
-    aparelhoTrocaModelo: 'iPhone 15 Pro',
-    aparelhoTrocaImei: '999000111222335',
-    status: 'Concluído'
+    aparelhoTrocaId: 'PROD-0102', aparelhoTrocaModelo: 'iPhone 15 Pro',
+    aparelhoTrocaImei: '999000111222335', status: 'Concluído'
   },
   {
-    id: 'TRAT-0008',
-    garantiaId: 'GAR-0006',
-    tipo: 'Troca Direta',
-    dataHora: '2024-12-15T09:30:00',
-    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
-    usuarioNome: 'Fernanda Gabrielle Silva de Lima',
+    id: 'TRAT-0008', garantiaId: 'GAR-0006', tipo: 'Troca Direta',
+    dataHora: '2024-12-15T09:30:00', usuarioId: '7c1231ea', usuarioNome: 'Fernanda Gabrielle Silva de Lima',
     descricao: 'Problema recorrente após reparo. Cliente optou por troca direta.',
-    aparelhoTrocaId: 'PROD-0103',
-    aparelhoTrocaModelo: 'iPhone SE 2022',
-    aparelhoTrocaImei: '999000111222336',
-    status: 'Concluído'
+    aparelhoTrocaId: 'PROD-0103', aparelhoTrocaModelo: 'iPhone SE 2022',
+    aparelhoTrocaImei: '999000111222336', status: 'Concluído'
   }
 ];
 
-let timeline: TimelineGarantia[] = [
-  // Timeline para GAR-0005 (Empréstimo ativo) - IDs atualizados para UUIDs reais
+const defaultTimeline: TimelineGarantia[] = [
   {
-    id: 'TL-0001',
-    garantiaId: 'GAR-0005',
-    dataHora: '2025-01-19T10:00:00',
-    tipo: 'registro_venda',
-    titulo: 'Venda registrada',
+    id: 'TL-0001', garantiaId: 'GAR-0005', dataHora: '2025-01-19T10:00:00',
+    tipo: 'registro_venda', titulo: 'Venda registrada',
     descricao: 'Venda VEN-2025-0005 realizada com garantia Thiago Imports (12 meses)',
-    usuarioId: 'b106080f', // Erick Guthemberg Ferreira da Silva
-    usuarioNome: 'Erick Guthemberg Ferreira da Silva'
+    usuarioId: 'b106080f', usuarioNome: 'Erick Guthemberg Ferreira da Silva'
   },
   {
-    id: 'TL-0002',
-    garantiaId: 'GAR-0005',
-    dataHora: '2024-12-20T14:30:00',
-    tipo: 'abertura_garantia',
-    titulo: 'Garantia acionada',
+    id: 'TL-0002', garantiaId: 'GAR-0005', dataHora: '2024-12-20T14:30:00',
+    tipo: 'abertura_garantia', titulo: 'Garantia acionada',
     descricao: 'Cliente relatou problema no microfone durante ligações',
-    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
-    usuarioNome: 'Fernanda Gabrielle Silva de Lima'
+    usuarioId: '7c1231ea', usuarioNome: 'Fernanda Gabrielle Silva de Lima'
   },
   {
-    id: 'TL-0003',
-    garantiaId: 'GAR-0005',
-    dataHora: '2024-12-20T14:35:00',
-    tipo: 'tratativa',
-    titulo: 'Tratativa: Assistência + Empréstimo',
+    id: 'TL-0003', garantiaId: 'GAR-0005', dataHora: '2024-12-20T14:35:00',
+    tipo: 'tratativa', titulo: 'Tratativa: Assistência + Empréstimo',
     descricao: 'Definida tratativa com aparelho emprestado',
-    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
-    usuarioNome: 'Fernanda Gabrielle Silva de Lima'
+    usuarioId: '7c1231ea', usuarioNome: 'Fernanda Gabrielle Silva de Lima'
   },
   {
-    id: 'TL-0004',
-    garantiaId: 'GAR-0005',
-    dataHora: '2024-12-20T14:35:00',
-    tipo: 'os_criada',
-    titulo: 'OS criada: OS-0052',
+    id: 'TL-0004', garantiaId: 'GAR-0005', dataHora: '2024-12-20T14:35:00',
+    tipo: 'os_criada', titulo: 'OS criada: OS-0052',
     descricao: 'Ordem de serviço criada para reparo do microfone',
-    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
-    usuarioNome: 'Fernanda Gabrielle Silva de Lima'
+    usuarioId: '7c1231ea', usuarioNome: 'Fernanda Gabrielle Silva de Lima'
   },
   {
-    id: 'TL-0005',
-    garantiaId: 'GAR-0005',
-    dataHora: '2024-12-20T14:40:00',
-    tipo: 'emprestimo',
-    titulo: 'Aparelho emprestado',
+    id: 'TL-0005', garantiaId: 'GAR-0005', dataHora: '2024-12-20T14:40:00',
+    tipo: 'emprestimo', titulo: 'Aparelho emprestado',
     descricao: 'iPhone 13 (IMEI: 999000111222333) emprestado ao cliente',
-    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
-    usuarioNome: 'Fernanda Gabrielle Silva de Lima'
+    usuarioId: '7c1231ea', usuarioNome: 'Fernanda Gabrielle Silva de Lima'
   },
-  // Timeline para GAR-0006 (Concluída)
   {
-    id: 'TL-0006',
-    garantiaId: 'GAR-0006',
-    dataHora: '2024-11-20T11:00:00',
-    tipo: 'registro_venda',
-    titulo: 'Venda registrada',
+    id: 'TL-0006', garantiaId: 'GAR-0006', dataHora: '2024-11-20T11:00:00',
+    tipo: 'registro_venda', titulo: 'Venda registrada',
     descricao: 'Venda VEN-2024-0050 realizada com garantia Thiago Imports (12 meses)',
-    usuarioId: '1b9137c8', // Evelyn Cordeiro de Oliveira
-    usuarioNome: 'Evelyn Cordeiro de Oliveira'
+    usuarioId: '1b9137c8', usuarioNome: 'Evelyn Cordeiro de Oliveira'
   },
   {
-    id: 'TL-0007',
-    garantiaId: 'GAR-0006',
-    dataHora: '2024-12-15T09:30:00',
-    tipo: 'troca',
-    titulo: 'Troca realizada',
+    id: 'TL-0007', garantiaId: 'GAR-0006', dataHora: '2024-12-15T09:30:00',
+    tipo: 'troca', titulo: 'Troca realizada',
     descricao: 'Aparelho trocado por iPhone SE 2022 (IMEI: 999000111222336)',
-    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
-    usuarioNome: 'Fernanda Gabrielle Silva de Lima'
+    usuarioId: '7c1231ea', usuarioNome: 'Fernanda Gabrielle Silva de Lima'
   },
   {
-    id: 'TL-0008',
-    garantiaId: 'GAR-0006',
-    dataHora: '2024-12-15T09:35:00',
-    tipo: 'conclusao',
-    titulo: 'Garantia concluída',
+    id: 'TL-0008', garantiaId: 'GAR-0006', dataHora: '2024-12-15T09:35:00',
+    tipo: 'conclusao', titulo: 'Garantia concluída',
     descricao: 'Tratativa finalizada com sucesso',
-    usuarioId: '7c1231ea', // Fernanda Gabrielle Silva de Lima
-    usuarioNome: 'Fernanda Gabrielle Silva de Lima'
+    usuarioId: '7c1231ea', usuarioNome: 'Fernanda Gabrielle Silva de Lima'
   }
 ];
 
-let garantiaCounter = garantias.length;
-let tratativaCounter = tratativas.length;
-let timelineCounter = timeline.length;
+// ==================== INICIALIZAÇÃO COM localStorage ====================
+
+let garantias: GarantiaItem[] = loadFromStorage('garantias_data', defaultGarantias);
+let tratativas: TratativaGarantia[] = loadFromStorage('tratativas_data', defaultTratativas);
+let timeline: TimelineGarantia[] = loadFromStorage('timeline_garantia_data', defaultTimeline);
+let contatosAtivos: ContatoAtivoGarantia[] = loadFromStorage('contatos_ativos_data', defaultContatosAtivos);
+let registrosAnaliseGarantia: RegistroAnaliseGarantia[] = loadFromStorage('registros_analise_data', defaultRegistrosAnalise);
+
+let garantiaCounter: number = loadFromStorage('garantia_counter', garantias.length);
+let tratativaCounter: number = loadFromStorage('tratativa_counter', tratativas.length);
+let timelineCounter: number = loadFromStorage('timeline_counter', timeline.length);
+let contatoAtivoCounter: number = loadFromStorage('contato_ativo_counter', contatosAtivos.length);
+let registroAnaliseCounter: number = loadFromStorage('registro_analise_counter', registrosAnaliseGarantia.length);
 
 // ==================== FUNÇÕES CRUD ====================
 
@@ -638,6 +436,8 @@ export const addGarantia = (garantia: Omit<GarantiaItem, 'id'>): GarantiaItem =>
     id: `GAR-${String(garantiaCounter).padStart(4, '0')}`
   };
   garantias.push(newGarantia);
+  saveToStorage('garantias_data', garantias);
+  saveToStorage('garantia_counter', garantiaCounter);
   return newGarantia;
 };
 
@@ -645,6 +445,7 @@ export const updateGarantia = (id: string, updates: Partial<GarantiaItem>): void
   const index = garantias.findIndex(g => g.id === id);
   if (index !== -1) {
     garantias[index] = { ...garantias[index], ...updates };
+    saveToStorage('garantias_data', garantias);
   }
 };
 
@@ -660,6 +461,8 @@ export const addTratativa = (tratativa: Omit<TratativaGarantia, 'id'>): Tratativ
     id: `TRAT-${String(tratativaCounter).padStart(4, '0')}`
   };
   tratativas.push(newTratativa);
+  saveToStorage('tratativas_data', tratativas);
+  saveToStorage('tratativa_counter', tratativaCounter);
   return newTratativa;
 };
 
@@ -671,6 +474,7 @@ export const updateTratativa = (id: string, updates: Partial<TratativaGarantia>)
   const index = tratativas.findIndex(t => t.id === id);
   if (index !== -1) {
     tratativas[index] = { ...tratativas[index], ...updates };
+    saveToStorage('tratativas_data', tratativas);
   }
 };
 
@@ -682,6 +486,8 @@ export const addTimelineEntry = (entry: Omit<TimelineGarantia, 'id'>): TimelineG
     id: `TL-${String(timelineCounter).padStart(4, '0')}`
   };
   timeline.push(newEntry);
+  saveToStorage('timeline_garantia_data', timeline);
+  saveToStorage('timeline_counter', timelineCounter);
   return newEntry;
 };
 
@@ -729,40 +535,32 @@ export const getHistoricoGarantiasByIMEI = (imei: string): GarantiaItem[] => {
   return garantias.filter(g => g.imei === imei);
 };
 
-// Verificar se IMEI tem tratativa em andamento
 export const verificarTratativaAtivaByIMEI = (imei: string): { garantia: GarantiaItem; tratativa: TratativaGarantia } | null => {
   const garantia = garantias.find(g => g.imei === imei && g.status === 'Em Tratativa');
   if (!garantia) return null;
-  
   const tratativaAtiva = tratativas.find(t => 
     t.garantiaId === garantia.id && t.status === 'Em Andamento'
   );
-  
-  if (tratativaAtiva) {
-    return { garantia, tratativa: tratativaAtiva };
-  }
+  if (tratativaAtiva) return { garantia, tratativa: tratativaAtiva };
   return null;
 };
 
 // Contadores para dashboard
 export const getContadoresGarantia = () => {
   const emAndamento = garantias.filter(g => g.status === 'Em Tratativa').length;
-  
   const aparelhosEmprestados = tratativas.filter(t => 
     t.status === 'Em Andamento' && t.aparelhoEmprestadoId
   ).length;
-  
   const emAssistencia = tratativas.filter(t => 
     t.status === 'Em Andamento' && t.osId
   ).length;
-  
   const maisde7Dias = tratativas.filter(t => {
     if (t.status !== 'Em Andamento') return false;
     const dias = differenceInDays(new Date(), new Date(t.dataHora));
     return dias > 7;
   }).length;
-  
-  return { emAndamento, aparelhosEmprestados, emAssistencia, maisde7Dias };
+  const aguardandoAprovacao = tratativas.filter(t => t.status === 'Aguardando Aprovação').length;
+  return { emAndamento, aparelhosEmprestados, emAssistencia, maisde7Dias, aguardandoAprovacao };
 };
 
 // Função para calcular status de expiração da garantia
@@ -777,38 +575,19 @@ export const calcularStatusExpiracao = (dataFimGarantia: string): {
   const dias = differenceInDays(dataFim, hoje);
   
   if (dias < 0) {
-    return {
-      status: 'expirada',
-      diasRestantes: dias,
-      mensagem: `Fora do período de garantia (expirou em ${format(dataFim, 'dd/MM/yyyy')})`,
-      cor: 'destructive'
-    };
+    return { status: 'expirada', diasRestantes: dias,
+      mensagem: `Fora do período de garantia (expirou em ${format(dataFim, 'dd/MM/yyyy')})`, cor: 'destructive' };
   }
-  
   if (dias <= 7) {
-    return {
-      status: 'urgente',
-      diasRestantes: dias,
-      mensagem: `URGENTE: Garantia expira em ${dias} dia${dias !== 1 ? 's' : ''}`,
-      cor: 'warning'
-    };
+    return { status: 'urgente', diasRestantes: dias,
+      mensagem: `URGENTE: Garantia expira em ${dias} dia${dias !== 1 ? 's' : ''}`, cor: 'warning' };
   }
-  
   if (dias <= 30) {
-    return {
-      status: 'atencao',
-      diasRestantes: dias,
-      mensagem: `Atenção: Garantia expira em ${dias} dias`,
-      cor: 'secondary'
-    };
+    return { status: 'atencao', diasRestantes: dias,
+      mensagem: `Atenção: Garantia expira em ${dias} dias`, cor: 'secondary' };
   }
-  
-  return {
-    status: 'ativa',
-    diasRestantes: dias,
-    mensagem: `Garantia válida até ${format(dataFim, 'dd/MM/yyyy')}`,
-    cor: 'success'
-  };
+  return { status: 'ativa', diasRestantes: dias,
+    mensagem: `Garantia válida até ${format(dataFim, 'dd/MM/yyyy')}`, cor: 'success' };
 };
 
 // Export para CSV
@@ -817,30 +596,16 @@ export const exportGarantiasToCSV = (garantiasFiltradas: GarantiaItem[], filenam
     'Data Venda', 'ID Garantia', 'IMEI', 'Modelo', 'Cliente', 
     'Resp. Garantia', 'Data Fim', 'Status', 'Tipo Tratativa', 'Data Tratativa'
   ];
-  
   const rows = garantiasFiltradas.map(g => {
     const tratativasGarantia = getTratativasByGarantiaId(g.id);
     const ultimaTratativa = tratativasGarantia[tratativasGarantia.length - 1];
-    
     return [
-      format(new Date(g.dataInicioGarantia), 'dd/MM/yyyy'),
-      g.id,
-      g.imei,
-      g.modelo,
-      g.clienteNome,
-      g.tipoGarantia,
-      format(new Date(g.dataFimGarantia), 'dd/MM/yyyy'),
-      g.status,
-      ultimaTratativa?.tipo || '-',
-      ultimaTratativa ? format(new Date(ultimaTratativa.dataHora), 'dd/MM/yyyy') : '-'
+      format(new Date(g.dataInicioGarantia), 'dd/MM/yyyy'), g.id, g.imei, g.modelo, g.clienteNome,
+      g.tipoGarantia, format(new Date(g.dataFimGarantia), 'dd/MM/yyyy'), g.status,
+      ultimaTratativa?.tipo || '-', ultimaTratativa ? format(new Date(ultimaTratativa.dataHora), 'dd/MM/yyyy') : '-'
     ];
   });
-  
-  const csvContent = [
-    headers.join(','),
-    ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-  ].join('\n');
-  
+  const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
@@ -862,6 +627,8 @@ export const addContatoAtivo = (contato: Omit<ContatoAtivoGarantia, 'id' | 'time
     timeline: [{ id: `TLC-${Date.now()}`, dataHora: new Date().toISOString(), tipo: 'criacao', descricao: 'Contato registrado' }]
   };
   contatosAtivos.push(newContato);
+  saveToStorage('contatos_ativos_data', contatosAtivos);
+  saveToStorage('contato_ativo_counter', contatoAtivoCounter);
   return newContato;
 };
 
@@ -875,7 +642,57 @@ export const updateContatoAtivo = (id: string, updates: Partial<ContatoAtivoGara
       tipo: 'edicao',
       descricao: 'Contato atualizado'
     });
+    saveToStorage('contatos_ativos_data', contatosAtivos);
   }
+};
+
+// ==================== AUTOMAÇÃO DE CONTATOS ATIVOS ====================
+
+export const verificarEGerarContatosAutomaticos = (): ContatoAtivoGarantia[] => {
+  const garantiasExpirando = [...getGarantiasExpirandoEm7Dias(), ...getGarantiasExpirandoEm30Dias()];
+  const novosContatos: ContatoAtivoGarantia[] = [];
+
+  for (const garantia of garantiasExpirando) {
+    // Verificar se já existe contato ativo para esta garantia
+    const jaExiste = contatosAtivos.some(c => c.garantiaId === garantia.id);
+    if (jaExiste) continue;
+
+    contatoAtivoCounter++;
+    const novoContato: ContatoAtivoGarantia = {
+      id: `CTA-${String(contatoAtivoCounter).padStart(4, '0')}`,
+      garantiaId: garantia.id,
+      dataLancamento: new Date().toISOString(),
+      cliente: {
+        id: garantia.clienteId,
+        nome: garantia.clienteNome,
+        telefone: garantia.clienteTelefone || '',
+        email: garantia.clienteEmail || ''
+      },
+      aparelho: {
+        modelo: garantia.modelo,
+        imei: garantia.imei
+      },
+      logistica: {
+        motoboyId: '',
+        motoboyNome: '',
+        dataEntregaPrevista: '',
+        enderecoEntrega: '',
+        observacoes: `Contato gerado automaticamente - Garantia ${garantia.id} expira em ${format(new Date(garantia.dataFimGarantia), 'dd/MM/yyyy')}`
+      },
+      status: 'Pendente',
+      timeline: [{ id: `TLC-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, dataHora: new Date().toISOString(), tipo: 'criacao', descricao: 'Contato gerado automaticamente por garantia próxima do vencimento' }],
+      autoGerado: true
+    };
+    contatosAtivos.push(novoContato);
+    novosContatos.push(novoContato);
+  }
+
+  if (novosContatos.length > 0) {
+    saveToStorage('contatos_ativos_data', contatosAtivos);
+    saveToStorage('contato_ativo_counter', contatoAtivoCounter);
+  }
+
+  return novosContatos;
 };
 
 // ==================== ANÁLISE GARANTIA ====================
@@ -887,11 +704,8 @@ export const getRegistrosAnaliseGarantia = (): RegistroAnaliseGarantia[] => {
 export const aprovarAnaliseGarantia = (id: string, dados: { tecnicoId: string; tecnicoNome: string; dataAprovacao: string; usuarioAprovacao: string }): RegistroAnaliseGarantia | null => {
   const index = registrosAnaliseGarantia.findIndex(r => r.id === id);
   if (index !== -1) {
-    registrosAnaliseGarantia[index] = {
-      ...registrosAnaliseGarantia[index],
-      status: 'Solicitação Aprovada',
-      ...dados
-    };
+    registrosAnaliseGarantia[index] = { ...registrosAnaliseGarantia[index], status: 'Solicitação Aprovada', ...dados };
+    saveToStorage('registros_analise_data', registrosAnaliseGarantia);
     return registrosAnaliseGarantia[index];
   }
   return null;
@@ -901,34 +715,144 @@ export const recusarAnaliseGarantia = (id: string, motivo: string): RegistroAnal
   const index = registrosAnaliseGarantia.findIndex(r => r.id === id);
   if (index !== -1) {
     registrosAnaliseGarantia[index] = {
-      ...registrosAnaliseGarantia[index],
-      status: 'Recusada',
-      motivoRecusa: motivo,
-      dataRecusa: new Date().toISOString()
+      ...registrosAnaliseGarantia[index], status: 'Recusada',
+      motivoRecusa: motivo, dataRecusa: new Date().toISOString()
     };
+    saveToStorage('registros_analise_data', registrosAnaliseGarantia);
     return registrosAnaliseGarantia[index];
   }
   return null;
 };
 
 export const encaminharParaAnaliseGarantia = (
-  origemId: string, 
-  origem: 'Garantia' | 'Estoque', 
-  descricao: string, 
-  observacao?: string,
-  metadata?: MetadadosEstoque
+  origemId: string, origem: 'Garantia' | 'Estoque', descricao: string, 
+  observacao?: string, metadata?: MetadadosEstoque
 ): void => {
   registroAnaliseCounter++;
   registrosAnaliseGarantia.push({
     id: `RAG-${String(registroAnaliseCounter).padStart(4, '0')}`,
-    origem,
-    origemId,
-    clienteDescricao: descricao,
-    dataChegada: new Date().toISOString(),
-    status: 'Pendente',
-    observacao,
-    metadata
+    origem, origemId, clienteDescricao: descricao,
+    dataChegada: new Date().toISOString(), status: 'Pendente', observacao, metadata
   });
+  saveToStorage('registros_analise_data', registrosAnaliseGarantia);
+  saveToStorage('registro_analise_counter', registroAnaliseCounter);
+};
+
+// ==================== FLUXO DE APROVAÇÃO DE TRATATIVAS ====================
+
+export const aprovarTratativa = (
+  id: string, gestorId: string, gestorNome: string
+): { sucesso: boolean; erro?: string } => {
+  const index = tratativas.findIndex(t => t.id === id);
+  if (index === -1) return { sucesso: false, erro: 'Tratativa não encontrada' };
+
+  const tratativa = tratativas[index];
+  if (tratativa.status !== 'Aguardando Aprovação') {
+    return { sucesso: false, erro: 'Tratativa não está aguardando aprovação' };
+  }
+
+  const garantia = getGarantiaById(tratativa.garantiaId);
+  if (!garantia) return { sucesso: false, erro: 'Garantia não encontrada' };
+
+  try {
+    const agora = new Date().toISOString();
+
+    // Executar ações de estoque que estavam pendentes
+    if (tratativa.tipo === 'Assistência + Empréstimo' && tratativa.aparelhoEmprestadoId) {
+      updateProduto(tratativa.aparelhoEmprestadoId, {
+        statusEmprestimo: 'Empréstimo - Assistência',
+        emprestimoGarantiaId: garantia.id,
+        emprestimoClienteId: garantia.clienteId,
+        emprestimoClienteNome: garantia.clienteNome,
+        emprestimoOsId: tratativa.osId,
+        emprestimoDataHora: agora,
+      });
+      addMovimentacao({
+        data: agora, produto: tratativa.aparelhoEmprestadoModelo || '', imei: tratativa.aparelhoEmprestadoImei || '',
+        quantidade: 1, origem: garantia.lojaVenda, destino: 'Empréstimo - Garantia',
+        responsavel: gestorNome, motivo: `Empréstimo aprovado garantia ${garantia.id}`
+      });
+    }
+
+    if (tratativa.tipo === 'Troca Direta' && tratativa.aparelhoTrocaId) {
+      updateProduto(tratativa.aparelhoTrocaId, { bloqueadoEmTrocaGarantiaId: garantia.id });
+      addMovimentacao({
+        data: agora, produto: tratativa.aparelhoTrocaModelo || '', imei: tratativa.aparelhoTrocaImei || '',
+        quantidade: 1, origem: garantia.lojaVenda, destino: 'Reserva - Troca Garantia',
+        responsavel: gestorNome, motivo: `Troca aprovada garantia ${garantia.id}`
+      });
+      encaminharParaAnaliseGarantia(
+        garantia.id, 'Garantia',
+        `${garantia.clienteNome} - ${garantia.modelo} (IMEI: ${garantia.imei}) - Troca Direta`
+      );
+    }
+
+    // Atualizar status
+    tratativas[index] = { ...tratativas[index], status: 'Em Andamento' };
+    saveToStorage('tratativas_data', tratativas);
+
+    // Timeline
+    addTimelineEntry({
+      garantiaId: garantia.id, dataHora: agora, tipo: 'tratativa',
+      titulo: 'Tratativa Aprovada pelo Gestor',
+      descricao: `Tratativa ${tratativa.tipo} aprovada por ${gestorNome}. Ações de estoque executadas.`,
+      usuarioId: gestorId, usuarioNome: gestorNome
+    });
+
+    // Timeline unificada
+    addTimelineUnificada({
+      entidadeId: garantia.id, entidadeTipo: 'Garantia', dataHora: agora,
+      tipo: 'aprovacao_tratativa', titulo: 'Tratativa Aprovada',
+      descricao: `Tratativa ${tratativa.tipo} da garantia ${garantia.id} aprovada por ${gestorNome}`,
+      usuarioId: gestorId, usuarioNome: gestorNome
+    });
+
+    return { sucesso: true };
+  } catch (error) {
+    console.error('[GARANTIA] Erro ao aprovar tratativa:', error);
+    return { sucesso: false, erro: 'Erro ao aprovar tratativa' };
+  }
+};
+
+export const recusarTratativa = (
+  id: string, gestorId: string, gestorNome: string, motivo: string
+): { sucesso: boolean; erro?: string } => {
+  const index = tratativas.findIndex(t => t.id === id);
+  if (index === -1) return { sucesso: false, erro: 'Tratativa não encontrada' };
+
+  const tratativa = tratativas[index];
+  if (tratativa.status !== 'Aguardando Aprovação') {
+    return { sucesso: false, erro: 'Tratativa não está aguardando aprovação' };
+  }
+
+  const garantia = getGarantiaById(tratativa.garantiaId);
+
+  tratativas[index] = { ...tratativas[index], status: 'Recusada' };
+  saveToStorage('tratativas_data', tratativas);
+
+  if (garantia) {
+    // Reverter status da garantia se não há outras tratativas ativas
+    const outrasTratativas = tratativas.filter(t => t.garantiaId === garantia.id && t.status === 'Em Andamento');
+    if (outrasTratativas.length === 0) {
+      updateGarantia(garantia.id, { status: 'Ativa' });
+    }
+
+    addTimelineEntry({
+      garantiaId: garantia.id, dataHora: new Date().toISOString(), tipo: 'tratativa',
+      titulo: 'Tratativa Recusada pelo Gestor',
+      descricao: `Tratativa ${tratativa.tipo} recusada por ${gestorNome}. Motivo: ${motivo}`,
+      usuarioId: gestorId, usuarioNome: gestorNome
+    });
+
+    addTimelineUnificada({
+      entidadeId: garantia.id, entidadeTipo: 'Garantia', dataHora: new Date().toISOString(),
+      tipo: 'recusa_tratativa', titulo: 'Tratativa Recusada',
+      descricao: `Tratativa ${tratativa.tipo} da garantia ${garantia.id} recusada. Motivo: ${motivo}`,
+      usuarioId: gestorId, usuarioNome: gestorNome
+    });
+  }
+
+  return { sucesso: true };
 };
 
 // ==================== ORQUESTRADOR ATÔMICO DE TRATATIVA ====================
@@ -946,9 +870,20 @@ export const processarTratativaGarantia = (dados: ProcessarTratativaRequest): { 
   const garantia = getGarantiaById(dados.garantiaId);
   if (!garantia) return { sucesso: false, erro: 'Garantia não encontrada' };
 
+  // Validação de status - impedir tratativa em garantias expiradas/concluídas
+  if (garantia.status === 'Expirada') {
+    return { sucesso: false, erro: 'Não é possível abrir tratativa para garantia expirada' };
+  }
+  if (garantia.status === 'Concluída') {
+    return { sucesso: false, erro: 'Não é possível abrir tratativa para garantia concluída' };
+  }
+
   try {
     let osId: string | undefined;
     const agora = new Date().toISOString();
+
+    // Verificar se precisa de aprovação
+    const precisaAprovacao = dados.tipo === 'Assistência + Empréstimo' || dados.tipo === 'Troca Direta';
 
     // 1. Criar OS automática (Assistência ou Assistência + Empréstimo)
     if (dados.tipo === 'Encaminhado Assistência' || dados.tipo === 'Assistência + Empréstimo') {
@@ -957,130 +892,50 @@ export const processarTratativaGarantia = (dados: ProcessarTratativaRequest): { 
         : '';
 
       const novaOS = addOrdemServico({
-        dataHora: agora,
-        clienteId: garantia.clienteId,
-        setor: 'GARANTIA',
-        tecnicoId: '',
-        lojaId: garantia.lojaVenda,
-        status: 'Aguardando Análise',
-        proximaAtuacao: 'Técnico: Avaliar/Executar',
-        pecas: [],
-        pagamentos: [],
+        dataHora: agora, clienteId: garantia.clienteId, setor: 'GARANTIA',
+        tecnicoId: '', lojaId: garantia.lojaVenda, status: 'Aguardando Análise',
+        proximaAtuacao: 'Técnico: Avaliar/Executar', pecas: [], pagamentos: [],
         descricao: `${dados.descricao}${observacaoEmprestimo}`,
-        timeline: [
-          { data: agora, tipo: 'registro', descricao: `OS criada automaticamente via Garantia ${garantia.id}`, responsavel: dados.usuarioNome }
-        ],
-        valorTotal: 0,
-        custoTotal: 0,
-        origemOS: 'Garantia',
-        garantiaId: garantia.id,
-        modeloAparelho: garantia.modelo,
-        imeiAparelho: garantia.imei,
+        timeline: [{ data: agora, tipo: 'registro', descricao: `OS criada automaticamente via Garantia ${garantia.id}`, responsavel: dados.usuarioNome }],
+        valorTotal: 0, custoTotal: 0, origemOS: 'Garantia', garantiaId: garantia.id,
+        modeloAparelho: garantia.modelo, imeiAparelho: garantia.imei,
       });
       osId = novaOS.id;
 
-      // Timeline: OS criada
       addTimelineEntry({
-        garantiaId: garantia.id,
-        dataHora: agora,
-        tipo: 'os_criada',
+        garantiaId: garantia.id, dataHora: agora, tipo: 'os_criada',
         titulo: `OS criada: ${osId}`,
         descricao: `Ordem de serviço ${osId} criada automaticamente para reparo`,
-        usuarioId: dados.usuarioId,
-        usuarioNome: dados.usuarioNome
+        usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome
+      });
+
+      // Timeline unificada
+      addTimelineUnificada({
+        entidadeId: garantia.id, entidadeTipo: 'Garantia', dataHora: agora,
+        tipo: 'os_criada', titulo: `OS ${osId} criada via Garantia`,
+        descricao: `OS ${osId} criada automaticamente para garantia ${garantia.id}`,
+        usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome
       });
     }
 
-    // 2. Empréstimo de aparelho
-    if (dados.tipo === 'Assistência + Empréstimo' && dados.aparelhoSelecionado) {
-      const ap = dados.aparelhoSelecionado;
-      updateProduto(ap.id, {
-        statusEmprestimo: 'Empréstimo - Assistência',
-        emprestimoGarantiaId: garantia.id,
-        emprestimoClienteId: garantia.clienteId,
-        emprestimoClienteNome: garantia.clienteNome,
-        emprestimoOsId: osId,
-        emprestimoDataHora: agora,
-      });
-      addMovimentacao({
-        data: agora,
-        produto: ap.modelo,
-        imei: ap.imei || '',
-        quantidade: 1,
-        origem: ap.loja,
-        destino: 'Empréstimo - Garantia',
-        responsavel: dados.usuarioNome,
-        motivo: `Empréstimo garantia ${garantia.id}`
-      });
-
-      // Timeline: Empréstimo
-      addTimelineEntry({
-        garantiaId: garantia.id,
-        dataHora: agora,
-        tipo: 'emprestimo',
-        titulo: 'Aparelho Emprestado ao Cliente',
-        descricao: `${ap.modelo} (IMEI: ${ap.imei}) emprestado ao cliente ${garantia.clienteNome}`,
-        usuarioId: dados.usuarioId,
-        usuarioNome: dados.usuarioNome
-      });
-
-      // Timeline unificada do cliente
-      registrarEmprestimoGarantia(
-        garantia.clienteId,
-        garantia.clienteNome,
-        ap.modelo,
-        ap.imei || '',
-        garantia.id,
-        dados.usuarioId,
-        dados.usuarioNome
-      );
+    // 2. Empréstimo de aparelho (somente se NÃO precisa aprovação)
+    if (dados.tipo === 'Assistência + Empréstimo' && dados.aparelhoSelecionado && !precisaAprovacao) {
+      // Este bloco não executa mais para Assistência + Empréstimo (sempre precisa aprovação)
+      // Mantido para compatibilidade
     }
 
-    // 3. Troca Direta
-    if (dados.tipo === 'Troca Direta' && dados.aparelhoSelecionado) {
-      const ap = dados.aparelhoSelecionado;
-
-      // Aparelho novo: reservar (NÃO zerar quantidade)
-      updateProduto(ap.id, {
-        bloqueadoEmTrocaGarantiaId: garantia.id,
-      });
-      addMovimentacao({
-        data: agora,
-        produto: ap.modelo,
-        imei: ap.imei || '',
-        quantidade: 1,
-        origem: ap.loja,
-        destino: 'Reserva - Troca Garantia',
-        responsavel: dados.usuarioNome,
-        motivo: `Troca direta garantia ${garantia.id}`
-      });
-
-      // Aparelho com defeito: encaminhar para Análise de Tratativas
-      encaminharParaAnaliseGarantia(
-        garantia.id,
-        'Garantia',
-        `${garantia.clienteNome} - ${garantia.modelo} (IMEI: ${garantia.imei}) - Troca Direta`
-      );
-
-      // Timeline: Troca
-      addTimelineEntry({
-        garantiaId: garantia.id,
-        dataHora: agora,
-        tipo: 'troca',
-        titulo: 'Troca Direta Realizada',
-        descricao: `Aparelho novo reservado: ${ap.modelo} (IMEI: ${ap.imei}). Aparelho defeituoso encaminhado para pendências.`,
-        usuarioId: dados.usuarioId,
-        usuarioNome: dados.usuarioNome
-      });
+    // 3. Troca Direta (somente se NÃO precisa aprovação)
+    if (dados.tipo === 'Troca Direta' && dados.aparelhoSelecionado && !precisaAprovacao) {
+      // Este bloco não executa mais para Troca Direta (sempre precisa aprovação)
+      // Mantido para compatibilidade
     }
 
     // 4. Registrar tratativa
+    const statusInicial = precisaAprovacao ? 'Aguardando Aprovação' : 'Em Andamento';
+    
     const novaTratativa = addTratativa({
-      garantiaId: garantia.id,
-      tipo: dados.tipo,
-      dataHora: agora,
-      usuarioId: dados.usuarioId,
-      usuarioNome: dados.usuarioNome,
+      garantiaId: garantia.id, tipo: dados.tipo, dataHora: agora,
+      usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome,
       descricao: dados.descricao,
       aparelhoEmprestadoId: dados.tipo === 'Assistência + Empréstimo' ? dados.aparelhoSelecionado?.id : undefined,
       aparelhoEmprestadoModelo: dados.tipo === 'Assistência + Empréstimo' ? dados.aparelhoSelecionado?.modelo : undefined,
@@ -1089,24 +944,37 @@ export const processarTratativaGarantia = (dados: ProcessarTratativaRequest): { 
       aparelhoTrocaModelo: dados.tipo === 'Troca Direta' ? dados.aparelhoSelecionado?.modelo : undefined,
       aparelhoTrocaImei: dados.tipo === 'Troca Direta' ? dados.aparelhoSelecionado?.imei : undefined,
       osId: osId,
-      status: 'Em Andamento'
+      status: statusInicial
     });
 
-    // 5. Timeline genérica da tratativa (Direcionado Apple)
+    // 5. Timeline genérica
     if (dados.tipo === 'Direcionado Apple') {
       addTimelineEntry({
-        garantiaId: garantia.id,
-        dataHora: agora,
-        tipo: 'tratativa',
-        titulo: 'Cliente Direcionado para Apple',
-        descricao: dados.descricao,
-        usuarioId: dados.usuarioId,
-        usuarioNome: dados.usuarioNome
+        garantiaId: garantia.id, dataHora: agora, tipo: 'tratativa',
+        titulo: 'Cliente Direcionado para Apple', descricao: dados.descricao,
+        usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome
+      });
+    }
+
+    if (precisaAprovacao) {
+      addTimelineEntry({
+        garantiaId: garantia.id, dataHora: agora, tipo: 'tratativa',
+        titulo: `${dados.tipo} - Aguardando Aprovação`,
+        descricao: `Tratativa registrada e aguardando aprovação do gestor. ${dados.descricao}`,
+        usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome
       });
     }
 
     // 6. Atualizar status da garantia
     updateGarantia(garantia.id, { status: 'Em Tratativa' });
+
+    // Timeline unificada
+    addTimelineUnificada({
+      entidadeId: garantia.id, entidadeTipo: 'Garantia', dataHora: agora,
+      tipo: 'tratativa_registrada', titulo: `Tratativa: ${dados.tipo}`,
+      descricao: `Tratativa registrada para garantia ${garantia.id}${precisaAprovacao ? ' (aguardando aprovação)' : ''}`,
+      usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome
+    });
 
     return { sucesso: true, osId };
   } catch (error) {
