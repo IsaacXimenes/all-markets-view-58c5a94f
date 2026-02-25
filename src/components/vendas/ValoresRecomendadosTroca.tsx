@@ -13,6 +13,7 @@ interface ValoresRecomendadosTrocaProps {
 
 export function ValoresRecomendadosTroca({ onUsarValor }: ValoresRecomendadosTrocaProps) {
   const [busca, setBusca] = useState('');
+  const [selecionadoId, setSelecionadoId] = useState<string | null>(null);
 
   const resultados = useMemo(() => buscarValoresRecomendados(busca), [busca]);
 
@@ -45,25 +46,38 @@ export function ValoresRecomendadosTroca({ onUsarValor }: ValoresRecomendadosTro
                 </TableCell>
               </TableRow>
             ) : (
-              resultados.map(item => (
-                <TableRow key={item.id}>
+              resultados.map(item => {
+                const isSelected = selecionadoId === item.id;
+                return (
+                <TableRow key={item.id} className={isSelected ? 'bg-green-50 dark:bg-green-900/20 transition-colors duration-500' : 'transition-colors duration-300'}>
                   <TableCell className="font-medium text-sm">{item.modelo}</TableCell>
                   <TableCell className="text-right text-sm font-semibold">{formatCurrency(item.valorSugerido)}</TableCell>
                   {onUsarValor && (
                     <TableCell className="text-center">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs"
-                        onClick={() => onUsarValor(item.valorSugerido, item.modelo)}
-                      >
-                        <Check className="h-3 w-3 mr-1" />
-                        Usar
-                      </Button>
+                      {isSelected ? (
+                        <span className="inline-flex items-center text-xs font-medium text-green-600 dark:text-green-400 h-7 px-2">
+                          <Check className="h-3 w-3 mr-1" />
+                          Vinculado
+                        </span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs"
+                          onClick={() => {
+                            onUsarValor(item.valorSugerido, item.modelo);
+                            setSelecionadoId(item.id);
+                          }}
+                        >
+                          <Check className="h-3 w-3 mr-1" />
+                          Usar
+                        </Button>
+                      )}
                     </TableCell>
                   )}
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>

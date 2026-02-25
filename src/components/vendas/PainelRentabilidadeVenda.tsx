@@ -6,7 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Separator } from '@/components/ui/separator';
 import { 
   Package, Headphones, ArrowLeftRight, Shield, Truck, TrendingUp, TrendingDown,
-  ChevronDown, DollarSign, AlertTriangle, Info
+  ChevronDown, DollarSign, AlertTriangle, Info, Lightbulb
 } from 'lucide-react';
 import { formatarMoeda } from '@/utils/formatUtils';
 import { ItemVenda, ItemTradeIn, Pagamento } from '@/utils/vendasApi';
@@ -304,6 +304,38 @@ export function PainelRentabilidadeVenda(props: PainelRentabilidadeVendaProps) {
           </details>
 
           <Separator className="my-2" />
+
+          {/* Coach de Vendas - Dicas de Upsell */}
+          {(itens.length > 0 && acessoriosVenda.length === 0) || (!garantiaExtendida && itens.length > 0) ? (
+            <div className="space-y-2">
+              {itens.length > 0 && acessoriosVenda.length === 0 && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40">
+                  <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
+                      Dica: Adicionar Acessórios
+                    </p>
+                    <p className="text-xs text-amber-700 dark:text-amber-400/80 mt-0.5">
+                      Capa + Película pode gerar ~{formatCurrency(50 * 0.4)} de lucro extra e ajuda a bater a meta de acessórios da loja!
+                    </p>
+                  </div>
+                </div>
+              )}
+              {!garantiaExtendida && itens.length > 0 && (
+                <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40">
+                  <Lightbulb className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-amber-800 dark:text-amber-300">
+                      Dica: Garantia Extendida
+                    </p>
+                    <p className="text-xs text-amber-700 dark:text-amber-400/80 mt-0.5">
+                      A Garantia Extendida garante 10% de comissão extra (~{formatCurrency(199 * 0.10)}) e protege o investimento do cliente!
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
 
           <div className={`flex justify-between items-center p-3 rounded-lg ${resumo.lucroReal >= 0 ? 'bg-green-500/10' : 'bg-destructive/10'}`}>
             <span className="font-bold text-sm">Lucro Real (Líquido)</span>
