@@ -37,6 +37,7 @@ export default function CadastrosMetas() {
   const [metaFaturamento, setMetaFaturamento] = useState('');
   const [metaAcessorios, setMetaAcessorios] = useState('');
   const [metaGarantia, setMetaGarantia] = useState('');
+  const [metaAssistencia, setMetaAssistencia] = useState('');
 
   // Montar dados da tabela: uma linha por loja
   const linhasTabela = useMemo(() => {
@@ -54,6 +55,7 @@ export default function CadastrosMetas() {
     setMetaFaturamento('');
     setMetaAcessorios('');
     setMetaGarantia('');
+    setMetaAssistencia('');
     setEditando(null);
     setLojaIdModal('');
   };
@@ -70,6 +72,7 @@ export default function CadastrosMetas() {
     setMetaFaturamento(formatarMoeda(meta.metaFaturamento));
     setMetaAcessorios(formatarMoeda(meta.metaAcessorios));
     setMetaGarantia(formatarMoeda(meta.metaGarantia));
+    setMetaAssistencia(formatarMoeda(meta.metaAssistencia));
     setModalOpen(true);
   };
 
@@ -81,6 +84,7 @@ export default function CadastrosMetas() {
       metaFaturamento: parseMoeda(metaFaturamento),
       metaAcessorios: parseMoeda(metaAcessorios),
       metaGarantia: parseMoeda(metaGarantia),
+      metaAssistencia: parseMoeda(metaAssistencia),
     };
 
     if (editando) {
@@ -141,6 +145,7 @@ export default function CadastrosMetas() {
                   <TableHead className="text-right">Meta Faturamento</TableHead>
                   <TableHead className="text-right">Meta Acessórios</TableHead>
                   <TableHead className="text-right">Meta Garantia</TableHead>
+                  <TableHead className="text-right">Meta Assistência</TableHead>
                   <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -156,6 +161,9 @@ export default function CadastrosMetas() {
                     </TableCell>
                     <TableCell className="text-right">
                       {meta ? formatarMoeda(meta.metaGarantia) : <span className="text-muted-foreground">-</span>}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {meta ? formatarMoeda(meta.metaAssistencia) : <span className="text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell className="text-center">
                       {meta ? (
@@ -221,6 +229,14 @@ export default function CadastrosMetas() {
               <Input
                 value={metaGarantia}
                 onChange={e => setMetaGarantia(moedaMask(e.target.value))}
+                placeholder="R$ 0,00"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Meta Assistência (R$)</label>
+              <Input
+                value={metaAssistencia}
+                onChange={e => setMetaAssistencia(moedaMask(e.target.value))}
                 placeholder="R$ 0,00"
               />
             </div>

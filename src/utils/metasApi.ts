@@ -8,6 +8,7 @@ export interface MetaLoja {
   metaFaturamento: number;
   metaAcessorios: number;
   metaGarantia: number;
+  metaAssistencia: number;
   dataCriacao: string;
   ultimaAtualizacao: string;
 }
@@ -28,6 +29,7 @@ const defaultMetas: MetaLoja[] = [
     metaFaturamento: 150000,
     metaAcessorios: 5000,
     metaGarantia: 12000,
+    metaAssistencia: 10000,
     dataCriacao: '2026-02-01T00:00:00.000Z',
     ultimaAtualizacao: '2026-02-01T00:00:00.000Z',
   },
@@ -39,6 +41,7 @@ const defaultMetas: MetaLoja[] = [
     metaFaturamento: 120000,
     metaAcessorios: 3500,
     metaGarantia: 8000,
+    metaAssistencia: 7000,
     dataCriacao: '2026-02-01T00:00:00.000Z',
     ultimaAtualizacao: '2026-02-01T00:00:00.000Z',
   },
@@ -50,6 +53,7 @@ const defaultMetas: MetaLoja[] = [
     metaFaturamento: 200000,
     metaAcessorios: 8000,
     metaGarantia: 15000,
+    metaAssistencia: 12000,
     dataCriacao: '2026-02-01T00:00:00.000Z',
     ultimaAtualizacao: '2026-02-01T00:00:00.000Z',
   },

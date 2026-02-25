@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Target, TrendingUp, Headphones, Shield, AlertCircle } from 'lucide-react';
+import { Target, TrendingUp, Headphones, Shield, Wrench, AlertCircle } from 'lucide-react';
 import { getMetaByLojaEMes } from '@/utils/metasApi';
 import { getVendas } from '@/utils/vendasApi';
 import { formatarMoeda } from '@/utils/formatUtils';
@@ -65,7 +65,7 @@ export function PainelMetasLoja({ lojaId }: PainelMetasLojaProps) {
   const meta = useMemo(() => getMetaByLojaEMes(lojaId, mesAtual, anoAtual), [lojaId, mesAtual, anoAtual]);
 
   const realizacao = useMemo(() => {
-    if (!lojaId) return { faturamento: 0, acessorios: 0, garantia: 0 };
+    if (!lojaId) return { faturamento: 0, acessorios: 0, garantia: 0, assistencia: 0 };
 
     const vendas = getVendas().filter(v => {
       if (v.lojaVenda !== lojaId) return false;
@@ -83,7 +83,7 @@ export function PainelMetasLoja({ lojaId }: PainelMetasLojaProps) {
       garantia += (v.garantiaExtendida?.valor ?? 0);
     });
 
-    return { faturamento, acessorios, garantia };
+    return { faturamento, acessorios, garantia, assistencia: 0 };
   }, [lojaId, mesAtual, anoAtual]);
 
   if (!lojaId) return null;
@@ -129,6 +129,13 @@ export function PainelMetasLoja({ lojaId }: PainelMetasLojaProps) {
           icon={Shield}
           atual={realizacao.garantia}
           meta={meta.metaGarantia}
+          formatFn={formatarMoeda}
+        />
+        <MetaBar
+          label="Assistência"
+          icon={Wrench}
+          atual={realizacao.assistencia}
+          meta={meta.metaAssistencia}
           formatFn={formatarMoeda}
         />
       </CardContent>
