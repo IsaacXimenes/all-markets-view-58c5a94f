@@ -124,6 +124,7 @@ import GestaoAdmIndicadores from "./pages/GestaoAdmIndicadores";
 import GestaoAdmAtividades from "./pages/GestaoAdmAtividades";
 import CadastrosAtividades from "./pages/CadastrosAtividades";
 import CadastrosLogsAuditoria from "./pages/CadastrosLogsAuditoria";
+import CadastrosMetas from "./pages/CadastrosMetas";
 import DadosAntigoClientes from "./pages/DadosAntigoClientes";
 import DadosAntigoCompras from "./pages/DadosAntigoCompras";
 import DadosAntigoComprasPagamentos from "./pages/DadosAntigoComprasPagamentos";
@@ -245,6 +246,7 @@ const App = () => (
               <Route path="/cadastros/taxas-entrega" element={<CadastrosTaxasEntrega />} />
               <Route path="/cadastros/config-whatsapp" element={<CadastrosConfigWhatsApp />} />
               <Route path="/cadastros/atividades" element={<CadastrosAtividades />} />
+              <Route path="/cadastros/metas" element={<CadastrosMetas />} />
               <Route path="/cadastros/logs-auditoria" element={<CadastrosLogsAuditoria />} />
               <Route path="/vendas" element={<Vendas />} />
               <Route path="/vendas/nova" element={<VendasNova />} />

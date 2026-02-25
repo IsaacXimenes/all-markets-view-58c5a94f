@@ -29,6 +29,7 @@ import {
   DialogDescription
 } from '@/components/ui/dialog';
 import { Eye, Download, Filter, X, Pencil, Check, Clock, AlertTriangle, CreditCard, Wallet, Smartphone, Banknote, AlertCircle, ArrowLeftRight } from 'lucide-react';
+import { PainelMetasLoja } from '@/components/vendas/PainelMetasLoja';
 import { ComprovantePreview, ComprovanteBadgeSemAnexo } from '@/components/vendas/ComprovantePreview';
 import { VendaResumoCompleto } from '@/components/vendas/VendaResumoCompleto';
 import { useFluxoVendas } from '@/hooks/useFluxoVendas';
@@ -65,6 +66,12 @@ export default function VendasConferenciaLancamento() {
     if (!colaborador) return false;
     // Usando as flags do novo modelo
     return colaborador.eh_gestor;
+  }, [colaboradores]);
+
+  // Loja do usuário logado (para painel de metas)
+  const lojaUsuarioLogado = useMemo(() => {
+    const col = colaboradores.find(c => c.id === usuarioLogado.id);
+    return col?.loja_id || '';
   }, [colaboradores]);
   
   // Filtros
@@ -546,6 +553,11 @@ export default function VendasConferenciaLancamento() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Painel de Metas da Loja */}
+      <div className="mb-6">
+        <PainelMetasLoja lojaId={lojaUsuarioLogado} />
+      </div>
 
       {/* Tabela */}
       <Card>

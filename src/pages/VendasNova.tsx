@@ -46,6 +46,7 @@ import { AutocompleteColaborador } from '@/components/AutocompleteColaborador';
 import { getTaxasEntregaAtivas, TaxaEntrega } from '@/utils/taxasEntregaApi';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { PainelRentabilidadeVenda } from '@/components/vendas/PainelRentabilidadeVenda';
 
 // Alias para compatibilidade
 const formatCurrency = formatarMoeda;
@@ -2446,6 +2447,19 @@ export default function VendasNova() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Painel de Rentabilidade */}
+        <PainelRentabilidadeVenda
+          itens={itens}
+          acessoriosVenda={acessoriosVenda}
+          tradeIns={tradeIns}
+          garantiaExtendida={garantiaExtendida}
+          taxaEntrega={taxaEntrega}
+          localEntregaId={localEntregaId}
+          lojaVenda={lojaVenda}
+          pagamentos={pagamentos}
+          total={total}
+        />
 
         {/* Botões Finais */}
         <div className="flex flex-col gap-4">
