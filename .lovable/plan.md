@@ -1,51 +1,45 @@
 
 
-## Plano: Coach de Vendas (Upsell) + Feedback Visual no Botao "Usar" Trade-In
+## Plano: Reformular Tabela de Metas + Botao Editar no Quadro de Pagamentos
 
-### O que ja esta implementado
+### 1. Reformular Tabela de Metas (`src/pages/CadastrosMetas.tsx`)
 
-Todas as funcionalidades das secoes 2.1, 2.2, 2.4, 3 e 4 do prompt ja estao no codigo. Os cabecalhos exibem valores de venda, as margens tem cores, o Game de Metas funciona, e as colunas expandidas no historico estao presentes.
+**Problema atual**: A tabela mostra apenas metas ja cadastradas, com coluna "Loja" generica. O usuario quer ver **uma linha por loja cadastrada** (do tipo "Loja"), independente de ter meta ou nao.
 
-### O que falta implementar
+**Nova abordagem**:
+- Remover filtro de Loja (desnecessario, todas aparecem sempre)
+- Manter filtros de Mes e Ano
+- A tabela tera uma linha fixa para cada loja retornada por `obterLojasTipoLoja()`
+- Para cada loja, buscar a meta correspondente ao mes/ano selecionado via `getMetaByLojaEMes()`
+- Se a meta existir, exibir os valores; se nao, exibir campos vazios/zerados
+- Os botoes Editar/Excluir ficam na coluna de acoes
+- Se nao houver meta, mostrar botao "Definir" que abre o modal pre-preenchido com a loja
+- Remover o botao "Nova Meta" generico e o campo "Loja" do modal (a loja vem da linha clicada)
+- A coluna "Mes/Ano" sai da tabela (ja esta nos filtros acima)
 
-**1. Sugestao Inteligente de Upsell (Coach de Vendas) - Secao 2.3**
+**Estrutura da tabela**:
 
-Adicionar um bloco de dicas contextuais no `PainelRentabilidadeVenda.tsx`, posicionado entre o Resumo Consolidado e o card de Lucro Real (linha ~306). O bloco so aparece quando ha gatilhos ativos.
+| Loja | Meta Faturamento | Meta Acessorios (un.) | Meta Garantia | Acoes |
+|------|------------------|-----------------------|---------------|-------|
+| Centro | R$ 150.000 | 80 | R$ 12.000 | Editar / Excluir |
+| Norte | R$ 120.000 | 60 | R$ 8.000 | Editar / Excluir |
+| Online | - | - | - | Definir |
 
-Logica dos gatilhos:
-- **Gatilho Acessorios**: Se `itens.length > 0` (ha aparelhos) e `acessoriosVenda.length === 0` (nenhum acessorio adicionado), exibir dica incentivando adicionar capa/pelicula com estimativa de comissao extra.
-- **Gatilho Garantia**: Se `garantiaExtendida === null`, exibir dica incentivando a venda de garantia com o valor de comissao (10% do plano).
-- **Calculo de Impacto**: Estimar o ganho adicional na comissao caso o vendedor adicione esses itens. Usar um valor medio de referencia para acessorios e garantia.
+### 2. Botao Editar no Quadro de Pagamentos (`src/components/vendas/PagamentoQuadro.tsx`)
 
-Visual: Cards discretos com icone de lampada (Lightbulb), fundo amarelo/ambar suave, texto curto e valor estimado de ganho.
+**Problema atual**: Cada pagamento tem apenas o botao de remover (X). Nao ha como editar um registro ja lancado.
 
-**2. Feedback Visual no Botao "Usar" do Trade-In - Secao 2.2c**
+**Solucao**:
+- Adicionar estado `editandoPagamentoId` para rastrear qual pagamento esta sendo editado
+- Adicionar botao de editar (icone Pencil) ao lado do botao de remover na tabela
+- Ao clicar em Editar, abrir o mesmo modal de pagamento pre-preenchido com os dados do pagamento selecionado
+- No `handleAddPagamento`, se `editandoPagamentoId` estiver setado, substituir o pagamento existente ao inves de adicionar um novo
+- Resetar `editandoPagamentoId` ao fechar o modal
 
-No componente `ValoresRecomendadosTroca.tsx`, ao clicar em "Usar":
-- Trocar o texto do botao para "Vinculado" com icone de check verde
-- Aplicar uma animacao de destaque (bg-green-100 fade) na linha da tabela
-- Usar estado local para rastrear qual item foi selecionado
-
-### Arquivos Afetados
+### Arquivos afetados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/components/vendas/PainelRentabilidadeVenda.tsx` | Adicionar bloco de Coach de Vendas com gatilhos contextuais e estimativa de comissao |
-| `src/components/vendas/ValoresRecomendadosTroca.tsx` | Adicionar feedback visual animado no botao "Usar" (estado "Vinculado" + destaque na linha) |
-
-### Detalhes Tecnicos
-
-**Coach de Vendas** - Novo bloco JSX no PainelRentabilidadeVenda:
-- Importar `Lightbulb` do lucide-react
-- Calcular `temAparelhoSemAcessorio = itens.length > 0 && acessoriosVenda.length === 0`
-- Calcular `semGarantia = !garantiaExtendida && itens.length > 0`
-- Estimar comissao extra de acessorios: valor medio de R$ 50 por acessorio * margem media
-- Estimar comissao extra de garantia: valor medio de plano * 10%
-- Renderizar cards de dica apenas quando o gatilho estiver ativo
-
-**Feedback "Usar"** - Alteracoes no ValoresRecomendadosTroca:
-- Adicionar `const [selecionadoId, setSelecionadoId] = useState<string | null>(null)`
-- No onClick: chamar `onUsarValor`, setar `setSelecionadoId(item.id)`
-- Na TableRow: aplicar `className={selecionadoId === item.id ? 'bg-green-50 dark:bg-green-900/20 transition-colors' : ''}`
-- No Button: se selecionado, mostrar "Vinculado" com check verde; senao, mostrar "Usar"
+| `src/pages/CadastrosMetas.tsx` | Reformular tabela para exibir uma linha por loja, remover filtro de loja, ajustar modal para nao ter campo loja |
+| `src/components/vendas/PagamentoQuadro.tsx` | Adicionar estado e logica de edicao de pagamento, botao Pencil na tabela |
 
