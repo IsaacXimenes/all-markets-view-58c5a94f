@@ -386,6 +386,9 @@ export default function OSConsignacao() {
   };
 
   // Inventory filters state
+  const [popoverModeloAberto, setPopoverModeloAberto] = useState<number | null>(null);
+  const [popoverEditModeloAberto, setPopoverEditModeloAberto] = useState<string | null>(null);
+  const [popoverEditNovoModeloAberto, setPopoverEditNovoModeloAberto] = useState<number | null>(null);
   const [filtroInventarioStatus, setFiltroInventarioStatus] = useState('todos');
   const [filtroInventarioLoja, setFiltroInventarioLoja] = useState('todos');
   const [filtroInventarioBusca, setFiltroInventarioBusca] = useState('');
@@ -446,7 +449,7 @@ export default function OSConsignacao() {
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs">Modelo</Label>
-                        <Popover>
+                        <Popover open={popoverModeloAberto === idx} onOpenChange={(open) => setPopoverModeloAberto(open ? idx : null)}>
                           <PopoverTrigger asChild>
                             <Button variant="outline" className="w-full justify-start h-9 font-normal text-sm">
                               {item.modelo || <span className="text-muted-foreground">Modelo...</span>}
@@ -459,7 +462,7 @@ export default function OSConsignacao() {
                                 <CommandEmpty>Nenhum modelo encontrado</CommandEmpty>
                                 <CommandGroup>
                                   {produtosCadastro.map(p => (
-                                    <CommandItem key={p.id} value={p.produto} onSelect={() => updateItemRow(idx, 'modelo', p.produto)}>
+                                    <CommandItem key={p.id} value={p.produto} onSelect={() => { updateItemRow(idx, 'modelo', p.produto); setPopoverModeloAberto(null); }}>
                                       {p.produto}
                                     </CommandItem>
                                   ))}
@@ -605,7 +608,7 @@ export default function OSConsignacao() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Modelo</Label>
-                      <Popover>
+                      <Popover open={popoverEditModeloAberto === item.id} onOpenChange={(open) => setPopoverEditModeloAberto(open ? item.id : null)}>
                         <PopoverTrigger asChild>
                           <Button variant="outline" className="w-full justify-start h-9 font-normal text-sm">
                             {item.modelo || <span className="text-muted-foreground">Modelo...</span>}
@@ -618,7 +621,7 @@ export default function OSConsignacao() {
                               <CommandEmpty>Nenhum modelo encontrado</CommandEmpty>
                               <CommandGroup>
                                 {produtosCadastro.map(p => (
-                                  <CommandItem key={p.id} value={p.produto} onSelect={() => updateEditItem(item.id, 'modelo', p.produto)}>
+                                  <CommandItem key={p.id} value={p.produto} onSelect={() => { updateEditItem(item.id, 'modelo', p.produto); setPopoverEditModeloAberto(null); }}>
                                     {p.produto}
                                   </CommandItem>
                                 ))}
@@ -656,7 +659,7 @@ export default function OSConsignacao() {
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs">Modelo</Label>
-                      <Popover>
+                      <Popover open={popoverEditNovoModeloAberto === idx} onOpenChange={(open) => setPopoverEditNovoModeloAberto(open ? idx : null)}>
                         <PopoverTrigger asChild>
                           <Button variant="outline" className="w-full justify-start h-9 font-normal text-sm">
                             {item.modelo || <span className="text-muted-foreground">Modelo...</span>}
@@ -669,7 +672,7 @@ export default function OSConsignacao() {
                               <CommandEmpty>Nenhum modelo encontrado</CommandEmpty>
                               <CommandGroup>
                                 {produtosCadastro.map(p => (
-                                  <CommandItem key={p.id} value={p.produto} onSelect={() => updateEditNovoItem(idx, 'modelo', p.produto)}>
+                                  <CommandItem key={p.id} value={p.produto} onSelect={() => { updateEditNovoItem(idx, 'modelo', p.produto); setPopoverEditNovoModeloAberto(null); }}>
                                     {p.produto}
                                   </CommandItem>
                                 ))}
