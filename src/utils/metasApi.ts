@@ -15,17 +15,60 @@ export interface MetaLoja {
 const STORAGE_KEY = 'metas_lojas_data';
 const COUNTER_KEY = 'metas_counter';
 
+const now = new Date();
+const mesAtual = now.getMonth() + 1;
+const anoAtual = now.getFullYear();
+
+const defaultMetas: MetaLoja[] = [
+  {
+    id: 'META-0001',
+    lojaId: 'LOJA-001',
+    mes: mesAtual,
+    ano: anoAtual,
+    metaFaturamento: 150000,
+    metaAcessorios: 80,
+    metaGarantia: 12000,
+    dataCriacao: '2026-02-01T00:00:00.000Z',
+    ultimaAtualizacao: '2026-02-01T00:00:00.000Z',
+  },
+  {
+    id: 'META-0002',
+    lojaId: 'LOJA-002',
+    mes: mesAtual,
+    ano: anoAtual,
+    metaFaturamento: 120000,
+    metaAcessorios: 60,
+    metaGarantia: 8000,
+    dataCriacao: '2026-02-01T00:00:00.000Z',
+    ultimaAtualizacao: '2026-02-01T00:00:00.000Z',
+  },
+  {
+    id: 'META-0003',
+    lojaId: 'LOJA-ONLINE',
+    mes: mesAtual,
+    ano: anoAtual,
+    metaFaturamento: 200000,
+    metaAcessorios: 100,
+    metaGarantia: 15000,
+    dataCriacao: '2026-02-01T00:00:00.000Z',
+    ultimaAtualizacao: '2026-02-01T00:00:00.000Z',
+  },
+];
+
 const loadFromStorage = <T>(key: string, defaultData: T): T => {
   const saved = localStorage.getItem(key);
-  return saved ? JSON.parse(saved) : defaultData;
+  if (saved) return JSON.parse(saved);
+  // Seed default data on first load
+  saveToStorage(key, defaultData);
+  return defaultData;
 };
 
 const saveToStorage = (key: string, data: any) => {
   localStorage.setItem(key, JSON.stringify(data));
 };
 
-let metas: MetaLoja[] = loadFromStorage(STORAGE_KEY, []);
-let counter = loadFromStorage(COUNTER_KEY, 1);
+let metas: MetaLoja[] = loadFromStorage(STORAGE_KEY, defaultMetas);
+let counter = loadFromStorage(COUNTER_KEY, 4);
 
 const gerarId = (): string => {
   const id = `META-${String(counter).padStart(4, '0')}`;

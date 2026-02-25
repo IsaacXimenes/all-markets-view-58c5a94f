@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2, Target } from 'lucide-react';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { getMetas, addMeta, updateMeta, deleteMeta, MetaLoja } from '@/utils/metasApi';
+import { PainelMetasLoja } from '@/components/vendas/PainelMetasLoja';
 import { formatarMoeda, parseMoeda, moedaMask } from '@/utils/formatUtils';
 import { toast } from 'sonner';
 
@@ -190,6 +191,19 @@ export default function CadastrosMetas() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Painéis visuais de metas */}
+      {(() => {
+        const lojasComMeta = [...new Set(metasFiltradas.map(m => m.lojaId))];
+        if (lojasComMeta.length === 0) return null;
+        return (
+          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {lojasComMeta.map(lojaId => (
+              <PainelMetasLoja key={lojaId} lojaId={lojaId} />
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
