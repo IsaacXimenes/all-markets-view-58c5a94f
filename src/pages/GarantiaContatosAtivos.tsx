@@ -146,7 +146,7 @@ export default function GarantiaContatosAtivos() {
                   Aparelho: c.aparelho.modelo,
                   IMEI: c.aparelho.imei,
                   Motoboy: c.logistica.motoboyNome,
-                  'Entrega Prevista': format(new Date(c.logistica.dataEntregaPrevista), 'dd/MM/yyyy'),
+                  'Entrega Prevista': c.logistica.dataEntregaPrevista ? format(new Date(c.logistica.dataEntregaPrevista), 'dd/MM/yyyy') : '-',
                   'Garantia Estendida': c.garantiaEstendida?.aderida ? 'Sim' : 'Não',
                   Status: c.status
                 }));
@@ -197,7 +197,7 @@ export default function GarantiaContatosAtivos() {
                 </TableCell>
                 <TableCell className="font-mono text-xs">{contato.aparelho.imei}</TableCell>
                 <TableCell>{contato.logistica.motoboyNome}</TableCell>
-                <TableCell>{format(new Date(contato.logistica.dataEntregaPrevista), 'dd/MM/yyyy')}</TableCell>
+                <TableCell>{contato.logistica.dataEntregaPrevista ? format(new Date(contato.logistica.dataEntregaPrevista), 'dd/MM/yyyy') : '-'}</TableCell>
                 <TableCell>
                   {contato.garantiaEstendida?.aderida ? (
                     <div className="space-y-1">

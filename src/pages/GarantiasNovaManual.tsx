@@ -19,9 +19,9 @@ import { toast } from 'sonner';
 import { getProdutosCadastro, getClientes, addCliente, Cliente, calcularTipoPessoa } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
-import { addGarantia, addTimelineEntry, addTratativa } from '@/utils/garantiasApi';
+import { addGarantia, addTimelineEntry, processarTratativaGarantia } from '@/utils/garantiasApi';
 import { getPlanosPorModelo, PlanoGarantia, formatCurrency } from '@/utils/planosGarantiaApi';
-import { getProdutos, updateProduto, addMovimentacao, Produto } from '@/utils/estoqueApi';
+import { getProdutos, Produto } from '@/utils/estoqueApi';
 import { format, addMonths } from 'date-fns';
 import { formatIMEI, unformatIMEI, displayIMEI } from '@/utils/imeiMask';
 
@@ -316,71 +316,24 @@ export default function GarantiasNovaManual() {
       usuarioNome: 'Usuário Sistema'
     });
 
-    // Se tiver tratativa, registrar
+    // Se tiver tratativa, usar o orquestrador atômico (mesmo fluxo da página de detalhes)
     if (tipoTratativa && descricaoTratativa) {
-      addTratativa({
+      const resultado = processarTratativaGarantia({
         garantiaId: novaGarantia.id,
         tipo: tipoTratativa as 'Direcionado Apple' | 'Encaminhado Assistência' | 'Assistência + Empréstimo' | 'Troca Direta',
-        dataHora: new Date().toISOString(),
+        descricao: descricaoTratativa,
         usuarioId: 'COL-001',
         usuarioNome: 'Usuário Sistema',
-        descricao: descricaoTratativa,
-        aparelhoEmprestadoId: tipoTratativa === 'Assistência + Empréstimo' ? aparelhoSelecionado?.id : undefined,
-        aparelhoEmprestadoModelo: tipoTratativa === 'Assistência + Empréstimo' ? aparelhoSelecionado?.modelo : undefined,
-        aparelhoEmprestadoImei: tipoTratativa === 'Assistência + Empréstimo' ? aparelhoSelecionado?.imei : undefined,
-        aparelhoTrocaId: tipoTratativa === 'Troca Direta' ? aparelhoSelecionado?.id : undefined,
-        aparelhoTrocaModelo: tipoTratativa === 'Troca Direta' ? aparelhoSelecionado?.modelo : undefined,
-        aparelhoTrocaImei: tipoTratativa === 'Troca Direta' ? aparelhoSelecionado?.imei : undefined,
-        osId: tipoTratativa.includes('Assistência') ? 'OS-AUTO' : undefined,
-        status: 'Em Andamento'
+        aparelhoSelecionado: aparelhoSelecionado,
       });
 
-      // Adicionar entrada na timeline para a tratativa
-      addTimelineEntry({
-        garantiaId: novaGarantia.id,
-        dataHora: new Date().toISOString(),
-        tipo: getTipoTimeline(tipoTratativa),
-        titulo: getTituloTimeline(tipoTratativa),
-        descricao: descricaoTratativa,
-        usuarioId: 'COL-001',
-        usuarioNome: 'Usuário Sistema'
-      });
-
-      // Ações específicas por tipo
-      if (tipoTratativa === 'Assistência + Empréstimo' && aparelhoSelecionado) {
-        // Atualizar produto com status de empréstimo (NÃO alterar origemEntrada)
-        updateProduto(aparelhoSelecionado.id, { 
-          quantidade: 0,
-          statusEmprestimo: 'Empréstimo - Assistência',
-          emprestimoGarantiaId: novaGarantia.id,
-          emprestimoClienteId: formData.clienteId,
-          emprestimoClienteNome: formData.clienteNome,
-          emprestimoDataHora: new Date().toISOString()
-        });
-        addMovimentacao({
-          data: new Date().toISOString(),
-          produto: aparelhoSelecionado.modelo,
-          imei: aparelhoSelecionado.imei || '',
-          quantidade: 1,
-          origem: aparelhoSelecionado.loja,
-          destino: 'Empréstimo - Garantia',
-          responsavel: 'Usuário Sistema',
-          motivo: `Empréstimo garantia ${novaGarantia.id}`
-        });
+      if (!resultado.sucesso) {
+        toast.error(resultado.erro || 'Erro ao processar tratativa');
+        return;
       }
 
-      if (tipoTratativa === 'Troca Direta' && aparelhoSelecionado) {
-        updateProduto(aparelhoSelecionado.id, { quantidade: 0 });
-        addMovimentacao({
-          data: new Date().toISOString(),
-          produto: aparelhoSelecionado.modelo,
-          imei: aparelhoSelecionado.imei || '',
-          quantidade: 1,
-          origem: aparelhoSelecionado.loja,
-          destino: 'Saída - Troca Garantia',
-          responsavel: 'Usuário Sistema',
-          motivo: `Troca direta garantia ${novaGarantia.id}`
-        });
+      if (resultado.osId) {
+        toast.success(`Tratativa registrada! OS ${resultado.osId} criada automaticamente.`);
       }
     }
 

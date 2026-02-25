@@ -918,19 +918,7 @@ export const processarTratativaGarantia = (dados: ProcessarTratativaRequest): { 
       });
     }
 
-    // 2. Empréstimo de aparelho (somente se NÃO precisa aprovação)
-    if (dados.tipo === 'Assistência + Empréstimo' && dados.aparelhoSelecionado && !precisaAprovacao) {
-      // Este bloco não executa mais para Assistência + Empréstimo (sempre precisa aprovação)
-      // Mantido para compatibilidade
-    }
-
-    // 3. Troca Direta (somente se NÃO precisa aprovação)
-    if (dados.tipo === 'Troca Direta' && dados.aparelhoSelecionado && !precisaAprovacao) {
-      // Este bloco não executa mais para Troca Direta (sempre precisa aprovação)
-      // Mantido para compatibilidade
-    }
-
-    // 4. Registrar tratativa
+    // 2. Registrar tratativa
     const statusInicial = precisaAprovacao ? 'Aguardando Aprovação' : 'Em Andamento';
     
     const novaTratativa = addTratativa({
