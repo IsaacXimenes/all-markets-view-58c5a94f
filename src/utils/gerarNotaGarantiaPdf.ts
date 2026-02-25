@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import { Venda } from './vendasApi';
-import { getClienteById, getLojaById } from './cadastrosApi';
+import { getClienteById, getLojaById, getColaboradorById } from './cadastrosApi';
 import { formatCurrency } from './formatUtils';
 import logoBase64Promise from './notaGarantiaLogo';
 
@@ -330,7 +330,10 @@ export const gerarNotaGarantiaPdf = async (venda: Venda) => {
     const freteL2Col1W = contentWidth * 0.20;
     const freteL2Col2W = contentWidth * 0.80;
     drawField('TAXA DE ENTREGA', venda.taxaEntrega ? formatCurrency(venda.taxaEntrega) : 'Grátis', margin, y, freteL2Col1W, freteH);
-    drawField('MOTOBOY / OBSERVAÇÕES', venda.motoboyId || '-', margin + freteL2Col1W, y, freteL2Col2W, freteH);
+    const motoboyNome = venda.motoboyId
+      ? (getColaboradorById(venda.motoboyId)?.nome || venda.motoboyId)
+      : '-';
+    drawField('MOTOBOY / OBSERVAÇÕES', motoboyNome, margin + freteL2Col1W, y, freteL2Col2W, freteH);
     y += freteH;
   }
 
@@ -425,6 +428,19 @@ export const gerarNotaGarantiaPdf = async (venda: Venda) => {
       doc.text('- ' + formatCurrency(tradeIn.valorCompraUsado), prodColValor + 2, y + 5);
       y += rowH;
     });
+  }
+
+  // Taxa de Entrega (como item na tabela de produtos)
+  if (venda.taxaEntrega && venda.taxaEntrega > 0) {
+    drawBox(prodColQtd, y, prodColQtdW, rowH);
+    drawBox(prodColDesc, y, prodColDescW, rowH);
+    drawBox(prodColTipo, y, prodColTipoW, rowH);
+    drawBox(prodColValor, y, prodColValorW, rowH);
+    doc.text('1', prodColQtd + 2, y + 5);
+    doc.text('Taxa de Entrega', prodColDesc + 2, y + 5);
+    doc.text('Entrega', prodColTipo + 2, y + 5);
+    doc.text(formatCurrency(venda.taxaEntrega), prodColValor + 2, y + 5);
+    y += rowH;
   }
 
   // Total produtos
