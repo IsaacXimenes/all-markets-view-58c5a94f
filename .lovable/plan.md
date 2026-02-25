@@ -1,111 +1,176 @@
 
 
-## Plano: Modulo de Garantia - Persistencia localStorage + Correcoes PDF/Timeline + Regras de Negocio
+## Plano: Dashboard de Performance em Vendas + Game de Metas + Colunas Expandidas no Historico
 
-### Escopo Geral
+### Visao Geral
 
-Refatorar o modulo de Garantia em 4 frentes: persistencia com localStorage, correcoes na Nota de Garantia (PDF), unificacao da timeline, e implementacao de regras de negocio (validacoes, automacao e fluxo de aprovacao).
-
----
-
-### 1. Persistencia com localStorage (`src/utils/garantiasApi.ts`)
-
-Todas as entidades do modulo (garantias, tratativas, timeline, contatos ativos, registros de analise) serao persistidas no localStorage. O padrao ja existe em outros modulos do sistema (ex: `gestaoAdministrativaApi.ts`, `whatsappNotificacaoApi.ts`).
-
-**Acoes:**
-- Criar funcoes auxiliares `loadFromStorage(key, defaultData)` e `saveToStorage(key, data)` no topo do arquivo
-- Chaves: `garantias_data`, `tratativas_data`, `timeline_garantia_data`, `contatos_ativos_data`, `registros_analise_data`, `garantia_counter`, `tratativa_counter`, `timeline_counter`
-- Os dados mockados atuais serao usados como `defaultData` na primeira carga (quando nao ha dados no localStorage)
-- Toda funcao de escrita (`addGarantia`, `updateGarantia`, `addTratativa`, `updateTratativa`, `addTimelineEntry`, `addContatoAtivo`, `updateContatoAtivo`, `aprovarAnaliseGarantia`, `recusarAnaliseGarantia`, `encaminharParaAnaliseGarantia`) chamara `saveToStorage` apos modificar o array
-- Toda funcao de leitura (`getGarantias`, `getTratativas`, etc.) lera do array em memoria (ja carregado do localStorage na inicializacao)
-- Os contadores (`garantiaCounter`, `tratativaCounter`, `timelineCounter`) tambem serao persistidos
-
-**Arquivo:** `src/utils/garantiasApi.ts`
+Implementar 3 grandes frentes no modulo de Vendas:
+1. Painel de rentabilidade detalhado na tela Nova Venda (VendasNova.tsx)
+2. Game de Metas na Conferencia de Lancamento (VendasConferenciaLancamento.tsx) + cadastro de metas
+3. Colunas expandidas no Historico de Vendas (Vendas.tsx)
 
 ---
 
-### 2. Correcoes na Nota de Garantia
+### 1. Dashboard de Performance no Lancamento (VendasNova.tsx)
 
-**2.1 Corrigir `entidadeTipo` na Timeline** - `src/pages/VendaDetalhes.tsx`
-- Linha 178: Mudar `entidadeTipo: 'OS' as any` para `entidadeTipo: 'Venda'`
-- Adicionar `'Venda'` ao tipo union de `entidadeTipo` em `src/utils/timelineApi.ts` na interface `TimelineEntry`
+Adicionar um componente `PainelRentabilidadeVenda` ao final da pagina de Nova Venda, posicionado entre o card de "Resumo da Venda" e os "Botoes Finais" (apos linha ~2448).
 
-**2.2 Corrigir mensagem da timeline** - `src/pages/VendaDetalhes.tsx`
-- Linha 181: Atualizar descricao para ser mais precisa sobre o que realmente acontece (imagens do termo de garantia anexadas como paginas adicionais)
+#### 1.1 Novo Componente: `src/components/vendas/PainelRentabilidadeVenda.tsx`
 
-**2.3 Cabecalho dinamico** - `src/utils/gerarNotaGarantiaPdf.ts`
-- A funcao `getCabecalhoLoja` atualmente usa IDs hardcoded. Refatorar para buscar dados das lojas via `getLojaById` do `cadastrosApi.ts` como fallback, mantendo o mapeamento especifico para os dados fiscais (CNPJ, Razao Social) que nao existem no cadastro de lojas
+Componente isolado que recebe como props todos os dados necessarios para calcular as metricas. Sera dividido em 6 blocos visuais usando cards colapsaveis (Collapsible):
 
-**2.4 Verificar anexo do Termo** - `src/utils/gerarNotaGarantiaPdf.ts`
-- Confirmar que as imagens `termo-garantia-p1.jpg` e `termo-garantia-p2.jpg` estao sendo carregadas e anexadas corretamente
-- Adicionar tratamento de erro mais robusto com feedback ao usuario caso as imagens nao carreguem
+**a. Bloco Aparelhos**
+- Para cada item em `itens[]`: exibir produto, valorCusto, valorVenda, lucro (valorVenda - valorCusto), margem ((lucro/valorCusto)*100)
+- Totalizar ao final
 
-**Arquivos:** `src/pages/VendaDetalhes.tsx`, `src/utils/timelineApi.ts`, `src/utils/gerarNotaGarantiaPdf.ts`
+**b. Bloco Acessorios**
+- Para cada item em `acessoriosVenda[]`: buscar `valorCusto` via `getAcessorioById(acessorioId)` do `acessoriosApi.ts`, multiplicar pela quantidade
+- Calcular lucro = valorTotal - (valorCusto * quantidade)
+- Margem = (lucro / custoTotal) * 100
+
+**c. Bloco Base de Troca (Trade-In)**
+- Para cada trade-in: exibir modelo, valorCompraUsado
+- Buscar `valorSugerido` via `getValoresRecomendados()` do `valoresRecomendadosTrocaApi.ts` (match pelo modelo)
+- Indicador visual:
+  - Se valorCompraUsado < valorSugerido: seta verde + "Economia: R$ X"
+  - Se valorCompraUsado > valorSugerido: seta vermelha + "Acima do Recomendado: R$ X"
+
+**d. Bloco Garantia Extendida**
+- Plano, valor, comissao sobre garantia (10% do valor do plano)
+
+**e. Bloco Logistica (Entrega)**
+- Valor cobrado do cliente (taxaEntrega)
+- Custo parametrizado (obtido do `taxasEntregaApi.ts` via localEntregaId)
+- Diferenca = valor cobrado - custo parametrizado (positivo = lucro, negativo = prejuizo)
+- Nota: "Custo parametrizado provisionado 100% para o motoboy"
+
+**f. Bloco Resumo Consolidado**
+- Custo Total = soma custos aparelhos + custos acessorios + valorCompraUsado dos trade-ins
+- Valor de Venda Total = total da venda
+- Lucro Bruto = Valor de Venda Total - Custo Total
+- Comissao Hibrida:
+  - Comissao Garantia = valorGarantiaExtendida * 0.10
+  - Lucro Restante = Lucro Bruto - Comissao Garantia
+  - Se loja = LOJA_ONLINE_ID ou LOJA_MATRIZ_ID: comissao = Lucro Restante * 0.06
+  - Senao: comissao = Lucro Restante * 0.10
+  - Comissao Final = Comissao Garantia + Comissao sobre Lucro Restante
+- Taxas de Cartao: calcular usando `calcularValoresVenda` do `taxasCartao.ts` com dados dos pagamentos
+- Lucro Real (Liquido) = Valor de Venda Total - Custo Total - Comissao Final - Custo Entrega Parametrizado - Taxas Cartao
+- Secao "Discriminacao de Valores" com tabela detalhada mostrando cada componente
+
+#### 1.2 Integracao com VendasNova.tsx
+
+- Importar e renderizar `PainelRentabilidadeVenda` apos o card de Resumo (linha ~2448)
+- Passar props: itens, acessoriosVenda, tradeIns, garantiaExtendida, taxaEntrega, localEntregaId, lojaVenda, pagamentos, total
+- O painel atualiza em tempo real via useMemo
+
+#### 1.3 Novo Utilitario: `src/utils/calculoRentabilidadeVenda.ts`
+
+Centralizar toda a logica de calculo em funcoes puras reutilizaveis:
+- `calcularRentabilidadeAparelhos(itens)`
+- `calcularRentabilidadeAcessorios(acessoriosVenda, getAcessorioById)`
+- `calcularAnaliseTradeIn(tradeIns, getValoresRecomendados)`
+- `calcularComissaoHibrida(lucro, valorGarantia, lojaVendaId)`
+- `calcularLucroReal(params)` - calculo completo do lucro liquido
+- `calcularTaxasCartao(pagamentos)` - soma de taxas de todos os pagamentos
 
 ---
 
-### 3. Unificacao da Timeline
+### 2. Game de Metas (VendasConferenciaLancamento.tsx)
 
-**3.1 Expandir `TimelineEntry` em `timelineApi.ts`**
-- Adicionar `'Venda'` ao tipo union de `entidadeTipo`
-- Manter a interface `TimelineGarantia` em `garantiasApi.ts` como tipo interno para compatibilidade, mas todas as novas entradas usarao o sistema unificado
+#### 2.1 Nova API: `src/utils/metasApi.ts`
 
-**3.2 Migrar chamadas de timeline nas paginas de Garantia**
-- Em `GarantiasEmAndamento.tsx` (linhas 125-143): As chamadas a `addTimelineEntry` do garantiasApi continuam funcionando normalmente (timeline local da garantia). Adicionalmente, registrar na timeline unificada (`timelineApi.ts`) para rastreabilidade global
-- Em `GarantiaDetalhes.tsx`: Mesmo tratamento - manter timeline local e adicionar registro unificado
-- Em `processarTratativaGarantia`: Manter ambas timelines (local para exibicao na garantia, unificada para auditoria global)
+Interface e CRUD para metas mensais por loja:
 
-**Arquivos:** `src/utils/timelineApi.ts`, `src/utils/garantiasApi.ts`, `src/pages/GarantiasEmAndamento.tsx`, `src/pages/GarantiaDetalhes.tsx`
+```text
+interface MetaLoja {
+  id: string;
+  lojaId: string;
+  mes: number;       // 1-12
+  ano: number;
+  metaFaturamento: number;    // R$
+  metaAcessorios: number;     // Unidades
+  metaGarantia: number;       // R$ ou conversao %
+  dataCriacao: string;
+  ultimaAtualizacao: string;
+}
+```
+
+Persistencia via localStorage (`metas_lojas_data`).
+Funcoes: `getMetas()`, `getMetaByLojaEMes(lojaId, mes, ano)`, `addMeta()`, `updateMeta()`.
+
+#### 2.2 Nova Pagina: `src/pages/CadastrosMetas.tsx`
+
+Adicionar ao modulo de Cadastros (nova aba "Metas"):
+- Select de Loja + Select de Mes/Ano
+- Campos: Meta Faturamento (R$), Meta Acessorios (unidades), Meta Garantia (R$)
+- Tabela com metas cadastradas, edicao inline ou modal
+- Botao salvar persiste no localStorage
+
+Adicionar rota em `App.tsx`: `/cadastros/metas`
+Adicionar tab em `CadastrosLayout.tsx`: `{ name: 'Metas', href: '/cadastros/metas', icon: Target }`
+
+#### 2.3 Painel de Metas em VendasConferenciaLancamento.tsx
+
+Apos os cards de resumo financeiro (apos linha ~426), adicionar componente `PainelMetasLoja`:
+- Buscar meta do mes atual via `getMetaByLojaEMes()`
+- Calcular realizacao acumulada do mes (soma de vendas filtradas por loja e mes atual)
+- Exibir 3 barras de progresso (componente `Progress`):
+  - **Faturamento**: Acumulado vs Meta, percentual, valor faltante
+  - **Acessorios**: Total unidades vendidas vs Meta, percentual
+  - **Garantia**: Total R$ garantias vendidas vs Meta, percentual
+- Cores: verde >= 80%, amarelo >= 50%, vermelho < 50%
+- Se nao houver meta cadastrada para o mes/loja, exibir mensagem: "Meta nao cadastrada para este periodo"
 
 ---
 
-### 4. Regras de Negocio e Automacao
+### 3. Expansao do Historico de Vendas (Vendas.tsx)
 
-**4.1 Validacao de Status para Tratativas** - `src/utils/garantiasApi.ts` e `src/pages/GarantiaDetalhes.tsx`
-- Na funcao `processarTratativaGarantia`: Adicionar validacao que impede abertura de tratativa se `garantia.status === 'Expirada'` ou `garantia.status === 'Concluída'`, retornando `{ sucesso: false, erro: 'Nao e possivel abrir tratativa para garantia expirada/concluida' }`
-- Em `GarantiaDetalhes.tsx`: Exibir alerta visual (`Alert` com icone `AlertTriangle`) quando `statusExpiracao.status === 'urgente'` ou `'atencao'`, com cor vermelha/amarela respectivamente
-- Desabilitar o formulario de nova tratativa quando garantia esta expirada ou concluida, com mensagem explicativa
+#### 3.1 Novas Colunas na Tabela (apos linha ~412)
 
-**4.2 Automacao de Contatos Ativos** - `src/utils/garantiasApi.ts`
-- Criar funcao `verificarEGerarContatosAutomaticos()` que:
-  - Busca garantias com `getGarantiasExpirandoEm30Dias()` e `getGarantiasExpirandoEm7Dias()`
-  - Para cada garantia sem contato ativo existente, gera automaticamente um `ContatoAtivoGarantia` com dados do cliente pre-preenchidos
-  - Marca com flag `autoGerado: true` para diferenciar dos manuais
-- Chamar esta funcao na inicializacao da pagina `GarantiaContatosAtivosNovo.tsx` e `GarantiaContatosAtivos.tsx` (via `useEffect`)
-- Adicionar campo `autoGerado?: boolean` na interface `ContatoAtivoGarantia`
+Adicionar entre as colunas existentes (reorganizar):
 
-**4.3 Fluxo de Aprovacao de Tratativas** - `src/utils/garantiasApi.ts`, `src/pages/GarantiaDetalhes.tsx`, `src/pages/GarantiasEmAndamento.tsx`
-- Adicionar novos status a interface `TratativaGarantia`: `'Aguardando Aprovação' | 'Aprovada' | 'Recusada'` alem dos existentes
-- Na funcao `processarTratativaGarantia`: Para tratativas dos tipos `'Assistência + Empréstimo'` e `'Troca Direta'`, o status inicial sera `'Aguardando Aprovação'` em vez de `'Em Andamento'`. As acoes de estoque (emprestimo, reserva) so serao executadas apos aprovacao
-- Criar funcoes `aprovarTratativa(id, gestorId, gestorNome)` e `recusarTratativa(id, gestorId, gestorNome, motivo)` que:
-  - Alteram o status da tratativa
-  - Executam as acoes de estoque (se aprovada)
-  - Registram na timeline
-- Em `GarantiasEmAndamento.tsx`: Adicionar coluna "Aprovacao" na tabela. Tratativas com status `'Aguardando Aprovação'` exibem botoes "Aprovar" / "Recusar" para gestores
-- Badge visual diferenciado para tratativas pendentes de aprovacao (laranja)
+| Coluna | Fonte | Calculo |
+|--------|-------|---------|
+| V. Aparelhos | venda.itens | soma de item.valorVenda |
+| V. Acessorios | venda.acessorios | soma de acessorio.valorTotal |
+| V. Garantia | venda.garantiaExtendida | .valor ou 0 |
+| Custo Total | itens + acessorios | soma valorCusto * qtd (itens) + soma custoAcessorio * qtd |
+| V. Final (Bruto) | venda.total | total ja calculado |
+| Lucro Real | calculoRentabilidade | usar `calcularLucroReal()` do novo utilitario |
 
-**Arquivos:** `src/utils/garantiasApi.ts`, `src/pages/GarantiaDetalhes.tsx`, `src/pages/GarantiasEmAndamento.tsx`, `src/pages/GarantiaContatosAtivosNovo.tsx`, `src/pages/GarantiaContatosAtivos.tsx`
+#### 3.2 Alteracoes no Componente
+
+- Atualizar `calcularTotaisVenda()` (linha ~75) para retornar campos adicionais: `valorAparelhos`, `valorAcessorios`, `valorGarantia`, `custoTotal`, `lucroReal`
+- Adicionar `TableHead` para cada nova coluna
+- Adicionar `TableCell` no map de `vendasFiltradas`
+- Atualizar totalizador no rodape para incluir novos totais
+
+#### 3.3 Funcao de Calculo Expandida
+
+Usar `calcularLucroReal()` de `calculoRentabilidadeVenda.ts` para calcular o lucro liquido real (descontando comissao, taxas cartao, custo entrega).
 
 ---
 
-### Resumo de Arquivos Afetados
+### Resumo de Arquivos
 
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/utils/garantiasApi.ts` | localStorage, validacoes, aprovacao, contatos automaticos |
-| `src/utils/timelineApi.ts` | Adicionar 'Venda' ao entidadeTipo |
-| `src/utils/gerarNotaGarantiaPdf.ts` | Fallback dinamico no cabecalho, erro robusto no termo |
-| `src/pages/VendaDetalhes.tsx` | Corrigir entidadeTipo e descricao da timeline |
-| `src/pages/GarantiaDetalhes.tsx` | Alertas visuais, bloquear tratativa em expirada, aprovacao |
-| `src/pages/GarantiasEmAndamento.tsx` | Coluna aprovacao, timeline unificada |
-| `src/pages/GarantiaContatosAtivos.tsx` | useEffect para contatos automaticos |
-| `src/pages/GarantiaContatosAtivosNovo.tsx` | Contatos auto-gerados |
+| Arquivo | Tipo | Alteracao |
+|---------|------|-----------|
+| `src/utils/calculoRentabilidadeVenda.ts` | Novo | Funcoes puras de calculo de rentabilidade |
+| `src/utils/metasApi.ts` | Novo | CRUD de metas mensais por loja com localStorage |
+| `src/components/vendas/PainelRentabilidadeVenda.tsx` | Novo | Dashboard de rentabilidade por categoria |
+| `src/pages/CadastrosMetas.tsx` | Novo | Tela de cadastro de metas |
+| `src/pages/VendasNova.tsx` | Editar | Integrar PainelRentabilidadeVenda |
+| `src/pages/VendasConferenciaLancamento.tsx` | Editar | Adicionar painel de metas |
+| `src/pages/Vendas.tsx` | Editar | Adicionar colunas expandidas na tabela |
+| `src/components/layout/CadastrosLayout.tsx` | Editar | Adicionar tab "Metas" |
+| `src/App.tsx` | Editar | Adicionar rota /cadastros/metas |
 
 ### Ordem de Implementacao
 
-1. Persistencia localStorage (base para tudo)
-2. Correcoes PDF e Timeline (bugs atuais)
-3. Validacoes de status e alertas visuais
-4. Automacao de contatos ativos
-5. Fluxo de aprovacao de tratativas
+1. `calculoRentabilidadeVenda.ts` - base de calculos reutilizavel
+2. `PainelRentabilidadeVenda.tsx` + integracao com `VendasNova.tsx`
+3. `metasApi.ts` + `CadastrosMetas.tsx` + rotas
+4. Painel de metas em `VendasConferenciaLancamento.tsx`
+5. Colunas expandidas em `Vendas.tsx`
 
