@@ -1,83 +1,111 @@
 
 
-## Plano: Toggle Contas Financeiras + Evidencias OS + PIX no Financeiro
+## Plano: Modulo de Garantia - Persistencia localStorage + Correcoes PDF/Timeline + Regras de Negocio
 
-### 1. Toggle Habilitar/Desabilitar Contas Financeiras (2.1)
+### Escopo Geral
 
-**1.1 Modelo de Dados** - `src/utils/cadastrosApi.ts`
-- Adicionar campos a interface `ContaFinanceira`:
-  - `habilitada: boolean` (default `true`)
-  - `historicoAlteracoes?: { dataHora: string; usuario: string; statusAnterior: string; novoStatus: string; observacao?: string }[]`
-- Inicializar todas as 25 contas existentes com `habilitada: true` e `historicoAlteracoes: []`
-- Criar funcao `toggleContaFinanceira(id, usuario, observacao?)` que alterna o campo `habilitada` e registra no historico
-- Criar funcao `getContasFinanceirasHabilitadas()` que retorna somente contas com `habilitada !== false`
-
-**1.2 Interface** - `src/pages/CadastrosContasFinanceiras.tsx`
-- Importar `Switch` de `@/components/ui/switch` e icone `History` de lucide-react
-- Adicionar coluna "Habilitada" na tabela com Switch interativo (verde quando ativo, cinza quando inativo)
-- Ao clicar no Switch: abrir Dialog pedindo observacao opcional, usar `useAuthStore` para obter usuario, chamar `toggleContaFinanceira`
-- Contas desabilitadas: linha com `opacity-50` para diferenciacao visual
-- Adicionar botao "Historico" (icone History) na coluna de acoes que abre Dialog com timeline de alteracoes
-
-**1.3 Impacto nos selects de outros modulos**
-- Trocar `getContasFinanceiras()` por `getContasFinanceirasHabilitadas()` nos campos de selecao dos seguintes arquivos:
-  - `VendasNova.tsx`, `VendasFinalizarDigital.tsx`, `VendasAcessorios.tsx`
-  - `FinanceiroConferencia.tsx`, `FinanceiroConferenciaNotas.tsx`
-  - `FinanceiroPagamentosDowngrade.tsx`
-  - `FinanceiroNotasAssistencia.tsx`
-  - `PagamentoQuadro.tsx`
-  - `CadastrosMaquinas.tsx`
-  - `VendasEditarGestor.tsx`
-  - Demais telas com selects de contas
-- Telas de consulta/visualizacao (VendaResumoCompleto, etc.) mantem `getContasFinanceiras()` para exibir nomes mesmo de contas desabilitadas
+Refatorar o modulo de Garantia em 4 frentes: persistencia com localStorage, correcoes na Nota de Garantia (PDF), unificacao da timeline, e implementacao de regras de negocio (validacoes, automacao e fluxo de aprovacao).
 
 ---
 
-### 2. Documentacao de Evidencias na Finalizacao de OS (2.2)
+### 1. Persistencia com localStorage (`src/utils/garantiasApi.ts`)
 
-**2.1 Modelo de Dados** - `src/utils/assistenciaApi.ts`
-- Adicionar campo opcional a interface `OrdemServico`:
-  - `evidencias?: { nome: string; tipo: string; dataAnexo: string; usuario: string }[]`
+Todas as entidades do modulo (garantias, tratativas, timeline, contatos ativos, registros de analise) serao persistidas no localStorage. O padrao ja existe em outros modulos do sistema (ex: `gestaoAdministrativaApi.ts`, `whatsappNotificacaoApi.ts`).
 
-**2.2 Modal de Finalizacao** - `src/pages/OSAssistenciaDetalhes.tsx`
-- No modal "Confirmar Finalizacao do Servico" (linhas 1799-1860):
-  - Adicionar estado `evidenciasServico` com `useState<AnexoTemporario[]>([])`
-  - Inserir componente `BufferAnexos` (ja existente) com label "Anexar Evidencias do Servico (opcional)", limite 5 arquivos, 10MB cada
-  - No `handleConfirmarFinalizacao`: salvar evidencias na OS via `updateOrdemServico` e registrar na timeline ("Evidencia anexada: [nome]" para cada arquivo)
+**Acoes:**
+- Criar funcoes auxiliares `loadFromStorage(key, defaultData)` e `saveToStorage(key, data)` no topo do arquivo
+- Chaves: `garantias_data`, `tratativas_data`, `timeline_garantia_data`, `contatos_ativos_data`, `registros_analise_data`, `garantia_counter`, `tratativa_counter`, `timeline_counter`
+- Os dados mockados atuais serao usados como `defaultData` na primeira carga (quando nao ha dados no localStorage)
+- Toda funcao de escrita (`addGarantia`, `updateGarantia`, `addTratativa`, `updateTratativa`, `addTimelineEntry`, `addContatoAtivo`, `updateContatoAtivo`, `aprovarAnaliseGarantia`, `recusarAnaliseGarantia`, `encaminharParaAnaliseGarantia`) chamara `saveToStorage` apos modificar o array
+- Toda funcao de leitura (`getGarantias`, `getTratativas`, etc.) lera do array em memoria (ja carregado do localStorage na inicializacao)
+- Os contadores (`garantiaCounter`, `tratativaCounter`, `timelineCounter`) tambem serao persistidos
 
-**2.3 Edicao de OS** - `src/pages/OSAssistenciaEditar.tsx`
-- No card "Concluir Servico" (linhas 1036-1048): adicionar `BufferAnexos` antes do botao
-- Ao salvar com status "Servico concluido", persistir evidencias na OS
-
-**2.4 Visualizacao** - `src/pages/OSAssistenciaDetalhes.tsx`
-- Na secao de detalhes, adicionar card "Evidencias do Servico" quando `os.evidencias?.length > 0`, listando nome, data e usuario de cada arquivo
+**Arquivo:** `src/utils/garantiasApi.ts`
 
 ---
 
-### 3. Automacao PIX da Nota de Entrada no Financeiro (2.3)
+### 2. Correcoes na Nota de Garantia
 
-**3.1 Exibicao no Financeiro** - `src/pages/FinanceiroNotasPendencias.tsx`
-- Entre o `NotaDetalhesContent` e o quadro "Pagamento" (linha ~344), adicionar Card condicional:
-  - Visivel quando `notaSelecionada.formaPagamento === 'Pix'` e houver dados PIX (`pixBanco`, `pixRecebedor` ou `pixChave`)
-  - Estilo: borda azul (`border-blue-500/30`), background `bg-blue-500/5`, icone `Landmark`
-  - Exibe campos somente leitura: Banco, Recebedor, Chave PIX e Observacao em grid 2x2
-  - Titulo: "Instrucoes de Pagamento PIX"
-  - Subtitulo: "Dados transferidos automaticamente da Nota de Entrada"
+**2.1 Corrigir `entidadeTipo` na Timeline** - `src/pages/VendaDetalhes.tsx`
+- Linha 178: Mudar `entidadeTipo: 'OS' as any` para `entidadeTipo: 'Venda'`
+- Adicionar `'Venda'` ao tipo union de `entidadeTipo` em `src/utils/timelineApi.ts` na interface `TimelineEntry`
 
-**3.2 Modal de Pagamento** - `src/components/estoque/ModalFinalizarPagamento.tsx`
-- Receber prop opcional `dadosPix?: { banco: string; recebedor: string; chave: string; observacao?: string }`
-- Se presente, exibir banner informativo no topo do modal com os dados PIX pre-preenchidos
+**2.2 Corrigir mensagem da timeline** - `src/pages/VendaDetalhes.tsx`
+- Linha 181: Atualizar descricao para ser mais precisa sobre o que realmente acontece (imagens do termo de garantia anexadas como paginas adicionais)
+
+**2.3 Cabecalho dinamico** - `src/utils/gerarNotaGarantiaPdf.ts`
+- A funcao `getCabecalhoLoja` atualmente usa IDs hardcoded. Refatorar para buscar dados das lojas via `getLojaById` do `cadastrosApi.ts` como fallback, mantendo o mapeamento especifico para os dados fiscais (CNPJ, Razao Social) que nao existem no cadastro de lojas
+
+**2.4 Verificar anexo do Termo** - `src/utils/gerarNotaGarantiaPdf.ts`
+- Confirmar que as imagens `termo-garantia-p1.jpg` e `termo-garantia-p2.jpg` estao sendo carregadas e anexadas corretamente
+- Adicionar tratamento de erro mais robusto com feedback ao usuario caso as imagens nao carreguem
+
+**Arquivos:** `src/pages/VendaDetalhes.tsx`, `src/utils/timelineApi.ts`, `src/utils/gerarNotaGarantiaPdf.ts`
 
 ---
 
-### Resumo de arquivos a modificar
+### 3. Unificacao da Timeline
 
-1. `src/utils/cadastrosApi.ts` - interface + toggleContaFinanceira + getContasFinanceirasHabilitadas
-2. `src/pages/CadastrosContasFinanceiras.tsx` - Switch toggle + historico
-3. ~15 arquivos de selects - trocar para getContasFinanceirasHabilitadas
-4. `src/utils/assistenciaApi.ts` - campo evidencias na interface
-5. `src/pages/OSAssistenciaDetalhes.tsx` - BufferAnexos no modal + card de visualizacao
-6. `src/pages/OSAssistenciaEditar.tsx` - BufferAnexos no card de conclusao
-7. `src/pages/FinanceiroNotasPendencias.tsx` - Card PIX pre-preenchido
-8. `src/components/estoque/ModalFinalizarPagamento.tsx` - banner PIX
+**3.1 Expandir `TimelineEntry` em `timelineApi.ts`**
+- Adicionar `'Venda'` ao tipo union de `entidadeTipo`
+- Manter a interface `TimelineGarantia` em `garantiasApi.ts` como tipo interno para compatibilidade, mas todas as novas entradas usarao o sistema unificado
+
+**3.2 Migrar chamadas de timeline nas paginas de Garantia**
+- Em `GarantiasEmAndamento.tsx` (linhas 125-143): As chamadas a `addTimelineEntry` do garantiasApi continuam funcionando normalmente (timeline local da garantia). Adicionalmente, registrar na timeline unificada (`timelineApi.ts`) para rastreabilidade global
+- Em `GarantiaDetalhes.tsx`: Mesmo tratamento - manter timeline local e adicionar registro unificado
+- Em `processarTratativaGarantia`: Manter ambas timelines (local para exibicao na garantia, unificada para auditoria global)
+
+**Arquivos:** `src/utils/timelineApi.ts`, `src/utils/garantiasApi.ts`, `src/pages/GarantiasEmAndamento.tsx`, `src/pages/GarantiaDetalhes.tsx`
+
+---
+
+### 4. Regras de Negocio e Automacao
+
+**4.1 Validacao de Status para Tratativas** - `src/utils/garantiasApi.ts` e `src/pages/GarantiaDetalhes.tsx`
+- Na funcao `processarTratativaGarantia`: Adicionar validacao que impede abertura de tratativa se `garantia.status === 'Expirada'` ou `garantia.status === 'Concluída'`, retornando `{ sucesso: false, erro: 'Nao e possivel abrir tratativa para garantia expirada/concluida' }`
+- Em `GarantiaDetalhes.tsx`: Exibir alerta visual (`Alert` com icone `AlertTriangle`) quando `statusExpiracao.status === 'urgente'` ou `'atencao'`, com cor vermelha/amarela respectivamente
+- Desabilitar o formulario de nova tratativa quando garantia esta expirada ou concluida, com mensagem explicativa
+
+**4.2 Automacao de Contatos Ativos** - `src/utils/garantiasApi.ts`
+- Criar funcao `verificarEGerarContatosAutomaticos()` que:
+  - Busca garantias com `getGarantiasExpirandoEm30Dias()` e `getGarantiasExpirandoEm7Dias()`
+  - Para cada garantia sem contato ativo existente, gera automaticamente um `ContatoAtivoGarantia` com dados do cliente pre-preenchidos
+  - Marca com flag `autoGerado: true` para diferenciar dos manuais
+- Chamar esta funcao na inicializacao da pagina `GarantiaContatosAtivosNovo.tsx` e `GarantiaContatosAtivos.tsx` (via `useEffect`)
+- Adicionar campo `autoGerado?: boolean` na interface `ContatoAtivoGarantia`
+
+**4.3 Fluxo de Aprovacao de Tratativas** - `src/utils/garantiasApi.ts`, `src/pages/GarantiaDetalhes.tsx`, `src/pages/GarantiasEmAndamento.tsx`
+- Adicionar novos status a interface `TratativaGarantia`: `'Aguardando Aprovação' | 'Aprovada' | 'Recusada'` alem dos existentes
+- Na funcao `processarTratativaGarantia`: Para tratativas dos tipos `'Assistência + Empréstimo'` e `'Troca Direta'`, o status inicial sera `'Aguardando Aprovação'` em vez de `'Em Andamento'`. As acoes de estoque (emprestimo, reserva) so serao executadas apos aprovacao
+- Criar funcoes `aprovarTratativa(id, gestorId, gestorNome)` e `recusarTratativa(id, gestorId, gestorNome, motivo)` que:
+  - Alteram o status da tratativa
+  - Executam as acoes de estoque (se aprovada)
+  - Registram na timeline
+- Em `GarantiasEmAndamento.tsx`: Adicionar coluna "Aprovacao" na tabela. Tratativas com status `'Aguardando Aprovação'` exibem botoes "Aprovar" / "Recusar" para gestores
+- Badge visual diferenciado para tratativas pendentes de aprovacao (laranja)
+
+**Arquivos:** `src/utils/garantiasApi.ts`, `src/pages/GarantiaDetalhes.tsx`, `src/pages/GarantiasEmAndamento.tsx`, `src/pages/GarantiaContatosAtivosNovo.tsx`, `src/pages/GarantiaContatosAtivos.tsx`
+
+---
+
+### Resumo de Arquivos Afetados
+
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/utils/garantiasApi.ts` | localStorage, validacoes, aprovacao, contatos automaticos |
+| `src/utils/timelineApi.ts` | Adicionar 'Venda' ao entidadeTipo |
+| `src/utils/gerarNotaGarantiaPdf.ts` | Fallback dinamico no cabecalho, erro robusto no termo |
+| `src/pages/VendaDetalhes.tsx` | Corrigir entidadeTipo e descricao da timeline |
+| `src/pages/GarantiaDetalhes.tsx` | Alertas visuais, bloquear tratativa em expirada, aprovacao |
+| `src/pages/GarantiasEmAndamento.tsx` | Coluna aprovacao, timeline unificada |
+| `src/pages/GarantiaContatosAtivos.tsx` | useEffect para contatos automaticos |
+| `src/pages/GarantiaContatosAtivosNovo.tsx` | Contatos auto-gerados |
+
+### Ordem de Implementacao
+
+1. Persistencia localStorage (base para tudo)
+2. Correcoes PDF e Timeline (bugs atuais)
+3. Validacoes de status e alertas visuais
+4. Automacao de contatos ativos
+5. Fluxo de aprovacao de tratativas
 
