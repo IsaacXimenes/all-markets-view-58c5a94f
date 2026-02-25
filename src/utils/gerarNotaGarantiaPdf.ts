@@ -386,6 +386,20 @@ export const gerarNotaGarantiaPdf = async (venda: Venda) => {
     });
   }
 
+  // Garantia Estendida
+  if (venda.garantiaExtendida && venda.garantiaExtendida.valor > 0) {
+    const descGarantia = `Plano de Garantia Estendido - ${venda.garantiaExtendida.planoNome} (${venda.garantiaExtendida.meses} meses)`;
+    drawBox(prodColQtd, y, prodColQtdW, rowH);
+    drawBox(prodColDesc, y, prodColDescW, rowH);
+    drawBox(prodColTipo, y, prodColTipoW, rowH);
+    drawBox(prodColValor, y, prodColValorW, rowH);
+    doc.text('1', prodColQtd + 2, y + 5);
+    doc.text(descGarantia.substring(0, 70), prodColDesc + 2, y + 5);
+    doc.text('Garantia', prodColTipo + 2, y + 5);
+    doc.text(formatCurrency(venda.garantiaExtendida.valor), prodColValor + 2, y + 5);
+    y += rowH;
+  }
+
   // Total produtos
   drawBox(prodColQtd, y, prodColQtdW + prodColDescW + prodColTipoW, rowH);
   drawBox(prodColValor, y, prodColValorW, rowH);
