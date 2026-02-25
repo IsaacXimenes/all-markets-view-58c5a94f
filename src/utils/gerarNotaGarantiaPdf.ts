@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import { Venda } from './vendasApi';
 import { getClienteById, getLojaById, getColaboradorById } from './cadastrosApi';
+import { useCadastroStore } from '../store/cadastroStore';
 import { formatCurrency } from './formatUtils';
 import logoBase64Promise from './notaGarantiaLogo';
 
@@ -93,6 +94,20 @@ const loadImageAsBase64 = (url: string): Promise<string> => {
     img.onerror = reject;
     img.src = url;
   });
+};
+
+/** Resolve nome do motoboy por múltiplas fontes */
+const getNomeMotoboy = (motoboyId?: string): string => {
+  if (!motoboyId) return '-';
+
+  const colaboradorCadastros = getColaboradorById(motoboyId);
+  if (colaboradorCadastros?.nome) return colaboradorCadastros.nome;
+
+  const cadastroStore = useCadastroStore.getState();
+  const colaboradorStore = cadastroStore.obterColaboradorById(motoboyId);
+  if (colaboradorStore?.nome) return colaboradorStore.nome;
+
+  return motoboyId;
 };
 
 /**
@@ -330,9 +345,7 @@ export const gerarNotaGarantiaPdf = async (venda: Venda) => {
     const freteL2Col1W = contentWidth * 0.20;
     const freteL2Col2W = contentWidth * 0.80;
     drawField('TAXA DE ENTREGA', venda.taxaEntrega ? formatCurrency(venda.taxaEntrega) : 'Grátis', margin, y, freteL2Col1W, freteH);
-    const motoboyNome = venda.motoboyId
-      ? (getColaboradorById(venda.motoboyId)?.nome || venda.motoboyId)
-      : '-';
+    const motoboyNome = getNomeMotoboy(venda.motoboyId);
     drawField('MOTOBOY / OBSERVAÇÕES', motoboyNome, margin + freteL2Col1W, y, freteL2Col2W, freteH);
     y += freteH;
   }
