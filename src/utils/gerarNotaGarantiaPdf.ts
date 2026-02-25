@@ -10,15 +10,53 @@ const getLogoBase64 = async (): Promise<string> => {
 };
 
 /** Retorna cabeçalho condicional por loja */
-export const getCabecalhoLoja = (lojaId: string): { subtitulo: string; endereco: string } => {
-  const mapa: Record<string, { subtitulo: string; endereco: string }> = {
-    '3ac7e00c': { subtitulo: 'FEIRA DOS IMPORTADOS', endereco: 'BLOCO D, LOJA 433/434 – BRASÍLIA' },
-    'fcc78c1a': { subtitulo: 'FEIRA DOS IMPORTADOS', endereco: 'BLOCO D, LOJA 433/434 – BRASÍLIA' },
-    '5b9446d5': { subtitulo: 'SHOPPING SUL', endereco: 'BR-040 – PARQUE ESPLANADA III, VALPARAÍSO DE GOIÁS' },
-    '0d06e7db': { subtitulo: 'SHOPPING ÁGUAS LINDAS', endereco: 'BR-070 – MANSÕES CENTROESTE, ÁGUAS LINDAS DE GOIÁS' },
-    'db894e7d': { subtitulo: 'JK SHOPPING', endereco: 'ST. M NORTE QNM 34 ÁREA ESPECIAL 01 – TAGUATINGA' },
+interface DadosLoja {
+  subtitulo: string;
+  endereco: string;
+  razaoSocial: string;
+  cnpj: string;
+  cidade: string;
+  cep: string;
+}
+
+export const getCabecalhoLoja = (lojaId: string): DadosLoja => {
+  const padrao: DadosLoja = {
+    subtitulo: 'FEIRA DOS IMPORTADOS',
+    endereco: 'BLOCO D, LOJA 433/434 – BRASÍLIA',
+    razaoSocial: 'THIAGO IMPORTS',
+    cnpj: '46.197.533/0001-06',
+    cidade: 'BRASÍLIA',
+    cep: '71208-900',
   };
-  return mapa[lojaId] || { subtitulo: 'FEIRA DOS IMPORTADOS', endereco: 'BLOCO D, LOJA 433/434 – BRASÍLIA' };
+  const mapa: Record<string, DadosLoja> = {
+    '3ac7e00c': padrao,
+    'fcc78c1a': padrao,
+    '5b9446d5': {
+      subtitulo: 'SHOPPING SUL',
+      endereco: 'BR-040 – PARQUE ESPLANADA III, VALPARAÍSO DE GOIÁS',
+      razaoSocial: 'THIAGOIMPORTS',
+      cnpj: '55.449.390/0001-73',
+      cidade: 'VALPARAISO DE GOIAS',
+      cep: '72.876-902',
+    },
+    '0d06e7db': {
+      subtitulo: 'SHOPPING ÁGUAS LINDAS',
+      endereco: 'BR-070 – MANSÕES CENTROESTE, ÁGUAS LINDAS DE GOIÁS',
+      razaoSocial: 'THIAGOIMPORTS',
+      cnpj: '56.221.743/0001-46',
+      cidade: 'AGUAS LINDAS DE GOIAS',
+      cep: '72.915-705',
+    },
+    'db894e7d': {
+      subtitulo: 'JK SHOPPING',
+      endereco: 'ST. M NORTE QNM 34 ÁREA ESPECIAL 01 – TAGUATINGA',
+      razaoSocial: 'THIAGOIMPORTS',
+      cnpj: '62.968.637/0001-23',
+      cidade: 'BRASILIA',
+      cep: '72.145-450',
+    },
+  };
+  return mapa[lojaId] || padrao;
 };
 
 /** Carrega imagem como base64 data URL */
@@ -151,13 +189,13 @@ export const gerarNotaGarantiaPdf = async (venda: Venda) => {
   const col3 = col2 + col2W;
   const col3W = contentWidth * 0.25;
 
-  drawField('NOME / RAZÃO SOCIAL', 'THIAGO IMPORTS', col1, y, col1W, emitenteH);
-  drawField('CNPJ / CPF', '46.197.533/0001-06', col2, y, col2W, emitenteH);
+  drawField('NOME / RAZÃO SOCIAL', cabecalho.razaoSocial, col1, y, col1W, emitenteH);
+  drawField('CNPJ / CPF', cabecalho.cnpj, col2, y, col2W, emitenteH);
   drawField('EMAIL', 'acessoriathiagoimports@gmail.com', col3, y, col3W, emitenteH);
   y += emitenteH;
 
-  drawField('CIDADE', 'BRASÍLIA', col1, y, col1W, emitenteH);
-  drawField('CEP', '71208-900', col2, y, col2W, emitenteH);
+  drawField('CIDADE', cabecalho.cidade, col1, y, col1W, emitenteH);
+  drawField('CEP', cabecalho.cep, col2, y, col2W, emitenteH);
   drawField('DATA DA EMISSÃO', formatarData(venda.dataHora), col3, y, col3W, emitenteH);
   y += emitenteH;
 
