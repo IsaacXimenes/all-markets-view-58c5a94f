@@ -1,15 +1,14 @@
 import { useState, useMemo } from 'react';
 import { CadastrosLayout } from '@/components/layout/CadastrosLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Target } from 'lucide-react';
+import { Pencil, Trash2, Target, PlusCircle } from 'lucide-react';
 import { useCadastroStore } from '@/store/cadastroStore';
-import { getMetas, addMeta, updateMeta, deleteMeta, MetaLoja } from '@/utils/metasApi';
+import { getMetas, addMeta, updateMeta, deleteMeta, getMetaByLojaEMes, MetaLoja } from '@/utils/metasApi';
 import { PainelMetasLoja } from '@/components/vendas/PainelMetasLoja';
 import { formatarMoeda, parseMoeda, moedaMask } from '@/utils/formatUtils';
 import { toast } from 'sonner';
@@ -28,46 +27,46 @@ export default function CadastrosMetas() {
   const [metas, setMetas] = useState<MetaLoja[]>(getMetas());
   const [modalOpen, setModalOpen] = useState(false);
   const [editando, setEditando] = useState<MetaLoja | null>(null);
+  const [lojaIdModal, setLojaIdModal] = useState('');
+
+  // Filtros (apenas Mês e Ano)
+  const [filtroMes, setFiltroMes] = useState(String(new Date().getMonth() + 1));
+  const [filtroAno, setFiltroAno] = useState(String(anoAtual));
 
   // Form state
-  const [lojaId, setLojaId] = useState('');
-  const [mes, setMes] = useState(String(new Date().getMonth() + 1));
-  const [ano, setAno] = useState(String(anoAtual));
   const [metaFaturamento, setMetaFaturamento] = useState('');
   const [metaAcessorios, setMetaAcessorios] = useState('');
   const [metaGarantia, setMetaGarantia] = useState('');
 
-  // Filtros
-  const [filtroLoja, setFiltroLoja] = useState('');
-  const [filtroAno, setFiltroAno] = useState(String(anoAtual));
+  // Montar dados da tabela: uma linha por loja
+  const linhasTabela = useMemo(() => {
+    return lojas.map(loja => {
+      const meta = getMetaByLojaEMes(loja.id, Number(filtroMes), Number(filtroAno));
+      return { loja, meta };
+    });
+  }, [lojas, filtroMes, filtroAno, metas]);
 
-  const metasFiltradas = useMemo(() => {
-    return metas
-      .filter(m => !filtroLoja || m.lojaId === filtroLoja)
-      .filter(m => !filtroAno || String(m.ano) === filtroAno)
-      .sort((a, b) => a.mes - b.mes);
-  }, [metas, filtroLoja, filtroAno]);
+  const lojasComMeta = useMemo(() => {
+    return linhasTabela.filter(l => l.meta).map(l => l.loja.id);
+  }, [linhasTabela]);
 
   const resetForm = () => {
-    setLojaId('');
-    setMes(String(new Date().getMonth() + 1));
-    setAno(String(anoAtual));
     setMetaFaturamento('');
     setMetaAcessorios('');
     setMetaGarantia('');
     setEditando(null);
+    setLojaIdModal('');
   };
 
-  const abrirNovo = () => {
+  const abrirDefinir = (lojaId: string) => {
     resetForm();
+    setLojaIdModal(lojaId);
     setModalOpen(true);
   };
 
   const abrirEditar = (meta: MetaLoja) => {
     setEditando(meta);
-    setLojaId(meta.lojaId);
-    setMes(String(meta.mes));
-    setAno(String(meta.ano));
+    setLojaIdModal(meta.lojaId);
     setMetaFaturamento(formatarMoeda(meta.metaFaturamento));
     setMetaAcessorios(String(meta.metaAcessorios));
     setMetaGarantia(formatarMoeda(meta.metaGarantia));
@@ -75,15 +74,10 @@ export default function CadastrosMetas() {
   };
 
   const handleSalvar = () => {
-    if (!lojaId) {
-      toast.error('Selecione uma loja');
-      return;
-    }
-
     const data = {
-      lojaId,
-      mes: Number(mes),
-      ano: Number(ano),
+      lojaId: lojaIdModal,
+      mes: Number(filtroMes),
+      ano: Number(filtroAno),
       metaFaturamento: parseMoeda(metaFaturamento),
       metaAcessorios: Number(metaAcessorios) || 0,
       metaGarantia: parseMoeda(metaGarantia),
@@ -110,17 +104,16 @@ export default function CadastrosMetas() {
 
   return (
     <CadastrosLayout title="Metas por Loja" icon={Target}>
-      {/* Filtros */}
+      {/* Filtros: Mês e Ano */}
       <Card className="mb-6">
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-4 items-end">
-            <div className="min-w-[200px]">
-              <label className="text-sm font-medium mb-1 block">Loja</label>
-              <Select value={filtroLoja || 'all'} onValueChange={v => setFiltroLoja(v === 'all' ? '' : v)}>
-                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+            <div className="min-w-[160px]">
+              <label className="text-sm font-medium mb-1 block">Mês</label>
+              <Select value={filtroMes} onValueChange={setFiltroMes}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas as Lojas</SelectItem>
-                  {lojas.map(l => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}
+                  {MESES.map((nome, i) => <SelectItem key={i} value={String(i + 1)}>{nome}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -133,15 +126,11 @@ export default function CadastrosMetas() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={abrirNovo}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Meta
-            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Tabela */}
+      {/* Tabela: uma linha por loja */}
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -149,7 +138,6 @@ export default function CadastrosMetas() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Loja</TableHead>
-                  <TableHead>Mês/Ano</TableHead>
                   <TableHead className="text-right">Meta Faturamento</TableHead>
                   <TableHead className="text-right">Meta Acessórios (un.)</TableHead>
                   <TableHead className="text-right">Meta Garantia</TableHead>
@@ -157,23 +145,20 @@ export default function CadastrosMetas() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {metasFiltradas.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                      Nenhuma meta cadastrada para o período selecionado.
+                {linhasTabela.map(({ loja, meta }) => (
+                  <TableRow key={loja.id}>
+                    <TableCell className="font-medium">{loja.nome}</TableCell>
+                    <TableCell className="text-right">
+                      {meta ? formatarMoeda(meta.metaFaturamento) : <span className="text-muted-foreground">-</span>}
                     </TableCell>
-                  </TableRow>
-                ) : (
-                  metasFiltradas.map(meta => (
-                    <TableRow key={meta.id}>
-                      <TableCell className="font-medium">{obterNomeLoja(meta.lojaId)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{MESES[meta.mes - 1]} {meta.ano}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">{formatarMoeda(meta.metaFaturamento)}</TableCell>
-                      <TableCell className="text-right">{meta.metaAcessorios}</TableCell>
-                      <TableCell className="text-right">{formatarMoeda(meta.metaGarantia)}</TableCell>
-                      <TableCell className="text-center">
+                    <TableCell className="text-right">
+                      {meta ? meta.metaAcessorios : <span className="text-muted-foreground">-</span>}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {meta ? formatarMoeda(meta.metaGarantia) : <span className="text-muted-foreground">-</span>}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {meta ? (
                         <div className="flex justify-center gap-1">
                           <Button variant="ghost" size="icon" onClick={() => abrirEditar(meta)}>
                             <Pencil className="h-4 w-4" />
@@ -182,10 +167,15 @@ export default function CadastrosMetas() {
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
+                      ) : (
+                        <Button variant="outline" size="sm" onClick={() => abrirDefinir(loja.id)}>
+                          <PlusCircle className="h-4 w-4 mr-1" />
+                          Definir
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
@@ -193,54 +183,23 @@ export default function CadastrosMetas() {
       </Card>
 
       {/* Painéis visuais de metas */}
-      {(() => {
-        const lojasComMeta = [...new Set(metasFiltradas.map(m => m.lojaId))];
-        if (lojasComMeta.length === 0) return null;
-        return (
-          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {lojasComMeta.map(lojaId => (
-              <PainelMetasLoja key={lojaId} lojaId={lojaId} />
-            ))}
-          </div>
-        );
-      })()}
+      {lojasComMeta.length > 0 && (
+        <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {lojasComMeta.map(lojaId => (
+            <PainelMetasLoja key={lojaId} lojaId={lojaId} />
+          ))}
+        </div>
+      )}
 
-      {/* Modal */}
+      {/* Modal sem campo Loja */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editando ? 'Editar Meta' : 'Nova Meta'}</DialogTitle>
+            <DialogTitle>
+              {editando ? 'Editar Meta' : 'Definir Meta'} — {obterNomeLoja(lojaIdModal)} ({MESES[Number(filtroMes) - 1]} {filtroAno})
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-1 block">Loja *</label>
-              <Select value={lojaId} onValueChange={setLojaId}>
-                <SelectTrigger><SelectValue placeholder="Selecione a loja" /></SelectTrigger>
-                <SelectContent>
-                  {lojas.map(l => <SelectItem key={l.id} value={l.id}>{l.nome}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium mb-1 block">Mês</label>
-                <Select value={mes} onValueChange={setMes}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {MESES.map((nome, i) => <SelectItem key={i} value={String(i + 1)}>{nome}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Ano</label>
-                <Select value={ano} onValueChange={setAno}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {ANOS.map(a => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
             <div>
               <label className="text-sm font-medium mb-1 block">Meta Faturamento (R$)</label>
               <Input

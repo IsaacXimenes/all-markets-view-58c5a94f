@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { CreditCard, Plus, X, AlertTriangle, DollarSign, TrendingUp, Percent, Store } from 'lucide-react';
+import { CreditCard, Plus, X, Pencil, AlertTriangle, DollarSign, TrendingUp, Percent, Store } from 'lucide-react';
 import { getContasFinanceirasHabilitadas, getMaquinasCartao, ContaFinanceira, MaquinaCartao } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { Pagamento } from '@/utils/vendasApi';
@@ -94,6 +94,7 @@ export function PagamentoQuadro({
   const [pagamentos, setPagamentos] = useState<Pagamento[]>(pagamentosIniciais);
   const [showPagamentoModal, setShowPagamentoModal] = useState(false);
   const [novoPagamento, setNovoPagamento] = useState<NovoPagamentoState>({});
+  const [editandoPagamentoId, setEditandoPagamentoId] = useState<string | null>(null);
   
   // Sincronizar pagamentos iniciais quando o componente recebe novos valores iniciais
   // Usa o ID do primeiro pagamento como "key" para detectar mudanças relevantes
@@ -160,6 +161,27 @@ export function PagamentoQuadro({
 
   const handleOpenPagamentoModal = () => {
     setNovoPagamento({});
+    setEditandoPagamentoId(null);
+    setShowPagamentoModal(true);
+  };
+
+  const handleEditarPagamento = (pag: Pagamento) => {
+    setEditandoPagamentoId(pag.id);
+    setNovoPagamento({
+      meioPagamento: pag.meioPagamento,
+      valor: pag.valor,
+      contaDestino: pag.contaDestino,
+      parcelas: pag.parcelas,
+      descricao: pag.descricao,
+      isFiado: pag.isFiado,
+      fiadoDataBase: pag.fiadoDataBase,
+      fiadoNumeroParcelas: pag.fiadoNumeroParcelas,
+      taxaCartao: pag.taxaCartao,
+      valorLiquido: pag.valor - (pag.taxaCartao || 0),
+      maquinaId: pag.maquinaId,
+      comprovante: pag.comprovante,
+      comprovanteNome: pag.comprovanteNome
+    });
     setShowPagamentoModal(true);
   };
 
@@ -362,10 +384,17 @@ export function PagamentoQuadro({
       comprovanteNome: novoPagamento.comprovanteNome
     };
     
-    setPagamentos([...pagamentos, pagamento]);
+    if (editandoPagamentoId) {
+      // Substituir pagamento existente
+      setPagamentos(pagamentos.map(p => p.id === editandoPagamentoId ? pagamento : p));
+      toast.success('Pagamento atualizado');
+    } else {
+      setPagamentos([...pagamentos, pagamento]);
+      toast.success('Pagamento adicionado');
+    }
     setShowPagamentoModal(false);
     setNovoPagamento({});
-    toast.success('Pagamento adicionado');
+    setEditandoPagamentoId(null);
   };
 
   const handleRemovePagamento = (pagamentoId: string) => {
@@ -442,13 +471,22 @@ export function PagamentoQuadro({
                         <ComprovantePreview comprovante={pag.comprovante} comprovanteNome={pag.comprovanteNome} />
                       </TableCell>
                       <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleRemovePagamento(pag.id)}
-                        >
-                          <X className="h-4 w-4 text-destructive" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleEditarPagamento(pag)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleRemovePagamento(pag.id)}
+                          >
+                            <X className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
