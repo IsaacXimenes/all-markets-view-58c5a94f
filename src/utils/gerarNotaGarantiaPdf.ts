@@ -400,6 +400,22 @@ export const gerarNotaGarantiaPdf = async (venda: Venda) => {
     y += rowH;
   }
 
+  // Base de Troca (Trade-In)
+  if (venda.tradeIns && venda.tradeIns.length > 0) {
+    venda.tradeIns.forEach(tradeIn => {
+      const descTradeIn = `Aparelho de Troca - ${tradeIn.modelo}${tradeIn.descricao ? ' (' + tradeIn.descricao + ')' : ''} - IMEI: ${tradeIn.imei}`;
+      drawBox(prodColQtd, y, prodColQtdW, rowH);
+      drawBox(prodColDesc, y, prodColDescW, rowH);
+      drawBox(prodColTipo, y, prodColTipoW, rowH);
+      drawBox(prodColValor, y, prodColValorW, rowH);
+      doc.text('1', prodColQtd + 2, y + 5);
+      doc.text(descTradeIn.substring(0, 70), prodColDesc + 2, y + 5);
+      doc.text('Base de Troca', prodColTipo + 2, y + 5);
+      doc.text('- ' + formatCurrency(tradeIn.valorCompraUsado), prodColValor + 2, y + 5);
+      y += rowH;
+    });
+  }
+
   // Total produtos
   drawBox(prodColQtd, y, prodColQtdW + prodColDescW + prodColTipoW, rowH);
   drawBox(prodColValor, y, prodColValorW, rowH);
