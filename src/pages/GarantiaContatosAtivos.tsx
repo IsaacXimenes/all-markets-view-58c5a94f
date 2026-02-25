@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GarantiasLayout } from '@/components/layout/GarantiasLayout';
 import { Button } from '@/components/ui/button';
@@ -14,13 +14,18 @@ import { exportToCSV } from '@/utils/formatUtils';
 import { format } from 'date-fns';
 import { formatCurrency } from '@/utils/planosGarantiaApi';
 
-import { getContatosAtivos, ContatoAtivoGarantia } from '@/utils/garantiasApi';
+import { getContatosAtivos, verificarEGerarContatosAutomaticos, ContatoAtivoGarantia } from '@/utils/garantiasApi';
 
 export default function GarantiaContatosAtivos() {
   const navigate = useNavigate();
   
   // Estados
-  const [contatos, setContatos] = useState<ContatoAtivoGarantia[]>(getContatosAtivos());
+  const [contatos, setContatos] = useState<ContatoAtivoGarantia[]>([]);
+  
+  useEffect(() => {
+    verificarEGerarContatosAutomaticos();
+    setContatos(getContatosAtivos());
+  }, []);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
   const [contatoSelecionado, setContatoSelecionado] = useState<ContatoAtivoGarantia | null>(null);
   

@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import { Venda } from './vendasApi';
-import { getClienteById } from './cadastrosApi';
+import { getClienteById, getLojaById } from './cadastrosApi';
 import { formatCurrency } from './formatUtils';
 import logoBase64Promise from './notaGarantiaLogo';
 
@@ -28,7 +28,8 @@ export const getCabecalhoLoja = (lojaId: string): DadosLoja => {
     cidade: 'BRASÍLIA',
     cep: '71208-900',
   };
-  const mapa: Record<string, DadosLoja> = {
+  // Dados fiscais específicos por loja (CNPJ, Razão Social não existem no cadastro)
+  const dadosFiscais: Record<string, DadosLoja> = {
     '3ac7e00c': padrao,
     'fcc78c1a': padrao,
     '5b9446d5': {
@@ -56,7 +57,24 @@ export const getCabecalhoLoja = (lojaId: string): DadosLoja => {
       cep: '72.145-450',
     },
   };
-  return mapa[lojaId] || padrao;
+
+  // Primeiro tentar dados fiscais hardcoded
+  if (dadosFiscais[lojaId]) return dadosFiscais[lojaId];
+
+  // Fallback: buscar dados dinâmicos do cadastro de lojas
+  const lojaCadastro = getLojaById(lojaId);
+  if (lojaCadastro) {
+    return {
+      subtitulo: lojaCadastro.nome.toUpperCase(),
+      endereco: lojaCadastro.endereco?.toUpperCase() || padrao.endereco,
+      razaoSocial: padrao.razaoSocial,
+      cnpj: padrao.cnpj,
+      cidade: lojaCadastro.cidade?.toUpperCase() || padrao.cidade,
+      cep: lojaCadastro.cep || padrao.cep,
+    };
+  }
+
+  return padrao;
 };
 
 /** Carrega imagem como base64 data URL */
@@ -414,6 +432,7 @@ export const gerarNotaGarantiaPdf = async (venda: Venda) => {
   doc.text('Sistema: Thiago Imports', margin + contentWidth - 40, y + 4);
 
   // Anexar páginas do Termo de Garantia
+  let termoAnexado = false;
   try {
     const [p1Data, p2Data] = await Promise.all([
       loadImageAsBase64('/docs/termo-garantia-p1.jpg'),
@@ -421,12 +440,29 @@ export const gerarNotaGarantiaPdf = async (venda: Venda) => {
     ]);
     const pageW = 210;
     const pageH = 297;
+    if (p1Data) {
+      doc.addPage('a4', 'p');
+      doc.addImage(p1Data, 'JPEG', 0, 0, pageW, pageH);
+    }
+    if (p2Data) {
+      doc.addPage('a4', 'p');
+      doc.addImage(p2Data, 'JPEG', 0, 0, pageW, pageH);
+    }
+    termoAnexado = !!(p1Data && p2Data);
+  } catch (err) {
+    console.warn('Não foi possível anexar o Termo de Garantia ao PDF.', err);
+  }
+
+  if (!termoAnexado) {
+    // Adicionar página de aviso caso as imagens não carreguem
     doc.addPage('a4', 'p');
-    doc.addImage(p1Data, 'JPEG', 0, 0, pageW, pageH);
-    doc.addPage('a4', 'p');
-    doc.addImage(p2Data, 'JPEG', 0, 0, pageW, pageH);
-  } catch {
-    console.warn('Não foi possível anexar o Termo de Garantia ao PDF.');
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('AVISO: Termo de Garantia não disponível', 20, 40);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('As imagens do Termo de Garantia não puderam ser carregadas.', 20, 55);
+    doc.text('Consulte a versão impressa do termo disponível na loja.', 20, 65);
   }
 
   // Abrir em nova aba

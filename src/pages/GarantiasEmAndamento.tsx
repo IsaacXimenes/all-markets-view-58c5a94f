@@ -11,13 +11,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { 
-  Eye, Clock, Package, Smartphone, Wrench, AlertTriangle, CheckCircle, Download, Filter, X
+  Eye, Clock, Package, Smartphone, Wrench, AlertTriangle, CheckCircle, Download, Filter, X, ThumbsUp, ThumbsDown
 } from 'lucide-react';
 import { exportToCSV, formatCurrency } from '@/utils/formatUtils';
 import {
   getGarantiasEmAndamento, getTratativas, updateTratativa, updateGarantia,
-  addTimelineEntry, getContadoresGarantia, GarantiaItem, TratativaGarantia
+  addTimelineEntry, getContadoresGarantia, GarantiaItem, TratativaGarantia,
+  aprovarTratativa, recusarTratativa
 } from '@/utils/garantiasApi';
+import { Textarea } from '@/components/ui/textarea';
 import { getClientes, getLojas } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { format, differenceInDays } from 'date-fns';
@@ -47,11 +49,17 @@ export default function GarantiasEmAndamento() {
   const [tratativaSelecionada, setTratativaSelecionada] = useState<TratativaGarantia | null>(null);
   const [garantiaParaDevolucao, setGarantiaParaDevolucao] = useState<GarantiaItem | null>(null);
   
+  // Modal recusa
+  const [showRecusaModal, setShowRecusaModal] = useState(false);
+  const [tratativaParaRecusa, setTratativaParaRecusa] = useState<TratativaGarantia | null>(null);
+  const [motivoRecusa, setMotivoRecusa] = useState('');
+  
   // Montar dados da tabela
   const dadosTabela = useMemo(() => {
     return garantiasEmAndamento.map(garantia => {
-      const tratativas = todasTratativas.filter(t => t.garantiaId === garantia.id && t.status === 'Em Andamento');
-      const ultimaTratativa = tratativas[tratativas.length - 1];
+      const tratativasGarantia = todasTratativas.filter(t => t.garantiaId === garantia.id && 
+        (t.status === 'Em Andamento' || t.status === 'Aguardando Aprovação'));
+      const ultimaTratativa = tratativasGarantia[tratativasGarantia.length - 1];
       const diasAberto = ultimaTratativa 
         ? differenceInDays(new Date(), new Date(ultimaTratativa.dataHora))
         : 0;
@@ -148,6 +156,30 @@ export default function GarantiasEmAndamento() {
     setGarantiaParaDevolucao(null);
   };
   
+  const handleAprovarTratativa = (tratativa: TratativaGarantia) => {
+    const resultado = aprovarTratativa(tratativa.id, 'COL-001', 'Gestor Sistema');
+    if (resultado.sucesso) {
+      toast.success('Tratativa aprovada! Ações de estoque executadas.');
+      window.location.reload();
+    } else {
+      toast.error(resultado.erro || 'Erro ao aprovar');
+    }
+  };
+
+  const handleRecusarTratativa = () => {
+    if (!tratativaParaRecusa || !motivoRecusa) return;
+    const resultado = recusarTratativa(tratativaParaRecusa.id, 'COL-001', 'Gestor Sistema', motivoRecusa);
+    if (resultado.sucesso) {
+      toast.success('Tratativa recusada.');
+      setShowRecusaModal(false);
+      setTratativaParaRecusa(null);
+      setMotivoRecusa('');
+      window.location.reload();
+    } else {
+      toast.error(resultado.erro || 'Erro ao recusar');
+    }
+  };
+
   const abrirModalDevolucao = (garantia: GarantiaItem, tratativa: TratativaGarantia) => {
     setGarantiaParaDevolucao(garantia);
     setTratativaSelecionada(tratativa);
@@ -314,6 +346,7 @@ export default function GarantiasEmAndamento() {
                     <TableHead>Modelo</TableHead>
                     <TableHead>IMEI</TableHead>
                     <TableHead>Tipo Tratativa</TableHead>
+                    <TableHead>Aprovação</TableHead>
                     <TableHead>Dias</TableHead>
                     <TableHead>Ações</TableHead>
                   </TableRow>
@@ -321,7 +354,7 @@ export default function GarantiasEmAndamento() {
                 <TableBody>
                   {dadosFiltrados.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                         Nenhuma garantia em andamento
                       </TableCell>
                     </TableRow>
@@ -338,7 +371,40 @@ export default function GarantiasEmAndamento() {
                           <TableCell>{garantia.modelo}</TableCell>
                           <TableCell className="font-mono text-xs">{garantia.imei}</TableCell>
                           <TableCell>
-                          <Badge variant="outline">{tratativa?.tipo || '-'}</Badge>
+                          <Badge variant="outline" className={tratativa?.status === 'Aguardando Aprovação' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-amber-300' : ''}>
+                            {tratativa?.tipo || '-'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {tratativa?.status === 'Aguardando Aprovação' ? (
+                            <div className="flex gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="text-green-600 hover:bg-green-50"
+                                onClick={() => handleAprovarTratativa(tratativa)}
+                                title="Aprovar tratativa"
+                              >
+                                <ThumbsUp className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="text-red-600 hover:bg-red-50"
+                                onClick={() => {
+                                  setTratativaParaRecusa(tratativa);
+                                  setShowRecusaModal(true);
+                                }}
+                                title="Recusar tratativa"
+                              >
+                                <ThumbsDown className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">
+                              {tratativa?.status === 'Em Andamento' ? 'Aprovada' : '-'}
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant={diasAberto > 7 ? 'destructive' : diasAberto > 3 ? 'secondary' : 'default'}>
@@ -421,6 +487,37 @@ export default function GarantiasEmAndamento() {
             </Button>
             <Button onClick={handleDevolucao}>
               Confirmar Devolução
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Recusa de Tratativa */}
+      <Dialog open={showRecusaModal} onOpenChange={setShowRecusaModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Recusar Tratativa</DialogTitle>
+            <DialogDescription>
+              Informe o motivo da recusa da tratativa
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Motivo da Recusa *</Label>
+              <Textarea 
+                placeholder="Descreva o motivo da recusa..."
+                value={motivoRecusa}
+                onChange={(e) => setMotivoRecusa(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowRecusaModal(false); setMotivoRecusa(''); }}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleRecusarTratativa} disabled={!motivoRecusa}>
+              Confirmar Recusa
             </Button>
           </DialogFooter>
         </DialogContent>

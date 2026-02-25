@@ -175,10 +175,10 @@ export default function VendaDetalhes() {
                 const authUser = useAuthStore.getState().user;
                 addTimelineEntry({
                   entidadeId: venda.id,
-                  entidadeTipo: 'OS' as any,
+                  entidadeTipo: 'Venda',
                   tipo: 'nota_garantia',
                   titulo: 'Nota de Garantia gerada',
-                  descricao: `Cabeçalho: ${cab.subtitulo} – ${cab.endereco}. Termo de Garantia anexado ao PDF.`,
+                  descricao: `Cabeçalho: ${cab.subtitulo} – ${cab.endereco}. Imagens do Termo de Garantia anexadas como páginas adicionais ao PDF.`,
                   dataHora: new Date().toISOString(),
                   usuarioId: authUser?.colaborador?.id || 'sistema',
                   usuarioNome: authUser?.colaborador?.nome || 'Sistema',
