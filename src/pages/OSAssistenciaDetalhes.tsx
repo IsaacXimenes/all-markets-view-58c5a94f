@@ -15,6 +15,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useAuthStore } from '@/store/authStore';
 import { ComprovantePreview } from '@/components/vendas/ComprovantePreview';
+import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { 
   getOrdemServicoById, 
   formatCurrency, 
@@ -85,6 +86,8 @@ export default function OSAssistenciaDetalhes() {
   const [finalizacaoConfirmada, setFinalizacaoConfirmada] = useState(false);
   const [checkFinalizacao, setCheckFinalizacao] = useState(false);
   const [resumoConclusao, setResumoConclusao] = useState('');
+  const [evidenciaComprovante, setEvidenciaComprovante] = useState('');
+  const [evidenciaNome, setEvidenciaNome] = useState('');
 
   const { user } = useAuthStore();
 
@@ -1837,32 +1840,17 @@ ${os.descricao ? `\nDescrição:\n${os.descricao}` : ''}
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">Anexar Evidências do Serviço (opcional)</label>
-              <div className="mt-1">
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*,.pdf,.doc,.docx"
-                  onChange={(e) => {
-                    const files = e.target.files;
-                    if (!files) return;
-                    // Store file names for timeline registration
-                    const nomes: string[] = [];
-                    for (let i = 0; i < files.length; i++) {
-                      if (files[i].size > 10 * 1024 * 1024) {
-                        toast.error(`Arquivo ${files[i].name} excede 10MB`);
-                        continue;
-                      }
-                      nomes.push(files[i].name);
-                    }
-                    // Store in a data attribute for later use
-                    (e.target as any)._evidenciaNomes = nomes;
-                  }}
-                  className="text-sm"
-                  id="evidencias-finalizacao"
-                />
-                <p className="text-xs text-muted-foreground mt-1">Máx. 5 arquivos, 10MB cada (PDF, JPG, PNG, DOCX)</p>
-              </div>
+              <FileUploadComprovante
+                label="Anexar Evidências do Serviço (opcional)"
+                value={evidenciaComprovante}
+                fileName={evidenciaNome}
+                onFileChange={({ comprovante, comprovanteNome }) => {
+                  setEvidenciaComprovante(comprovante);
+                  setEvidenciaNome(comprovanteNome);
+                }}
+                acceptedTypes={['image/jpeg', 'image/png', 'image/webp', 'application/pdf']}
+                maxSizeMB={10}
+              />
             </div>
             <div className="flex items-center gap-2 pt-2">
               <Checkbox
