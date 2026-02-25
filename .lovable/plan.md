@@ -1,45 +1,26 @@
 
 
-## Plano: Reformular Tabela de Metas + Botao Editar no Quadro de Pagamentos
+## Plano: Meta Acessorios em R$ + Ocultar Resumo na Nova Venda
 
-### 1. Reformular Tabela de Metas (`src/pages/CadastrosMetas.tsx`)
+### 1. Meta Acessorios passa de unidades para R$ 
 
-**Problema atual**: A tabela mostra apenas metas ja cadastradas, com coluna "Loja" generica. O usuario quer ver **uma linha por loja cadastrada** (do tipo "Loja"), independente de ter meta ou nao.
+**Arquivos afetados**: `src/pages/CadastrosMetas.tsx`, `src/utils/metasApi.ts`, `src/components/vendas/PainelMetasLoja.tsx` (se exibir meta de acessorios)
 
-**Nova abordagem**:
-- Remover filtro de Loja (desnecessario, todas aparecem sempre)
-- Manter filtros de Mes e Ano
-- A tabela tera uma linha fixa para cada loja retornada por `obterLojasTipoLoja()`
-- Para cada loja, buscar a meta correspondente ao mes/ano selecionado via `getMetaByLojaEMes()`
-- Se a meta existir, exibir os valores; se nao, exibir campos vazios/zerados
-- Os botoes Editar/Excluir ficam na coluna de acoes
-- Se nao houver meta, mostrar botao "Definir" que abre o modal pre-preenchido com a loja
-- Remover o botao "Nova Meta" generico e o campo "Loja" do modal (a loja vem da linha clicada)
-- A coluna "Mes/Ano" sai da tabela (ja esta nos filtros acima)
+Alteracoes:
 
-**Estrutura da tabela**:
+- **Tabela** (`CadastrosMetas.tsx` linha 142): Trocar header "Meta Acessorios (un.)" para "Meta Acessorios"
+- **Tabela** (linha 154-155): Exibir `formatarMoeda(meta.metaAcessorios)` ao inves do numero puro
+- **Modal** (linhas 211-218): Trocar label "Meta Acessorios (unidades)" para "Meta Acessorios (R$)", trocar `type="number"` por input com `moedaMask`, e usar `parseMoeda` no handleSalvar
+- **Editar** (linha 71): No `abrirEditar`, setar `setMetaAcessorios(formatarMoeda(meta.metaAcessorios))` ao inves de `String(meta.metaAcessorios)`
+- **Salvar** (linha 82): Trocar `Number(metaAcessorios) || 0` por `parseMoeda(metaAcessorios)`
+- **Defaults** (`metasApi.ts` linhas 25-45): Atualizar valores default de `metaAcessorios` de unidades (80, 60, 100) para valores em reais (ex: 5000, 3500, 8000)
+- **PainelMetasLoja**: Ajustar exibicao para formatar como moeda ao inves de unidades
 
-| Loja | Meta Faturamento | Meta Acessorios (un.) | Meta Garantia | Acoes |
-|------|------------------|-----------------------|---------------|-------|
-| Centro | R$ 150.000 | 80 | R$ 12.000 | Editar / Excluir |
-| Norte | R$ 120.000 | 60 | R$ 8.000 | Editar / Excluir |
-| Online | - | - | - | Definir |
+### 2. Ocultar o card "Resumo" na Nova Venda
 
-### 2. Botao Editar no Quadro de Pagamentos (`src/components/vendas/PagamentoQuadro.tsx`)
+**Arquivo afetado**: `src/pages/VendasNova.tsx`
 
-**Problema atual**: Cada pagamento tem apenas o botao de remover (X). Nao ha como editar um registro ja lancado.
-
-**Solucao**:
-- Adicionar estado `editandoPagamentoId` para rastrear qual pagamento esta sendo editado
-- Adicionar botao de editar (icone Pencil) ao lado do botao de remover na tabela
-- Ao clicar em Editar, abrir o mesmo modal de pagamento pre-preenchido com os dados do pagamento selecionado
-- No `handleAddPagamento`, se `editandoPagamentoId` estiver setado, substituir o pagamento existente ao inves de adicionar um novo
-- Resetar `editandoPagamentoId` ao fechar o modal
-
-### Arquivos afetados
-
-| Arquivo | Alteracao |
-|---------|-----------|
-| `src/pages/CadastrosMetas.tsx` | Reformular tabela para exibir uma linha por loja, remover filtro de loja, ajustar modal para nao ter campo loja |
-| `src/components/vendas/PagamentoQuadro.tsx` | Adicionar estado e logica de edicao de pagamento, botao Pencil na tabela |
+- Envolver o bloco do Resumo (linhas 2283-2449, o Card inteiro com header "Resumo") com `{false && (...)}`  ou adicionar `hidden` / comentario condicional
+- O Painel de Rentabilidade (linha 2451) permanece visivel
+- Nao excluir o codigo, apenas ocultar da renderizacao
 
