@@ -1,139 +1,85 @@
 
-## Plano: Toggle Contas Financeiras + Evidencias OS + PIX Automatico no Financeiro
 
-### 1. Toggle Habilitar/Desabilitar Contas Financeiras com Historico (2.1)
+## Plano: Cabecalho Condicional na Nota de Garantia + Anexo PDF Fixo
 
-**Arquivo:** `src/utils/cadastrosApi.ts`
-- Adicionar campo `habilitada: boolean` (default `true`) a interface `ContaFinanceira`
-- Adicionar campo `historicoAlteracoes?: { dataHora: string; usuario: string; statusAnterior: string; novoStatus: string; observacao?: string }[]` a interface `ContaFinanceira`
-- Inicializar todas as contas existentes com `habilitada: true` e `historicoAlteracoes: []`
-- Criar funcao `toggleContaFinanceira(id: string, usuario: string, observacao?: string)` que alterna `habilitada`, registra no historico e retorna a conta atualizada
-- Criar funcao `getContasFinanceirasHabilitadas()` que retorna apenas contas com `habilitada === true` (para uso nos selects de outros modulos)
+### Contexto
+A Nota de Garantia gerada pelo sistema atualmente usa um cabecalho fixo ("THIAGO IMPORTS / FEIRA DOS IMPORTADOS / BLOCO D, LOJA 433/434 - BRASILIA"). O cabecalho precisa variar conforme a loja da venda, e o PDF do Termo de Garantia (arquivo enviado pelo usuario) deve ser anexado automaticamente como segunda pagina.
 
-**Arquivo:** `src/pages/CadastrosContasFinanceiras.tsx`
-- Importar componente `Switch` de `@/components/ui/switch`
-- Substituir a coluna "Status" (Ativo/Inativo) por coluna "Habilitada" com um Switch interativo
-- Ao clicar no Switch, abrir modal pedindo observacao opcional, registrar usuario logado via `useAuthStore`, chamar `toggleContaFinanceira`
-- Contas desabilitadas: linha com `opacity-50` e texto cinza claro
-- Adicionar botao "Historico" (icone History) na coluna de acoes que abre Dialog com timeline de alteracoes da conta
-- Manter coluna "Status" original (Ativo/Inativo) separada, pois sao conceitos diferentes
+### 1. Copiar o PDF do Termo de Garantia para o projeto
 
-**Impacto nos outros modulos (selects de conta):**
-- Em todos os arquivos que usam `getContasFinanceiras()` para popular selects (27 arquivos encontrados), trocar para `getContasFinanceirasHabilitadas()` nos campos de selecao. Os principais sao:
-  - `src/pages/CadastrosMaquinas.tsx` (linha 60)
-  - `src/pages/VendasEditarGestor.tsx` (linha 57)
-  - `src/pages/FinanceiroConferencia.tsx` (linha 126)
-  - `src/components/vendas/PagamentoQuadro.tsx`
-  - `src/pages/FinanceiroContas.tsx`
-  - Outros modulos que montam selects de conta financeira
-- Em telas de consulta/visualizacao (VendaResumoCompleto, etc.), manter `getContasFinanceiras()` para exibir o nome mesmo de contas desabilitadas
+- Copiar o arquivo `Recibo_Modelo_-_Garantia.pdf` para `public/docs/termo-garantia.pdf`
+- Ficara acessivel via URL estatica para ser carregado em runtime
 
----
+### 2. Cabecalho condicional por loja (`src/utils/gerarNotaGarantiaPdf.ts`)
 
-### 2. Upload de Evidencias na Finalizacao de Servico da OS (2.2)
+Substituir o bloco fixo de cabecalho (linhas 88-99) por logica condicional baseada em `venda.lojaVenda`:
 
-**Arquivo:** `src/pages/OSAssistenciaDetalhes.tsx`
-- No modal "Confirmar Finalizacao do Servico" (linhas 1799-1860), adicionar campo `BufferAnexos` (componente ja existente em `src/components/estoque/BufferAnexos.tsx`) com label "Anexar Evidencias do Servico (opcional)"
-- Limite: 5 arquivos, 10MB cada
-- Estado: `const [evidenciasServico, setEvidenciasServico] = useState<AnexoTemporario[]>([])`
-- No `handleConfirmarFinalizacao`, salvar as evidencias na OS via `updateOrdemServico` (novo campo `evidencias?: { nome: string; tipo: string; dataAnexo: string; usuario: string }[]`)
-- Registrar na timeline: "Evidencia anexada: [nome do arquivo]" para cada arquivo
+```text
+Mapeamento loja -> cabecalho:
 
-**Arquivo:** `src/pages/OSAssistenciaEditar.tsx`
-- No card "Concluir Servico" (linhas 1036-1048), adicionar campo similar de `BufferAnexos` antes do botao "Concluir Servico"
-- Ao salvar com status "Servico concluido", persistir evidencias na OS
+Matriz (3ac7e00c) e Online (fcc78c1a):
+  Linha 2: "FEIRA DOS IMPORTADOS"
+  Linha 4: "BLOCO D, LOJA 433/434 - BRASILIA"
 
-**Arquivo:** `src/utils/assistenciaApi.ts`
-- Adicionar campo `evidencias?: { nome: string; tipo: string; url?: string; dataAnexo: string; usuario: string }[]` a interface `OrdemServico`
+Shopping Sul (5b9446d5):
+  Linha 2: "SHOPPING SUL"
+  Linha 4: "BR-040 - Parque Esplanada III, Valparaiso de Goias"
 
-**Arquivo:** `src/pages/OSAssistenciaDetalhes.tsx` (visualizacao)
-- Na secao de detalhes da OS, adicionar card "Evidencias do Servico" que lista os arquivos anexados com nome, data e usuario, quando houver evidencias
+Aguas Lindas (0d06e7db):
+  Linha 2: "SHOPPING AGUAS LINDAS"
+  Linha 4: "BR-070 - Mansoes Centroeste, Aguas Lindas de Goias"
 
----
+JK Shopping (db894e7d):
+  Linha 2: "JK SHOPPING"
+  Linha 4: "St. M Norte QNM 34 Area especial 01 - Taguatinga"
+```
 
-### 3. Informacoes PIX Automaticas da Nota de Entrada no Financeiro (2.3)
+- Criar funcao `getCabecalhoLoja(lojaId: string)` que retorna `{ subtitulo: string; endereco: string }`
+- Usar `getLojaById` como fallback para lojas nao mapeadas (exibindo nome da loja + endereco generico)
 
-**Situacao atual:** A Nota de Entrada ja persiste `pixBanco`, `pixRecebedor`, `pixChave` na interface `NotaEntrada` (notaEntradaFluxoApi.ts). Porem, a tela `FinanceiroNotasPendencias.tsx` nao exibe esses dados.
+### 3. Anexar PDF fixo do Termo de Garantia como segunda pagina
 
-**Arquivo:** `src/pages/FinanceiroNotasPendencias.tsx`
-- No modo detalhes (`modoDetalhes && notaSelecionada`), entre o `NotaDetalhesContent` e o quadro de Pagamento, adicionar um Card condicional "Instrucoes de Pagamento PIX" quando `notaSelecionada.formaPagamento === 'Pix'`
-- O card exibe: Banco, Recebedor, Chave PIX e Observacao -- todos pre-preenchidos e somente leitura, vindos da nota de entrada
-- Estilo: borda azul/primary, icone Smartphone ou Landmark, campos em grid 2x2
-- Adicionar timeline entry na nota quando o pagamento for registrado: "Pagamento registrado com dados PIX originados da Nota de Entrada"
+- Usar a biblioteca `jspdf` que ja esta instalada
+- Apos gerar a primeira pagina (nota de garantia com cabecalho condicional), carregar o PDF do Termo via `fetch('/docs/termo-garantia.pdf')`
+- Converter cada pagina do PDF em imagem (via canvas) e adiciona-las como paginas adicionais no documento jsPDF
+- Alternativa mais simples: usar a abordagem de renderizar o PDF como imagem full-page usando um canvas offscreen, ja que o Termo tem apenas 2 paginas
+- O resultado final sera um PDF unico com 3 paginas: Nota de Garantia + 2 paginas do Termo
 
-**Arquivo:** `src/components/estoque/ModalFinalizarPagamento.tsx`
-- Receber prop opcional `dadosPix?: { banco: string; recebedor: string; chave: string; observacao?: string }`
-- Se `dadosPix` estiver presente, exibir banner informativo no topo do modal: "Dados PIX pre-preenchidos da Nota de Entrada" com os valores
-- Propagar esses dados para o pagamento ao confirmar
+### 4. Registro na Timeline da Venda
 
----
+- No ponto de chamada (`VendaDetalhes.tsx`, linha 170), apos chamar `gerarNotaGarantiaPdf`, registrar entrada na timeline da venda informando:
+  - Qual cabecalho foi utilizado (nome da loja)
+  - Que o PDF fixo do Termo de Garantia foi anexado
+- Usar funcao existente de timeline (pattern do `TimelineVenda`)
 
 ### Resumo de arquivos a modificar
 
-1. `src/utils/cadastrosApi.ts` -- interface ContaFinanceira + toggleContaFinanceira + getContasFinanceirasHabilitadas
-2. `src/pages/CadastrosContasFinanceiras.tsx` -- Switch toggle + modal observacao + historico
-3. `src/pages/CadastrosMaquinas.tsx` -- trocar getContasFinanceiras por getContasFinanceirasHabilitadas nos selects
-4. `src/pages/VendasEditarGestor.tsx` -- idem
-5. `src/pages/FinanceiroConferencia.tsx` -- idem
-6. `src/utils/assistenciaApi.ts` -- campo evidencias na interface OrdemServico
-7. `src/pages/OSAssistenciaDetalhes.tsx` -- BufferAnexos no modal de finalizacao + card de visualizacao de evidencias
-8. `src/pages/OSAssistenciaEditar.tsx` -- BufferAnexos no card de conclusao de servico
-9. `src/pages/FinanceiroNotasPendencias.tsx` -- Card de instrucoes PIX pre-preenchido
-10. `src/components/estoque/ModalFinalizarPagamento.tsx` -- banner dados PIX
+1. **Copiar arquivo**: `user-uploads://Recibo_Modelo_-_Garantia.pdf` -> `public/docs/termo-garantia.pdf`
+2. **`src/utils/gerarNotaGarantiaPdf.ts`**: Cabecalho condicional + anexar PDF do Termo como paginas adicionais
+3. **`src/pages/VendaDetalhes.tsx`**: Registrar na timeline apos gerar a nota
 
-### Detalhes tecnicos
+### Detalhe tecnico
 
-**Toggle (item 1):**
 ```typescript
-// cadastrosApi.ts
-interface ContaFinanceira {
-  // ...campos existentes
-  habilitada: boolean;
-  historicoAlteracoes?: {
-    dataHora: string;
-    usuario: string;
-    statusAnterior: string;
-    novoStatus: string;
-    observacao?: string;
-  }[];
-}
+// gerarNotaGarantiaPdf.ts - mapeamento de cabecalhos
+const getCabecalhoLoja = (lojaId: string) => {
+  const mapa: Record<string, { subtitulo: string; endereco: string }> = {
+    '3ac7e00c': { subtitulo: 'FEIRA DOS IMPORTADOS', endereco: 'BLOCO D, LOJA 433/434 – BRASÍLIA' },
+    'fcc78c1a': { subtitulo: 'FEIRA DOS IMPORTADOS', endereco: 'BLOCO D, LOJA 433/434 – BRASÍLIA' },
+    '5b9446d5': { subtitulo: 'SHOPPING SUL', endereco: 'BR-040 – Parque Esplanada III, Valparaíso de Goiás' },
+    '0d06e7db': { subtitulo: 'SHOPPING ÁGUAS LINDAS', endereco: 'BR-070 – Mansões Centroeste, Águas Lindas de Goiás' },
+    'db894e7d': { subtitulo: 'JK SHOPPING', endereco: 'St. M Norte QNM 34 Área especial 01 – Taguatinga' },
+  };
+  return mapa[lojaId] || { subtitulo: 'FEIRA DOS IMPORTADOS', endereco: 'BLOCO D, LOJA 433/434 – BRASÍLIA' };
+};
 
-export const getContasFinanceirasHabilitadas = () =>
-  contasFinanceiras.filter(c => c.habilitada !== false);
-
-export const toggleContaFinanceira = (id: string, usuario: string, observacao?: string) => {
-  const conta = contasFinanceiras.find(c => c.id === id);
-  if (!conta) return null;
-  const anterior = conta.habilitada ? 'Habilitada' : 'Desabilitada';
-  conta.habilitada = !conta.habilitada;
-  if (!conta.historicoAlteracoes) conta.historicoAlteracoes = [];
-  conta.historicoAlteracoes.push({
-    dataHora: new Date().toISOString(),
-    usuario,
-    statusAnterior: anterior,
-    novoStatus: conta.habilitada ? 'Habilitada' : 'Desabilitada',
-    observacao
-  });
-  return conta;
+// Anexar PDF do Termo de Garantia
+// Carregar como ArrayBuffer, renderizar paginas via pdf.js ou canvas, adicionar ao doc
+const anexarTermoGarantia = async (doc: jsPDF) => {
+  const response = await fetch('/docs/termo-garantia.pdf');
+  const arrayBuffer = await response.arrayBuffer();
+  // Usar pdfjsLib para renderizar cada pagina em canvas e adicionar como imagem
 };
 ```
 
-**PIX no Financeiro (item 3):**
-```tsx
-// FinanceiroNotasPendencias.tsx - entre NotaDetalhesContent e quadro de Pagamento
-{notaSelecionada.formaPagamento === 'Pix' && (notaSelecionada.pixBanco || notaSelecionada.pixRecebedor || notaSelecionada.pixChave) && (
-  <Card className="border-blue-500/30 bg-blue-500/5">
-    <CardHeader>
-      <CardTitle>Instrucoes de Pagamento PIX</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="grid grid-cols-2 gap-4">
-        <div><Label>Banco</Label><p>{notaSelecionada.pixBanco}</p></div>
-        <div><Label>Recebedor</Label><p>{notaSelecionada.pixRecebedor}</p></div>
-        <div><Label>Chave PIX</Label><p>{notaSelecionada.pixChave}</p></div>
-        <div><Label>Observacao</Label><p>{notaSelecionada.observacoes || '-'}</p></div>
-      </div>
-    </CardContent>
-  </Card>
-)}
-```
+**Nota sobre a renderizacao do PDF anexo:** Como o projeto nao tem `pdfjs-dist` instalado, a abordagem sera converter o PDF do Termo em imagens PNG em build-time (extraidas do parse do documento) e salva-las como assets estaticos. Isso evita dependencia adicional e garante renderizacao perfeita. As 2 paginas do Termo serao salvas como `public/docs/termo-garantia-p1.png` e `public/docs/termo-garantia-p2.png`, e adicionadas ao jsPDF via `addImage`.
