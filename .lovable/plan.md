@@ -1,89 +1,84 @@
 
 
-# Plano: Aprimoramentos Completos no Modulo de Garantia
+# Plano: Substituir Quadro de Resumo pelo Painel de Rentabilidade em todas as abas de Vendas
 
-## Analise do Estado Atual
+## Contexto
 
-A maioria das funcionalidades base ja esta implementada. Este plano foca nos ajustes e refinamentos pendentes.
+O componente `PainelRentabilidadeVenda` ja esta implementado e funcional na aba "Nova Venda" (`VendasNova.tsx`). Ele calcula margens, lucro real, taxas de cartao, comissoes hibridas e inclui o Coach de Vendas. O objetivo e replicar esse padrao em todas as outras telas de vendas que ainda usam o quadro de "Resumo" antigo.
 
-| Funcionalidade | Status Atual |
-|---|---|
-| Estrutura 4 quadros | Implementado |
-| IMEI camera scan | Implementado |
-| 4 tipos de tratativa | Implementado |
-| Foto aparelho emprestimo | Implementado (1 campo) |
-| Foto devolucao | Implementado |
-| origemOS = "Garantia" | Implementado |
-| Troca Direta (nota + pendentes + status) | Implementado |
-| Garantia Extendida completa | Implementado |
-| Toggle Colaboradores | Implementado |
-| Extrato Log coluna | Implementado |
-| Fix observacao fantasma | Implementado |
+## Telas Afetadas
 
----
+| Tela | Arquivo | Situacao Atual |
+|------|---------|---------------|
+| Venda Balcao | `VendasAcessorios.tsx` | Quadro "Resumo da Venda" simples (linhas 798-874) |
+| Finalizar Digital | `VendasFinalizarDigital.tsx` | Quadro "Resumo" extenso (linhas 1964-2100+) |
+| Conferencia Lancamento | `VendasConferenciaLancamento.tsx` | Nao tem resumo individual (lista de vendas) |
+| Conferencia Gestor (Painel Lateral) | `VendasConferenciaGestor.tsx` | Usa `VendaResumoCompleto` no painel lateral (linha 800) |
+| Conferencia Gestor (Detalhes) | `VendasConferenciaGestorDetalhes.tsx` | Quadro "Resumo" basico no sidebar (linhas 186-207) |
 
-## Alteracoes Necessarias
+## Alteracoes por Arquivo
 
-### 1. Autocomplete para campo Modelo (GarantiasNovaManual.tsx, linhas 477-489)
+### 1. VendasFinalizarDigital.tsx (Finalizar Venda Digital)
 
-Substituir o `<Select>` estatico por um autocomplete pesquisavel usando `Popover` + `Command` (cmdk), seguindo o padrao arquitetural do sistema. Fonte de dados: `getProdutosCadastro()`.
+- **Remover** o card "Resumo" completo (linhas ~1964-2120)
+- **Adicionar** o componente `PainelRentabilidadeVenda` no mesmo local, passando as props ja existentes (`itens`, `acessoriosVenda`, `tradeIns`, `garantiaExtendida`, `taxaEntrega`, `localEntregaId`, `lojaVenda`, `pagamentos`, `total`)
+- **Manter** os cards especiais de Downgrade e Sinal abaixo do Painel de Rentabilidade, pois sao alertas criticos
+- **Manter** os botoes de acao (Cancelar / Finalizar Venda) que estao no final da pagina
+- Importar `PainelRentabilidadeVenda`
 
-### 2. Segundo campo de anexo: Termo de Responsabilidade (GarantiasNovaManual.tsx)
+### 2. VendasAcessorios.tsx (Venda Balcao)
 
-Adicionar um segundo `FileUploadComprovante` para "Assistencia + Emprestimo", abaixo do campo de fotos do aparelho:
-- Novo estado: `fotoTermo` e `fotoTermoNome`
-- Label: "Termo de Responsabilidade *"
-- Tipos aceitos: image/jpeg, image/png, image/webp, application/pdf
-- Validacao obrigatoria no `handleSalvar`: ambos os campos devem estar preenchidos
+- **Remover** o card "Resumo da Venda" (linhas ~798-874)
+- **Adaptar** o `PainelRentabilidadeVenda`: como Venda Balcao so vende acessorios (sem aparelhos, trade-in ou garantia extendida), passar `itens={[]}`, `tradeIns={[]}`, `garantiaExtendida={null}`, `localEntregaId={''}` e os acessorios reais
+- **Mover** os botoes de acao (Cancelar / Registrar Venda) para fora do card removido
+- Importar `PainelRentabilidadeVenda`
 
-### 3. Filtro de aparelhos: apenas status "Disponivel" (GarantiasNovaManual.tsx, linhas 139-149)
+### 3. VendasConferenciaGestorDetalhes.tsx (Detalhes Conferencia Gestor)
 
-O filtro atual aceita qualquer Seminovo com `quantidade > 0`. Deve usar `getStatusAparelho(p) === 'Disponivel'` para garantir que apenas aparelhos realmente disponiveis sejam listados (excluindo bloqueados, em movimentacao, emprestados, etc.). Tambem deve aceitar aparelhos Novos e Seminovos (remover restricao `p.tipo === 'Seminovo'`).
+- **Substituir** o card "Resumo" na coluna lateral (linhas 186-207) pelo `PainelRentabilidadeVenda`
+- Os dados vem de `venda.dadosVenda` - sera necessario mapear os campos para o formato esperado pelo componente (`ItemVenda[]`, `VendaAcessorio[]`, `ItemTradeIn[]`, `Pagamento[]`)
+- Importar `PainelRentabilidadeVenda` e as interfaces de tipos necessarias
 
-### 4. Dupla confirmacao para Troca Direta (GarantiasNovaManual.tsx)
+### 4. VendasConferenciaGestor.tsx (Painel Lateral)
 
-Quando `tipoTratativa === 'Troca Direta'`:
-- Ao clicar "Salvar Registro", abrir um modal de confirmacao com resumo (aparelho saindo, aparelho entrando, cliente)
-- Usuario deve confirmar marcando um checkbox "Confirmo a troca direta"
-- Apos primeira confirmacao, habilitar botao "Confirmar Troca"
-- Apos segunda confirmacao (clique no botao), exibir botao "Gerar Nota" ao lado do "Salvar Registro" no header
+- **Substituir** o `VendaResumoCompleto` (linha 800) pelo `PainelRentabilidadeVenda`
+- Os dados vem de `vendaSelecionada` (tipo `VendaComFluxo`) - mapear para as props do componente
+- **Manter** a validacao de pagamentos e campo de observacao do gestor abaixo do painel
+- Importar `PainelRentabilidadeVenda`
 
-### 5. Botao "Gerar Nota" ao lado de "Salvar Registro" (GarantiasNovaManual.tsx)
+### 5. VendasConferenciaLancamento.tsx
 
-Apos a dupla confirmacao da Troca Direta:
-- Estado `trocaConfirmada` = true
-- No header, exibir botao "Gerar Nota de Garantia" em destaque (variant default, icone FileText) ao lado do "Salvar Registro"
-- Ao clicar, buscar a venda gerada automaticamente e chamar `gerarNotaGarantiaPdf`
+- Esta tela e uma listagem de vendas, nao tem quadro de resumo individual para substituir
+- **Nenhuma alteracao necessaria**
 
-### 6. Motivo automatizado para aparelho defeituoso (garantiasApi.ts, linha 793-807)
+## Detalhes Tecnicos
 
-Na funcao `aprovarTratativa`, ao registrar o aparelho defeituoso em Aparelhos Pendentes via `addProdutoPendente`, adicionar campo de motivo/observacao automatizado:
-- `motivoAssistencia: "Defeito relatado na Garantia ID #[ID_GARANTIA]"`
-- Origem identificada como "Garantia" (nao apenas "Base de Troca")
+### Mapeamento de dados para o PainelRentabilidadeVenda
 
-### 7. Alerta visual "Servico Concluido" (GarantiasEmAndamento.tsx)
+O componente espera estas props:
 
-Na tabela de garantias em andamento, quando uma OS vinculada tiver status finalizado/concluido:
-- Exibir badge destacado "Servico Concluido - Chamar Cliente" em amarelo/verde
-- Adicionar indicador visual na linha da tabela (fundo verde claro)
-- Logica: verificar se a OS vinculada (`tratativa.osId`) tem status "Serviço concluído" ou similar
+```text
+itens: ItemVenda[]           -> produto, valorCusto, valorVenda, id
+acessoriosVenda: VendaAcessorio[] -> acessorioId, descricao, quantidade, valorTotal
+tradeIns: ItemTradeIn[]      -> modelo, valorCompraUsado, id
+garantiaExtendida: { planoNome, valor } | null
+taxaEntrega: number
+localEntregaId: string
+lojaVenda: string
+pagamentos: Pagamento[]      -> valor, parcelas, meioPagamento
+total: number
+```
 
----
+Para as telas de conferencia, os dados vem em formatos ligeiramente diferentes (ex: `dadosVenda.itens` com campos como `produto`, `valorVenda`). Sera feito mapeamento inline para compatibilidade.
 
-## Arquivos Modificados
+### Venda Balcao (caso especial)
 
-| Arquivo | Alteracoes |
-|---------|-----------|
-| `src/pages/GarantiasNovaManual.tsx` | Autocomplete Modelo, Termo de Responsabilidade, filtro aparelhos, dupla confirmacao, botao Gerar Nota |
-| `src/utils/garantiasApi.ts` | Motivo automatizado no addProdutoPendente, origem "Garantia" |
-| `src/pages/GarantiasEmAndamento.tsx` | Alerta visual "Servico Concluido" |
+Como so vende acessorios, o painel mostrara apenas o bloco de "Acessorios" e o "Resumo Consolidado" - os blocos de Aparelhos, Trade-In e Garantia Extendida ficarao ocultos automaticamente pela logica interna do componente.
 
 ## Sequencia de Implementacao
 
-1. Autocomplete Modelo
-2. Segundo campo de anexo (Termo)
-3. Filtro aparelhos com getStatusAparelho
-4. Dupla confirmacao + botao Gerar Nota para Troca Direta
-5. Motivo automatizado no aparelho pendente
-6. Alerta visual Servico Concluido
+1. VendasFinalizarDigital.tsx - substituir Resumo por PainelRentabilidadeVenda
+2. VendasAcessorios.tsx - adaptar para venda somente de acessorios
+3. VendasConferenciaGestorDetalhes.tsx - substituir Resumo no sidebar
+4. VendasConferenciaGestor.tsx - substituir VendaResumoCompleto no painel lateral
 
