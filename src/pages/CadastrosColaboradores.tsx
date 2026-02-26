@@ -872,6 +872,10 @@ export default function CadastrosColaboradores() {
               if (!colToggle) return;
               const novoStatus = !colToggle.ativo;
               atualizarColaborador(toggleColaboradorId, { ativo: novoStatus });
+              // Ao desativar, mudar filtro para "todos" para que o colaborador continue visível
+              if (!novoStatus && filtroStatus === 'ativos') {
+                setFiltroStatus('todos');
+              }
               toast({ 
                 title: novoStatus ? 'Colaborador Habilitado' : 'Colaborador Desabilitado', 
                 description: `${colToggle.nome} foi ${novoStatus ? 'habilitado' : 'desabilitado'} com sucesso.${toggleObservacao ? ` Motivo: ${toggleObservacao}` : ''}` 
