@@ -466,7 +466,6 @@
   /* Containers de tabela: garantir overflow-x scroll */
   .overflow-auto,
   .overflow-x-auto,
-  [class*="rounded"][class*="border"],
   [class*="CardContent"] > div,
   [role="dialog"] > div > div {
     overflow-x: auto !important;
