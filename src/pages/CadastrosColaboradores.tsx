@@ -449,7 +449,7 @@ export default function CadastrosColaboradores() {
                 const emRodizio = colaboradorEmRodizio(col.id);
                 
                 return (
-                  <TableRow key={col.id}>
+                  <TableRow key={col.id} className={!col.ativo ? 'opacity-50' : ''}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {getCargoIcon(col.cargo)}
@@ -492,9 +492,18 @@ export default function CadastrosColaboradores() {
                     </TableCell>
                     <TableCell className="text-sm">{formatCurrency(col.salario_fixo)}</TableCell>
                     <TableCell>
-                      <Badge variant={col.ativo ? 'default' : 'secondary'}>
-                        {col.ativo ? 'Ativo' : 'Inativo'}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={col.ativo}
+                          onCheckedChange={(checked) => {
+                            atualizarColaborador(col.id, { ativo: checked });
+                            toast({ title: checked ? 'Colaborador Ativado' : 'Colaborador Desativado', description: `${col.nome} foi ${checked ? 'ativado' : 'desativado'} com sucesso.` });
+                          }}
+                        />
+                        <span className={`text-xs ${col.ativo ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          {col.ativo ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">

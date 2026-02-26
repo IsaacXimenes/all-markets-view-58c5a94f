@@ -1,6 +1,7 @@
 // Comissões API - Mock Data
 
 import { getColaboradores } from './cadastrosApi';
+import { LOJA_ONLINE_ID } from './calculoComissaoVenda';
 
 export interface ComissaoColaborador {
   colaboradorId: string;
@@ -29,12 +30,12 @@ const inicializarComissoes = (): ComissaoColaborador[] => {
     return JSON.parse(stored);
   }
   
-  // Dados iniciais mockados
+  // Dados iniciais - percentual fixo 10% (padrão lojas físicas)
   const colaboradores = getColaboradores();
   const comissoesIniciais: ComissaoColaborador[] = colaboradores.map(col => ({
     colaboradorId: col.id,
     salarioFixo: col.salario || 0,
-    percentualComissao: Math.floor(Math.random() * 10) + 5 // 5-15%
+    percentualComissao: 10 // Fixo 10% para lojas físicas
   }));
   
   localStorage.setItem(COMISSOES_KEY, JSON.stringify(comissoesIniciais));
@@ -92,11 +93,11 @@ export const updateComissaoColaborador = (
   localStorage.setItem(COMISSOES_KEY, JSON.stringify(comissoes));
 };
 
-// Calcular comissão de uma venda
-export const calcularComissaoVenda = (vendedorId: string, lucroVenda: number): number => {
-  const { comissao } = getComissaoColaborador(vendedorId);
+// Calcular comissão de uma venda - usa regra fixa: 10% lojas físicas, 6% Online
+export const calcularComissaoVenda = (vendedorId: string, lucroVenda: number, lojaVendaId?: string): number => {
   if (lucroVenda <= 0) return 0; // Não há comissão em caso de prejuízo
-  return lucroVenda * (comissao / 100);
+  const percentual = lojaVendaId === LOJA_ONLINE_ID ? 6 : 10;
+  return lucroVenda * (percentual / 100);
 };
 
 // Histórico de alterações de comissão

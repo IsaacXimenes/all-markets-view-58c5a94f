@@ -96,18 +96,10 @@ const loadImageAsBase64 = (url: string): Promise<string> => {
   });
 };
 
-/** Resolve nome do motoboy por múltiplas fontes */
+/** Resolve nome do motoboy - padronizado como "Motoboy Thiago Imports" */
 const getNomeMotoboy = (motoboyId?: string): string => {
   if (!motoboyId) return '-';
-
-  const colaboradorCadastros = getColaboradorById(motoboyId);
-  if (colaboradorCadastros?.nome) return colaboradorCadastros.nome;
-
-  const cadastroStore = useCadastroStore.getState();
-  const colaboradorStore = cadastroStore.obterColaboradorById(motoboyId);
-  if (colaboradorStore?.nome) return colaboradorStore.nome;
-
-  return motoboyId;
+  return 'Motoboy Thiago Imports';
 };
 
 /**
@@ -393,7 +385,7 @@ export const gerarNotaGarantiaPdf = async (venda: Venda) => {
     drawBox(prodColValor, y, prodColValorW, rowH);
     doc.text(String(item.quantidade), prodColQtd + 2, y + 5);
     doc.text(descProduto.substring(0, 70), prodColDesc + 2, y + 5);
-    doc.text(item.categoria || 'Aparelho', prodColTipo + 2, y + 5);
+    doc.text((item.categoria === 'Apple' ? 'Aparelho' : item.categoria) || 'Aparelho', prodColTipo + 2, y + 5);
     doc.text(formatCurrency(item.valorVenda), prodColValor + 2, y + 5);
     y += rowH;
   });

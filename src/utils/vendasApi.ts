@@ -40,6 +40,8 @@ export interface ItemTradeIn {
   termoResponsabilidade?: AnexoTradeIn;
   fotosAparelho?: AnexoTradeIn[];
   dataRegistro?: string;
+  anexoConsultaIMEI?: string;
+  anexoConsultaIMEINome?: string;
 }
 
 export interface Pagamento {
