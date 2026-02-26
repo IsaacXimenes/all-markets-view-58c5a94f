@@ -1,5 +1,5 @@
 // Motoboy API - Gerenciamento de demandas e remuneração de motoboys
-import { format, startOfMonth, endOfMonth, addDays, subDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, getDaysInMonth } from 'date-fns';
 
 export interface DemandaMotoboy {
   id: string;
@@ -12,6 +12,7 @@ export interface DemandaMotoboy {
   lojaDestino: string;
   status: 'Concluída' | 'Pendente' | 'Cancelada';
   valorDemanda: number;
+  vendaId?: string;
 }
 
 export interface RemuneracaoMotoboy {
@@ -27,11 +28,11 @@ export interface RemuneracaoMotoboy {
   dataPagamento?: string;
 }
 
-// Mock data de demandas - IDs atualizados para UUIDs reais do useCadastroStore
+// Mock data de demandas
 const demandas: DemandaMotoboy[] = [
   {
     id: 'DEM-001',
-    motoboyId: 'a962efd4', // João Vitor Rezende Andrade de Souza
+    motoboyId: 'a962efd4',
     motoboyNome: 'João Vitor Rezende Andrade de Souza',
     data: '2026-01-28',
     tipo: 'Entrega',
@@ -39,11 +40,12 @@ const demandas: DemandaMotoboy[] = [
     lojaOrigem: 'SIA - Matriz',
     lojaDestino: 'Endereço cliente',
     status: 'Concluída',
-    valorDemanda: 25.00
+    valorDemanda: 25.00,
+    vendaId: 'VEN-2026-0010'
   },
   {
     id: 'DEM-002',
-    motoboyId: 'a962efd4', // João Vitor Rezende Andrade de Souza
+    motoboyId: 'a962efd4',
     motoboyNome: 'João Vitor Rezende Andrade de Souza',
     data: '2026-01-28',
     tipo: 'Coleta',
@@ -55,7 +57,7 @@ const demandas: DemandaMotoboy[] = [
   },
   {
     id: 'DEM-003',
-    motoboyId: 'a962efd4', // João Vitor Rezende Andrade de Souza
+    motoboyId: 'a962efd4',
     motoboyNome: 'João Vitor Rezende Andrade de Souza',
     data: '2026-01-29',
     tipo: 'Movimentação',
@@ -67,7 +69,7 @@ const demandas: DemandaMotoboy[] = [
   },
   {
     id: 'DEM-004',
-    motoboyId: '3b3afac0', // Samuel Silva dos Santos Nonato
+    motoboyId: '3b3afac0',
     motoboyNome: 'Samuel Silva dos Santos Nonato',
     data: '2026-01-29',
     tipo: 'Entrega',
@@ -75,11 +77,12 @@ const demandas: DemandaMotoboy[] = [
     lojaOrigem: 'JK Shopping',
     lojaDestino: 'Endereço cliente',
     status: 'Concluída',
-    valorDemanda: 35.00
+    valorDemanda: 35.00,
+    vendaId: 'VEN-2026-0012'
   },
   {
     id: 'DEM-005',
-    motoboyId: '3b3afac0', // Samuel Silva dos Santos Nonato
+    motoboyId: '3b3afac0',
     motoboyNome: 'Samuel Silva dos Santos Nonato',
     data: '2026-01-30',
     tipo: 'Entrega',
@@ -87,11 +90,12 @@ const demandas: DemandaMotoboy[] = [
     lojaOrigem: 'Shopping Sul',
     lojaDestino: 'Endereço cliente',
     status: 'Concluída',
-    valorDemanda: 25.00
+    valorDemanda: 25.00,
+    vendaId: 'VEN-2026-0015'
   },
   {
     id: 'DEM-006',
-    motoboyId: 'a962efd4', // João Vitor Rezende Andrade de Souza
+    motoboyId: 'a962efd4',
     motoboyNome: 'João Vitor Rezende Andrade de Souza',
     data: '2026-01-30',
     tipo: 'Entrega',
@@ -103,13 +107,13 @@ const demandas: DemandaMotoboy[] = [
   }
 ];
 
-// Mock de remunerações calculadas - IDs atualizados para UUIDs reais do useCadastroStore
+// Mock de remunerações - competências bi-mensais
 let remuneracoes: RemuneracaoMotoboy[] = [
   {
     id: 'REM-001',
-    motoboyId: 'a962efd4', // João Vitor Rezende Andrade de Souza
+    motoboyId: 'a962efd4',
     motoboyNome: 'João Vitor Rezende Andrade de Souza',
-    competencia: 'JAN-2026',
+    competencia: 'JAN-2026 - 1',
     periodoInicio: '2026-01-01',
     periodoFim: '2026-01-15',
     qtdDemandas: 12,
@@ -119,9 +123,9 @@ let remuneracoes: RemuneracaoMotoboy[] = [
   },
   {
     id: 'REM-002',
-    motoboyId: '3b3afac0', // Samuel Silva dos Santos Nonato
+    motoboyId: '3b3afac0',
     motoboyNome: 'Samuel Silva dos Santos Nonato',
-    competencia: 'JAN-2026',
+    competencia: 'JAN-2026 - 1',
     periodoInicio: '2026-01-01',
     periodoFim: '2026-01-15',
     qtdDemandas: 8,
@@ -131,9 +135,9 @@ let remuneracoes: RemuneracaoMotoboy[] = [
   },
   {
     id: 'REM-003',
-    motoboyId: 'a962efd4', // João Vitor Rezende Andrade de Souza
+    motoboyId: 'a962efd4',
     motoboyNome: 'João Vitor Rezende Andrade de Souza',
-    competencia: 'JAN-2026',
+    competencia: 'JAN-2026 - 2',
     periodoInicio: '2026-01-16',
     periodoFim: '2026-01-31',
     qtdDemandas: 15,
@@ -142,9 +146,9 @@ let remuneracoes: RemuneracaoMotoboy[] = [
   },
   {
     id: 'REM-004',
-    motoboyId: '3b3afac0', // Samuel Silva dos Santos Nonato
+    motoboyId: '3b3afac0',
     motoboyNome: 'Samuel Silva dos Santos Nonato',
-    competencia: 'JAN-2026',
+    competencia: 'JAN-2026 - 2',
     periodoInicio: '2026-01-16',
     periodoFim: '2026-01-31',
     qtdDemandas: 10,
@@ -152,6 +156,17 @@ let remuneracoes: RemuneracaoMotoboy[] = [
     status: 'Pendente'
   }
 ];
+
+// Adicionar nova demanda de motoboy
+export const addDemandaMotoboy = (demanda: Omit<DemandaMotoboy, 'id'>): DemandaMotoboy => {
+  const novaDemanda: DemandaMotoboy = {
+    ...demanda,
+    id: `DEM-${Date.now()}`
+  };
+  demandas.push(novaDemanda);
+  console.log(`[MOTOBOY] Demanda ${novaDemanda.id} registrada para ${demanda.motoboyNome}`);
+  return novaDemanda;
+};
 
 export const getDemandas = (filtros?: {
   motoboyId?: string;
@@ -195,7 +210,6 @@ export const getRemuneracoes = (filtros?: {
   }
   
   return resultado.sort((a, b) => {
-    // Ordenar por status (Pendente primeiro) e depois por período
     if (a.status === 'Pendente' && b.status === 'Pago') return -1;
     if (a.status === 'Pago' && b.status === 'Pendente') return 1;
     return new Date(b.periodoInicio).getTime() - new Date(a.periodoInicio).getTime();
@@ -240,7 +254,7 @@ export const formatCurrency = (value: number): string => {
   });
 };
 
-// Helper para gerar lista de competências
+// Competências bi-mensais: MMM-AAAA - 1 (01-15) e MMM-AAAA - 2 (16-fim)
 export const gerarCompetencias = (): string[] => {
   const meses = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
   const anoAtual = new Date().getFullYear();
@@ -248,7 +262,8 @@ export const gerarCompetencias = (): string[] => {
   
   for (let ano = anoAtual - 1; ano <= anoAtual + 1; ano++) {
     for (const mes of meses) {
-      competencias.push(`${mes}-${ano}`);
+      competencias.push(`${mes}-${ano} - 1`);
+      competencias.push(`${mes}-${ano} - 2`);
     }
   }
   
@@ -271,6 +286,10 @@ export const getDetalheEntregasRemuneracao = (
   periodoInicio: string,
   periodoFim: string
 ): DetalheEntregaRemuneracao[] => {
+  // Lazy import to avoid circular dependency
+  const { getVendas } = require('./vendasApi');
+  const todasVendas = getVendas();
+
   const demandasPeriodo = demandas.filter(d =>
     d.motoboyId === motoboyId &&
     d.data >= periodoInicio &&
@@ -278,15 +297,33 @@ export const getDetalheEntregasRemuneracao = (
     d.status === 'Concluída'
   );
 
-  return demandasPeriodo.map(d => ({
-    demandaId: d.id,
-    vendaId: d.id.replace('DEM', 'VND'),
-    vendedor: d.motoboyNome,
-    produto: d.descricao,
-    localizacao: d.lojaDestino,
-    valorEntrega: d.valorDemanda,
-    valorVenda: d.valorDemanda * 10 // mock: valor referência
-  }));
+  return demandasPeriodo.map(d => {
+    // Buscar dados reais da venda quando vendaId existir
+    if (d.vendaId) {
+      const venda = todasVendas.find((v: any) => v.id === d.vendaId);
+      if (venda) {
+        return {
+          demandaId: d.id,
+          vendaId: d.vendaId,
+          vendedor: venda.vendedor || d.motoboyNome,
+          produto: venda.itens?.map((i: any) => i.produto).join(', ') || d.descricao,
+          localizacao: d.lojaDestino,
+          valorEntrega: d.valorDemanda,
+          valorVenda: venda.total || 0
+        };
+      }
+    }
+    // Fallback para demandas sem vendaId
+    return {
+      demandaId: d.id,
+      vendaId: d.vendaId || '-',
+      vendedor: d.motoboyNome,
+      produto: d.descricao,
+      localizacao: d.lojaDestino,
+      valorEntrega: d.valorDemanda,
+      valorVenda: 0
+    };
+  });
 };
 
 // Estatísticas gerais de motoboys

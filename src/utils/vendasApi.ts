@@ -4,6 +4,7 @@ import { addProdutoPendente } from './osApi';
 import { getProdutos, updateProduto, addMovimentacao } from './estoqueApi';
 import { subtrairEstoqueAcessorio, VendaAcessorio } from './acessoriosApi';
 import { criarPagamentosDeVenda } from './financeApi';
+import { addDemandaMotoboy } from './motoboyApi';
 export interface ItemVenda {
   id: string;
   produtoId: string; // PROD-XXXX - ID único e persistente do produto
@@ -922,6 +923,28 @@ export const addVenda = (venda: Omit<Venda, 'id' | 'numero'>): Venda => {
       console.log(`[VENDAS] Pagamentos registrados no financeiro para venda ${newId}`);
     } catch (error) {
       console.error(`[VENDAS] Erro ao registrar pagamentos no financeiro:`, error);
+    }
+  }
+
+  // ========== INTEGRAÇÃO: Registrar Demanda de Motoboy ==========
+  if (venda.tipoRetirada === 'Entrega' && venda.motoboyId) {
+    try {
+      const motoboyNome = (venda as any).motoboyNome || 'Motoboy';
+      addDemandaMotoboy({
+        motoboyId: venda.motoboyId,
+        motoboyNome,
+        data: venda.dataHora ? venda.dataHora.split('T')[0] : new Date().toISOString().split('T')[0],
+        tipo: 'Entrega',
+        descricao: `Entrega Venda #${newId} - Cliente ${venda.clienteNome}`,
+        lojaOrigem: venda.lojaVenda,
+        lojaDestino: venda.clienteCidade || 'Endereço Cliente',
+        status: 'Concluída',
+        valorDemanda: venda.taxaEntrega || 0,
+        vendaId: newId
+      });
+      console.log(`[VENDAS] Demanda de entrega registrada para motoboy ${motoboyNome}`);
+    } catch (error) {
+      console.error(`[VENDAS] Erro ao registrar demanda de motoboy:`, error);
     }
   }
   
