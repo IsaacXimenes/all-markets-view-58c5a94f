@@ -37,6 +37,7 @@ export default function Vendas() {
   const [vendedorFiltro, setVendedorFiltro] = useState('');
   const [filtroGarantia, setFiltroGarantia] = useState('');
   const [tipoPagamentoFiltro, setTipoPagamentoFiltro] = useState('');
+  const [filtroBaseTroca, setFiltroBaseTroca] = useState('');
   
   // Estado para modal de anexos do Trade-In
   const [tradeInAnexosModal, setTradeInAnexosModal] = useState<{
@@ -210,10 +211,34 @@ export default function Vendas() {
         if (tipoPagamentoFiltro === 'fiado' && !isFiado) return false;
         if (tipoPagamentoFiltro === 'normal' && isFiado) return false;
       }
+
+      // Filtro de Valor Base Troca
+      if (filtroBaseTroca) {
+        if (v.tradeIns.length === 0) return false;
+        const statusTroca = (() => {
+          let temSemRef = false;
+          let temAcima = false;
+          let temAbaixo = false;
+          let todosConformes = true;
+          for (const t of v.tradeIns) {
+            const rec = getValorRecomendado(t.modelo);
+            if (!rec) { temSemRef = true; todosConformes = false; continue; }
+            const dif = t.valorCompraUsado - rec.valorSugerido;
+            if (dif > 0) { temAcima = true; todosConformes = false; }
+            else if (dif < 0) { temAbaixo = true; todosConformes = false; }
+          }
+          if (temAcima) return 'acima';
+          if (temAbaixo) return 'abaixo';
+          if (temSemRef) return 'sem-ref';
+          if (todosConformes) return 'conformidade';
+          return '';
+        })();
+        if (statusTroca !== filtroBaseTroca) return false;
+      }
       
       return true;
     }).sort((a, b) => new Date(b.dataHora).getTime() - new Date(a.dataHora).getTime());
-  }, [vendasVisiveis, dataInicio, dataFim, lojaFiltro, vendedorFiltro, modeloFiltro, imeiFiltro, filtroGarantia, tipoPagamentoFiltro]);
+  }, [vendasVisiveis, dataInicio, dataFim, lojaFiltro, vendedorFiltro, modeloFiltro, imeiFiltro, filtroGarantia, tipoPagamentoFiltro, filtroBaseTroca]);
 
   const totais = useMemo(() => {
     let totalVendas = 0;
@@ -403,6 +428,21 @@ export default function Vendas() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Valor Base Troca</label>
+              <Select value={filtroBaseTroca || 'all'} onValueChange={(val) => setFiltroBaseTroca(val === 'all' ? '' : val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="acima">Acima</SelectItem>
+                  <SelectItem value="abaixo">Abaixo</SelectItem>
+                  <SelectItem value="conformidade">Conformidade</SelectItem>
+                  <SelectItem value="sem-ref">Sem ref.</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-end gap-2">
               <Button onClick={() => navigate('/vendas/nova')} className="flex-1">
                 <Plus className="h-4 w-4 mr-2" />
@@ -431,7 +471,7 @@ export default function Vendas() {
                   <TableHead>Cliente</TableHead>
                   <TableHead>Resp. Venda</TableHead>
                   <TableHead>Base de Troca</TableHead>
-                  <TableHead>Status Compra</TableHead>
+                  <TableHead>Valor Base Troca</TableHead>
                   <TableHead className="text-right">V. Custo</TableHead>
                   <TableHead className="text-right">V. Aparelhos</TableHead>
                   <TableHead className="text-right">V. Acessórios</TableHead>
@@ -573,23 +613,25 @@ export default function Vendas() {
                                 const recomendado = getValorRecomendado(t.modelo);
                                 const valorPago = t.valorCompraUsado;
                                 const valorSugerido = recomendado?.valorSugerido || 0;
-                                const acimaDoPadrao = recomendado && valorPago > valorSugerido;
+                                const dif = recomendado ? valorPago - valorSugerido : null;
                                 
                                 return (
                                   <Tooltip key={t.id}>
                                     <TooltipTrigger asChild>
                                       <div className="flex items-center gap-1 cursor-help">
-                                        {!recomendado ? (
+                                        {dif === null ? (
                                           <Badge variant="outline" className="text-xs whitespace-nowrap">Sem ref.</Badge>
-                                        ) : acimaDoPadrao ? (
+                                        ) : dif > 0 ? (
                                           <Badge variant="destructive" className="text-xs whitespace-nowrap">
-                                            <AlertTriangle className="h-3 w-3 mr-1" />
-                                            Acima
+                                            Acima {formatCurrency(dif)}
+                                          </Badge>
+                                        ) : dif < 0 ? (
+                                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs whitespace-nowrap">
+                                            Abaixo {formatCurrency(Math.abs(dif))}
                                           </Badge>
                                         ) : (
                                           <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs whitespace-nowrap">
-                                            <Check className="h-3 w-3 mr-1" />
-                                            OK
+                                            Conforme
                                           </Badge>
                                         )}
                                       </div>
@@ -601,7 +643,7 @@ export default function Vendas() {
                                         {recomendado ? (
                                           <>
                                             <p>Valor Recomendado: {formatCurrency(valorSugerido)}</p>
-                                            {acimaDoPadrao && <p className="text-red-400 font-medium">Diferença: +{formatCurrency(valorPago - valorSugerido)}</p>}
+                                            {dif !== 0 && <p className={dif! > 0 ? "text-red-400 font-medium" : "text-green-400 font-medium"}>Diferença: {dif! > 0 ? '+' : '-'}{formatCurrency(Math.abs(dif!))}</p>}
                                           </>
                                         ) : (
                                           <p className="text-muted-foreground">Modelo sem valor de referência</p>
