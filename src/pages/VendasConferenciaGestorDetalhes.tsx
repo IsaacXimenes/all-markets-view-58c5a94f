@@ -138,7 +138,7 @@ export default function VendasConferenciaGestorDetalhes() {
           {/* Trade-Ins */}
           {venda.dadosVenda.tradeIns && venda.dadosVenda.tradeIns.length > 0 && (
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Package className="h-4 w-4" /> Trade-In</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Package className="h-4 w-4" /> Troca de Nota</CardTitle></CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader><TableRow><TableHead>Modelo</TableHead><TableHead>IMEI</TableHead><TableHead className="text-right">Abatimento</TableHead></TableRow></TableHeader>
@@ -187,7 +187,7 @@ export default function VendasConferenciaGestorDetalhes() {
             <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><TrendingUp className="h-4 w-4" /> Resumo</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex justify-between"><span>Subtotal:</span><strong>{formatCurrency(venda.dadosVenda.subtotal)}</strong></div>
-              {venda.dadosVenda.totalTradeIn > 0 && <div className="flex justify-between"><span>Trade-In:</span><strong className="text-orange-600">-{formatCurrency(venda.dadosVenda.totalTradeIn)}</strong></div>}
+              {venda.dadosVenda.totalTradeIn > 0 && <div className="flex justify-between"><span>Troca de Nota:</span><strong className="text-orange-600">-{formatCurrency(venda.dadosVenda.totalTradeIn)}</strong></div>}
               <Separator />
               <div className="flex justify-between text-base"><span>Total:</span><strong className="text-primary">{formatCurrency(venda.dadosVenda.total)}</strong></div>
               <div className="flex justify-between"><span>Lucro:</span><strong className={venda.dadosVenda.lucro >= 0 ? 'text-green-600' : 'text-red-600'}>{formatCurrency(venda.dadosVenda.lucro)}</strong></div>
@@ -227,7 +227,7 @@ export default function VendasConferenciaGestorDetalhes() {
                       <p className="font-medium text-sm">{evento.titulo}</p>
                       <p className="text-xs text-muted-foreground">{new Date(evento.dataHora).toLocaleString('pt-BR')}</p>
                       {evento.responsavel && <p className="text-xs">Por: {evento.responsavel}</p>}
-                      {evento.observacao && <p className="text-xs italic mt-1">"{evento.observacao}"</p>}
+                      {evento.observacao && evento.observacao.trim() && <p className="text-xs italic mt-1">"{evento.observacao}"</p>}
                     </div>
                   </div>
                 ))}

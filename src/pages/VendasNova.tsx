@@ -37,6 +37,7 @@ import { getProdutosCadastro, ProdutoCadastro, calcularTipoPessoa } from '@/util
 import { getProdutosPendentes, ProdutoPendente } from '@/utils/osApi';
 import { useDraftVenda } from '@/hooks/useDraftVenda';
 import { getPlanosPorModelo, PlanoGarantia } from '@/utils/planosGarantiaApi';
+import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { displayIMEI, formatIMEI } from '@/utils/imeiMask';
 import { formatarMoeda, moedaMask, parseMoeda } from '@/utils/formatUtils';
 import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
@@ -3089,6 +3090,14 @@ export default function VendasNova() {
                     </p>
                   </div>
                 </div>
+                <div className="bg-orange-50 dark:bg-orange-950/20 p-3 rounded-lg border border-orange-200 dark:border-orange-900">
+                  <div className="flex items-start gap-2">
+                    <Clock className="h-4 w-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-orange-700 dark:text-orange-300 font-medium">
+                      OBS.: A partir de 24 horas irá começar a contar o vale, até retorno do aparelho.
+                    </p>
+                  </div>
+                </div>
                 
                 {/* Termo de Responsabilidade */}
                 <div>
@@ -3229,11 +3238,36 @@ export default function VendasNova() {
                 type="checkbox"
                 id="imeiValidado"
                 checked={novoTradeIn.imeiValidado || false}
-                onChange={(e) => setNovoTradeIn({ ...novoTradeIn, imeiValidado: e.target.checked })}
+                onChange={(e) => setNovoTradeIn({ ...novoTradeIn, imeiValidado: e.target.checked, anexoConsultaIMEI: e.target.checked ? novoTradeIn.anexoConsultaIMEI : undefined, anexoConsultaIMEINome: e.target.checked ? novoTradeIn.anexoConsultaIMEINome : undefined })}
                 className="h-4 w-4"
               />
-              <label htmlFor="imeiValidado" className="text-sm font-medium">IMEI Validado</label>
+              <label htmlFor="imeiValidado" className="text-sm font-medium flex items-center gap-1.5">
+                <Shield className="h-4 w-4 text-amber-600" />
+                IMEI Validado
+              </label>
             </div>
+            {novoTradeIn.imeiValidado && (
+              <div className="space-y-2">
+                <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg border border-blue-200 dark:border-blue-900">
+                  <div className="flex items-start gap-2">
+                    <Shield className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      Campo próprio para anexar a tela de consulta da Polícia - TELA de Consulta do IMEI
+                    </p>
+                  </div>
+                </div>
+                <FileUploadComprovante
+                  label="Anexo da Consulta Policial do IMEI *"
+                  value={novoTradeIn.anexoConsultaIMEI || ''}
+                  fileName={novoTradeIn.anexoConsultaIMEINome || ''}
+                  onFileChange={({ comprovante, comprovanteNome }) => {
+                    setNovoTradeIn({ ...novoTradeIn, anexoConsultaIMEI: comprovante, anexoConsultaIMEINome: comprovanteNome });
+                  }}
+                  acceptedTypes={['image/jpeg', 'image/png', 'image/webp', 'application/pdf']}
+                  maxSizeMB={10}
+                />
+              </div>
+            )}
             {!novoTradeIn.imeiValidado && (
               <div className="bg-destructive/10 p-3 rounded-lg flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
@@ -3244,7 +3278,12 @@ export default function VendasNova() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTradeInModal(false)}>Cancelar</Button>
-            <Button onClick={handleAddTradeIn}>Adicionar</Button>
+            <Button 
+              onClick={handleAddTradeIn}
+              disabled={novoTradeIn.imeiValidado && !novoTradeIn.anexoConsultaIMEI}
+            >
+              Adicionar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

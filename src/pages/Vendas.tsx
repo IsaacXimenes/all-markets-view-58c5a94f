@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Plus, Download, Eye, TrendingUp, DollarSign, Percent, ShoppingCart, CreditCard, FileText, Image, Package, Check, AlertTriangle, X } from 'lucide-react';
 import { getVendas, exportVendasToCSV, formatCurrency, Venda, ItemTradeIn, AnexoTradeIn } from '@/utils/vendasApi';
+import { getValorRecomendado } from '@/utils/valoresRecomendadosTrocaApi';
 import { calcularLucroReal } from '@/utils/calculoRentabilidadeVenda';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { getStatusConferenciaByVendaId, StatusConferencia } from '@/utils/conferenciaGestorApi';
@@ -430,6 +431,7 @@ export default function Vendas() {
                   <TableHead>Cliente</TableHead>
                   <TableHead>Resp. Venda</TableHead>
                   <TableHead>Base de Troca</TableHead>
+                  <TableHead>Status Compra</TableHead>
                   <TableHead className="text-right">V. Custo</TableHead>
                   <TableHead className="text-right">V. Aparelhos</TableHead>
                   <TableHead className="text-right">V. Acessórios</TableHead>
@@ -557,6 +559,58 @@ export default function Vendas() {
                                   Entregue
                                 </Badge>
                               )}
+                            </div>
+                          </TooltipProvider>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {venda.tradeIns.length > 0 ? (
+                          <TooltipProvider>
+                            <div className="flex flex-col gap-1">
+                              {venda.tradeIns.map(t => {
+                                const recomendado = getValorRecomendado(t.modelo);
+                                const valorPago = t.valorCompraUsado;
+                                const valorSugerido = recomendado?.valorSugerido || 0;
+                                const acimaDoPadrao = recomendado && valorPago > valorSugerido;
+                                
+                                return (
+                                  <Tooltip key={t.id}>
+                                    <TooltipTrigger asChild>
+                                      <div className="flex items-center gap-1 cursor-help">
+                                        {!recomendado ? (
+                                          <Badge variant="outline" className="text-xs whitespace-nowrap">Sem ref.</Badge>
+                                        ) : acimaDoPadrao ? (
+                                          <Badge variant="destructive" className="text-xs whitespace-nowrap">
+                                            <AlertTriangle className="h-3 w-3 mr-1" />
+                                            Acima
+                                          </Badge>
+                                        ) : (
+                                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs whitespace-nowrap">
+                                            <Check className="h-3 w-3 mr-1" />
+                                            OK
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <div className="text-xs space-y-1">
+                                        <p><strong>{t.modelo}</strong></p>
+                                        <p>Valor Pago: {formatCurrency(valorPago)}</p>
+                                        {recomendado ? (
+                                          <>
+                                            <p>Valor Recomendado: {formatCurrency(valorSugerido)}</p>
+                                            {acimaDoPadrao && <p className="text-red-400 font-medium">Diferença: +{formatCurrency(valorPago - valorSugerido)}</p>}
+                                          </>
+                                        ) : (
+                                          <p className="text-muted-foreground">Modelo sem valor de referência</p>
+                                        )}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                );
+                              })}
                             </div>
                           </TooltipProvider>
                         ) : (

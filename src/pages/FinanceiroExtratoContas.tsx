@@ -736,6 +736,7 @@ export default function FinanceiroExtratoContas() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Data</TableHead>
+                      <TableHead>Log (Data/Hora)</TableHead>
                       <TableHead>Descrição</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
@@ -750,6 +751,7 @@ export default function FinanceiroExtratoContas() {
                           className={mov.tipo === 'entrada' ? 'bg-green-50/50 dark:bg-green-900/10' : 'bg-red-50/50 dark:bg-red-900/10'}
                         >
                           <TableCell>{new Date(mov.data).toLocaleDateString('pt-BR')}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{new Date(mov.data).toLocaleString('pt-BR')}</TableCell>
                           <TableCell>{mov.descricao}</TableCell>
                           <TableCell>
                             <Badge 
@@ -773,7 +775,7 @@ export default function FinanceiroExtratoContas() {
                       ))}
                     {(movimentacoesPorConta[contaSelecionada.id] || []).length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                           Nenhuma movimentação no período
                         </TableCell>
                       </TableRow>
