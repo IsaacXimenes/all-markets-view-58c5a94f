@@ -256,7 +256,6 @@ export default function CadastrosColaboradores() {
       'Data Admissão': col.data_admissao,
       'Salário Fixo': col.salario_fixo,
       'Ajuda de Custo': col.ajuda_custo,
-      Comissão: col.comissao,
       'É Gestor': col.eh_gestor ? 'Sim' : 'Não',
       'É Vendedor': col.eh_vendedor ? 'Sim' : 'Não',
       'É Estoquista': col.eh_estoquista ? 'Sim' : 'Não',
@@ -621,14 +620,6 @@ export default function CadastrosColaboradores() {
                 type="number" 
                 value={form.ajuda_custo} 
                 onChange={e => setForm({ ...form, ajuda_custo: parseFloat(e.target.value) || 0 })} 
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Comissão (%)</Label>
-              <Input 
-                type="number" 
-                value={form.comissao} 
-                onChange={e => setForm({ ...form, comissao: parseFloat(e.target.value) || 0 })} 
               />
             </div>
 
