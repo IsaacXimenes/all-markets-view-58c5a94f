@@ -1,6 +1,29 @@
 // Motoboy API - Gerenciamento de demandas e remuneração de motoboys
 import { format, startOfMonth, endOfMonth, getDaysInMonth } from 'date-fns';
 
+// Lazy imports to break circular dependency (motoboyApi <-> vendasApi)
+let _vendasModule: any = null;
+let _financeModule: any = null;
+
+const getVendasModule = () => {
+  if (!_vendasModule) {
+    // Dynamic import resolved synchronously after first load
+    import('./vendasApi').then(m => { _vendasModule = m; });
+  }
+  return _vendasModule;
+};
+
+const getFinanceModule = () => {
+  if (!_financeModule) {
+    import('./financeApi').then(m => { _financeModule = m; });
+  }
+  return _financeModule;
+};
+
+// Pre-warm lazy modules
+import('./vendasApi').then(m => { _vendasModule = m; });
+import('./financeApi').then(m => { _financeModule = m; });
+
 export interface DemandaMotoboy {
   id: string;
   motoboyId: string;
@@ -273,13 +296,15 @@ export const registrarPagamentoRemuneracao = (id: string, dados?: DadosPagamento
   // Integração financeira - lançar despesa no extrato
   if (dados) {
     try {
-      const { addDespesa } = require('./financeApi');
+      // Lançar despesa no extrato financeiro
       const meses = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
       const mesAtual = new Date().getMonth();
       const anoAtual = new Date().getFullYear();
       const competenciaFinanceira = `${meses[mesAtual]}-${anoAtual}`;
 
-      addDespesa({
+      const finApi = getFinanceModule();
+      if (!finApi) { console.warn('[MOTOBOY] financeApi not loaded yet'); }
+      (finApi?.addDespesa || (() => {}))({
         tipo: 'Variável' as const,
         data: hoje,
         descricao: `Pagamento Remuneração Motoboy - ${rem.motoboyNome} - Período ${new Date(rem.periodoInicio).toLocaleDateString('pt-BR')} a ${new Date(rem.periodoFim).toLocaleDateString('pt-BR')}`,
@@ -346,8 +371,8 @@ export const getDetalheEntregasRemuneracao = (
   periodoFim: string
 ): DetalheEntregaRemuneracao[] => {
   // Lazy import to avoid circular dependency
-  const { getVendas } = require('./vendasApi');
-  const todasVendas = getVendas();
+  const vendasMod = getVendasModule();
+  const todasVendas = vendasMod?.getVendas ? vendasMod.getVendas() : [];
 
   const demandasPeriodo = demandas.filter(d =>
     d.motoboyId === motoboyId &&
