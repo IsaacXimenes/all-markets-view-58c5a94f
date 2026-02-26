@@ -203,10 +203,12 @@ export const getLojaEstoqueReal = (lojaId: string): string => {
 };
 
 // Função para obter todas as lojas do mesmo pool de estoque compartilhado
+// UNIDIRECIONAL: Online vê Matriz, mas Matriz NÃO vê Online
 export const getLojasPorPoolEstoque = (lojaId: string): string[] => {
-  if (lojaId === LOJA_ONLINE_ID || lojaId === LOJA_MATRIZ_ID) {
-    return [LOJA_MATRIZ_ID, LOJA_ONLINE_ID];
+  if (lojaId === LOJA_ONLINE_ID) {
+    return [LOJA_ONLINE_ID, LOJA_MATRIZ_ID]; // Online pode ver estoque da Matriz
   }
+  // Matriz e qualquer outra loja: apenas ela mesma
   return [lojaId];
 };
 
@@ -1974,6 +1976,77 @@ export const getProdutosDisponivelMatriz = (): Produto[] => {
 
 // ============= CONFERÊNCIA AUTOMÁTICA VIA VENDA =============
 import { buscarVendaPorImei } from './vendasApi';
+
+// Conferir produto na movimentação matriz no ato do registro da venda
+export const conferirProdutoMovimentacaoMatrizPorVenda = (
+  produtoId: string,
+  vendaId: string,
+  vendedorId: string,
+  vendedorNome: string
+): { sucesso: boolean } => {
+  const produto = produtos.find(p => p.id === produtoId);
+  if (!produto || !produto.movimentacaoId) {
+    return { sucesso: false };
+  }
+  
+  const movimentacao = movimentacoesMatriz.find(m => m.id === produto.movimentacaoId);
+  if (!movimentacao || movimentacao.statusMovimentacao.startsWith('Finalizado')) {
+    return { sucesso: false };
+  }
+  
+  const item = movimentacao.itens.find(i => i.aparelhoId === produtoId);
+  if (!item || item.statusItem !== 'Enviado') {
+    return { sucesso: false };
+  }
+  
+  const agoraISO = new Date().toISOString();
+  
+  // Marcar item como Vendido
+  item.statusItem = 'Vendido';
+  item.dataHoraRetorno = agoraISO;
+  item.vendaId = vendaId;
+  item.vendedorId = vendedorId;
+  item.vendedorNome = vendedorNome;
+  item.conferenciaAutomatica = true;
+  
+  // Timeline da movimentação
+  movimentacao.timeline.unshift({
+    id: `TL-${Date.now()}-venda-auto-${produtoId}`,
+    data: agoraISO,
+    tipo: 'venda_matriz',
+    titulo: 'Conferido Automaticamente via Venda',
+    descricao: `${item.modelo} ${item.cor} - Venda ${vendaId} por ${vendedorNome}`,
+    responsavel: 'Sistema',
+    aparelhoId: produtoId
+  });
+  
+  // Limpar movimentacaoId do produto
+  produto.movimentacaoId = undefined;
+  
+  // Verificar se movimentação finalizou
+  const todosFinalizados = movimentacao.itens.every(
+    i => i.statusItem === 'Devolvido' || i.statusItem === 'Vendido'
+  );
+  
+  if (todosFinalizados) {
+    const agora = new Date();
+    const limite = new Date(movimentacao.dataHoraLimiteRetorno);
+    movimentacao.statusMovimentacao = (movimentacao.statusMovimentacao === 'Atrasado' || agora >= limite)
+      ? 'Finalizado - Atrasado'
+      : 'Finalizado - Dentro do Prazo';
+    
+    movimentacao.timeline.unshift({
+      id: `TL-${Date.now()}-auto-conc`,
+      data: agoraISO,
+      tipo: 'retorno_matriz',
+      titulo: 'Movimentação Finalizada Automaticamente',
+      descricao: `Todos os itens conferidos - ${movimentacao.statusMovimentacao}`,
+      responsavel: 'Sistema'
+    });
+  }
+  
+  return { sucesso: true };
+};
 
 // Função de conferência automática de itens pendentes via venda
 export const conferirItensAutomaticamentePorVenda = (

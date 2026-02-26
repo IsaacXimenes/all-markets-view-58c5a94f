@@ -27,7 +27,7 @@ import {
   addCliente
 } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
-import { getProdutos, Produto, updateProduto, bloquearProdutosEmVenda, getLojaEstoqueReal, getLojasPorPoolEstoque, LOJA_MATRIZ_ID, LOJA_ONLINE_ID } from '@/utils/estoqueApi';
+import { getProdutos, Produto, updateProduto, bloquearProdutosEmVenda, getLojaEstoqueReal, getLojasPorPoolEstoque, LOJA_MATRIZ_ID, LOJA_ONLINE_ID, conferirProdutoMovimentacaoMatrizPorVenda } from '@/utils/estoqueApi';
 import { addTradeInPendente } from '@/utils/baseTrocasPendentesApi';
 import { addVenda, getNextVendaNumber, getHistoricoComprasCliente, ItemVenda, ItemTradeIn, Pagamento } from '@/utils/vendasApi';
 import { inicializarVendaNoFluxo } from '@/utils/fluxoVendasApi';
@@ -598,7 +598,7 @@ export default function VendasNova() {
       valorRecomendado: produto.vendaRecomendada || produto.valorVendaSugerido,
       valorVenda: produto.vendaRecomendada || produto.valorVendaSugerido,
       valorCusto: produto.valorCusto,
-      loja: produto.loja
+      loja: produto.lojaAtualId || produto.loja
     };
     
     const isFirstItem = itens.length === 0;
@@ -988,6 +988,14 @@ export default function VendasNova() {
     
     const venda = addVenda(vendaData);
 
+    // CONFERÊNCIA AUTOMÁTICA: Para cada item com movimentacaoId, conferir automaticamente
+    itens.forEach(item => {
+      const produto = produtosEstoque.find(p => p.id === item.produtoId);
+      if (produto && produto.movimentacaoId) {
+        conferirProdutoMovimentacaoMatrizPorVenda(produto.id, venda.id, confirmVendedor, vendedorNome);
+      }
+    });
+
     // Inicializar venda no fluxo de conferência (registra no localStorage)
     inicializarVendaNoFluxo(venda.id, confirmVendedor, vendedorNome);
 
@@ -1332,6 +1340,7 @@ export default function VendasNova() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">{obterNomeLoja(item.loja)}</span>
+
                       <div className="relative">
                         <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">R$</span>
                         <Input 
@@ -1372,6 +1381,7 @@ export default function VendasNova() {
                       <TableCell className="font-medium sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">{item.produto}</TableCell>
                       <TableCell className="font-mono text-sm">{displayIMEI(item.imei)}</TableCell>
                       <TableCell>{obterNomeLoja(item.loja)}</TableCell>
+
                       <TableCell className="text-right text-muted-foreground">
                         {formatCurrency(item.valorCusto)}
                       </TableCell>
@@ -2806,7 +2816,7 @@ export default function VendasNova() {
                       <TableCell className="font-medium">{produto.modelo}</TableCell>
                       <TableCell className="font-mono text-sm">{displayIMEI(produto.imei)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(produto.vendaRecomendada || produto.valorVendaSugerido)}</TableCell>
-                      <TableCell>{obterNomeLoja(produto.loja)}</TableCell>
+                      <TableCell>{obterNomeLoja(produto.lojaAtualId || produto.loja)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button 
@@ -2850,7 +2860,7 @@ export default function VendasNova() {
                           <TableCell className="text-right">{formatCurrency(produto.vendaRecomendada || produto.valorVendaSugerido)}</TableCell>
                           <TableCell>
                             <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
-                              {obterNomeLoja(produto.loja)}
+                              {obterNomeLoja(produto.lojaAtualId || produto.loja)}
                             </Badge>
                           </TableCell>
                           <TableCell>

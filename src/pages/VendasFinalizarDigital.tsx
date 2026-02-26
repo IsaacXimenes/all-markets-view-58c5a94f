@@ -35,7 +35,7 @@ import {
 import { useCadastroStore } from '@/store/cadastroStore';
 import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
 import { ValoresRecomendadosTroca } from '@/components/vendas/ValoresRecomendadosTroca';
-import { getProdutos, Produto, updateProduto, getLojaEstoqueReal, getLojasPorPoolEstoque, LOJA_ONLINE_ID } from '@/utils/estoqueApi';
+import { getProdutos, Produto, updateProduto, getLojaEstoqueReal, getLojasPorPoolEstoque, LOJA_ONLINE_ID, conferirProdutoMovimentacaoMatrizPorVenda } from '@/utils/estoqueApi';
 import { addVenda, getHistoricoComprasCliente, ItemVenda, ItemTradeIn, Pagamento } from '@/utils/vendasApi';
 import { inicializarVendaNoFluxo } from '@/utils/fluxoVendasApi';
 import { getProdutosCadastro, ProdutoCadastro } from '@/utils/cadastrosApi';
@@ -625,7 +625,7 @@ export default function VendasFinalizarDigital() {
       valorRecomendado: produto.vendaRecomendada || produto.valorVendaSugerido,
       valorVenda: produto.vendaRecomendada || produto.valorVendaSugerido,
       valorCusto: produto.valorCusto,
-      loja: produto.loja
+      loja: produto.lojaAtualId || produto.loja
     };
     
     setItens([...itens, novoItem]);
@@ -791,6 +791,14 @@ export default function VendasFinalizarDigital() {
     // Inicializar venda no fluxo de conferência
     const vendedorNome = obterNomeColaborador(venda.responsavelVendaId);
     inicializarVendaNoFluxo(vendaRegistrada.id, venda.responsavelVendaId, vendedorNome);
+
+    // CONFERÊNCIA AUTOMÁTICA: Para cada item com movimentacaoId, conferir na movimentação matriz
+    itens.forEach(item => {
+      const produto = produtosEstoque.find(p => p.id === item.produtoId);
+      if (produto && produto.movimentacaoId) {
+        conferirProdutoMovimentacaoMatrizPorVenda(produto.id, vendaRegistrada.id, venda.responsavelVendaId, vendedorNome);
+      }
+    });
 
     // Trade-Ins "Com o Cliente" → Base de Trocas Pendentes
     tradeIns.forEach(tradeIn => {
@@ -1052,6 +1060,7 @@ export default function VendasFinalizarDigital() {
                       <TableCell className="font-medium">{item.produto}</TableCell>
                       <TableCell className="font-mono text-sm">{displayIMEI(item.imei)}</TableCell>
                       <TableCell>{obterNomeLoja(item.loja)}</TableCell>
+
                       <TableCell className="text-right text-muted-foreground">
                         {formatCurrency(item.valorCusto)}
                       </TableCell>
@@ -2352,7 +2361,7 @@ export default function VendasFinalizarDigital() {
                         <TableCell className="font-medium">{produto.modelo}</TableCell>
                         <TableCell className="font-mono text-sm">{displayIMEI(produto.imei)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(produto.vendaRecomendada || produto.valorVendaSugerido)}</TableCell>
-                        <TableCell>{obterNomeLoja(produto.loja)}</TableCell>
+                        <TableCell>{obterNomeLoja(produto.lojaAtualId || produto.loja)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             <Button 
@@ -2394,7 +2403,7 @@ export default function VendasFinalizarDigital() {
                             <TableCell className="text-right">{formatCurrency(produto.vendaRecomendada || produto.valorVendaSugerido)}</TableCell>
                             <TableCell>
                               <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
-                                {obterNomeLoja(produto.loja)}
+                                {obterNomeLoja(produto.lojaAtualId || produto.loja)}
                               </Badge>
                             </TableCell>
                             <TableCell>
@@ -2960,7 +2969,7 @@ export default function VendasFinalizarDigital() {
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Loja</label>
-                  <p className="font-medium">{obterNomeLoja(produtoDetalhe.loja)}</p>
+                  <p className="font-medium">{obterNomeLoja(produtoDetalhe.lojaAtualId || produtoDetalhe.loja)}</p>
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Valor de Custo</label>
