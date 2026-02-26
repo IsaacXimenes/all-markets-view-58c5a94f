@@ -901,11 +901,11 @@ export default function GarantiasNovaManual() {
 
       {/* Modal Buscar Cliente - Padronizado com VendasNova */}
       <Dialog open={showClienteModal} onOpenChange={setShowClienteModal}>
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Selecionar Cliente</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
             <div className="flex gap-2">
               <Input
                 placeholder="Buscar por nome ou CPF..."
@@ -918,7 +918,7 @@ export default function GarantiasNovaManual() {
                 Novo Cliente
               </Button>
             </div>
-            <div className="border rounded-lg max-h-[400px] overflow-auto">
+            <div className="border rounded-lg flex-1 overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
