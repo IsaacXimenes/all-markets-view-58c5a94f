@@ -18,6 +18,7 @@ import { TimelineEntry } from '@/utils/timelineApi';
 import { exportToCSV, formatCurrency } from '@/utils/formatUtils';
 import { Plus, Pencil, Trash2, Download, User, Users, Shield, Package, Wrench, Bike, ArrowLeftRight, History, Clock, RefreshCw, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/store/authStore';
 import { format } from 'date-fns';
 
 const CARGOS = [
@@ -33,6 +34,7 @@ const CARGOS = [
 
 export default function CadastrosColaboradores() {
   const { toast } = useToast();
+  const user = useAuthStore((s) => s.user);
   const { 
     colaboradores,
     lojas,
@@ -56,6 +58,11 @@ export default function CadastrosColaboradores() {
   const [filtroNome, setFiltroNome] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<string>('ativos');
   
+  // Modal de Toggle Status (igual Contas Bancárias)
+  const [toggleDialogOpen, setToggleDialogOpen] = useState(false);
+  const [toggleColaboradorId, setToggleColaboradorId] = useState<string | null>(null);
+  const [toggleObservacao, setToggleObservacao] = useState('');
+
   // Modal de Rodízio
   const [isRodizioModalOpen, setIsRodizioModalOpen] = useState(false);
   const [colaboradorRodizio, setColaboradorRodizio] = useState<ColaboradorMockado | null>(null);
@@ -495,12 +502,13 @@ export default function CadastrosColaboradores() {
                       <div className="flex items-center gap-2">
                         <Switch
                           checked={col.ativo}
-                          onCheckedChange={(checked) => {
-                            atualizarColaborador(col.id, { ativo: checked });
-                            toast({ title: checked ? 'Colaborador Ativado' : 'Colaborador Desativado', description: `${col.nome} foi ${checked ? 'ativado' : 'desativado'} com sucesso.` });
+                          onCheckedChange={() => {
+                            setToggleColaboradorId(col.id);
+                            setToggleObservacao('');
+                            setToggleDialogOpen(true);
                           }}
                         />
-                        <span className={`text-xs ${col.ativo ? 'text-green-600' : 'text-muted-foreground'}`}>
+                        <span className={`text-xs ${col.ativo ? 'text-primary' : 'text-muted-foreground'}`}>
                           {col.ativo ? 'Ativo' : 'Inativo'}
                         </span>
                       </div>
@@ -818,6 +826,59 @@ export default function CadastrosColaboradores() {
             <Button variant="outline" onClick={() => setIsHistoricoModalOpen(false)}>
               Fechar
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Dialog de confirmação do toggle de status */}
+      <Dialog open={toggleDialogOpen} onOpenChange={setToggleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {(() => {
+                const colToggle = toggleColaboradorId ? colaboradores.find(c => c.id === toggleColaboradorId) : null;
+                return colToggle?.ativo ? 'Desabilitar Colaborador' : 'Habilitar Colaborador';
+              })()}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {(() => {
+              const colToggle = toggleColaboradorId ? colaboradores.find(c => c.id === toggleColaboradorId) : null;
+              return (
+                <p className="text-sm text-muted-foreground">
+                  Deseja {colToggle?.ativo ? 'desabilitar' : 'habilitar'} o colaborador <strong>{colToggle?.nome}</strong>?
+                  {colToggle?.ativo && (
+                    <span className="block mt-1 text-destructive">
+                      Colaboradores desabilitados não aparecerão nos campos de seleção de outros módulos.
+                    </span>
+                  )}
+                </p>
+              );
+            })()}
+            <div className="space-y-2">
+              <Label>Observação (opcional)</Label>
+              <Textarea
+                value={toggleObservacao}
+                onChange={e => setToggleObservacao(e.target.value)}
+                placeholder="Motivo da alteração..."
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setToggleDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={() => {
+              if (!toggleColaboradorId) return;
+              const colToggle = colaboradores.find(c => c.id === toggleColaboradorId);
+              if (!colToggle) return;
+              const novoStatus = !colToggle.ativo;
+              atualizarColaborador(toggleColaboradorId, { ativo: novoStatus });
+              toast({ 
+                title: novoStatus ? 'Colaborador Habilitado' : 'Colaborador Desabilitado', 
+                description: `${colToggle.nome} foi ${novoStatus ? 'habilitado' : 'desabilitado'} com sucesso.${toggleObservacao ? ` Motivo: ${toggleObservacao}` : ''}` 
+              });
+              setToggleDialogOpen(false);
+              setToggleColaboradorId(null);
+            }}>Confirmar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
