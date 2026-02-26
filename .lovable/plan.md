@@ -1,52 +1,96 @@
 
-# Correção: Produtos da Loja Online não aparecem na Finalização Digital
 
-## Problema Identificado
+# Plano: Corrigir Localização de Produtos na Movimentação Matriz e Conferência Automática via Venda
 
-Quando a "Loja de Venda" é "Loja - Online" (ID `fcc78c1a`), o sistema aplica a regra de estoque compartilhado e redireciona para "Loja - Matriz" (ID `3ac7e00c`). Porém, o filtro so mostra produtos cuja localização efetiva seja exatamente a Matriz. Produtos registrados diretamente na loja Online (com `loja: 'fcc78c1a'`) ficam invisíveis, pois `'fcc78c1a' !== '3ac7e00c'`.
+## Problemas Identificados
 
-## Causa Raiz
+### 1. Exibição de loja errada no modal de produtos
+Na tela de vendas, ao exibir a loja de um produto, o sistema usa `obterNomeLoja(produto.loja)` -- ou seja, a loja de **cadastro original** (ex: "Estoque - SIA"). Porém, quando um produto foi transferido via Movimentação Matriz, o campo `lojaAtualId` contém a localização física real ("Loja - Matriz"). O sistema ignora esse campo na exibição.
 
-Na função `getLojaEstoqueReal()`, quando a loja é Online, retorna o ID da Matriz. O filtro de produtos compara `lojaEfetivaProduto === lojaEstoqueReal`, o que exclui produtos que estão fisicamente cadastrados na Online.
+### 2. Pool compartilhado Matriz/Online precisa ser corrigido
+Atualmente `getLojasPorPoolEstoque` para Loja Matriz retorna `[Matriz, Online]`, permitindo que vendedores da Matriz vejam produtos da Online. O correto é que vendedores da **Matriz** vejam apenas produtos da Matriz (e os transferidos do SIA para lá), **sem** incluir produtos registrados na Online.
 
-O mesmo bug existe em `getProdutosDisponiveisPorLoja()` na `estoqueApi.ts`.
+O compartilhamento deve ser **unidirecional**: somente vendas da Loja Online podem ver o estoque da Matriz. A Matriz não deve ver o estoque da Online.
 
-## Solução
+### 3. Conferência automática não é acionada ao registrar venda
+A função `conferirItensAutomaticamentePorVenda` existe e funciona, mas só é chamada quando alguém abre a tela de detalhes da movimentação. Quando uma venda é registrada com um produto que pertence a uma movimentação matriz ativa, a conferência deveria ocorrer imediatamente (mover o aparelho de "Enviado" para "Vendido" na movimentação).
 
-Alterar a lógica de filtragem para considerar AMBAS as lojas quando há compartilhamento de estoque. Produtos devem aparecer se estiverem na Matriz OU na Online quando a venda é de qualquer uma dessas duas lojas.
+---
 
-### Alterações
+## Alterações Planejadas
 
-**1. `src/utils/estoqueApi.ts`** - Criar helper e corrigir `getProdutosDisponiveisPorLoja`
+### 1. `src/utils/estoqueApi.ts` - Corrigir pool e criar conferência no ato da venda
 
-- Criar função `getLojasPorPoolEstoque(lojaId)` que retorna um array com todas as lojas do mesmo pool de estoque (ex: `['fcc78c1a', '3ac7e00c']` para Online ou Matriz)
-- Corrigir `getProdutosDisponiveisPorLoja` para usar o array de lojas do pool ao invés de um único ID
+**a) Ajustar `getLojasPorPoolEstoque`**: tornar o compartilhamento unidirecional
+- Loja Online retorna `[Online, Matriz]` (pode ver estoque da Matriz)
+- Loja Matriz retorna apenas `[Matriz]` (NÃO ve estoque da Online)
+- Qualquer outra loja retorna `[propria]`
 
-**2. `src/pages/VendasFinalizarDigital.tsx`** - Corrigir filtro de produtos (linha 584-588)
+**b) Criar função `conferirProdutoMovimentacaoMatrizPorVenda(produtoId, vendaId, vendedorId, vendedorNome)`**: 
+- Verifica se o produto tem `movimentacaoId` ativo
+- Se sim, marca o item como "Vendido" na movimentação, registra a venda e o vendedor
+- Adiciona entrada na timeline da movimentação
+- Verifica se todos os itens foram finalizados e atualiza status da movimentação
 
-- Importar a nova função `getLojasPorPoolEstoque`
-- No `produtosFiltrados`, trocar a comparação de igualdade simples por verificação de inclusão no pool:
-  - De: `lojaEfetivaProduto !== lojaEstoqueReal`
-  - Para: `!lojasPool.includes(lojaEfetivaProduto)`
-- Mesma correção no `produtosOutrasLojas` (linha 610)
+### 2. `src/pages/VendasNova.tsx` - Exibir loja efetiva e integrar conferência
 
-**3. `src/pages/VendasNova.tsx`** - Verificar e aplicar mesma correção se necessário
+**a) Corrigir exibição da loja** em todas as ocorrências do modal de produtos:
+- De: `obterNomeLoja(produto.loja)` 
+- Para: `obterNomeLoja(produto.lojaAtualId || produto.loja)`
+- Linhas afetadas: ~1334, ~1374, ~2809, ~2853, ~2912
 
-- Garantir consistência no filtro de produtos da tela de Nova Venda
+**b) Integrar conferência automática** na função `handleConfirmarVenda`:
+- Após registrar a venda, para cada item vendido que tenha `movimentacaoId`, chamar a nova função de conferência automática
+- Isso move automaticamente o aparelho de "pendente de devolução" para "conferido/vendido" na aba de Movimentação Matriz
 
-### Exemplo da correção no filtro
+### 3. `src/pages/VendasFinalizarDigital.tsx` - Mesmas correções
+
+**a) Corrigir exibição da loja** no modal de produtos:
+- Mesma alteração: `obterNomeLoja(produto.lojaAtualId || produto.loja)`
+
+**b) Integrar conferência automática** no fluxo de finalização da venda digital
+
+---
+
+## Detalhes Técnicos
+
+### Nova função de conferência no ato da venda
 
 ```text
-// Antes (bugado):
-const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
-if (lojaEfetivaProduto !== lojaEstoqueReal) return false;
-
-// Depois (corrigido):
-const lojasPool = getLojasPorPoolEstoque(lojaVenda);
-if (!lojasPool.includes(lojaEfetivaProduto)) return false;
+conferirProdutoMovimentacaoMatrizPorVenda(
+  produtoId: string,
+  vendaId: string, 
+  vendedorId: string,
+  vendedorNome: string
+) => { sucesso: boolean }
 ```
 
-A nova função `getLojasPorPoolEstoque` retornará:
-- Para Loja Online: `['fcc78c1a', '3ac7e00c']` (Online + Matriz)
-- Para Loja Matriz: `['3ac7e00c', 'fcc78c1a']` (Matriz + Online)
-- Para qualquer outra loja: `['<id_da_loja>']` (apenas ela mesma)
+Lógica:
+1. Buscar o produto por ID
+2. Se `produto.movimentacaoId` existe, buscar a movimentação
+3. Encontrar o item correspondente na movimentação
+4. Marcar como `statusItem: 'Vendido'`, registrar `vendaId`, `vendedorId`, `vendedorNome`, `conferenciaAutomatica: true`
+5. Adicionar timeline entry
+6. Verificar se movimentação completa e finalizar se necessário
+7. Limpar `produto.movimentacaoId` após conferência
+
+### Alteração no pool de estoque
+
+```text
+// Antes:
+getLojasPorPoolEstoque(Matriz) => [Matriz, Online]  
+getLojasPorPoolEstoque(Online) => [Matriz, Online]
+
+// Depois:
+getLojasPorPoolEstoque(Matriz) => [Matriz]           // Unidirecional
+getLojasPorPoolEstoque(Online) => [Matriz, Online]    // Online acessa Matriz
+```
+
+### Fluxo completo corrigido
+
+1. Estoquista cria Movimentação Matriz: produtos saem do SIA, `lojaAtualId` = Matriz
+2. Vendedor da Matriz abre Nova Venda: vê produtos com `lojaAtualId = Matriz` mostrando "Loja - Matriz"
+3. Vendedor seleciona o aparelho e registra a venda
+4. Sistema automaticamente marca o aparelho como "Vendido" na movimentação matriz
+5. Na aba Movimentações Matriz, o aparelho aparece em "Conferidos" com link para a venda
+
