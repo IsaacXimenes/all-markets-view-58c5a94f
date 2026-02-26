@@ -186,6 +186,63 @@ let remuneracoes: RemuneracaoMotoboy[] = [
   }
 ];
 
+// Helpers para competência bi-mensal
+const getMesesAbrev = () => ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+
+const getCompetenciaFromDate = (dateStr: string): { competencia: string; periodoInicio: string; periodoFim: string } => {
+  const date = new Date(dateStr + 'T12:00:00');
+  const meses = getMesesAbrev();
+  const mes = meses[date.getMonth()];
+  const ano = date.getFullYear();
+  const dia = date.getDate();
+  const ultimoDia = getDaysInMonth(date);
+
+  if (dia <= 15) {
+    return {
+      competencia: `${mes}-${ano} - 1`,
+      periodoInicio: `${ano}-${String(date.getMonth() + 1).padStart(2, '0')}-01`,
+      periodoFim: `${ano}-${String(date.getMonth() + 1).padStart(2, '0')}-15`
+    };
+  } else {
+    return {
+      competencia: `${mes}-${ano} - 2`,
+      periodoInicio: `${ano}-${String(date.getMonth() + 1).padStart(2, '0')}-16`,
+      periodoFim: `${ano}-${String(date.getMonth() + 1).padStart(2, '0')}-${ultimoDia}`
+    };
+  }
+};
+
+// Criar ou atualizar remuneração do período ao adicionar demanda
+const atualizarRemuneracaoPeriodo = (demanda: DemandaMotoboy) => {
+  if (demanda.status !== 'Concluída') return;
+
+  const { competencia, periodoInicio, periodoFim } = getCompetenciaFromDate(demanda.data);
+
+  const existente = remuneracoes.find(
+    r => r.motoboyId === demanda.motoboyId && r.competencia === competencia
+  );
+
+  if (existente) {
+    existente.qtdDemandas += 1;
+    existente.valorTotal += demanda.valorDemanda;
+    console.log(`[MOTOBOY] Remuneração ${existente.id} atualizada: +1 demanda, total ${existente.valorTotal}`);
+  } else {
+    const novaRem: RemuneracaoMotoboy = {
+      id: `REM-${Date.now()}`,
+      motoboyId: demanda.motoboyId,
+      motoboyNome: demanda.motoboyNome,
+      competencia,
+      periodoInicio,
+      periodoFim,
+      qtdDemandas: 1,
+      valorTotal: demanda.valorDemanda,
+      status: 'Pendente'
+    };
+    remuneracoes.push(novaRem);
+    console.log(`[MOTOBOY] Nova remuneração ${novaRem.id} criada para ${demanda.motoboyNome} - ${competencia}`);
+  }
+};
+
 // Adicionar nova demanda de motoboy
 export const addDemandaMotoboy = (demanda: Omit<DemandaMotoboy, 'id'>): DemandaMotoboy => {
   const novaDemanda: DemandaMotoboy = {
@@ -194,6 +251,10 @@ export const addDemandaMotoboy = (demanda: Omit<DemandaMotoboy, 'id'>): DemandaM
   };
   demandas.push(novaDemanda);
   console.log(`[MOTOBOY] Demanda ${novaDemanda.id} registrada para ${demanda.motoboyNome}`);
+
+  // Atualizar/criar remuneração automaticamente
+  atualizarRemuneracaoPeriodo(novaDemanda);
+
   return novaDemanda;
 };
 
