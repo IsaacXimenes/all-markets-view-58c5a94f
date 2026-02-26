@@ -441,3 +441,46 @@
   0%, 100% { background-position: 200% center; }
   50% { background-position: -200% center; }
 }
+
+/* ============================================
+   MOBILE TABLE SCROLL - Global Fix
+   Garante scroll horizontal em tabelas dentro de
+   dialogs e cards em telas pequenas
+   ============================================ */
+
+@media (max-width: 640px) {
+  /* Dialog content responsivo - full width no mobile */
+  [role="dialog"] {
+    max-width: calc(100vw - 1rem) !important;
+    width: calc(100vw - 1rem) !important;
+    max-height: 90vh !important;
+    overflow-y: auto;
+    padding: 1rem !important;
+  }
+
+  /* TODAS as tabelas no mobile: largura mínima para forçar scroll */
+  table {
+    min-width: 650px;
+  }
+
+  /* Containers de tabela: garantir overflow-x scroll */
+  .overflow-auto,
+  .overflow-x-auto,
+  [class*="rounded"][class*="border"],
+  [class*="CardContent"] > div,
+  [role="dialog"] > div > div {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Scrollbar visível no mobile */
+  .overflow-auto::-webkit-scrollbar,
+  .overflow-x-auto::-webkit-scrollbar {
+    height: 6px;
+  }
+  .overflow-auto::-webkit-scrollbar-thumb,
+  .overflow-x-auto::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+}
