@@ -35,7 +35,7 @@ import {
 import { useCadastroStore } from '@/store/cadastroStore';
 import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
 import { ValoresRecomendadosTroca } from '@/components/vendas/ValoresRecomendadosTroca';
-import { getProdutos, Produto, updateProduto, getLojaEstoqueReal, LOJA_ONLINE_ID } from '@/utils/estoqueApi';
+import { getProdutos, Produto, updateProduto, getLojaEstoqueReal, getLojasPorPoolEstoque, LOJA_ONLINE_ID } from '@/utils/estoqueApi';
 import { addVenda, getHistoricoComprasCliente, ItemVenda, ItemTradeIn, Pagamento } from '@/utils/vendasApi';
 import { inicializarVendaNoFluxo } from '@/utils/fluxoVendasApi';
 import { getProdutosCadastro, ProdutoCadastro } from '@/utils/cadastrosApi';
@@ -582,9 +582,9 @@ export default function VendasFinalizarDigital() {
       if ((p as any).statusEmprestimo) return false;
       
       if (lojaVenda) {
-        const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
+        const lojasPool = getLojasPorPoolEstoque(lojaVenda);
         const lojaEfetivaProduto = (p as any).lojaAtualId || p.loja;
-        if (lojaEfetivaProduto !== lojaEstoqueReal) return false;
+        if (!lojasPool.includes(lojaEfetivaProduto)) return false;
       }
       
       if (filtroLojaProduto) {
@@ -600,14 +600,14 @@ export default function VendasFinalizarDigital() {
   // Produtos de OUTRAS lojas
   const produtosOutrasLojas = useMemo(() => {
     if (!lojaVenda) return [];
-    const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
+    const lojasPool = getLojasPorPoolEstoque(lojaVenda);
     return produtosEstoque.filter(p => {
       if (p.quantidade <= 0) return false;
       if ((p as any).bloqueadoEmVendaId) return false;
       if ((p as any).statusMovimentacao) return false;
       if ((p as any).statusEmprestimo) return false;
       const lojaEfetivaProduto = (p as any).lojaAtualId || p.loja;
-      if (lojaEfetivaProduto === lojaEstoqueReal) return false;
+      if (lojasPool.includes(lojaEfetivaProduto)) return false;
       if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
       if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
       return true;

@@ -202,6 +202,14 @@ export const getLojaEstoqueReal = (lojaId: string): string => {
   return lojaId;
 };
 
+// Função para obter todas as lojas do mesmo pool de estoque compartilhado
+export const getLojasPorPoolEstoque = (lojaId: string): string[] => {
+  if (lojaId === LOJA_ONLINE_ID || lojaId === LOJA_MATRIZ_ID) {
+    return [LOJA_MATRIZ_ID, LOJA_ONLINE_ID];
+  }
+  return [lojaId];
+};
+
 const fornecedores = [
   'Apple Distribuidor BR',
   'TechSupply Imports',
@@ -1318,14 +1326,14 @@ export const getProdutosDisponiveis = (): Produto[] => {
 
 // Obter produtos disponíveis para uma loja específica (considerando compartilhamento Online/Matriz)
 export const getProdutosDisponiveisPorLoja = (lojaId: string): Produto[] => {
-  const lojaEstoqueReal = getLojaEstoqueReal(lojaId);
+  const lojasPool = getLojasPorPoolEstoque(lojaId);
   return produtos.filter(p => {
     if (p.quantidade <= 0) return false;
     if (p.bloqueadoEmVendaId) return false;
     if (p.statusMovimentacao) return false;
     // Usar localização física efetiva: lojaAtualId (se existir) ou loja original
     const lojaEfetivaProduto = p.lojaAtualId || p.loja;
-    return lojaEfetivaProduto === lojaEstoqueReal;
+    return lojasPool.includes(lojaEfetivaProduto);
   });
 };
 

@@ -27,7 +27,7 @@ import {
   addCliente
 } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
-import { getProdutos, Produto, updateProduto, bloquearProdutosEmVenda, getLojaEstoqueReal, LOJA_MATRIZ_ID, LOJA_ONLINE_ID } from '@/utils/estoqueApi';
+import { getProdutos, Produto, updateProduto, bloquearProdutosEmVenda, getLojaEstoqueReal, getLojasPorPoolEstoque, LOJA_MATRIZ_ID, LOJA_ONLINE_ID } from '@/utils/estoqueApi';
 import { addTradeInPendente } from '@/utils/baseTrocasPendentesApi';
 import { addVenda, getNextVendaNumber, getHistoricoComprasCliente, ItemVenda, ItemTradeIn, Pagamento } from '@/utils/vendasApi';
 import { inicializarVendaNoFluxo } from '@/utils/fluxoVendasApi';
@@ -553,11 +553,9 @@ export default function VendasNova() {
       
       // Se uma loja foi selecionada para a venda
       if (lojaVenda) {
-        // Obter a loja de estoque real (considerando compartilhamento Online/Matriz)
-        const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
-        // Usar localização física efetiva: lojaAtualId (se existir) ou loja original
+        const lojasPool = getLojasPorPoolEstoque(lojaVenda);
         const lojaEfetivaProduto = p.lojaAtualId || p.loja;
-        if (lojaEfetivaProduto !== lojaEstoqueReal) return false;
+        if (!lojasPool.includes(lojaEfetivaProduto)) return false;
       }
       
       // Filtros adicionais do modal
@@ -574,15 +572,14 @@ export default function VendasNova() {
   // Produtos de OUTRAS lojas (para visualização apenas - bloqueados para seleção)
   const produtosOutrasLojas = useMemo(() => {
     if (!lojaVenda) return [];
-    const lojaEstoqueReal = getLojaEstoqueReal(lojaVenda);
+    const lojasPool = getLojasPorPoolEstoque(lojaVenda);
     return produtosEstoque.filter(p => {
       if (p.quantidade <= 0) return false;
       if (p.bloqueadoEmVendaId) return false;
       if (p.statusMovimentacao) return false;
-      if (p.statusEmprestimo) return false; // NOVO: Bloquear produtos emprestados
-      // Usar localização física efetiva: lojaAtualId (se existir) ou loja original
+      if (p.statusEmprestimo) return false;
       const lojaEfetivaProduto = p.lojaAtualId || p.loja;
-      if (lojaEfetivaProduto === lojaEstoqueReal) return false; // Excluir loja de estoque real
+      if (lojasPool.includes(lojaEfetivaProduto)) return false;
       if (buscaProduto && !p.imei.includes(buscaProduto)) return false;
       if (buscaModeloProduto && !p.modelo.toLowerCase().includes(buscaModeloProduto.toLowerCase())) return false;
       return true;
