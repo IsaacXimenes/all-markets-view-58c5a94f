@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { ColaboradorMockado, RodizioColaborador } from '@/types/mockData';
-import { TimelineEntry } from '@/utils/timelineApi';
+import { TimelineEntry, addTimelineEntry } from '@/utils/timelineApi';
 import { exportToCSV, formatCurrency } from '@/utils/formatUtils';
 import { Plus, Pencil, Trash2, Download, User, Users, Shield, Package, Wrench, Bike, ArrowLeftRight, History, Clock, RefreshCw, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -871,7 +871,21 @@ export default function CadastrosColaboradores() {
               const colToggle = colaboradores.find(c => c.id === toggleColaboradorId);
               if (!colToggle) return;
               const novoStatus = !colToggle.ativo;
+              const usuario = user?.colaborador?.nome || user?.username || 'Usuário';
+              const usuarioId = user?.colaborador?.id || user?.username || 'unknown';
               atualizarColaborador(toggleColaboradorId, { ativo: novoStatus });
+              // Registrar na timeline
+              addTimelineEntry({
+                entidadeId: toggleColaboradorId,
+                entidadeTipo: 'Colaborador',
+                dataHora: new Date().toISOString(),
+                tipo: novoStatus ? 'status_habilitado' : 'status_desabilitado',
+                titulo: novoStatus ? 'Colaborador Habilitado' : 'Colaborador Desabilitado',
+                descricao: `${colToggle.nome} foi ${novoStatus ? 'habilitado' : 'desabilitado'}`,
+                usuarioId,
+                usuarioNome: usuario,
+                metadata: { observacao: toggleObservacao || undefined }
+              });
               // Ao desativar, mudar filtro para "todos" para que o colaborador continue visível
               if (!novoStatus && filtroStatus === 'ativos') {
                 setFiltroStatus('todos');
