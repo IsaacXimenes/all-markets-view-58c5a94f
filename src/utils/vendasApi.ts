@@ -901,13 +901,14 @@ export const addVenda = (venda: Omit<Venda, 'id' | 'numero'>): Venda => {
       });
       
       // Registrar movimentação de saída
+      const destinoMovimentacao = venda.origemVenda === 'Troca Garantia' ? 'Troca Direta - Garantia' : 'Vendido';
       addMovimentacao({
         data: new Date().toISOString().split('T')[0],
         produto: produto.modelo,
         imei: produto.imei,
         quantidade: 1,
         origem: produto.loja,
-        destino: 'Vendido',
+        destino: destinoMovimentacao,
         responsavel: 'Sistema de Vendas',
         motivo: `Venda ${newId} - Cliente: ${venda.clienteNome}`
       });

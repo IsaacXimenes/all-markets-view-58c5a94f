@@ -963,16 +963,12 @@ export const processarTratativaGarantia = (dados: ProcessarTratativaRequest): { 
     let osId: string | undefined;
     const agora = new Date().toISOString();
 
-    // Verificar se precisa de aprovação
-    const precisaAprovacao = dados.tipo === 'Assistência + Empréstimo' || dados.tipo === 'Troca Direta';
-
     // 1. Criar OS automática (Assistência ou Assistência + Empréstimo)
     if (dados.tipo === 'Encaminhado Assistência' || dados.tipo === 'Assistência + Empréstimo') {
       const observacaoEmprestimo = dados.tipo === 'Assistência + Empréstimo' && dados.aparelhoSelecionado
         ? `\n[EMPRÉSTIMO] Cliente com aparelho emprestado: ${dados.aparelhoSelecionado.modelo} (IMEI: ${dados.aparelhoSelecionado.imei})`
         : '';
 
-      // Para Assistência + Empréstimo, usar status que indica análise pendente
       const statusOS = 'Aguardando Análise' as const;
 
       const novaOS = addOrdemServico({
@@ -993,7 +989,6 @@ export const processarTratativaGarantia = (dados: ProcessarTratativaRequest): { 
         usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome
       });
 
-      // Timeline unificada
       addTimelineUnificada({
         entidadeId: garantia.id, entidadeTipo: 'Garantia', dataHora: agora,
         tipo: 'os_criada', titulo: `OS ${osId} criada via Garantia`,
@@ -1001,7 +996,6 @@ export const processarTratativaGarantia = (dados: ProcessarTratativaRequest): { 
         usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome
       });
 
-      // Para Assistência + Empréstimo, encaminhar para Análise de Tratativas (igual Troca Direta)
       if (dados.tipo === 'Assistência + Empréstimo') {
         encaminharParaAnaliseGarantia(
           garantia.id, 'Garantia',
@@ -1010,9 +1004,122 @@ export const processarTratativaGarantia = (dados: ProcessarTratativaRequest): { 
       }
     }
 
-    // 2. Registrar tratativa
-    const statusInicial = precisaAprovacao ? 'Aguardando Aprovação' : 'Em Andamento';
-    
+    // 2. Executar ações de estoque imediatamente (sem aprovação)
+    if (dados.tipo === 'Assistência + Empréstimo' && dados.aparelhoSelecionado) {
+      updateProduto(dados.aparelhoSelecionado.id, {
+        statusEmprestimo: 'Empréstimo - Assistência',
+        emprestimoGarantiaId: garantia.id,
+        emprestimoClienteId: garantia.clienteId,
+        emprestimoClienteNome: garantia.clienteNome,
+        emprestimoOsId: osId,
+        emprestimoDataHora: agora,
+      });
+      addMovimentacao({
+        data: agora, produto: dados.aparelhoSelecionado.modelo, imei: dados.aparelhoSelecionado.imei,
+        quantidade: 1, origem: garantia.lojaVenda, destino: 'Empréstimo - Garantia',
+        responsavel: dados.usuarioNome, motivo: `Empréstimo garantia ${garantia.id}`
+      });
+
+      addTimelineEntry({
+        garantiaId: garantia.id, dataHora: agora, tipo: 'emprestimo',
+        titulo: 'Aparelho emprestado',
+        descricao: `${dados.aparelhoSelecionado.modelo} (IMEI: ${dados.aparelhoSelecionado.imei}) emprestado ao cliente`,
+        usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome
+      });
+    }
+
+    if (dados.tipo === 'Troca Direta' && dados.aparelhoSelecionado) {
+      // 1. Marcar aparelho novo como "Troca - Garantia" e dar baixa
+      updateProduto(dados.aparelhoSelecionado.id, { 
+        bloqueadoEmTrocaGarantiaId: garantia.id,
+        quantidade: 0 
+      });
+      addMovimentacao({
+        data: agora, produto: dados.aparelhoSelecionado.modelo, imei: dados.aparelhoSelecionado.imei,
+        quantidade: 1, origem: garantia.lojaVenda, destino: 'Troca - Garantia',
+        responsavel: dados.usuarioNome, motivo: `Troca direta garantia ${garantia.id}`
+      });
+
+      // 2. Registrar aparelho defeituoso do cliente em Aparelhos Pendentes
+      addProdutoPendente({
+        imei: garantia.imei,
+        marca: 'Apple',
+        modelo: garantia.modelo,
+        cor: dados.aparelhoSelecionado.cor || '-',
+        tipo: 'Seminovo',
+        condicao: 'Semi-novo',
+        origemEntrada: 'Garantia',
+        notaOuVendaId: `GAR-${garantia.id}`,
+        valorCusto: 0,
+        valorOrigem: 0,
+        saudeBateria: 0,
+        loja: garantia.lojaVenda,
+        dataEntrada: agora.split('T')[0],
+        motivoAssistencia: `Defeito relatado na Garantia ID #${garantia.id}`,
+      } as any, true);
+
+      // 3. Gerar Nota de Venda (modelo garantia) com custo e lucro zerados
+      addVenda({
+        dataHora: agora,
+        lojaVenda: garantia.lojaVenda,
+        vendedor: dados.usuarioId,
+        clienteId: garantia.clienteId,
+        clienteNome: garantia.clienteNome,
+        clienteCpf: '',
+        clienteTelefone: garantia.clienteTelefone || '',
+        clienteEmail: garantia.clienteEmail || '',
+        clienteCidade: '',
+        origemVenda: 'Troca Garantia',
+        localRetirada: garantia.lojaVenda,
+        tipoRetirada: 'Retirada Balcão',
+        taxaEntrega: 0,
+        itens: [{
+          id: `ITEM-GAR-${garantia.id}`,
+          produtoId: dados.aparelhoSelecionado.id,
+          produto: dados.aparelhoSelecionado.modelo,
+          imei: dados.aparelhoSelecionado.imei,
+          quantidade: 1,
+          valorRecomendado: 0,
+          valorCusto: 0,
+          valorVenda: 0,
+          categoria: 'Apple',
+          loja: garantia.lojaVenda,
+        }],
+        tradeIns: [{
+          id: `TI-GAR-${garantia.id}`,
+          modelo: garantia.modelo,
+          descricao: 'Entrada de Garantia',
+          imei: garantia.imei,
+          valorCompraUsado: 0,
+          imeiValidado: true,
+          condicao: 'Semi-novo',
+        }],
+        acessorios: [],
+        pagamentos: [],
+        subtotal: 0,
+        totalTradeIn: 0,
+        total: 0,
+        lucro: 0,
+        margem: 0,
+        observacoes: `Troca Direta - Garantia ${garantia.id}. Aparelho defeituoso IMEI: ${garantia.imei}. Aparelho novo: ${dados.aparelhoSelecionado.modelo} IMEI: ${dados.aparelhoSelecionado.imei}.`,
+        status: 'Concluída',
+      });
+
+      // 4. Encaminhar para análise
+      encaminharParaAnaliseGarantia(
+        garantia.id, 'Garantia',
+        `${garantia.clienteNome} - ${garantia.modelo} (IMEI: ${garantia.imei}) - Troca Direta`
+      );
+
+      addTimelineEntry({
+        garantiaId: garantia.id, dataHora: agora, tipo: 'troca',
+        titulo: 'Nota de Venda Garantia Gerada',
+        descricao: `Nota de venda com custo zerado gerada. Aparelho defeituoso (IMEI: ${garantia.imei}) encaminhado para Aparelhos Pendentes.`,
+        usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome
+      });
+    }
+
+    // 3. Registrar tratativa — todas com status 'Em Andamento'
     const novaTratativa = addTratativa({
       garantiaId: garantia.id, tipo: dados.tipo, dataHora: agora,
       usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome,
@@ -1024,10 +1131,10 @@ export const processarTratativaGarantia = (dados: ProcessarTratativaRequest): { 
       aparelhoTrocaModelo: dados.tipo === 'Troca Direta' ? dados.aparelhoSelecionado?.modelo : undefined,
       aparelhoTrocaImei: dados.tipo === 'Troca Direta' ? dados.aparelhoSelecionado?.imei : undefined,
       osId: osId,
-      status: statusInicial
+      status: 'Em Andamento'
     });
 
-    // 5. Timeline genérica
+    // 4. Timeline genérica
     if (dados.tipo === 'Direcionado Apple') {
       addTimelineEntry({
         garantiaId: garantia.id, dataHora: agora, tipo: 'tratativa',
@@ -1036,23 +1143,14 @@ export const processarTratativaGarantia = (dados: ProcessarTratativaRequest): { 
       });
     }
 
-    if (precisaAprovacao) {
-      addTimelineEntry({
-        garantiaId: garantia.id, dataHora: agora, tipo: 'tratativa',
-        titulo: `${dados.tipo} - Aguardando Aprovação`,
-        descricao: `Tratativa registrada e aguardando aprovação do gestor. ${dados.descricao}`,
-        usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome
-      });
-    }
-
-    // 6. Atualizar status da garantia
+    // 5. Atualizar status da garantia
     updateGarantia(garantia.id, { status: 'Em Tratativa' });
 
     // Timeline unificada
     addTimelineUnificada({
       entidadeId: garantia.id, entidadeTipo: 'Garantia', dataHora: agora,
       tipo: 'tratativa_registrada', titulo: `Tratativa: ${dados.tipo}`,
-      descricao: `Tratativa registrada para garantia ${garantia.id}${precisaAprovacao ? ' (aguardando aprovação)' : ''}`,
+      descricao: `Tratativa registrada para garantia ${garantia.id}. Ações de estoque executadas.`,
       usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome
     });
 
