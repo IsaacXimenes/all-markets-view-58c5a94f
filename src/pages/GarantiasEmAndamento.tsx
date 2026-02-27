@@ -16,7 +16,7 @@ import {
 import { FileUploadComprovante } from '@/components/estoque/FileUploadComprovante';
 import { exportToCSV, formatCurrency } from '@/utils/formatUtils';
 import { gerarNotaGarantiaPdf } from '@/utils/gerarNotaGarantiaPdf';
-import { getVendas } from '@/utils/vendasApi';
+import { getVendas, addVenda } from '@/utils/vendasApi';
 import { getOrdensServico } from '@/utils/assistenciaApi';
 import {
   getGarantiasEmAndamento, getTratativas, updateTratativa, updateGarantia,
@@ -474,17 +474,65 @@ export default function GarantiasEmAndamento() {
                                 size="icon"
                                 onClick={() => {
                                   const vendas = getVendas();
-                                  const vendaGarantia = vendas.find(v => 
+                                  let vendaGarantia = vendas.find(v => 
                                     v.origemVenda === 'Troca Garantia' && (
                                       v.observacoes?.includes(garantia.id) ||
                                       v.itens?.some(item => item.id === `ITEM-GAR-${garantia.id}`)
                                     )
                                   );
+                                  // Se a venda não existe (aprovação anterior ao código), criar agora
+                                  if (!vendaGarantia && tratativa) {
+                                    vendaGarantia = addVenda({
+                                      dataHora: new Date().toISOString(),
+                                      lojaVenda: garantia.lojaVenda,
+                                      vendedor: 'COL-001',
+                                      clienteId: garantia.clienteId,
+                                      clienteNome: garantia.clienteNome,
+                                      clienteCpf: '',
+                                      clienteTelefone: garantia.clienteTelefone || '',
+                                      clienteEmail: garantia.clienteEmail || '',
+                                      clienteCidade: '',
+                                      origemVenda: 'Troca Garantia',
+                                      localRetirada: garantia.lojaVenda,
+                                      tipoRetirada: 'Retirada Balcão',
+                                      taxaEntrega: 0,
+                                      itens: [{
+                                        id: `ITEM-GAR-${garantia.id}`,
+                                        produtoId: tratativa.aparelhoTrocaId || '',
+                                        produto: tratativa.aparelhoTrocaModelo || garantia.modelo,
+                                        imei: tratativa.aparelhoTrocaImei || '',
+                                        quantidade: 1,
+                                        valorRecomendado: 0,
+                                        valorCusto: 0,
+                                        valorVenda: 0,
+                                        categoria: 'Apple',
+                                        loja: garantia.lojaVenda,
+                                      }],
+                                      tradeIns: [{
+                                        id: `TI-GAR-${garantia.id}`,
+                                        modelo: garantia.modelo,
+                                        descricao: 'Entrada de Garantia',
+                                        imei: garantia.imei,
+                                        valorCompraUsado: 0,
+                                        imeiValidado: true,
+                                        condicao: 'Semi-novo',
+                                      }],
+                                      acessorios: [],
+                                      pagamentos: [],
+                                      subtotal: 0,
+                                      totalTradeIn: 0,
+                                      total: 0,
+                                      lucro: 0,
+                                      margem: 0,
+                                      observacoes: `Troca Direta - Garantia ${garantia.id}. Aparelho defeituoso IMEI: ${garantia.imei}. Aparelho novo: ${tratativa.aparelhoTrocaModelo} IMEI: ${tratativa.aparelhoTrocaImei}.`,
+                                      status: 'Concluída',
+                                    });
+                                  }
                                   if (vendaGarantia) {
                                     gerarNotaGarantiaPdf(vendaGarantia);
                                     toast.success('Nota de garantia gerada!');
                                   } else {
-                                    toast.error('Nota de venda não encontrada. Verifique se a tratativa de troca foi aprovada pelo gestor.');
+                                    toast.error('Erro ao gerar nota de garantia.');
                                   }
                                 }}
                                 title="Gerar Nota de Garantia"
