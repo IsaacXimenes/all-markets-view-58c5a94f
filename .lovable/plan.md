@@ -1,96 +1,82 @@
 
 
-# Plano: Corrigir Localização de Produtos na Movimentação Matriz e Conferência Automática via Venda
+# Plano: 5 Correções no Sistema
 
-## Problemas Identificados
+## 1. Adequar Movimentações de Acessórios ao modelo de Movimentações de Aparelhos
 
-### 1. Exibição de loja errada no modal de produtos
-Na tela de vendas, ao exibir a loja de um produto, o sistema usa `obterNomeLoja(produto.loja)` -- ou seja, a loja de **cadastro original** (ex: "Estoque - SIA"). Porém, quando um produto foi transferido via Movimentação Matriz, o campo `lojaAtualId` contém a localização física real ("Loja - Matriz"). O sistema ignora esse campo na exibição.
+**Problema**: A aba de Movimentações de Acessórios (`EstoqueMovimentacoesAcessorios.tsx`) é simplificada comparada à de aparelhos. Falta: subtrair do estoque da origem ao registrar, somar no destino ao confirmar recebimento, e usar IDs de loja (não nomes) nos registros.
 
-### 2. Pool compartilhado Matriz/Online precisa ser corrigido
-Atualmente `getLojasPorPoolEstoque` para Loja Matriz retorna `[Matriz, Online]`, permitindo que vendedores da Matriz vejam produtos da Online. O correto é que vendedores da **Matriz** vejam apenas produtos da Matriz (e os transferidos do SIA para lá), **sem** incluir produtos registrados na Online.
+**Alterações**:
+- `src/utils/acessoriosApi.ts`: Criar funções `transferirAcessorioOrigem(id, quantidade, lojaOrigem)` e `receberAcessorioDestino(id, quantidade, lojaDestino)` para movimentar estoque entre lojas
+- `src/pages/EstoqueMovimentacoesAcessorios.tsx`:
+  - Ao registrar movimentação: subtrair quantidade do estoque da loja de origem (validar estoque suficiente)
+  - Ao confirmar recebimento: somar quantidade na loja de destino (ou criar novo registro de acessório nessa loja se não existir)
+  - Gravar origem/destino usando IDs de loja (não nomes) para consistência
+  - Filtrar acessórios no formulário pela loja de origem selecionada (mostrar apenas os que têm estoque naquela loja)
 
-O compartilhamento deve ser **unidirecional**: somente vendas da Loja Online podem ver o estoque da Matriz. A Matriz não deve ver o estoque da Online.
+---
 
-### 3. Conferência automática não é acionada ao registrar venda
-A função `conferirItensAutomaticamentePorVenda` existe e funciona, mas só é chamada quando alguém abre a tela de detalhes da movimentação. Quando uma venda é registrada com um produto que pertence a uma movimentação matriz ativa, a conferência deveria ocorrer imediatamente (mover o aparelho de "Enviado" para "Vendido" na movimentação).
+## 2. Filtrar acessórios por loja de venda na Venda Balcão
+
+**Problema**: Em `VendasAcessorios.tsx` (linha 316-322), o filtro `acessoriosFiltrados` não considera a `lojaVenda`. O vendedor vê todos os acessórios de todas as lojas.
+
+**Alteração**:
+- `src/pages/VendasAcessorios.tsx`: Adicionar filtro `a.loja === lojaVenda` no `acessoriosFiltrados` (similar ao filtro de produtos por loja na Nova Venda), usando `getLojasPorPoolEstoque` para respeitar a regra de pool Online/Matriz
+- Exibir a loja do acessório no modal de seleção para clareza
 
 ---
 
-## Alterações Planejadas
+## 3. Pagamento Parcial não deve pagar valor total no primeiro ato
 
-### 1. `src/utils/estoqueApi.ts` - Corrigir pool e criar conferência no ato da venda
+**Problema**: No `ModalFinalizarPagamento.tsx` (linha 109), o valor padrão para pagamento parcial é `saldoDevedor` (que no primeiro pagamento é o valor total). O campo é editável, mas o default induz ao erro.
 
-**a) Ajustar `getLojasPorPoolEstoque`**: tornar o compartilhamento unidirecional
-- Loja Online retorna `[Online, Matriz]` (pode ver estoque da Matriz)
-- Loja Matriz retorna apenas `[Matriz]` (NÃO ve estoque da Online)
-- Qualquer outra loja retorna `[propria]`
-
-**b) Criar função `conferirProdutoMovimentacaoMatrizPorVenda(produtoId, vendaId, vendedorId, vendedorNome)`**: 
-- Verifica se o produto tem `movimentacaoId` ativo
-- Se sim, marca o item como "Vendido" na movimentação, registra a venda e o vendedor
-- Adiciona entrada na timeline da movimentação
-- Verifica se todos os itens foram finalizados e atualiza status da movimentação
-
-### 2. `src/pages/VendasNova.tsx` - Exibir loja efetiva e integrar conferência
-
-**a) Corrigir exibição da loja** em todas as ocorrências do modal de produtos:
-- De: `obterNomeLoja(produto.loja)` 
-- Para: `obterNomeLoja(produto.lojaAtualId || produto.loja)`
-- Linhas afetadas: ~1334, ~1374, ~2809, ~2853, ~2912
-
-**b) Integrar conferência automática** na função `handleConfirmarVenda`:
-- Após registrar a venda, para cada item vendido que tenha `movimentacaoId`, chamar a nova função de conferência automática
-- Isso move automaticamente o aparelho de "pendente de devolução" para "conferido/vendido" na aba de Movimentação Matriz
-
-### 3. `src/pages/VendasFinalizarDigital.tsx` - Mesmas correções
-
-**a) Corrigir exibição da loja** no modal de produtos:
-- Mesma alteração: `obterNomeLoja(produto.lojaAtualId || produto.loja)`
-
-**b) Integrar conferência automática** no fluxo de finalização da venda digital
+**Alteração**:
+- `src/components/estoque/ModalFinalizarPagamento.tsx`: Quando for pagamento parcial e o primeiro pagamento (`valorPago === 0`), inicializar `valorPagamento` como vazio (undefined/0) forçando o financeiro a digitar o valor desejado em vez de preencher automaticamente com o total
+- Adicionar validação: se for primeiro pagamento parcial e o valor digitado for igual ao total, exibir alerta de confirmação ("Você está pagando o valor total. Para pagamento parcial, informe um valor menor.")
 
 ---
+
+## 4. Aparelhos não são acrescentados ao estoque após finalização da nota de entrada
+
+**Problema**: A migração de produtos para o estoque (`migrarProdutosConferidosPorCategoria`) só é chamada em `EstoqueNotaConferencia.tsx` (quando conferência atinge 100%). Quando a conferência é feita via `NotaDetalhesContent.tsx` (produto a produto), a migração nunca é disparada.
+
+**Alterações**:
+- `src/components/estoque/NotaDetalhesContent.tsx`:
+  - Após cada `conferirProdutoSimples`, verificar se a conferência atingiu 100% (`qtdConferida === qtdInformada`)
+  - Se sim, chamar `migrarProdutosConferidosPorCategoria` automaticamente para enviar os aparelhos ao estoque
+  - Importar a função de `notaEntradaFluxoApi`
+  - Exibir toast informando quantos produtos foram migrados (novos para Estoque, seminovos para Pendentes)
+
+---
+
+## 5. Habilitar conferência do gestor em lotes de stories
+
+**Problema**: Em `GestaoAdmStoriesValidacao.tsx` (linhas 45-46), a variável `cannotValidate` verifica se `conferidoPor === user.colaborador.id`. Isso bloqueia o gestor se ele mesmo fez a conferência operacional. A regra de negócio impede a mesma pessoa de conferir e validar, mas o gestor deve poder validar lotes conferidos por outros.
+
+**Alteração**:
+- `src/pages/GestaoAdmStoriesValidacao.tsx`: A lógica já está correta conceitualmente (impede a mesma pessoa). O problema real é que provavelmente o usuário está logado como o mesmo colaborador que fez a conferência. Duas opções:
+  - **Opção A**: Remover a restrição completamente (permitir que qualquer gestor valide qualquer lote)
+  - **Opção B**: Manter a restrição mas adicionar um botão de override para gestores com permissão administrativa ("Validar mesmo assim")
+  - **Recomendação**: Implementar opção B, adicionando um checkbox "Validar como gestor administrativo" que desbloqueia a ação quando `cannotValidate` é true, desde que o usuário tenha perfil de gestor
 
 ## Detalhes Técnicos
 
-### Nova função de conferência no ato da venda
+### Migração de Acessórios entre Lojas
 
 ```text
-conferirProdutoMovimentacaoMatrizPorVenda(
-  produtoId: string,
-  vendaId: string, 
-  vendedorId: string,
-  vendedorNome: string
-) => { sucesso: boolean }
+// Nova lógica no registro de movimentação:
+1. Filtrar acessórios por loja de origem selecionada
+2. Validar quantidade disponível na origem
+3. Subtrair quantidade na origem (acessoriosApi)
+4. Ao confirmar recebimento: buscar ou criar acessório na loja destino e somar quantidade
 ```
 
-Lógica:
-1. Buscar o produto por ID
-2. Se `produto.movimentacaoId` existe, buscar a movimentação
-3. Encontrar o item correspondente na movimentação
-4. Marcar como `statusItem: 'Vendido'`, registrar `vendaId`, `vendedorId`, `vendedorNome`, `conferenciaAutomatica: true`
-5. Adicionar timeline entry
-6. Verificar se movimentação completa e finalizar se necessário
-7. Limpar `produto.movimentacaoId` após conferência
+### Sequência de Implementação
 
-### Alteração no pool de estoque
-
-```text
-// Antes:
-getLojasPorPoolEstoque(Matriz) => [Matriz, Online]  
-getLojasPorPoolEstoque(Online) => [Matriz, Online]
-
-// Depois:
-getLojasPorPoolEstoque(Matriz) => [Matriz]           // Unidirecional
-getLojasPorPoolEstoque(Online) => [Matriz, Online]    // Online acessa Matriz
-```
-
-### Fluxo completo corrigido
-
-1. Estoquista cria Movimentação Matriz: produtos saem do SIA, `lojaAtualId` = Matriz
-2. Vendedor da Matriz abre Nova Venda: vê produtos com `lojaAtualId = Matriz` mostrando "Loja - Matriz"
-3. Vendedor seleciona o aparelho e registra a venda
-4. Sistema automaticamente marca o aparelho como "Vendido" na movimentação matriz
-5. Na aba Movimentações Matriz, o aparelho aparece em "Conferidos" com link para a venda
+1. `estoqueApi.ts` / `acessoriosApi.ts` - Funções de transferência de acessórios
+2. `EstoqueMovimentacoesAcessorios.tsx` - Integrar transferência real
+3. `VendasAcessorios.tsx` - Filtro por loja
+4. `ModalFinalizarPagamento.tsx` - Corrigir default parcial
+5. `NotaDetalhesContent.tsx` - Migração automática após conferência
+6. `GestaoAdmStoriesValidacao.tsx` - Override de validação para gestores
 
