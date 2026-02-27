@@ -475,14 +475,16 @@ export default function GarantiasEmAndamento() {
                                 onClick={() => {
                                   const vendas = getVendas();
                                   const vendaGarantia = vendas.find(v => 
-                                    v.origemVenda === 'Troca Garantia' && 
-                                    v.observacoes?.includes(garantia.id)
+                                    v.origemVenda === 'Troca Garantia' && (
+                                      v.observacoes?.includes(garantia.id) ||
+                                      v.itens?.some(item => item.id === `ITEM-GAR-${garantia.id}`)
+                                    )
                                   );
                                   if (vendaGarantia) {
                                     gerarNotaGarantiaPdf(vendaGarantia);
                                     toast.success('Nota de garantia gerada!');
                                   } else {
-                                    toast.error('Nota de venda não encontrada para esta garantia.');
+                                    toast.error('Nota de venda não encontrada. Verifique se a tratativa de troca foi aprovada pelo gestor.');
                                   }
                                 }}
                                 title="Gerar Nota de Garantia"
