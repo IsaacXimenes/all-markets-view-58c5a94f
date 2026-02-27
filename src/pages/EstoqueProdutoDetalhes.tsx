@@ -16,6 +16,7 @@ import { ImagemTemporaria } from '@/components/estoque/ImagensTemporarias';
 import { CarrosselImagensProduto } from '@/components/estoque/CarrosselImagensProduto';
 import { ListaImagensAnexadas } from '@/components/estoque/ListaImagensAnexadas';
 import { useAuthStore } from '@/store/authStore';
+import { useCadastroStore } from '@/store/cadastroStore';
 import { toast } from 'sonner';
 
 interface VideoAnexo {
@@ -33,6 +34,7 @@ const formatCurrency = (value: number) => {
 
 export default function EstoqueProdutoDetalhes() {
   const { id } = useParams();
+  const { obterNomeLoja } = useCadastroStore();
   const navigate = useNavigate();
   const [produto, setProduto] = useState<Produto | null>(null);
   const [qrCode, setQrCode] = useState('');
@@ -437,7 +439,7 @@ export default function EstoqueProdutoDetalhes() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Loja Atual</p>
-                <p className="font-semibold">{produto.loja}</p>
+                <p className="font-semibold">{obterNomeLoja(produto.lojaAtualId || produto.loja)}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Status de Conferência</p>

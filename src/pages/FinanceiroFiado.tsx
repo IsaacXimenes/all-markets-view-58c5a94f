@@ -41,7 +41,7 @@ import {
 import { toast } from 'sonner';
 
 export default function FinanceiroFiado() {
-  const { obterLojasAtivas } = useCadastroStore();
+  const { obterLojasAtivas, obterNomeLoja } = useCadastroStore();
   const { user } = useAuthStore();
   const lojas = obterLojasAtivas();
 
@@ -311,7 +311,7 @@ export default function FinanceiroFiado() {
                       <TableCell className="font-mono text-xs">{venda.id}</TableCell>
                       <TableCell>{new Date(venda.dataHora).toLocaleDateString('pt-BR')}</TableCell>
                       <TableCell className="font-medium">{venda.clienteNome}</TableCell>
-                      <TableCell>{venda.lojaVenda}</TableCell>
+                      <TableCell>{obterNomeLoja(venda.lojaVenda)}</TableCell>
                       <TableCell className="text-right font-semibold">{formatCurrencyUtil(venda.total || 0)}</TableCell>
                       <TableCell>
                         <Button

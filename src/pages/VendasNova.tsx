@@ -3481,7 +3481,7 @@ export default function VendasNova() {
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Loja</label>
-                  <p className="font-medium">{produtoDetalhe.loja}</p>
+                  <p className="font-medium">{obterNomeLoja(produtoDetalhe.lojaAtualId || produtoDetalhe.loja)}</p>
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground">Valor de Custo</label>

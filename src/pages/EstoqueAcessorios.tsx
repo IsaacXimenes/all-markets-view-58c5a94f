@@ -460,7 +460,7 @@ export default function EstoqueAcessorios() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Loja</p>
-                  <p className="font-medium">{acessorioSelecionado.loja}</p>
+                  <p className="font-medium">{getLojaNome(acessorioSelecionado.loja)}</p>
                 </div>
                 <div>
                   <Label htmlFor="quantidade">Nova Quantidade</Label>

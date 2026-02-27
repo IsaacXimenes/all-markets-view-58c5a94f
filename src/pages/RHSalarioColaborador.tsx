@@ -204,7 +204,6 @@ export default function RHSalarioColaborador() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Cargo</TableHead>
                   <TableHead>Admissão</TableHead>
@@ -226,7 +225,6 @@ export default function RHSalarioColaborador() {
                       key={salario.id}
                       className={temAlteracao ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}
                     >
-                      <TableCell className="font-mono text-xs">{salario.colaboradorId}</TableCell>
                       <TableCell className="font-medium">{salario.colaborador.nome}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{getCargoNome(salario.colaborador.cargo)}</Badge>
