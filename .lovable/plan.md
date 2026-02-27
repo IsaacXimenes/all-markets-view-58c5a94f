@@ -1,73 +1,61 @@
 
+# Plano: Substituir IDs brutos por nomes em exibições do sistema
 
-# Plano: 4 Correções no Módulo de Garantia
+## Problema
+Em vários locais do sistema, campos que armazenam IDs de lojas, colaboradores ou fornecedores estao sendo exibidos diretamente na interface ao inves de resolver para seus nomes legíveis. O campo `produto.loja` e `venda.lojaVenda` armazenam IDs como `'db894e7d'` ou `'3ac7e00c'`, mas em alguns componentes sao renderizados sem passar por `obterNomeLoja()`.
 
-## 1. Ordenar coluna Data Abertura (mais nova para mais velha)
+## Locais identificados com ID bruto exibido
 
-**Problema**: `dadosFiltrados` em `GarantiasEmAndamento.tsx` não tem ordenação. Os registros aparecem na ordem de inserção do array.
+### 1. `src/pages/EstoqueProdutoDetalhes.tsx` (linha 440)
+- **Campo**: `{produto.loja}` -- exibe ID da loja
+- **Correção**: Importar `useCadastroStore` e usar `obterNomeLoja(produto.lojaAtualId || produto.loja)`
 
-**Correção**: Adicionar `.sort()` ao final de `dadosFiltrados` (useMemo), ordenando por `tratativa.dataHora` em ordem decrescente (mais recente primeiro).
+### 2. `src/pages/VendasNova.tsx` (linha 3484)
+- **Campo**: `{produtoDetalhe.loja}` -- exibe ID da loja no modal de detalhes do produto
+- **Correção**: Usar `obterNomeLoja(produtoDetalhe.lojaAtualId || produtoDetalhe.loja)` (o `obterNomeLoja` ja esta importado neste arquivo)
 
-**Arquivo**: `src/pages/GarantiasEmAndamento.tsx` (~linha 128)
+### 3. `src/pages/VendasEditar.tsx` (linha 2471)
+- **Campo**: `{produtoDetalhe.loja}` -- exibe ID da loja no modal de detalhes do produto
+- **Correção**: Importar/usar `obterNomeLoja` do `useCadastroStore` e substituir por `obterNomeLoja(produtoDetalhe.lojaAtualId || produtoDetalhe.loja)`
 
----
+### 4. `src/pages/EstoqueAcessorios.tsx` (linha 463)
+- **Campo**: `{acessorioSelecionado.loja}` -- exibe ID da loja no modal de edição de acessório
+- **Correção**: Usar `getLojaNome(acessorioSelecionado.loja)` (o componente ja tem acesso ao `useCadastroStore` com `getLojaNome`)
 
-## 2. OS de "Assistência + Empréstimo" deve ir para Análise de Tratativas primeiro
+### 5. `src/pages/FinanceiroFiado.tsx` (linha 314)
+- **Campo**: `{venda.lojaVenda}` -- exibe ID da loja na tabela de vendas pendentes de fiado
+- **Correção**: Importar `useCadastroStore`, criar helper `obterNomeLoja` e substituir por `obterNomeLoja(venda.lojaVenda)`
 
-**Problema**: Em `processarTratativaGarantia` (garantiasApi.ts, linha 975), a OS é criada com `status: 'Aguardando Análise'` e inserida diretamente no array de ordens de serviço via `addOrdemServico`. A aba "Nova Assistência" (`OSAssistencia.tsx`) mostra todas as OS incluindo as com status "Aguardando Análise". Porém, a aba "Análise de Tratativas" (`OSAnaliseGarantia.tsx`) busca dados de `getRegistrosAnaliseGarantia()`, que usa registros separados. A OS criada por garantia não gera um registro de análise, então não aparece na aba correta.
-
-**Correção**: Em `processarTratativaGarantia`, após criar a OS para "Assistência + Empréstimo", chamar `encaminharParaAnaliseGarantia()` (que já existe e é usada para "Troca Direta"). Isso criará o registro na aba de Análise de Tratativas. Adicionalmente, a OS deve ser criada com um status intermediário como `'Aguardando Aprovação Análise'` para que NÃO apareça na lista da aba "Nova Assistência" até ser aprovada pela análise.
-
-**Arquivo**: `src/utils/garantiasApi.ts` (~linha 970-1000)
-
----
-
-## 3. Aparelho emprestado não fica com status "Empréstimo - Garantia"
-
-**Problema**: Na função `aprovarTratativa` (garantiasApi.ts, linha 764), o `updateProduto` define `statusEmprestimo: 'Empréstimo - Assistência'`. Porém, a tratativa precisa ser aprovada primeiro (status "Aguardando Aprovação"). O fluxo está correto -- a marcação só ocorre após aprovação. O problema pode ser:
-  - (a) O `updateProduto` não persiste em localStorage (estoque é in-memory), então ao recarregar a página o status se perde
-  - (b) O campo `statusEmprestimo` não é reconhecido pela interface `Produto`
-
-**Correção**: Verificar que `updateProduto` persiste as alterações e que o campo é incluído na interface. Se o estoque usa localStorage, verificar que o save é chamado. Caso contrário, garantir que o campo seja setado corretamente e exibido no estoque.
-
-**Arquivo**: `src/utils/estoqueApi.ts` (verificar persistência de `updateProduto`)
-
----
-
-## 4. "Nota de venda não encontrada para esta garantia" na Troca Direta
-
-**Problema**: Em `GarantiasEmAndamento.tsx` (linha 474-483), ao clicar "Gerar Nota", o código busca a venda com:
-```text
-vendas.find(v => v.origemVenda === 'Troca Garantia' && v.observacoes?.includes(garantia.id))
-```
-A venda é criada dentro de `aprovarTratativa` via `addVenda()`. Porém, logo após a aprovação, `handleAprovarTratativa` (linha 190) chama `window.location.reload()`. O módulo de vendas (`vendasApi.ts`) usa dados **in-memory** sem persistência em localStorage, então ao recarregar a página, a venda criada na aprovação é perdida.
-
-**Correção**: Adicionar persistência localStorage ao array de vendas em `vendasApi.ts`. Após cada `addVenda`, salvar o array em localStorage. Na inicialização, carregar de localStorage. Isso garante que a venda de garantia sobreviva ao reload da página.
-
-**Arquivo**: `src/utils/vendasApi.ts` (adicionar load/save localStorage para o array `vendas`)
+### 6. `src/pages/RHSalarioColaborador.tsx` (linha 229)
+- **Campo**: `{salario.colaboradorId}` -- exibe ID bruto do colaborador na tabela
+- **Nota**: A coluna seguinte ja mostra `salario.colaborador.nome`. O ID pode ser intencional como codigo de referência, mas se o objetivo for remover IDs brutos, pode ser ocultado ou substituído pelo nome
 
 ---
 
 ## Detalhes Técnicos
 
-### Arquivo 1: `src/pages/GarantiasEmAndamento.tsx`
-- Adicionar `.sort()` ao `dadosFiltrados` por data decrescente
+### Padrão de correção
+Todos os locais seguem o mesmo padrão:
+1. Verificar se `useCadastroStore` ja esta importado no componente
+2. Se nao, importar e extrair `obterNomeLoja` e/ou `obterNomeColaborador`
+3. Substituir `{campo.loja}` por `{obterNomeLoja(campo.lojaAtualId || campo.loja)}`
+4. Substituir `{campo.vendedor}` por `{obterNomeColaborador(campo.vendedor)}`
 
-### Arquivo 2: `src/utils/garantiasApi.ts`
-- Em `processarTratativaGarantia`, adicionar chamada `encaminharParaAnaliseGarantia()` para tipo "Assistência + Empréstimo" (assim como já é feito para "Troca Direta")
-- Criar OS com status que indique que ainda precisa passar pela análise
+### Arquivos a modificar (6 arquivos)
+1. `src/pages/EstoqueProdutoDetalhes.tsx` -- 1 alteração
+2. `src/pages/VendasNova.tsx` -- 1 alteração
+3. `src/pages/VendasEditar.tsx` -- 1 alteração
+4. `src/pages/EstoqueAcessorios.tsx` -- 1 alteração
+5. `src/pages/FinanceiroFiado.tsx` -- importar store + 1 alteração
+6. `src/pages/RHSalarioColaborador.tsx` -- importar store + substituir ID por nome
 
-### Arquivo 3: `src/utils/estoqueApi.ts`
-- Verificar e garantir que `updateProduto` persiste campos como `statusEmprestimo` em localStorage
-
-### Arquivo 4: `src/utils/vendasApi.ts`
-- Adicionar `saveToStorage` após `vendas.push()` em `addVenda`
-- Inicializar `vendas` com `loadFromStorage('vendas_data', defaultVendas)` no topo do módulo
-- Garantir que `vendaCounter` também seja persistido
-
-### Sequência de Implementação
-1. Ordenação da tabela (mais simples)
-2. Persistência de vendas no localStorage (resolve nota não encontrada)
-3. Registro de análise para Assistência + Empréstimo
-4. Verificação de persistência do status de empréstimo no estoque
-
+### Locais ja corretos (nao precisam de alteração)
+- `VendaDetalhes.tsx` -- ja usa `getLojaNome()` e `getColaboradorNome()`
+- `Vendas.tsx` -- ja usa `getLojaName()` e `getColaboradorNome()`
+- `GarantiasNova.tsx` -- ja usa `obterNomeLoja()` e `obterNomeColaborador()`
+- `FinanceiroPagamentosDowngrade.tsx` -- ja usa `obterNomeLoja()` e `obterNomeColaborador()`
+- `FinanceiroConferencia.tsx` -- ja usa helpers locais
+- `EstoqueAcessorios.tsx` tabela -- ja usa `getLojaNome()` na listagem
+- `EstoqueMovimentacoes.tsx` -- ja usa `getLojaNome()` para origem/destino
+- `nota.fornecedor` nos módulos de estoque -- armazena nome do fornecedor (nao ID), nao precisa de correção
+- Campos `.responsavel` nos timelines -- armazenam nomes, nao IDs
