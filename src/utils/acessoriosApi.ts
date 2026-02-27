@@ -239,6 +239,45 @@ export const updateValorRecomendadoAcessorio = (
   return acessorio;
 };
 
+// Transferir acessório da origem (subtrair estoque)
+export const transferirAcessorioOrigem = (id: string, quantidade: number, lojaOrigem: string): boolean => {
+  const acessorio = acessorios.find(a => a.id === id && a.loja === lojaOrigem);
+  if (!acessorio || acessorio.quantidade < quantidade) return false;
+  acessorio.quantidade -= quantidade;
+  return true;
+};
+
+// Receber acessório no destino (somar estoque ou criar novo registro)
+export const receberAcessorioDestino = (
+  id: string, 
+  quantidade: number, 
+  lojaDestino: string
+): boolean => {
+  const acessorioOrigem = acessorios.find(a => a.id === id);
+  if (!acessorioOrigem) return false;
+
+  // Buscar acessório com mesma descrição na loja de destino
+  const existenteDestino = acessorios.find(
+    a => a.descricao.toLowerCase() === acessorioOrigem.descricao.toLowerCase() && a.loja === lojaDestino
+  );
+
+  if (existenteDestino) {
+    existenteDestino.quantidade += quantidade;
+  } else {
+    // Criar novo registro na loja destino
+    addAcessorio({
+      descricao: acessorioOrigem.descricao,
+      categoria: acessorioOrigem.categoria,
+      quantidade,
+      valorCusto: acessorioOrigem.valorCusto,
+      valorRecomendado: acessorioOrigem.valorRecomendado,
+      loja: lojaDestino,
+      fornecedorId: acessorioOrigem.fornecedorId
+    });
+  }
+  return true;
+};
+
 export const exportAcessoriosToCSV = (data: Acessorio[], filename: string) => {
   if (data.length === 0) return;
   

@@ -31,6 +31,7 @@ import {
   Acessorio,
   VendaAcessorio 
 } from '@/utils/acessoriosApi';
+import { getLojasPorPoolEstoque } from '@/utils/estoqueApi';
 import { useDraftVenda } from '@/hooks/useDraftVenda';
 import { PagamentoQuadro } from '@/components/vendas/PagamentoQuadro';
 import { PainelRentabilidadeVenda } from '@/components/vendas/PainelRentabilidadeVenda';
@@ -312,14 +313,16 @@ export default function VendasAcessorios() {
     toast({ title: "Sucesso", description: "Cliente cadastrado!" });
   };
 
-  // Acessórios filtrados
+  // Acessórios filtrados pela loja de venda (pool de estoque)
   const acessoriosFiltrados = useMemo(() => {
+    const lojasPool = lojaVenda ? getLojasPorPoolEstoque(lojaVenda) : [];
     return acessoriosEstoque.filter(a => {
       if (a.quantidade <= 0) return false;
+      if (lojaVenda && !lojasPool.includes(a.loja)) return false;
       if (buscaAcessorio && !a.descricao.toLowerCase().includes(buscaAcessorio.toLowerCase())) return false;
       return true;
     });
-  }, [acessoriosEstoque, buscaAcessorio]);
+  }, [acessoriosEstoque, buscaAcessorio, lojaVenda]);
 
   // Adicionar acessório
   const handleAddAcessorio = () => {

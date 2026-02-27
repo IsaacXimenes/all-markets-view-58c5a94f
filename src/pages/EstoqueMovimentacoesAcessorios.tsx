@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { getAcessorios, Acessorio } from '@/utils/acessoriosApi';
+import { getAcessorios, getAcessoriosByLoja, Acessorio, transferirAcessorioOrigem, receberAcessorioDestino } from '@/utils/acessoriosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { AutocompleteLoja } from '@/components/AutocompleteLoja';
 import { Download, Plus, CheckCircle, Clock, Eye, Edit, Package, X } from 'lucide-react';
@@ -84,6 +84,7 @@ export default function EstoqueMovimentacoesAcessorios() {
   const { obterLojasTipoLoja, obterColaboradoresAtivos, obterLojaById, obterNomeLoja } = useCadastroStore();
   const user = useAuthStore(state => state.user);
   const [movimentacoes, setMovimentacoes] = useState<MovimentacaoAcessorio[]>(movimentacoesData);
+  const [acessoriosEstoque, setAcessoriosEstoque] = useState<Acessorio[]>(getAcessorios());
   const [origemFilter, setOrigemFilter] = useState<string>('todas');
   const [destinoFilter, setDestinoFilter] = useState<string>('todas');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -91,7 +92,7 @@ export default function EstoqueMovimentacoesAcessorios() {
 
   // Apenas lojas do tipo 'Loja' para movimentações
   const lojas = obterLojasTipoLoja();
-  const acessorios = getAcessorios();
+  const acessorios = acessoriosEstoque;
   const colaboradores = obterColaboradoresAtivos();
   
   // Colaboradores com permissão de estoque ou gestor
@@ -154,8 +155,21 @@ export default function EstoqueMovimentacoesAcessorios() {
     
     const movIndex = movimentacoes.findIndex(m => m.id === movimentacaoParaConfirmar);
     if (movIndex !== -1) {
+      const mov = movimentacoes[movIndex];
+      
+      // Somar estoque no destino
+      const recebido = receberAcessorioDestino(mov.acessorioId, mov.quantidade, mov.destino);
+      if (!recebido) {
+        toast({
+          title: 'Erro ao receber',
+          description: 'Não foi possível adicionar os acessórios ao estoque de destino',
+          variant: 'destructive'
+        });
+        return;
+      }
+
       const updatedMov = {
-        ...movimentacoes[movIndex],
+        ...mov,
         status: 'Recebido' as const,
         dataRecebimento: new Date().toISOString(),
         responsavelRecebimento: nomeResponsavel
@@ -164,6 +178,7 @@ export default function EstoqueMovimentacoesAcessorios() {
       newMovimentacoes[movIndex] = updatedMov;
       setMovimentacoes(newMovimentacoes);
       movimentacoesData = newMovimentacoes;
+      setAcessoriosEstoque(getAcessorios());
     }
     
     setConfirmDialogOpen(false);
@@ -171,7 +186,7 @@ export default function EstoqueMovimentacoesAcessorios() {
     setResponsavelConfirmacao('');
     toast({
       title: 'Recebimento confirmado',
-      description: `Movimentação ${movimentacaoParaConfirmar} confirmada por ${nomeResponsavel}`,
+      description: `Movimentação ${movimentacaoParaConfirmar} confirmada. Estoque adicionado ao destino.`,
     });
   };
 
@@ -240,11 +255,18 @@ export default function EstoqueMovimentacoesAcessorios() {
     link.click();
   };
 
+  // Acessórios filtrados pela loja de origem selecionada
+  const acessoriosFiltradosPorOrigem = useMemo(() => {
+    if (!formOrigem) return acessorios.filter(a => a.quantidade > 0);
+    return getAcessoriosByLoja(formOrigem).filter(a => a.quantidade > 0);
+  }, [acessorios, formOrigem]);
+
   const handleRegistrarMovimentacao = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
     const acessorioId = formData.get('acessorioId') as string;
+    const quantidade = parseInt(formData.get('quantidade') as string);
     const acessorio = acessorios.find(a => a.id === acessorioId);
     
     const responsavelId = formData.get('responsavel') as string;
@@ -270,18 +292,25 @@ export default function EstoqueMovimentacoesAcessorios() {
       return;
     }
 
-    // Obter nome da loja pelo ID
-    const origemNome = obterNomeLoja(formOrigem);
-    const destinoNome = obterNomeLoja(formDestino);
+    // Validar estoque suficiente e subtrair da origem
+    const sucesso = transferirAcessorioOrigem(acessorioId, quantidade, formOrigem);
+    if (!sucesso) {
+      toast({
+        title: 'Estoque insuficiente',
+        description: 'A loja de origem não possui estoque suficiente para esta movimentação',
+        variant: 'destructive'
+      });
+      return;
+    }
     
     const novaMovimentacao: MovimentacaoAcessorio = {
       id: `MOV-ACESS-${Date.now()}`,
       data: formData.get('data') as string,
       acessorio: acessorio?.descricao || '',
       acessorioId,
-      quantidade: parseInt(formData.get('quantidade') as string),
-      origem: origemNome,
-      destino: destinoNome,
+      quantidade,
+      origem: formOrigem,
+      destino: formDestino,
       responsavel: responsavelNome,
       motivo: motivo,
       status: 'Pendente'
@@ -292,9 +321,10 @@ export default function EstoqueMovimentacoesAcessorios() {
     setDialogOpen(false);
     setFormOrigem('');
     setFormDestino('');
+    setAcessoriosEstoque(getAcessorios());
     toast({
       title: 'Movimentação registrada',
-      description: `Movimentação ${novaMovimentacao.id} registrada com sucesso`,
+      description: `Movimentação ${novaMovimentacao.id} registrada. Estoque subtraído da origem.`,
     });
   };
 
@@ -362,7 +392,7 @@ export default function EstoqueMovimentacoesAcessorios() {
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
-                        {acessorios.filter(a => a.quantidade > 0).map(acessorio => (
+                        {acessoriosFiltradosPorOrigem.map(acessorio => (
                           <SelectItem key={acessorio.id} value={acessorio.id}>
                             {acessorio.descricao} (Qtd: {acessorio.quantidade})
                           </SelectItem>

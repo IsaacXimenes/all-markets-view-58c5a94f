@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, CheckCircle2, XCircle, Image as ImageIcon, Award, Info, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Image as ImageIcon, Award, Info, ThumbsUp, ThumbsDown, ShieldCheck } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from 'sonner';
@@ -43,6 +44,10 @@ export default function GestaoAdmStoriesValidacao() {
 
   const isReadOnly = loteOriginal?.status === 'Validado';
   const cannotValidate = loteOriginal?.conferidoPor === user?.colaborador?.id;
+  const [overrideGestor, setOverrideGestor] = useState(false);
+  const colaboradorCompleto = colaboradores.find(c => c.id === user?.colaborador?.id);
+  const isGestor = colaboradorCompleto?.eh_gestor ?? user?.colaborador?.cargo?.toLowerCase().includes('gestor') ?? false;
+  const bloqueado = cannotValidate && !overrideGestor;
 
   const handleValidar = (vendaId: string) => {
     setVendas(prev => prev.map(v =>
@@ -69,7 +74,7 @@ export default function GestaoAdmStoriesValidacao() {
   };
 
   const handleSalvarValidacao = () => {
-    if (cannotValidate) {
+    if (bloqueado) {
       toast.error('O validador não pode ser o mesmo que realizou a conferência operacional.');
       return;
     }
@@ -119,9 +124,24 @@ export default function GestaoAdmStoriesValidacao() {
         )}
       </div>
 
-      {cannotValidate && (
+      {cannotValidate && !overrideGestor && (
         <Alert className="mb-4" variant="destructive">
-          <AlertDescription>Você não pode validar este lote pois realizou a conferência operacional.</AlertDescription>
+          <AlertDescription className="flex flex-col gap-2">
+            <span>Você não pode validar este lote pois realizou a conferência operacional.</span>
+            {isGestor && (
+              <div className="flex items-center gap-2 mt-1">
+                <Checkbox 
+                  id="overrideGestor" 
+                  checked={overrideGestor}
+                  onCheckedChange={(checked) => setOverrideGestor(!!checked)}
+                />
+                <label htmlFor="overrideGestor" className="text-sm cursor-pointer flex items-center gap-1">
+                  <ShieldCheck className="h-4 w-4" />
+                  Validar como gestor administrativo
+                </label>
+              </div>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 
@@ -200,7 +220,7 @@ export default function GestaoAdmStoriesValidacao() {
                 )}
 
                 {/* Validation actions */}
-                {(selectedVenda.anexos || []).length > 0 && !isReadOnly && !cannotValidate && (
+                {(selectedVenda.anexos || []).length > 0 && !isReadOnly && !bloqueado && (
                   <div className="space-y-3">
                     <div className="flex gap-2">
                       <Button
@@ -244,7 +264,7 @@ export default function GestaoAdmStoriesValidacao() {
                     value={selectedVenda.observacaoValidacao || ''}
                     onChange={e => handleObsChange(selectedVendaId!, e.target.value)}
                     placeholder="Observações do supervisor..."
-                    disabled={isReadOnly || cannotValidate}
+                    disabled={isReadOnly || bloqueado}
                     rows={3}
                   />
                 </div>
@@ -255,7 +275,7 @@ export default function GestaoAdmStoriesValidacao() {
       </div>
 
       {/* Save button */}
-      {!isReadOnly && !cannotValidate && (
+      {!isReadOnly && !bloqueado && (
         <div className="mt-6 flex justify-end">
           <Button onClick={handleSalvarValidacao} size="lg">
             <CheckCircle2 className="h-4 w-4 mr-2" />

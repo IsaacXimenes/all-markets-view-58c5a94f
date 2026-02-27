@@ -106,7 +106,7 @@ export function ModalFinalizarPagamento({
         observacoes: '',
         responsavel: usuarioLogado,
         forcarFinalizacao: false,
-        valorPagamento: isParcial ? saldoDevedor : undefined
+        valorPagamento: isParcial ? (valorJaPago === 0 ? 0 : saldoDevedor) : undefined
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,6 +160,13 @@ export function ModalFinalizarPagamento({
       if (form.valorPagamento > saldoDevedor + 0.01) {
         toast.error('O valor não pode exceder o saldo devedor');
         return false;
+      }
+      // Alerta se primeiro pagamento parcial e valor é igual ao total
+      if (valorJaPago === 0 && Math.abs(form.valorPagamento - pendencia!.valorTotal) < 0.01) {
+        const confirmar = window.confirm(
+          'Você está pagando o valor total da nota. Para pagamento parcial, informe um valor menor. Deseja continuar mesmo assim?'
+        );
+        if (!confirmar) return false;
       }
     }
     if (conferenciaIncompleta && !form.forcarFinalizacao) {

@@ -35,6 +35,8 @@ import {
   getCreditosByFornecedor,
   getNotaEntradaById,
   conferirProdutoSimples,
+  migrarProdutosConferidosPorCategoria,
+  getNotaEntradaById as getNotaFresh,
 } from '@/utils/notaEntradaFluxoApi';
 import { getLoteRevisaoByNotaId, calcularAbatimento, criarLoteRevisao, encaminharLoteParaAssistencia, reconciliarLoteComOS, atualizarItemRevisao, sincronizarNotaComLote, registrarEventoTecnicoNaNota } from '@/utils/loteRevisaoApi';
 import { LoteRevisaoResumo } from '@/components/estoque/LoteRevisaoResumo';
@@ -285,6 +287,7 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
     conferirProdutoSimples(nota.id, item.produtoNotaId, nomeResponsavel);
 
     toast.success(`Aparelho ${item.modelo} aprovado! Custo de R$ ${custoReparo.toFixed(2)} incorporado.`);
+    verificarEMigrarProdutos(nota.id, nomeResponsavel);
     setRefreshKey(k => k + 1);
   };
 
@@ -332,12 +335,28 @@ export function NotaDetalhesContent({ nota, showActions = true }: NotaDetalhesCo
     setRefreshKey(k => k + 1);
   };
 
+  // Verificar se conferência atingiu 100% e migrar produtos automaticamente
+  const verificarEMigrarProdutos = (notaId: string, nomeResponsavel: string) => {
+    const notaAtualizada = getNotaFresh(notaId);
+    if (!notaAtualizada) return;
+    if (notaAtualizada.qtdConferida >= notaAtualizada.qtdInformada && notaAtualizada.qtdInformada > 0) {
+      const resultado = migrarProdutosConferidosPorCategoria(notaAtualizada, nomeResponsavel);
+      if (resultado.novos > 0 || resultado.seminovos > 0) {
+        toast.success(
+          `Conferência 100% concluída! ${resultado.novos} novo(s) → Estoque, ${resultado.seminovos} seminovo(s) → Pendentes.`,
+          { duration: 5000 }
+        );
+      }
+    }
+  };
+
   // Handler para conferir produto direto (não encaminhado para assistência)
   const handleConferirProdutoDireto = (produtoId: string) => {
     const nomeResponsavel = user?.colaborador?.nome || user?.username || 'Estoque';
     const resultado = conferirProdutoSimples(nota.id, produtoId, nomeResponsavel);
     if (resultado) {
       toast.success('Produto conferido com sucesso!');
+      verificarEMigrarProdutos(nota.id, nomeResponsavel);
       setRefreshKey(k => k + 1);
     } else {
       toast.error('Erro ao conferir produto.');
