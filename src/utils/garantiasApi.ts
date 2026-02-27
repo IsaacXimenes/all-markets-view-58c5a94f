@@ -972,9 +972,12 @@ export const processarTratativaGarantia = (dados: ProcessarTratativaRequest): { 
         ? `\n[EMPRÉSTIMO] Cliente com aparelho emprestado: ${dados.aparelhoSelecionado.modelo} (IMEI: ${dados.aparelhoSelecionado.imei})`
         : '';
 
+      // Para Assistência + Empréstimo, usar status que indica análise pendente
+      const statusOS = 'Aguardando Análise' as const;
+
       const novaOS = addOrdemServico({
         dataHora: agora, clienteId: garantia.clienteId, setor: 'GARANTIA',
-        tecnicoId: '', lojaId: garantia.lojaVenda, status: 'Aguardando Análise',
+        tecnicoId: '', lojaId: garantia.lojaVenda, status: statusOS,
         proximaAtuacao: 'Técnico: Avaliar/Executar', pecas: [], pagamentos: [],
         descricao: `${dados.descricao}${observacaoEmprestimo}`,
         timeline: [{ data: agora, tipo: 'registro', descricao: `OS criada automaticamente via Garantia ${garantia.id}`, responsavel: dados.usuarioNome }],
@@ -997,6 +1000,14 @@ export const processarTratativaGarantia = (dados: ProcessarTratativaRequest): { 
         descricao: `OS ${osId} criada automaticamente para garantia ${garantia.id}`,
         usuarioId: dados.usuarioId, usuarioNome: dados.usuarioNome
       });
+
+      // Para Assistência + Empréstimo, encaminhar para Análise de Tratativas (igual Troca Direta)
+      if (dados.tipo === 'Assistência + Empréstimo') {
+        encaminharParaAnaliseGarantia(
+          garantia.id, 'Garantia',
+          `${garantia.clienteNome} - ${garantia.modelo} (IMEI: ${garantia.imei}) - Assistência + Empréstimo`
+        );
+      }
     }
 
     // 2. Registrar tratativa

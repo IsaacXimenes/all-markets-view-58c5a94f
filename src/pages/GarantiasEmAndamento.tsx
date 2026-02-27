@@ -124,6 +124,10 @@ export default function GarantiasEmAndamento() {
       }
       
       return true;
+    }).sort((a, b) => {
+      const dataA = a.tratativa?.dataHora ? new Date(a.tratativa.dataHora).getTime() : 0;
+      const dataB = b.tratativa?.dataHora ? new Date(b.tratativa.dataHora).getTime() : 0;
+      return dataB - dataA;
     });
   }, [dadosTabela, filters]);
   

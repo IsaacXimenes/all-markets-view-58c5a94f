@@ -980,6 +980,33 @@ const initializeMovimentacaoStatus = () => {
 // Executar inicialização
 initializeMovimentacaoStatus();
 
+// Restaurar campos persistidos do localStorage (statusEmprestimo, etc.)
+try {
+  const savedUpdates = localStorage.getItem('produtos_updates');
+  if (savedUpdates) {
+    const updates: Array<{ id: string; [key: string]: any }> = JSON.parse(savedUpdates);
+    updates.forEach(update => {
+      const produto = produtos.find(p => p.id === update.id);
+      if (produto) {
+        if (update.statusEmprestimo !== undefined) produto.statusEmprestimo = update.statusEmprestimo;
+        if (update.emprestimoGarantiaId !== undefined) produto.emprestimoGarantiaId = update.emprestimoGarantiaId;
+        if (update.emprestimoClienteId !== undefined) produto.emprestimoClienteId = update.emprestimoClienteId;
+        if (update.emprestimoClienteNome !== undefined) produto.emprestimoClienteNome = update.emprestimoClienteNome;
+        if (update.emprestimoOsId !== undefined) produto.emprestimoOsId = update.emprestimoOsId;
+        if (update.emprestimoDataHora !== undefined) produto.emprestimoDataHora = update.emprestimoDataHora;
+        if (update.bloqueadoEmTrocaGarantiaId !== undefined) produto.bloqueadoEmTrocaGarantiaId = update.bloqueadoEmTrocaGarantiaId;
+        if (update.bloqueadoEmVendaId !== undefined) produto.bloqueadoEmVendaId = update.bloqueadoEmVendaId;
+        if (update.statusMovimentacao !== undefined) produto.statusMovimentacao = update.statusMovimentacao;
+        if (update.quantidade !== undefined) produto.quantidade = update.quantidade;
+        if (update.statusNota !== undefined) produto.statusNota = update.statusNota;
+      }
+    });
+    console.log('[ESTOQUE] Campos persistidos restaurados do localStorage');
+  }
+} catch (e) {
+  console.warn('[ESTOQUE] Erro ao restaurar campos do localStorage:', e);
+}
+
 // Funções de API
 export const getProdutos = (): Produto[] => {
   return [...produtos];
@@ -993,6 +1020,27 @@ export const updateProduto = (id: string, updates: Partial<Produto>): Produto | 
   const index = produtos.findIndex(p => p.id === id);
   if (index === -1) return null;
   produtos[index] = { ...produtos[index], ...updates };
+  // Persistir alterações no localStorage para campos críticos como statusEmprestimo
+  try {
+    localStorage.setItem('produtos_updates', JSON.stringify(
+      produtos.map(p => ({
+        id: p.id,
+        statusEmprestimo: p.statusEmprestimo,
+        emprestimoGarantiaId: p.emprestimoGarantiaId,
+        emprestimoClienteId: p.emprestimoClienteId,
+        emprestimoClienteNome: p.emprestimoClienteNome,
+        emprestimoOsId: p.emprestimoOsId,
+        emprestimoDataHora: p.emprestimoDataHora,
+        bloqueadoEmTrocaGarantiaId: p.bloqueadoEmTrocaGarantiaId,
+        bloqueadoEmVendaId: p.bloqueadoEmVendaId,
+        statusMovimentacao: p.statusMovimentacao,
+        quantidade: p.quantidade,
+        statusNota: p.statusNota,
+      }))
+    ));
+  } catch (e) {
+    console.warn('[ESTOQUE] Erro ao persistir produto no localStorage:', e);
+  }
   return produtos[index];
 };
 

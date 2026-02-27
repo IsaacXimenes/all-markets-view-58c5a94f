@@ -6,6 +6,26 @@ import { subtrairEstoqueAcessorio, VendaAcessorio } from './acessoriosApi';
 import { criarPagamentosDeVenda } from './financeApi';
 import { addDemandaMotoboy } from './motoboyApi';
 import { getColaboradorById } from './cadastrosApi';
+
+// ==================== HELPERS localStorage ====================
+const loadFromStorage = <T>(key: string, defaultData: T): T => {
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {
+    console.warn(`[VENDAS] Erro ao carregar ${key} do localStorage:`, e);
+  }
+  return defaultData;
+};
+
+const saveVendasToStorage = (): void => {
+  try {
+    localStorage.setItem('vendas_data', JSON.stringify(vendas));
+    localStorage.setItem('venda_counter', JSON.stringify(vendaCounter));
+  } catch (e) {
+    console.warn(`[VENDAS] Erro ao salvar vendas no localStorage:`, e);
+  }
+};
 export interface ItemVenda {
   id: string;
   produtoId: string; // PROD-XXXX - ID único e persistente do produto
@@ -200,8 +220,8 @@ const VENDEDORES = {
   ELIDA_FRANCA: '4bfe3508',     // Vendedor - Assistência SIA
 };
 
-// Dados mockados - IDs PROD-XXXX únicos e consistentes com estoqueApi
-let vendas: Venda[] = [
+// Dados mockados default
+const defaultVendas: Venda[] = [
   // VENDA DE TESTE - CONFERÊNCIA FINANCEIRO (para testar Teto Bancário)
   {
     id: 'VEN-2025-TEST-FINANCEIRO',
@@ -799,6 +819,9 @@ let vendas: Venda[] = [
   }
 ];
 
+// ==================== INICIALIZAÇÃO COM localStorage ====================
+let vendas: Venda[] = loadFromStorage('vendas_data', defaultVendas);
+
 // Histórico de compras por cliente (mockado)
 const historicoComprasCliente: Record<string, HistoricoCompraCliente[]> = {
   'CLI-001': [
@@ -821,7 +844,7 @@ const historicoComprasCliente: Record<string, HistoricoCompraCliente[]> = {
   'CLI-005': []
 };
 
-let vendaCounter = vendas.length;
+let vendaCounter: number = loadFromStorage('venda_counter', vendas.length);
 
 // Funções de API
 export const getVendas = (): Venda[] => {
@@ -864,6 +887,7 @@ export const addVenda = (venda: Omit<Venda, 'id' | 'numero'>): Venda => {
     tradeIns: tradeInsComIds
   };
   vendas.push(newVenda);
+  saveVendasToStorage();
   
   // ========== INTEGRAÇÃO: Redução de Estoque de Aparelhos ==========
   // Para cada item vendido, marcar produto como "Vendido" e registrar movimentação
