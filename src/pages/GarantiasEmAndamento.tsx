@@ -22,6 +22,7 @@ import {
   getGarantiasEmAndamento, getTratativas, updateTratativa, updateGarantia,
   addTimelineEntry, getContadoresGarantia, GarantiaItem, TratativaGarantia
 } from '@/utils/garantiasApi';
+import { updateProduto, getProdutoById, addMovimentacao } from '@/utils/estoqueApi';
 import { Textarea } from '@/components/ui/textarea';
 import { getClientes, getLojas } from '@/utils/cadastrosApi';
 import { useCadastroStore } from '@/store/cadastroStore';
@@ -145,6 +146,45 @@ export default function GarantiasEmAndamento() {
     if (!fotoDevolucao) {
       toast.error('É obrigatório anexar fotos do estado do aparelho na devolução');
       return;
+    }
+    
+    // Limpar campos de empréstimo no estoque e registrar timeline do produto
+    if (tratativaSelecionada.aparelhoEmprestadoId) {
+      const produtoEmprestado = getProdutoById(tratativaSelecionada.aparelhoEmprestadoId);
+      
+      updateProduto(tratativaSelecionada.aparelhoEmprestadoId, {
+        quantidade: 1,
+        origemEntrada: 'Base de Troca',
+        statusEmprestimo: null,
+        emprestimoGarantiaId: undefined,
+        emprestimoClienteId: undefined,
+        emprestimoClienteNome: undefined,
+        emprestimoOsId: undefined,
+        emprestimoDataHora: undefined,
+      });
+      
+      // Registrar na timeline do produto
+      if (produtoEmprestado?.timeline) {
+        produtoEmprestado.timeline.push({
+          id: `TL-DEV-${Date.now()}`,
+          data: new Date().toISOString(),
+          tipo: 'retorno_matriz',
+          titulo: 'Devolução Empréstimo Garantia',
+          descricao: `Aparelho devolvido pelo cliente após empréstimo na garantia ${garantiaParaDevolucao.id}. Encaminhado para conferência.`
+        });
+      }
+      
+      // Adicionar movimentação
+      addMovimentacao({
+        data: new Date().toISOString(),
+        produto: tratativaSelecionada.aparelhoEmprestadoModelo || '',
+        imei: tratativaSelecionada.aparelhoEmprestadoImei || '',
+        quantidade: 1,
+        origem: 'Empréstimo - Garantia',
+        destino: 'Conferência',
+        responsavel: 'Usuário Sistema',
+        motivo: `Devolução empréstimo garantia ${garantiaParaDevolucao.id}`
+      });
     }
     
     // Atualizar tratativa

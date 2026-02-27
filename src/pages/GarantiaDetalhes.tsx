@@ -28,7 +28,7 @@ import {
   calcularStatusExpiracao, addTimelineEntry, updateGarantia, updateTratativa,
   processarTratativaGarantia
 } from '@/utils/garantiasApi';
-import { getProdutos, updateProduto, addMovimentacao, Produto } from '@/utils/estoqueApi';
+import { getProdutos, updateProduto, addMovimentacao, getProdutoById, getStatusAparelho, Produto } from '@/utils/estoqueApi';
 import { useCadastroStore } from '@/store/cadastroStore';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -69,11 +69,13 @@ export default function GarantiaDetalhes() {
     const produtos = getProdutos();
     return produtos.filter(p => 
       p.quantidade > 0 && 
+      getStatusAparelho(p) === 'Disponível' &&
+      (garantia ? p.loja === garantia.lojaVenda : true) &&
       (buscaAparelho === '' || 
         p.imei?.toLowerCase().includes(buscaAparelho.toLowerCase()) ||
         p.modelo.toLowerCase().includes(buscaAparelho.toLowerCase()))
     );
-  }, [buscaAparelho]);
+  }, [buscaAparelho, garantia]);
   
   const getLojaName = (lojaId: string) => obterNomeLoja(lojaId);
   
@@ -502,14 +504,6 @@ export default function GarantiaDetalhes() {
                 </div>
               )}
 
-              {(tipoTratativa === 'Assistência + Empréstimo' || tipoTratativa === 'Troca Direta') && (
-                <Alert className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="text-xs text-amber-700 dark:text-amber-400">
-                    Esta tratativa requer aprovação do gestor antes da execução das ações de estoque.
-                  </AlertDescription>
-                </Alert>
-              )}
               
               <Separator />
               
@@ -558,6 +552,11 @@ export default function GarantiaDetalhes() {
                             <Smartphone className="h-3 w-3 inline mr-1" />
                             Emprestado: {t.aparelhoEmprestadoModelo}
                           </p>
+                          {t.aparelhoEmprestadoImei && (
+                            <p className="text-xs text-yellow-600 dark:text-yellow-500 font-mono mt-0.5 ml-4">
+                              IMEI: {t.aparelhoEmprestadoImei}
+                            </p>
+                          )}
                         </div>
                       )}
                       
@@ -567,6 +566,11 @@ export default function GarantiaDetalhes() {
                             <ArrowRightLeft className="h-3 w-3 inline mr-1" />
                             Troca: {t.aparelhoTrocaModelo}
                           </p>
+                          {t.aparelhoTrocaImei && (
+                            <p className="text-xs text-pink-600 dark:text-pink-500 font-mono mt-0.5 ml-4">
+                              IMEI: {t.aparelhoTrocaImei}
+                            </p>
+                          )}
                         </div>
                       )}
                       
@@ -690,12 +694,31 @@ export default function GarantiaDetalhes() {
             <Button onClick={() => {
               if (!tratativaEmprestimo || !garantia) return;
               
-              // Atualizar produto no estoque - volta como Base de Troca para conferência
+              // Atualizar produto no estoque - limpar campos de empréstimo e restaurar
               if (tratativaEmprestimo.aparelhoEmprestadoId) {
+                const produtoEmprestado = getProdutoById(tratativaEmprestimo.aparelhoEmprestadoId);
+                
                 updateProduto(tratativaEmprestimo.aparelhoEmprestadoId, { 
                   quantidade: 1,
-                  origemEntrada: 'Base de Troca'
+                  origemEntrada: 'Base de Troca',
+                  statusEmprestimo: null,
+                  emprestimoGarantiaId: undefined,
+                  emprestimoClienteId: undefined,
+                  emprestimoClienteNome: undefined,
+                  emprestimoOsId: undefined,
+                  emprestimoDataHora: undefined,
                 });
+                
+                // Registrar na timeline do produto
+                if (produtoEmprestado?.timeline) {
+                  produtoEmprestado.timeline.push({
+                    id: `TL-DEV-${Date.now()}`,
+                    data: new Date().toISOString(),
+                    tipo: 'retorno_matriz',
+                    titulo: 'Devolução Empréstimo Garantia',
+                    descricao: `Aparelho devolvido pelo cliente após empréstimo na garantia ${garantia.id}. Encaminhado para conferência.`
+                  });
+                }
                 
                 // Adicionar movimentação
                 addMovimentacao({

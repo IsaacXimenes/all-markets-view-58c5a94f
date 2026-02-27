@@ -2,6 +2,7 @@ import { useState, useRef, DragEvent, ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Upload, X, FileText, Image, Link2, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -133,16 +134,22 @@ export function FileUploadComprovante({
     }
   };
 
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+
   // Se tem um arquivo selecionado, mostrar preview
   if (value) {
     const isImage = value.startsWith('data:image/');
     const isUrl = value.startsWith('http');
+    const isViewable = isImage || isUrl;
     
     return (
       <div className="space-y-2">
         <Label>{label} {required && '*'}</Label>
         <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30">
-          <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-muted flex items-center justify-center">
+          <div 
+            className={`flex-shrink-0 w-12 h-12 rounded-lg bg-muted flex items-center justify-center ${isViewable ? 'cursor-pointer hover:ring-2 hover:ring-primary/40 transition-all' : ''}`}
+            onClick={() => isViewable && setShowPreviewDialog(true)}
+          >
             {isImage ? (
               <img src={value} alt="Preview" className="w-full h-full object-cover rounded-lg" />
             ) : isUrl ? (
@@ -167,6 +174,19 @@ export function FileUploadComprovante({
             <X className="h-4 w-4" />
           </Button>
         </div>
+
+        {isViewable && (
+          <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>{fileName || 'Comprovante'}</DialogTitle>
+              </DialogHeader>
+              <div className="flex justify-center">
+                <img src={value} alt="Comprovante" className="max-h-[70vh] object-contain rounded-lg" />
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     );
   }
